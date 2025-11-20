@@ -1,29 +1,32 @@
+import { Outlet, Link } from '@tanstack/react-router'
+import { Button } from '@/components/ui/button'
+
 function App(): React.JSX.Element {
   const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
 
   return (
-    <>
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
-            Documentation
-          </a>
+    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+      <nav className="flex items-center justify-between border-b p-4">
+        <div className="flex gap-4">
+          <Button asChild variant="ghost">
+            <Link to="/" activeProps={{ className: 'text-primary bg-accent' }}>
+              Home
+            </Link>
+          </Button>
+          <Button asChild variant="ghost">
+            <Link to="/about" activeProps={{ className: 'text-primary bg-accent' }}>
+              About
+            </Link>
+          </Button>
         </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
-          </a>
-        </div>
-      </div>
-    </>
+        <Button onClick={ipcHandle} variant="outline" size="sm">
+          Ping IPC
+        </Button>
+      </nav>
+      <main className="flex-1 overflow-auto p-4">
+        <Outlet />
+      </main>
+    </div>
   )
 }
 
