@@ -1,20 +1,20 @@
-import { Outlet, Link } from '@tanstack/react-router'
-import { Button } from '@/components/ui/button'
+import { Outlet, Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
 
 function App(): React.JSX.Element {
-  const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
+  const ipcHandle = (): void => window.electron.ipcRenderer.send("ping");
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-foreground">
+    <div className="bg-background text-foreground flex h-screen flex-col overflow-hidden">
       <nav className="flex items-center justify-between border-b p-4">
         <div className="flex gap-4">
           <Button asChild variant="ghost">
-            <Link to="/" activeProps={{ className: 'text-primary bg-accent' }}>
+            <Link to="/" activeProps={{ className: "text-primary bg-accent" }}>
               Home
             </Link>
           </Button>
           <Button asChild variant="ghost">
-            <Link to="/about" activeProps={{ className: 'text-primary bg-accent' }}>
+            <Link to="/about" activeProps={{ className: "text-primary bg-accent" }}>
               About
             </Link>
           </Button>
@@ -27,7 +27,7 @@ function App(): React.JSX.Element {
         <Outlet />
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
