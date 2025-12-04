@@ -38,20 +38,14 @@ export function EditorArea({ content = "", onChange }: EditorAreaProps) {
         </div>
       </div>
 
-      {/* 编辑/预览区域 */}
+      {/* 编辑区域 - 后续会根据 mode 切换为独立的编辑/预览组件 */}
       <div className="flex-1 overflow-hidden">
-        {mode === "edit" ? (
-          <textarea
-            className="bg-background text-foreground h-full w-full resize-none p-4 font-mono text-sm leading-relaxed outline-none"
-            value={content}
-            onChange={(e) => onChange?.(e.target.value)}
-            placeholder="开始编写你的笔记..."
-          />
-        ) : (
-          <div className="prose prose-sm dark:prose-invert h-full max-w-none overflow-y-auto p-4">
-            <div className="whitespace-pre-wrap">{content || "暂无内容"}</div>
-          </div>
-        )}
+        <textarea
+          className="bg-background text-foreground h-full w-full resize-none p-4 font-mono text-sm leading-relaxed outline-none"
+          value={content}
+          onChange={(e) => onChange?.(e.target.value)}
+          placeholder="开始编写你的笔记..."
+        />
       </div>
     </div>
   );
