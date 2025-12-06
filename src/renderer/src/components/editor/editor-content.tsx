@@ -1,16 +1,33 @@
+import CodeMirror from "@uiw/react-codemirror";
+import { useCodemirrorExtensions } from "./hooks/use-codemirror";
+
 interface EditorContentProps {
   content: string;
   onChange: (content: string) => void;
 }
 
 export function EditorContent({ content, onChange }: EditorContentProps) {
+  const { extensions, theme } = useCodemirrorExtensions({ isDark: false });
+
   return (
     <div className="flex-1 overflow-hidden">
-      <textarea
-        className="bg-background text-foreground h-full w-full resize-none p-4 font-mono text-sm leading-relaxed outline-none"
+      <CodeMirror
         value={content}
-        onChange={(e) => onChange(e.target.value)}
+        height="100%"
+        theme={theme}
+        extensions={extensions}
+        onChange={onChange}
         placeholder="开始编写你的笔记..."
+        className="h-full"
+        basicSetup={{
+          lineNumbers: false,
+          foldGutter: false,
+          highlightActiveLine: true,
+          highlightSelectionMatches: true,
+          bracketMatching: true,
+          closeBrackets: true,
+          autocompletion: false
+        }}
       />
     </div>
   );
