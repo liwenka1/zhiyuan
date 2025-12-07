@@ -1,6 +1,7 @@
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
 import { githubLight, githubDark } from "@uiw/codemirror-theme-github";
+import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
 
 interface UseCodemirrorOptions {
@@ -17,7 +18,8 @@ export function useCodemirrorExtensions(options: UseCodemirrorOptions = {}): {
     markdown({
       base: markdownLanguage,
       codeLanguages: languages
-    })
+    }),
+    EditorView.lineWrapping
   ];
 
   const theme = isDark ? githubDark : githubLight;
