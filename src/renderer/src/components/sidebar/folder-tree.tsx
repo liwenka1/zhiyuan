@@ -1,8 +1,14 @@
-import { Folder } from "lucide-react";
+import { Folder, Inbox, Plus } from "lucide-react";
+import { motion } from "motion/react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface FolderItem {
   id: string;
   name: string;
+  noteCount?: number;
 }
 
 interface FolderTreeProps {
@@ -14,35 +20,63 @@ interface FolderTreeProps {
 export function FolderTree({ folders = [], selectedFolderId, onSelectFolder }: FolderTreeProps) {
   return (
     <div className="flex h-full flex-col">
-      {/* 文件夹列表标题 */}
-      <div className="border-border flex h-12 items-center border-b px-4">
-        <h2 className="text-foreground text-sm font-semibold">文件夹</h2>
+      {/* 顶部工具栏 */}
+      <div className="border-divider flex h-12 shrink-0 items-center justify-between border-b px-3">
+        <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">文件夹</span>
+        <TooltipProvider delayDuration={300}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" aria-label="新建文件夹">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>新建文件夹</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       {/* 文件夹列表 */}
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1">
         {folders.length === 0 ? (
-          <div className="text-muted-foreground flex h-full flex-col items-center justify-center p-4 text-sm">
-            <Folder className="mb-2 h-8 w-8 opacity-50" />
-            <p>暂无文件夹</p>
-          </div>
+          <motion.div
+            className="empty-state text-muted-foreground flex h-full flex-col items-center justify-center p-6 text-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Inbox className="empty-state-icon mb-3 h-10 w-10" />
+            <p className="text-sm font-medium">暂无文件夹</p>
+            <p className="text-tertiary-foreground mt-1 text-xs">点击 + 创建文件夹</p>
+          </motion.div>
         ) : (
-          <div className="p-2">
-            {folders.map((folder) => (
-              <div
+          <div className="space-y-0.5 p-2">
+            {folders.map((folder, index) => (
+              <motion.div
                 key={folder.id}
-                className={`flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 transition-colors ${
-                  selectedFolderId === folder.id ? "bg-accent text-accent-foreground" : "hover:bg-accent/50"
-                }`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: index * 0.03 }}
+                whileHover={{ backgroundColor: "hsl(var(--muted))" }}
+                className={cn(
+                  "sidebar-item flex cursor-pointer items-center gap-2 rounded-md px-3 py-2",
+                  selectedFolderId === folder.id
+                    ? "bg-selection text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
                 onClick={() => onSelectFolder?.(folder.id)}
               >
                 <Folder className="h-4 w-4 shrink-0" />
-                <span className="truncate text-sm">{folder.name}</span>
-              </div>
+                <span className="truncate-text flex-1 text-sm">{folder.name}</span>
+                {folder.noteCount !== undefined && (
+                  <span className="text-tertiary-foreground text-xs tabular-nums">{folder.noteCount}</span>
+                )}
+              </motion.div>
             ))}
           </div>
         )}
-      </div>
+      </ScrollArea>
     </div>
   );
 }
