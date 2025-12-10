@@ -3,12 +3,44 @@
     @apply border-border;
   }
 
+  html {
+    font-family:
+      "SF Pro Text",
+      -apple-system,
+      BlinkMacSystemFont,
+      system-ui,
+      sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: 0.3px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
   body {
     @apply bg-background text-foreground;
+    overflow: hidden;
   }
 
   button,
   [role="button"] {
     cursor: pointer;
+  }
+
+  /* 禁用文本选择（侧边栏等） */
+  .no-select {
+    user-select: none;
+  }
+
+  /* 允许文本选择（编辑器） */
+  .allow-select {
+    user-select: text;
+  }
+
+  /* 截断文本 */
+  .truncate-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

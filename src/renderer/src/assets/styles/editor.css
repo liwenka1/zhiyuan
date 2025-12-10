@@ -1,1 +1,127 @@
-/* CodeMirror 编辑器基础样式 */
+/* CodeMirror 编辑器样式 */
+
+/* 编辑器容器 */
+.cm-editor {
+  height: 100%;
+  font-family: var(--editor-font);
+  font-size: var(--editor-font-size);
+  line-height: var(--editor-line-height);
+  letter-spacing: var(--editor-letter-spacing);
+}
+
+.cm-editor.cm-focused {
+  outline: none;
+}
+
+/* 编辑器内容区 */
+.cm-scroller {
+  overflow: auto;
+}
+
+.cm-content {
+  padding: 8px var(--editor-padding) var(--editor-padding);
+  caret-color: hsl(var(--foreground));
+}
+
+/* 占位符 */
+.cm-placeholder {
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+}
+
+/* 活动行高亮 */
+.cm-activeLine {
+  background-color: transparent;
+}
+
+/* 选中文本 */
+.cm-selectionBackground {
+  background-color: hsl(var(--selection)) !important;
+}
+
+.cm-focused .cm-selectionBackground {
+  background-color: hsl(var(--highlight) / 0.3) !important;
+}
+
+/* 光标 */
+.cm-cursor {
+  border-left-color: hsl(var(--foreground));
+  border-left-width: 1.5px;
+}
+
+/* 行号（如果启用） */
+.cm-lineNumbers {
+  color: hsl(var(--muted-foreground));
+  font-size: 12px;
+}
+
+/* 折叠标记 */
+.cm-foldGutter {
+  color: hsl(var(--muted-foreground));
+}
+
+/* 括号匹配 */
+.cm-matchingBracket {
+  background-color: hsl(var(--highlight) / 0.2);
+  color: inherit;
+}
+
+/* Markdown 语法高亮 */
+.cm-header {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.cm-header-1 {
+  font-size: 1.5em;
+}
+
+.cm-header-2 {
+  font-size: 1.3em;
+}
+
+.cm-header-3 {
+  font-size: 1.1em;
+}
+
+.cm-strong {
+  font-weight: 600;
+}
+
+.cm-em {
+  font-style: italic;
+}
+
+.cm-link {
+  color: hsl(var(--highlight));
+  text-decoration: none;
+}
+
+.cm-url {
+  color: hsl(var(--muted-foreground));
+}
+
+.cm-comment {
+  color: hsl(var(--muted-foreground));
+}
+
+.cm-quote {
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+
+.cm-list {
+  color: hsl(var(--highlight));
+}
+
+/* 代码块 */
+.cm-monospace {
+  font-family: "Monaco", "Menlo", "Consolas", monospace;
+  font-size: 0.9em;
+}
+
+.cm-inline-code {
+  background-color: hsl(var(--muted));
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+}
