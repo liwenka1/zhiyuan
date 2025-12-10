@@ -295,13 +295,24 @@ function App(): React.JSX.Element {
     }
   };
 
+  // 获取当前选中笔记的文件名
+  const currentNote = notes.find((n) => n.id === selectedNoteId);
+  const fileName = currentNote?.title;
+
   return (
     <MainLayout
       leftSidebar={
         <FolderTree folders={folders} selectedFolderId={selectedFolderId} onSelectFolder={handleSelectFolder} />
       }
       rightSidebar={<NoteList notes={notes} selectedNoteId={selectedNoteId} onSelectNote={handleSelectNote} />}
-      mainContent={<EditorArea content={editorContent} onChange={setEditorContent} hasNote={!!selectedNoteId} />}
+      mainContent={
+        <EditorArea
+          content={editorContent}
+          onChange={setEditorContent}
+          hasNote={!!selectedNoteId}
+          fileName={fileName}
+        />
+      }
     />
   );
 }

@@ -6,9 +6,10 @@ interface EditorAreaProps {
   content?: string;
   onChange?: (content: string) => void;
   hasNote?: boolean;
+  fileName?: string;
 }
 
-export function EditorArea({ content = "", onChange, hasNote = false }: EditorAreaProps) {
+export function EditorArea({ content = "", onChange, hasNote = false, fileName }: EditorAreaProps) {
   const handleContentChange = (value: string) => {
     onChange?.(value);
   };
@@ -27,7 +28,7 @@ export function EditorArea({ content = "", onChange, hasNote = false }: EditorAr
 
   return (
     <div className="flex h-full flex-col">
-      <EditorToolbar />
+      <EditorToolbar fileName={fileName} />
       <div className="flex-1 overflow-hidden">
         <EditorContent content={content} onChange={handleContentChange} />
       </div>

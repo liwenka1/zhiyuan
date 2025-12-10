@@ -1,15 +1,30 @@
-import { Eye, Presentation, Wand2 } from "lucide-react";
+import { Eye, FileText, Presentation, Wand2 } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-export function EditorToolbar() {
+interface EditorToolbarProps {
+  fileName?: string;
+}
+
+export function EditorToolbar({ fileName }: EditorToolbarProps) {
   return (
-    <div className="border-divider flex h-12 shrink-0 items-center justify-end border-b px-3">
+    <div className="flex h-12 shrink-0 items-center justify-between px-3">
+      {/* 左侧：文件名 */}
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {fileName && (
+          <>
+            <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
+            <span className="text-foreground truncate text-sm font-medium">{fileName}</span>
+          </>
+        )}
+      </div>
+
+      {/* 右侧：工具按钮 */}
       <TooltipProvider delayDuration={300}>
         <motion.div
-          className="flex items-center gap-1"
+          className="flex shrink-0 items-center gap-1"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3, delay: 0.1 }}
