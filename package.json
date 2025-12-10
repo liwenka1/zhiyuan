@@ -25,7 +25,11 @@
     "@codemirror/language-data": "^6.5.2",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@radix-ui/react-scroll-area": "^1.2.10",
+    "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-toggle": "^1.1.10",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-router": "^1.136.18",
     "@uiw/codemirror-theme-github": "^4.25.3",
     "@uiw/react-codemirror": "^4.25.3",
@@ -33,6 +37,8 @@
     "clsx": "^2.1.1",
     "electron-updater": "^6.3.9",
     "lucide-react": "^0.554.0",
+    "motion": "^12.23.26",
+    "react-resizable-panels": "^3.0.6",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
