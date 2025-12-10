@@ -1,35 +1,56 @@
-import { Edit, Eye } from "lucide-react";
+import { Eye, Presentation, Wand2 } from "lucide-react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import type { EditorMode } from "./types";
+import { Toggle } from "@/components/ui/toggle";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-interface EditorToolbarProps {
-  mode: EditorMode;
-  onModeChange: (mode: EditorMode) => void;
-}
-
-export function EditorToolbar({ mode, onModeChange }: EditorToolbarProps) {
+export function EditorToolbar() {
   return (
-    <div className="border-border flex h-12 items-center justify-between border-b px-4">
-      <div className="flex items-center gap-2">
-        <Button
-          variant={mode === "edit" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => onModeChange("edit")}
-          className="gap-2"
+    <div className="border-divider flex h-12 shrink-0 items-center justify-end border-b px-3">
+      <TooltipProvider delayDuration={300}>
+        <motion.div
+          className="flex items-center gap-1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Edit className="h-4 w-4" />
-          编辑
-        </Button>
-        <Button
-          variant={mode === "preview" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => onModeChange("preview")}
-          className="gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          预览
-        </Button>
-      </div>
+          {/* 预览按钮 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle size="sm" className="h-8 w-8 p-0" aria-label="预览">
+                <Eye className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>预览</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* 演示按钮 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Toggle size="sm" className="h-8 w-8 p-0" aria-label="演示">
+                <Presentation className="h-4 w-4" />
+              </Toggle>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>演示模式</p>
+            </TooltipContent>
+          </Tooltip>
+
+          {/* 格式化按钮 */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="格式化">
+                <Wand2 className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <p>格式化</p>
+            </TooltipContent>
+          </Tooltip>
+        </motion.div>
+      </TooltipProvider>
     </div>
   );
 }

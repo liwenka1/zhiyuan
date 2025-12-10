@@ -10,7 +10,7 @@ export function EditorContent({ content, onChange }: EditorContentProps) {
   const { extensions, theme } = useCodemirrorExtensions({ isDark: false });
 
   return (
-    <div className="flex-1 overflow-hidden">
+    <div className="h-full overflow-hidden">
       <CodeMirror
         value={content}
         height="100%"
@@ -22,7 +22,7 @@ export function EditorContent({ content, onChange }: EditorContentProps) {
         basicSetup={{
           lineNumbers: false,
           foldGutter: false,
-          highlightActiveLine: true,
+          highlightActiveLine: false,
           highlightSelectionMatches: true,
           bracketMatching: true,
           closeBrackets: true,
