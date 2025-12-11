@@ -1,6 +1,8 @@
 import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
+import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
+import { useViewStore } from "@/stores/use-view-store";
 
 interface EditorAreaProps {
   content?: string;
@@ -10,6 +12,8 @@ interface EditorAreaProps {
 }
 
 export function EditorArea({ content = "", onChange, hasNote = false, fileName }: EditorAreaProps) {
+  const editorMode = useViewStore((state) => state.editorMode);
+
   const handleContentChange = (value: string) => {
     onChange?.(value);
   };
@@ -26,11 +30,13 @@ export function EditorArea({ content = "", onChange, hasNote = false, fileName }
     );
   }
 
+  // 根据编辑器模式渲染不同内容
   return (
     <div className="flex h-full flex-col">
       <EditorToolbar fileName={fileName} />
       <div className="flex-1 overflow-hidden">
-        <EditorContent content={content} onChange={handleContentChange} />
+        {editorMode === "edit" && <EditorContent content={content} onChange={handleContentChange} />}
+        {editorMode === "preview" && <PreviewContent content={content} />}
       </div>
     </div>
   );

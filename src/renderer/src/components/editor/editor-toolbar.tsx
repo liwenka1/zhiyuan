@@ -3,12 +3,17 @@ import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useViewStore } from "@/stores/use-view-store";
 
 interface EditorToolbarProps {
   fileName?: string;
 }
 
 export function EditorToolbar({ fileName }: EditorToolbarProps) {
+  const editorMode = useViewStore((state) => state.editorMode);
+  const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
+  const setViewMode = useViewStore((state) => state.setViewMode);
+
   return (
     <div className="flex h-12 shrink-0 items-center justify-between px-3">
       {/* 左侧：文件名 */}
@@ -32,21 +37,33 @@ export function EditorToolbar({ fileName }: EditorToolbarProps) {
           {/* 预览按钮 */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Toggle size="sm" className="h-8 w-8 p-0" aria-label="预览">
+              <Toggle
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label="预览"
+                pressed={editorMode === "preview"}
+                onPressedChange={() => toggleEditorMode("preview")}
+              >
                 <Eye className="h-4 w-4" />
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>预览</p>
+              <p>预览模式</p>
             </TooltipContent>
           </Tooltip>
 
           {/* 演示按钮 */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Toggle size="sm" className="h-8 w-8 p-0" aria-label="演示">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label="演示"
+                onClick={() => setViewMode("presentation")}
+              >
                 <Presentation className="h-4 w-4" />
-              </Toggle>
+              </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p>演示模式</p>
