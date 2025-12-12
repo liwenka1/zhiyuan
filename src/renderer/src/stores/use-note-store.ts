@@ -12,7 +12,7 @@ interface NoteStore {
 
   // 操作方法 - 文件夹
   setFolders: (folders: Folder[]) => void;
-  selectFolder: (folderId: string) => void;
+  selectFolder: (folderId: string | null) => void;
   createFolder: (name: string) => void;
   deleteFolder: (folderId: string) => void;
 
@@ -141,7 +141,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     set({
       folders: DEMO_FOLDERS,
       notes: DEMO_NOTES,
-      selectedFolderId: "1",
+      selectedFolderId: null,
       selectedNoteId: null,
       editorContent: ""
     });
