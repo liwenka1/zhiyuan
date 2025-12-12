@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
+import { ThemeToggle } from "@/components/theme";
 
 // 特殊 ID 表示「全部笔记」
 export const ALL_NOTES_FOLDER_ID = "__all__";
@@ -103,6 +104,11 @@ export function FolderTree({ folders = [], selectedFolderId, totalNoteCount = 0,
           })}
         </div>
       </ScrollArea>
+
+      {/* 底部主题切换按钮 */}
+      <div className="border-divider flex h-12 shrink-0 items-center justify-center border-t px-3">
+        <ThemeToggle />
+      </div>
     </div>
   );
 }
