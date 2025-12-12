@@ -19,7 +19,6 @@
 }
 
 .cm-content {
-  padding: 8px var(--editor-padding) var(--editor-padding);
   caret-color: hsl(var(--foreground));
 }
 

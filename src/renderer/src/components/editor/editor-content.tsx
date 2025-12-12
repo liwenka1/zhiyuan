@@ -1,5 +1,6 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { useCodemirrorExtensions } from "./hooks/use-codemirror";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface EditorContentProps {
   content: string;
@@ -10,15 +11,14 @@ export function EditorContent({ content, onChange }: EditorContentProps) {
   const { extensions, theme } = useCodemirrorExtensions({ isDark: false });
 
   return (
-    <div className="h-full overflow-hidden">
+    <ScrollArea className="h-full">
       <CodeMirror
         value={content}
-        height="100%"
+        height="auto"
         theme={theme}
         extensions={extensions}
         onChange={onChange}
         placeholder="开始编写你的笔记..."
-        className="h-full"
         basicSetup={{
           lineNumbers: false,
           foldGutter: false,
@@ -29,6 +29,6 @@ export function EditorContent({ content, onChange }: EditorContentProps) {
           autocompletion: false
         }}
       />
-    </div>
+    </ScrollArea>
   );
 }

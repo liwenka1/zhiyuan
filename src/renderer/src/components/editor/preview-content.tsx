@@ -22,12 +22,9 @@ interface PreviewContentProps {
 export function PreviewContent({ content }: PreviewContentProps) {
   return (
     <ScrollArea className="h-full">
-      <div className="prose prose-slate dark:prose-invert mx-auto max-w-4xl p-8">
+      <div className="prose prose-slate dark:prose-invert max-w-none" style={{ padding: "var(--editor-padding)" }}>
         {/* 临时占位：显示纯文本 */}
-        <div className="font-mono text-sm whitespace-pre-wrap">
-          <div className="text-muted-foreground mb-4 text-xs">[ 预览模式 - TODO: 实现 Markdown 渲染 ]</div>
-          {content || "暂无内容"}
-        </div>
+        <div className="font-mono text-sm whitespace-pre-wrap">{content || "暂无内容"}</div>
       </div>
     </ScrollArea>
   );

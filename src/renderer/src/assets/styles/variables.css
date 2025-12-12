@@ -37,19 +37,19 @@
     --highlight: 211 100% 50%;
 
     /* 布局尺寸 */
-    --sidebar-width: 138px;
-    --sidebar-min-width: 138px;
-    --sidebar-max-width: 280px;
-    --notelist-width: 280px;
-    --notelist-max-width: 600px;
-    --titlebar-height: 52px;
+    --sidebar-width: 8.625rem;        /* 138px */
+    --sidebar-min-width: 8.625rem;    /* 138px */
+    --sidebar-max-width: 17.5rem;     /* 280px */
+    --notelist-width: 17.5rem;        /* 280px */
+    --notelist-max-width: 37.5rem;    /* 600px */
+    --titlebar-height: 3.25rem;       /* 52px */
 
     /* 编辑器 */
     --editor-font: "SF Pro Text", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    --editor-font-size: 16px;
+    --editor-font-size: 1rem;         /* 16px */
     --editor-line-height: 1.3;
-    --editor-letter-spacing: 0.5px;
-    --editor-padding: 24px;
+    --editor-letter-spacing: 0.03125rem; /* 0.5px */
+    --editor-padding: 1rem;           /* 16px */
 
     /* 圆角 */
     --radius: 0.5rem;

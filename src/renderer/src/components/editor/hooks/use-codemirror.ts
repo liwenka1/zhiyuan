@@ -14,12 +14,28 @@ export function useCodemirrorExtensions(options: UseCodemirrorOptions = {}): {
 } {
   const { isDark = false } = options;
 
+  const customTheme = EditorView.theme({
+    "&": {
+      height: "auto"
+    },
+    ".cm-scroller": {
+      overflow: "visible"
+    },
+    ".cm-content": {
+      padding: "var(--editor-padding)"
+    },
+    ".cm-line": {
+      padding: "0"
+    }
+  });
+
   const extensions: Extension[] = [
     markdown({
       base: markdownLanguage,
       codeLanguages: languages
     }),
-    EditorView.lineWrapping
+    EditorView.lineWrapping,
+    customTheme
   ];
 
   const theme = isDark ? githubDark : githubLight;
