@@ -1,9 +1,13 @@
-import { Folder, FolderPlus, Inbox } from "lucide-react";
+import { Folder, FolderPlus, FileStack } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
+
+// 特殊 ID 表示「全部笔记」
+export const ALL_NOTES_FOLDER_ID = "__all__";
 
 interface FolderItem {
   id: string;
@@ -13,11 +17,15 @@ interface FolderItem {
 
 interface FolderTreeProps {
   folders?: FolderItem[];
-  selectedFolderId?: string;
-  onSelectFolder?: (folderId: string) => void;
+  selectedFolderId?: string | null;
+  totalNoteCount?: number;
+  onSelectFolder?: (folderId: string | null) => void;
 }
 
-export function FolderTree({ folders = [], selectedFolderId, onSelectFolder }: FolderTreeProps) {
+export function FolderTree({ folders = [], selectedFolderId, totalNoteCount = 0, onSelectFolder }: FolderTreeProps) {
+  // 是否选中「全部笔记」
+  const isAllSelected = selectedFolderId === null;
+
   return (
     <div className="flex h-full flex-col">
       {/* 顶部工具栏 */}
@@ -39,44 +47,61 @@ export function FolderTree({ folders = [], selectedFolderId, onSelectFolder }: F
 
       {/* 文件夹列表 */}
       <ScrollArea className="flex-1">
-        {folders.length === 0 ? (
+        <div className="space-y-0.5 p-2">
+          {/* 全部笔记 - 始终显示在最上方 */}
           <motion.div
-            className="empty-state text-muted-foreground flex h-full flex-col items-center justify-center p-6 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{
+              opacity: 1,
+              x: 0,
+              backgroundColor: getSelectionBgColor(isAllSelected)
+            }}
+            whileHover={{
+              backgroundColor: getHoverBgColor(isAllSelected)
+            }}
+            transition={{ duration: 0.2 }}
+            className={cn(
+              "sidebar-item flex cursor-pointer items-center gap-2 rounded-md px-3 py-2",
+              isAllSelected ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={() => onSelectFolder?.(null)}
           >
-            <Inbox className="empty-state-icon mb-3 h-10 w-10" />
-            <p className="text-sm font-medium">暂无文件夹</p>
-            <p className="text-tertiary-foreground mt-1 text-xs">点击 + 创建文件夹</p>
+            <FileStack className="h-4 w-4 shrink-0" />
+            <span className="truncate-text flex-1 text-sm">全部笔记</span>
+            <span className="text-tertiary-foreground text-xs tabular-nums">{totalNoteCount}</span>
           </motion.div>
-        ) : (
-          <div className="space-y-0.5 p-2">
-            {folders.map((folder, index) => {
-              const isSelected = selectedFolderId === folder.id;
-              return (
-                <motion.div
-                  key={folder.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2, delay: index * 0.03 }}
-                  whileHover={isSelected ? {} : { backgroundColor: "hsl(var(--muted))" }}
-                  className={cn(
-                    "sidebar-item flex cursor-pointer items-center gap-2 rounded-md px-3 py-2",
-                    isSelected ? "bg-selection text-foreground" : "text-muted-foreground hover:text-foreground"
-                  )}
-                  onClick={() => onSelectFolder?.(folder.id)}
-                >
-                  <Folder className="h-4 w-4 shrink-0" />
-                  <span className="truncate-text flex-1 text-sm">{folder.name}</span>
-                  {folder.noteCount !== undefined && (
-                    <span className="text-tertiary-foreground text-xs tabular-nums">{folder.noteCount}</span>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
+
+          {/* 文件夹列表 */}
+          {folders.map((folder, index) => {
+            const isSelected = selectedFolderId === folder.id;
+            return (
+              <motion.div
+                key={folder.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{
+                  opacity: 1,
+                  x: 0,
+                  backgroundColor: getSelectionBgColor(isSelected)
+                }}
+                whileHover={{
+                  backgroundColor: getHoverBgColor(isSelected)
+                }}
+                transition={{ duration: 0.2, delay: (index + 1) * 0.03 }}
+                className={cn(
+                  "sidebar-item flex cursor-pointer items-center gap-2 rounded-md px-3 py-2",
+                  isSelected ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+                )}
+                onClick={() => onSelectFolder?.(folder.id)}
+              >
+                <Folder className="h-4 w-4 shrink-0" />
+                <span className="truncate-text flex-1 text-sm">{folder.name}</span>
+                {folder.noteCount !== undefined && (
+                  <span className="text-tertiary-foreground text-xs tabular-nums">{folder.noteCount}</span>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
       </ScrollArea>
     </div>
   );

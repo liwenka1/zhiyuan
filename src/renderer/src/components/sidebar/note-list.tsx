@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 
 interface Note {
   id: string;
@@ -67,27 +68,55 @@ export function NoteList({ notes = [], selectedNoteId, onSelectNote }: NoteListP
                 <motion.div
                   key={note.id}
                   initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
+                  animate={{
+                    opacity: 1,
+                    x: 0,
+                    backgroundColor: getSelectionBgColor(isSelected)
+                  }}
+                  whileHover={{
+                    backgroundColor: getHoverBgColor(isSelected)
+                  }}
                   transition={{ duration: 0.2, delay: index * 0.03 }}
-                  whileHover={isSelected ? {} : { backgroundColor: "hsl(var(--muted))" }}
-                  className={cn("note-item cursor-pointer rounded-md px-3 py-3", isSelected && "bg-selection")}
+                  className="note-item cursor-pointer rounded-md px-3 py-3"
                   onClick={() => onSelectNote?.(note.id)}
                 >
                   {/* 标题行 */}
                   <div className="flex items-start gap-2">
                     {note.isPinned ? (
-                      <Pin className="text-highlight mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <Pin
+                        className={cn(
+                          "mt-0.5 h-3.5 w-3.5 shrink-0",
+                          isSelected ? "text-highlight" : "text-highlight/70"
+                        )}
+                      />
                     ) : (
-                      <FileText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0" />
+                      <FileText
+                        className={cn(
+                          "mt-0.5 h-3.5 w-3.5 shrink-0",
+                          isSelected ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      />
                     )}
-                    <h3 className="text-foreground truncate-text flex-1 text-sm leading-tight font-medium">
+                    <h3
+                      className={cn(
+                        "truncate-text flex-1 text-sm leading-tight font-medium",
+                        isSelected ? "text-foreground" : "text-foreground/90"
+                      )}
+                    >
                       {note.title}
                     </h3>
                   </div>
 
                   {/* 日期行 */}
                   {note.updatedAt && (
-                    <p className="text-muted-foreground mt-1.5 pl-[22px] text-[11px]">{note.updatedAt}</p>
+                    <p
+                      className={cn(
+                        "mt-1.5 pl-[22px] text-[11px]",
+                        isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
+                      )}
+                    >
+                      {note.updatedAt}
+                    </p>
                   )}
                 </motion.div>
               );
