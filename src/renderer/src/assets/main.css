@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 @import "./styles/variables.css";
 @import "./styles/base.css";
 @import "./styles/themes.css";

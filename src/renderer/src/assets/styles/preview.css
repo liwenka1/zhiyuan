@@ -1,0 +1,84 @@
+/* ==================== Markdown 预览样式 (使用 Tailwind Typography) ==================== */
+
+/* 
+ * 通过 CSS 变量自定义 prose 样式，使其与编辑器颜色一致
+ * prose 类由 @tailwindcss/typography 提供完善的排版系统
+ */
+
+.prose {
+  /* 使用编辑器的颜色变量 */
+  --tw-prose-body: hsl(var(--foreground));
+  --tw-prose-headings: hsl(var(--editor-heading));
+  --tw-prose-lead: hsl(var(--foreground));
+  --tw-prose-links: hsl(var(--editor-link));
+  --tw-prose-bold: hsl(var(--editor-strong));
+  --tw-prose-counters: hsl(var(--editor-list-marker));
+  --tw-prose-bullets: hsl(var(--editor-list-marker));
+  --tw-prose-hr: hsl(var(--editor-hr));
+  --tw-prose-quotes: hsl(var(--editor-quote));
+  --tw-prose-quote-borders: hsl(var(--border));
+  --tw-prose-captions: hsl(var(--muted-foreground));
+  --tw-prose-code: hsl(var(--editor-code));
+  --tw-prose-pre-code: hsl(var(--foreground));
+  --tw-prose-pre-bg: hsl(var(--editor-code-bg));
+  --tw-prose-th-borders: hsl(var(--border));
+  --tw-prose-td-borders: hsl(var(--border));
+
+  /* 深色模式（prose-invert 会自动使用这些） */
+  --tw-prose-invert-body: hsl(var(--foreground));
+  --tw-prose-invert-headings: hsl(var(--editor-heading));
+  --tw-prose-invert-lead: hsl(var(--foreground));
+  --tw-prose-invert-links: hsl(var(--editor-link));
+  --tw-prose-invert-bold: hsl(var(--editor-strong));
+  --tw-prose-invert-counters: hsl(var(--editor-list-marker));
+  --tw-prose-invert-bullets: hsl(var(--editor-list-marker));
+  --tw-prose-invert-hr: hsl(var(--editor-hr));
+  --tw-prose-invert-quotes: hsl(var(--editor-quote));
+  --tw-prose-invert-quote-borders: hsl(var(--border));
+  --tw-prose-invert-captions: hsl(var(--muted-foreground));
+  --tw-prose-invert-code: hsl(var(--editor-code));
+  --tw-prose-invert-pre-code: hsl(var(--foreground));
+  --tw-prose-invert-pre-bg: hsl(var(--editor-code-bg));
+  --tw-prose-invert-th-borders: hsl(var(--border));
+  --tw-prose-invert-td-borders: hsl(var(--border));
+}
+
+/* 额外的自定义样式 */
+.prose code {
+  background-color: hsl(var(--editor-code-bg));
+}
+
+.prose pre {
+  background-color: hsl(var(--editor-code-bg));
+}
+
+.prose pre code {
+  background-color: transparent;
+}
+
+/* 斜体颜色 */
+.prose em {
+  color: hsl(var(--editor-emphasis));
+}
+
+/* kbd 标签样式 */
+.prose kbd {
+  color: hsl(var(--editor-tag));
+  background-color: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+}
+
+/* 上下标 */
+.prose sup,
+.prose sub {
+  color: hsl(var(--editor-meta));
+}
+
+/* mark 高亮 */
+.prose mark {
+  background-color: hsl(45, 100%, 70%);
+}
+
+.dark .prose mark {
+  background-color: hsl(45, 100%, 40%);
+}
