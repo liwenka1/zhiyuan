@@ -94,7 +94,7 @@
 /* 删除线 */
 .cm-strikethrough {
   text-decoration: line-through;
-  color: hsl(var(--muted-foreground));
+  color: hsl(var(--editor-strikethrough));
 }
 
 /* 链接 */

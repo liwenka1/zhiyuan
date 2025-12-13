@@ -52,6 +52,8 @@
     --editor-string: 155 60% 35%; /* 字符串 */
     --editor-comment: 0 0% 55%; /* 注释 */
     --editor-meta: 0 0% 55%; /* 元信息 */
+    --editor-strikethrough: 0 0% 55%; /* 删除线 */
+    --editor-mark-bg: 45 100% 70%; /* 高亮标记背景 */
 
     /* 布局尺寸 */
     --sidebar-width: 8.625rem; /* 138px */
@@ -125,5 +127,7 @@
     --editor-string: 155 60% 60%; /* 字符串 */
     --editor-comment: 0 0% 55%; /* 注释 */
     --editor-meta: 0 0% 60%; /* 元信息 */
+    --editor-strikethrough: 0 0% 60%; /* 删除线 */
+    --editor-mark-bg: 45 100% 40%; /* 高亮标记背景 */
   }
 }
