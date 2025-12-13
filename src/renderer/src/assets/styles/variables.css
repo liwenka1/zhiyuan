@@ -36,6 +36,23 @@
     --link: 0 0% 23%;
     --highlight: 211 100% 50%;
 
+    /* 编辑器语法高亮颜色 */
+    --editor-heading: 0 0% 9%; /* 标题 */
+    --editor-strong: 0 0% 9%; /* 粗体 */
+    --editor-emphasis: 0 0% 25%; /* 斜体 */
+    --editor-link: 211 100% 50%; /* 链接 */
+    --editor-url: 0 0% 45%; /* URL */
+    --editor-code: 280 100% 40%; /* 行内代码 */
+    --editor-code-bg: 0 0% 96%; /* 代码背景 */
+    --editor-quote: 0 0% 45%; /* 引用 */
+    --editor-list-marker: 211 100% 50%; /* 列表标记 */
+    --editor-hr: 0 0% 80%; /* 分割线 */
+    --editor-tag: 155 60% 35%; /* HTML标签 */
+    --editor-attribute: 25 100% 45%; /* 属性 */
+    --editor-string: 155 60% 35%; /* 字符串 */
+    --editor-comment: 0 0% 55%; /* 注释 */
+    --editor-meta: 0 0% 55%; /* 元信息 */
+
     /* 布局尺寸 */
     --sidebar-width: 8.625rem; /* 138px */
     --sidebar-min-width: 8.625rem; /* 138px */
@@ -91,5 +108,22 @@
     --tertiary-foreground: 0 0% 50%;
     --link: 0 0% 78%;
     --highlight: 211 100% 55%;
+
+    /* 编辑器语法高亮颜色（深色） */
+    --editor-heading: 0 0% 95%; /* 标题 */
+    --editor-strong: 0 0% 95%; /* 粗体 */
+    --editor-emphasis: 0 0% 75%; /* 斜体 */
+    --editor-link: 211 100% 65%; /* 链接 */
+    --editor-url: 0 0% 65%; /* URL */
+    --editor-code: 280 100% 75%; /* 行内代码 */
+    --editor-code-bg: 210 14% 22%; /* 代码背景 */
+    --editor-quote: 0 0% 65%; /* 引用 */
+    --editor-list-marker: 211 100% 65%; /* 列表标记 */
+    --editor-hr: 0 0% 35%; /* 分割线 */
+    --editor-tag: 155 60% 60%; /* HTML标签 */
+    --editor-attribute: 25 100% 65%; /* 属性 */
+    --editor-string: 155 60% 60%; /* 字符串 */
+    --editor-comment: 0 0% 55%; /* 注释 */
+    --editor-meta: 0 0% 60%; /* 元信息 */
   }
 }

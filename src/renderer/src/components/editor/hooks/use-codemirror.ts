@@ -77,6 +77,12 @@ function createCustomTheme(isDark: boolean): Extension {
       },
       ".cm-tooltip .cm-tooltip-arrow:after": {
         borderTopColor: "hsl(var(--popover))"
+      },
+      // 行内代码背景色
+      ".cm-line .cm-monospace": {
+        backgroundColor: "hsl(var(--editor-code-bg))",
+        borderRadius: "3px",
+        padding: "2px 4px"
       }
     },
     { dark: isDark }
@@ -86,31 +92,59 @@ function createCustomTheme(isDark: boolean): Extension {
   // 编辑模式下保持统一字号，只用颜色和粗细区分元素
   const highlightStyle = HighlightStyle.define([
     // 标题：只用粗细区分，不改变字号
-    { tag: tags.heading1, fontWeight: "700", color: "hsl(var(--foreground))" },
-    { tag: tags.heading2, fontWeight: "700", color: "hsl(var(--foreground))" },
-    { tag: tags.heading3, fontWeight: "600", color: "hsl(var(--foreground))" },
-    { tag: tags.heading4, fontWeight: "600", color: "hsl(var(--foreground))" },
-    { tag: tags.heading5, fontWeight: "600", color: "hsl(var(--foreground))" },
-    { tag: tags.heading6, fontWeight: "600", color: "hsl(var(--foreground))" },
+    { tag: tags.heading1, fontWeight: "700", color: "hsl(var(--editor-heading))" },
+    { tag: tags.heading2, fontWeight: "700", color: "hsl(var(--editor-heading))" },
+    { tag: tags.heading3, fontWeight: "600", color: "hsl(var(--editor-heading))" },
+    { tag: tags.heading4, fontWeight: "600", color: "hsl(var(--editor-heading))" },
+    { tag: tags.heading5, fontWeight: "600", color: "hsl(var(--editor-heading))" },
+    { tag: tags.heading6, fontWeight: "600", color: "hsl(var(--editor-heading))" },
+
+    // 标题标记（# 符号）和通用标题标签
+    { tag: tags.processingInstruction, color: "hsl(var(--tertiary-foreground))" },
+    { tag: tags.heading, color: "hsl(var(--editor-heading))" },
+
     // 文本样式
-    { tag: tags.strong, fontWeight: "600", color: "hsl(var(--foreground))" },
-    { tag: tags.emphasis, fontStyle: "italic", color: "hsl(var(--foreground))" },
+    { tag: tags.strong, fontWeight: "600", color: "hsl(var(--editor-strong))" },
+    { tag: tags.emphasis, fontStyle: "italic", color: "hsl(var(--editor-emphasis))" },
     { tag: tags.strikethrough, textDecoration: "line-through", color: "hsl(var(--muted-foreground))" },
-    // 链接
-    { tag: tags.link, color: "hsl(var(--link))", textDecoration: "underline" },
-    { tag: tags.url, color: "hsl(var(--link))" },
-    // 代码
-    { tag: tags.monospace, fontFamily: "ui-monospace, monospace", color: "hsl(var(--foreground))" },
-    // 引用和列表
-    { tag: tags.quote, color: "hsl(var(--muted-foreground))", fontStyle: "italic" },
-    { tag: tags.list, color: "hsl(var(--foreground))" },
-    // 其他
-    { tag: tags.keyword, color: "hsl(var(--primary))", fontWeight: "500" },
-    { tag: tags.comment, color: "hsl(var(--muted-foreground))", fontStyle: "italic" },
-    { tag: tags.meta, color: "hsl(var(--muted-foreground))" },
-    { tag: tags.invalid, color: "hsl(var(--destructive))" },
+
+    // 链接和URL
+    { tag: tags.link, color: "hsl(var(--editor-link))", textDecoration: "underline" },
+    { tag: tags.url, color: "hsl(var(--editor-url))" },
+
+    // 代码（行内）- 添加背景色
+    { tag: tags.monospace, fontFamily: "ui-monospace, monospace", color: "hsl(var(--editor-code))" },
+
+    // 引用
+    { tag: tags.quote, color: "hsl(var(--editor-quote))", fontStyle: "italic" },
+
+    // 列表标记
+    { tag: tags.list, color: "hsl(var(--editor-list-marker))" },
+
+    // 分割线
+    { tag: tags.contentSeparator, color: "hsl(var(--editor-hr))" },
+
+    // HTML标签和属性
+    { tag: tags.tagName, color: "hsl(var(--editor-tag))" },
+    { tag: tags.attributeName, color: "hsl(var(--editor-attribute))" },
+    { tag: tags.attributeValue, color: "hsl(var(--editor-string))" },
+
+    // 字符串
+    { tag: tags.string, color: "hsl(var(--editor-string))" },
+
+    // 关键字
+    { tag: tags.keyword, color: "hsl(var(--editor-link))", fontWeight: "500" },
+
+    // 注释和元信息
+    { tag: tags.comment, color: "hsl(var(--editor-comment))", fontStyle: "italic" },
+    { tag: tags.meta, color: "hsl(var(--editor-meta))" },
+
+    // 标点符号
     { tag: tags.punctuation, color: "hsl(var(--tertiary-foreground))" },
-    { tag: tags.contentSeparator, color: "hsl(var(--divider))" }
+    { tag: tags.bracket, color: "hsl(var(--tertiary-foreground))" },
+
+    // 错误
+    { tag: tags.invalid, color: "hsl(var(--destructive))", textDecoration: "underline wavy" }
   ]);
 
   return [baseTheme, syntaxHighlighting(highlightStyle)];
