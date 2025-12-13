@@ -2,6 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
+import { themeManager } from "./theme";
+import { registerThemeHandlers } from "./ipc/theme-handler";
 
 function createWindow(): void {
   // Create the browser window.
@@ -50,6 +52,12 @@ app.whenReady().then(() => {
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window);
   });
+
+  // 初始化主题管理器
+  themeManager.init();
+
+  // 注册主题相关的 IPC 处理器
+  registerThemeHandlers();
 
   // IPC test
   ipcMain.on("ping", () => console.log("pong"));
