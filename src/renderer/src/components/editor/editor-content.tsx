@@ -1,6 +1,7 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { useCodemirrorExtensions } from "./hooks/use-codemirror";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useThemeStore } from "@/stores/use-theme-store";
 
 interface EditorContentProps {
   content: string;
@@ -8,14 +9,15 @@ interface EditorContentProps {
 }
 
 export function EditorContent({ content, onChange }: EditorContentProps) {
-  const { extensions, theme } = useCodemirrorExtensions({ isDark: false });
+  const theme = useThemeStore((state) => state.theme);
+  const { extensions, theme: editorTheme } = useCodemirrorExtensions({ isDark: theme === "dark" });
 
   return (
     <ScrollArea className="h-full">
       <CodeMirror
         value={content}
         height="auto"
-        theme={theme}
+        theme={editorTheme}
         extensions={extensions}
         onChange={onChange}
         placeholder="开始编写你的笔记..."
