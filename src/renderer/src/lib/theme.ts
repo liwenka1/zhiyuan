@@ -46,7 +46,19 @@ export const ThemeColors = {
   divider: "--divider",
   tertiaryForeground: "--tertiary-foreground",
   link: "--link",
-  highlight: "--highlight"
+  highlight: "--highlight",
+
+  // 新增：语义化颜色变量
+  // 编辑器专用颜色
+  editorTitle: "--editor-title",
+  editorLink: "--editor-link",
+  editorList: "--editor-list",
+
+  // 预览专用颜色
+  previewTitle: "--preview-title",
+  previewLink: "--preview-link",
+  previewList: "--preview-list",
+  previewCodeBg: "--preview-code-bg"
 } as const;
 
 /**

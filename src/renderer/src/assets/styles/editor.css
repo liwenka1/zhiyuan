@@ -28,7 +28,7 @@
   font-style: normal;
 }
 
-/* 活动行高亮 - 禁用以保持简洁 */
+/* 活动行高亮 */
 .cm-activeLine {
   background-color: transparent;
 }
@@ -48,7 +48,7 @@
   border-left-width: 1px;
 }
 
-/* 行号（如果启用） */
+/* 行号 */
 .cm-lineNumbers {
   color: hsl(var(--muted-foreground));
   font-size: 12px;
@@ -72,36 +72,21 @@
   border-radius: 2px;
 }
 
-/* ==================== Markdown 语法增强 ==================== */
+/* Markdown 语法增强 */
 
-/* 标题 - 只用粗细区分，不改变字号（编辑模式） */
+/* 标题 */
 .cm-header {
-  color: hsl(var(--editor-heading));
-}
-
-/* 粗体 */
-.cm-strong {
-  font-weight: 600;
-  color: hsl(var(--editor-strong));
-}
-
-/* 斜体 */
-.cm-em {
-  font-style: italic;
-  color: hsl(var(--editor-emphasis));
+  color: hsl(var(--editor-title));
 }
 
 /* 删除线 */
 .cm-strikethrough {
-  text-decoration: line-through;
   color: hsl(var(--editor-strikethrough));
 }
 
 /* 链接 */
 .cm-link {
   color: hsl(var(--editor-link));
-  text-decoration: underline;
-  text-underline-offset: 2px;
 }
 
 .cm-link:hover {
@@ -117,13 +102,11 @@
 /* 引用块 */
 .cm-quote {
   color: hsl(var(--editor-quote));
-  font-style: italic;
 }
 
 /* 列表标记 */
 .cm-list {
-  color: hsl(var(--editor-list-marker));
-  font-weight: 600;
+  color: hsl(var(--editor-list));
 }
 
 /* 分割线 */
@@ -146,7 +129,7 @@
   color: hsl(var(--editor-attribute));
 }
 
-/* ==================== 代码块样式 ==================== */
+/* 代码块样式 */
 
 /* 行内代码 */
 .cm-monospace,
@@ -165,7 +148,7 @@
   border-radius: 6px;
 }
 
-/* ==================== 特殊元素 ==================== */
+/* 特殊元素 */
 
 /* 脚注引用 */
 .cm-footref {
@@ -188,21 +171,18 @@
   color: hsl(var(--tertiary-foreground));
 }
 
-/* ==================== 性能优化 ==================== */
+/* 性能优化 */
 
-/* 平滑过渡 */
 .cm-line {
   transition: background-color 0.15s ease;
 }
 
-/* 防止布局抖动 */
 .cm-editor .cm-content {
   contain: layout style;
 }
 
-/* ==================== 可访问性 ==================== */
+/* 可访问性 */
 
-/* 增强对比度模式 */
 @media (prefers-contrast: high) {
   .cm-editor {
     --editor-emphasis: var(--foreground);

@@ -37,38 +37,49 @@
     --highlight: 211 100% 50%;
 
     /* 编辑器语法高亮颜色 */
-    --editor-heading: 0 0% 9%; /* 标题 */
-    --editor-strong: 0 0% 9%; /* 粗体 */
-    --editor-emphasis: 0 0% 25%; /* 斜体 */
-    --editor-link: 211 100% 50%; /* 链接 */
-    --editor-url: 0 0% 45%; /* URL */
-    --editor-code: 280 100% 40%; /* 行内代码 */
-    --editor-code-bg: 0 0% 96%; /* 代码背景 */
-    --editor-quote: 0 0% 45%; /* 引用 */
-    --editor-list-marker: 211 100% 50%; /* 列表标记 */
-    --editor-hr: 0 0% 80%; /* 分割线 */
-    --editor-tag: 155 60% 35%; /* HTML标签 */
-    --editor-attribute: 25 100% 45%; /* 属性 */
-    --editor-string: 155 60% 35%; /* 字符串 */
-    --editor-comment: 0 0% 55%; /* 注释 */
-    --editor-meta: 0 0% 55%; /* 元信息 */
-    --editor-strikethrough: 0 0% 55%; /* 删除线 */
-    --editor-mark-bg: 45 100% 70%; /* 高亮标记背景 */
+    --editor-heading: 0 0% 9%;
+    --editor-strong: 0 0% 9%;
+    --editor-emphasis: 0 0% 25%;
+    --editor-link: 211 100% 50%;
+    --editor-url: 0 0% 45%;
+    --editor-code: 280 100% 40%;
+    --editor-code-bg: 0 0% 96%;
+    --editor-quote: 0 0% 45%;
+    --editor-list-marker: 211 100% 50%;
+    --editor-hr: 0 0% 80%;
+    --editor-tag: 155 60% 35%;
+    --editor-attribute: 25 100% 45%;
+    --editor-string: 155 60% 35%;
+    --editor-comment: 0 0% 55%;
+    --editor-meta: 0 0% 55%;
+    --editor-strikethrough: 0 0% 55%;
+    --editor-mark-bg: 45 100% 70%;
+
+    /* 编辑器专用颜色 */
+    --editor-title: 262 61% 45%;
+    --editor-link: 171 81% 46%;
+    --editor-list: 36 39% 33%;
+
+    /* 预览专用颜色 */
+    --preview-title: 0 0% 26%;
+    --preview-link: 207 100% 44%;
+    --preview-list: 0 0% 26%;
+    --preview-code-bg: 0 0% 96%;
 
     /* 布局尺寸 */
-    --sidebar-width: 8.625rem; /* 138px */
-    --sidebar-min-width: 8.625rem; /* 138px */
-    --sidebar-max-width: 17.5rem; /* 280px */
-    --notelist-width: 17.5rem; /* 280px */
-    --notelist-max-width: 37.5rem; /* 600px */
-    --titlebar-height: 3.25rem; /* 52px */
+    --sidebar-width: 8.625rem;
+    --sidebar-min-width: 8.625rem;
+    --sidebar-max-width: 17.5rem;
+    --notelist-width: 17.5rem;
+    --notelist-max-width: 37.5rem;
+    --titlebar-height: 3.25rem;
 
     /* 编辑器 */
     --editor-font: "SF Pro Text", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    --editor-font-size: 1rem; /* 16px */
+    --editor-font-size: 1rem;
     --editor-line-height: 1.3;
-    --editor-letter-spacing: 0.03125rem; /* 0.5px */
-    --editor-padding: 1rem; /* 16px */
+    --editor-letter-spacing: 0.03125rem;
+    --editor-padding: 1rem;
 
     /* 圆角 */
     --radius: 0.5rem;
@@ -111,23 +122,34 @@
     --link: 0 0% 78%;
     --highlight: 211 100% 55%;
 
-    /* 编辑器语法高亮颜色（深色） */
-    --editor-heading: 0 0% 95%; /* 标题 */
-    --editor-strong: 0 0% 95%; /* 粗体 */
-    --editor-emphasis: 0 0% 75%; /* 斜体 */
-    --editor-link: 211 100% 65%; /* 链接 */
-    --editor-url: 0 0% 65%; /* URL */
-    --editor-code: 280 100% 75%; /* 行内代码 */
-    --editor-code-bg: 210 14% 22%; /* 代码背景 */
-    --editor-quote: 0 0% 65%; /* 引用 */
-    --editor-list-marker: 211 100% 65%; /* 列表标记 */
-    --editor-hr: 0 0% 35%; /* 分割线 */
-    --editor-tag: 155 60% 60%; /* HTML标签 */
-    --editor-attribute: 25 100% 65%; /* 属性 */
-    --editor-string: 155 60% 60%; /* 字符串 */
-    --editor-comment: 0 0% 55%; /* 注释 */
-    --editor-meta: 0 0% 60%; /* 元信息 */
-    --editor-strikethrough: 0 0% 60%; /* 删除线 */
-    --editor-mark-bg: 45 100% 40%; /* 高亮标记背景 */
+    /* 编辑器语法高亮颜色 */
+    --editor-heading: 0 0% 95%;
+    --editor-strong: 0 0% 95%;
+    --editor-emphasis: 0 0% 75%;
+    --editor-link: 211 100% 65%;
+    --editor-url: 0 0% 65%;
+    --editor-code: 280 100% 75%;
+    --editor-code-bg: 210 14% 22%;
+    --editor-quote: 0 0% 65%;
+    --editor-list-marker: 211 100% 65%;
+    --editor-hr: 0 0% 35%;
+    --editor-tag: 155 60% 60%;
+    --editor-attribute: 25 100% 65%;
+    --editor-string: 155 60% 60%;
+    --editor-comment: 0 0% 55%;
+    --editor-meta: 0 0% 60%;
+    --editor-strikethrough: 0 0% 60%;
+    --editor-mark-bg: 45 100% 40%;
+
+    /* 编辑器专用颜色 */
+    --editor-title: 262 82% 65%;
+    --editor-link: 171 100% 69%;
+    --editor-list: 0 0% 72%;
+
+    /* 预览专用颜色 */
+    --preview-title: 0 0% 90%;
+    --preview-link: 206 100% 64%;
+    --preview-list: 0 0% 90%;
+    --preview-code-bg: 210 14% 22%;
   }
 }
