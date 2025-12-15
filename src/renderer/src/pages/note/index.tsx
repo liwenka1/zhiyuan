@@ -4,13 +4,14 @@ import { FolderTree } from "@/components/sidebar/folder-tree";
 import { NoteList } from "@/components/sidebar/note-list";
 import { EditorArea } from "@/components/editor/editor-area";
 import { useNoteStore } from "@/stores/use-note-store";
+import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { useViewStore } from "@/stores/use-view-store";
 import { PresentationMode } from "./modes/presentation-mode";
 
 /**
  * 笔记页面
  * 负责：
- * - 初始化演示数据
+ * - 初始化演示数据或从文件系统加载
  * - 管理页面级模式切换（note / presentation）
  * - 笔记模式：三栏布局（文件夹树 + 笔记列表 + 编辑区）
  * - 演示模式：全屏幻灯片
@@ -18,6 +19,8 @@ import { PresentationMode } from "./modes/presentation-mode";
 export function NotePage() {
   const viewMode = useViewStore((state) => state.viewMode);
   const initWithDemoData = useNoteStore((state) => state.initWithDemoData);
+  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
+  const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
 
   // 状态和方法
   const folders = useNoteStore((state) => state.folders);
@@ -31,10 +34,32 @@ export function NotePage() {
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
   const getSelectedNote = useNoteStore((state) => state.getSelectedNote);
 
-  // 初始化演示数据
+  // 初始化：检查是否有保存的工作区，或加载演示数据
   useEffect(() => {
-    initWithDemoData();
-  }, [initWithDemoData]);
+    const initWorkspace = async () => {
+      try {
+        // 尝试获取上次打开的工作区
+        const savedWorkspacePath = await window.api.workspace.getCurrent();
+
+        if (savedWorkspacePath) {
+          // 有保存的工作区，加载它
+          setWorkspacePath(savedWorkspacePath);
+          const data = await window.api.workspace.scan(savedWorkspacePath);
+          loadFromFileSystem(data);
+          console.log("已加载工作区:", savedWorkspacePath);
+        } else {
+          // 没有保存的工作区，加载演示数据
+          initWithDemoData();
+        }
+      } catch (error) {
+        console.error("初始化工作区失败:", error);
+        // 出错时使用演示数据
+        initWithDemoData();
+      }
+    };
+
+    initWorkspace();
+  }, [initWithDemoData, loadFromFileSystem, setWorkspacePath]);
 
   // 幻灯片模式：全屏展示
   if (viewMode === "presentation") {
