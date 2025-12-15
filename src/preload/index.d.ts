@@ -38,6 +38,8 @@ export interface WorkspaceAPI {
     }>;
   }>;
   getRecent: () => Promise<string[]>;
+  createDefault: () => Promise<string>;
+  checkDefaultExists: () => Promise<boolean>;
 }
 
 // 文件 API 接口
@@ -57,12 +59,19 @@ export interface FolderAPI {
   delete: (folderPath: string) => Promise<void>;
 }
 
+// Shell API 接口
+export interface ShellAPI {
+  showItemInFolder: (fullPath: string) => Promise<void>;
+  openPath: (fullPath: string) => Promise<string>;
+}
+
 // 扩展的 API 接口
 export interface API {
   theme: ThemeAPI;
   workspace: WorkspaceAPI;
   file: FileAPI;
   folder: FolderAPI;
+  shell: ShellAPI;
 }
 
 declare global {

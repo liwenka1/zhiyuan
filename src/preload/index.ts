@@ -64,7 +64,17 @@ const api = {
     /**
      * 获取最近打开的工作区
      */
-    getRecent: (): Promise<string[]> => ipcRenderer.invoke("workspace:getRecent")
+    getRecent: (): Promise<string[]> => ipcRenderer.invoke("workspace:getRecent"),
+
+    /**
+     * 创建默认工作区
+     */
+    createDefault: (): Promise<string> => ipcRenderer.invoke("workspace:createDefault"),
+
+    /**
+     * 检查默认工作区是否存在
+     */
+    checkDefaultExists: (): Promise<boolean> => ipcRenderer.invoke("workspace:checkDefaultExists")
   },
 
   file: {
@@ -139,6 +149,18 @@ const api = {
      * 删除文件夹
      */
     delete: (folderPath: string): Promise<void> => ipcRenderer.invoke("folder:delete", folderPath)
+  },
+
+  shell: {
+    /**
+     * 在文件管理器中显示文件
+     */
+    showItemInFolder: (fullPath: string): Promise<void> => ipcRenderer.invoke("shell:showItemInFolder", fullPath),
+
+    /**
+     * 在文件管理器中打开文件夹
+     */
+    openPath: (fullPath: string): Promise<string> => ipcRenderer.invoke("shell:openPath", fullPath)
   }
 };
 

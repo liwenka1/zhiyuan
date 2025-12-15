@@ -2,6 +2,8 @@ import { dialog, BrowserWindow } from "electron";
 import fs from "fs";
 import path from "path";
 import { configManager } from "../config";
+import { DEFAULT_WORKSPACE_CONFIG } from "../constants/default-config";
+import { USER_GUIDE_CONTENT } from "../constants/guide-template";
 
 export interface FolderInfo {
   id: string;
@@ -153,5 +155,51 @@ export const workspaceManager = {
    */
   getRecentWorkspaces(): string[] {
     return configManager.getRecentWorkspaces();
+  },
+
+  /**
+   * 创建默认工作区
+   * 用于首次启动应用时初始化工作环境
+   */
+  async createDefaultWorkspace(): Promise<string> {
+    try {
+      const workspacePath = DEFAULT_WORKSPACE_CONFIG.WORKSPACE_PATH;
+      const defaultFolderPath = path.join(workspacePath, DEFAULT_WORKSPACE_CONFIG.DEFAULT_FOLDER_NAME);
+      const guideFilePath = path.join(defaultFolderPath, DEFAULT_WORKSPACE_CONFIG.GUIDE_FILE_NAME);
+
+      // 1. 创建工作区根目录
+      await fs.promises.mkdir(workspacePath, { recursive: true });
+      console.log("已创建工作区目录:", workspacePath);
+
+      // 2. 创建默认文件夹
+      await fs.promises.mkdir(defaultFolderPath, { recursive: true });
+      console.log("已创建默认文件夹:", defaultFolderPath);
+
+      // 3. 创建用户指南文件
+      await fs.promises.writeFile(guideFilePath, USER_GUIDE_CONTENT, "utf-8");
+      console.log("已创建用户指南:", guideFilePath);
+
+      // 4. 保存工作区路径到配置
+      configManager.setWorkspacePath(workspacePath);
+      console.log("已保存工作区配置");
+
+      return workspacePath;
+    } catch (error) {
+      console.error("创建默认工作区失败:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * 检查默认工作区是否存在
+   */
+  async checkDefaultWorkspaceExists(): Promise<boolean> {
+    try {
+      const workspacePath = DEFAULT_WORKSPACE_CONFIG.WORKSPACE_PATH;
+      await fs.promises.access(workspacePath);
+      return true;
+    } catch {
+      return false;
+    }
   }
 };

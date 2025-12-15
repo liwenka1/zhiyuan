@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { ipcMain, shell } from "electron";
 import { workspaceManager } from "../workspace";
 import { fileSystem } from "../file-system";
 import { fileWatcher } from "../file-watcher";
@@ -32,6 +32,21 @@ export function registerWorkspaceHandlers(): void {
     return workspaceManager.getRecentWorkspaces();
   });
 
+  // 创建默认工作区
+  ipcMain.handle("workspace:createDefault", async () => {
+    const workspacePath = await workspaceManager.createDefaultWorkspace();
+    if (workspacePath) {
+      // 启动文件监听
+      fileWatcher.startWatching(workspacePath);
+    }
+    return workspacePath;
+  });
+
+  // 检查默认工作区是否存在
+  ipcMain.handle("workspace:checkDefaultExists", () => {
+    return workspaceManager.checkDefaultWorkspaceExists();
+  });
+
   // 读取文件
   ipcMain.handle("file:read", async (_, filePath: string) => {
     return await fileSystem.readFile(filePath);
@@ -60,6 +75,16 @@ export function registerWorkspaceHandlers(): void {
   // 删除文件夹
   ipcMain.handle("folder:delete", async (_, folderPath: string) => {
     return await fileSystem.deleteFolder(folderPath);
+  });
+
+  // 在文件管理器中显示文件
+  ipcMain.handle("shell:showItemInFolder", (_, fullPath: string) => {
+    shell.showItemInFolder(fullPath);
+  });
+
+  // 在文件管理器中打开文件夹
+  ipcMain.handle("shell:openPath", async (_, fullPath: string) => {
+    return await shell.openPath(fullPath);
   });
 
   console.log("工作区 IPC 处理器已注册");
