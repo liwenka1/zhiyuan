@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { ThemeToggle } from "@/components/theme";
+import { WorkspaceSelector } from "@/components/workspace/workspace-selector";
 
 // 特殊 ID 表示「全部笔记」
 export const ALL_NOTES_FOLDER_ID = "__all__";
@@ -29,6 +30,12 @@ export function FolderTree({ folders = [], selectedFolderId, totalNoteCount = 0,
 
   return (
     <div className="flex h-full flex-col">
+      {/* 工作区选择器 */}
+      <WorkspaceSelector />
+
+      {/* 分隔线 */}
+      <div className="border-divider border-b" />
+
       {/* 顶部工具栏 */}
       <div className="flex h-12 shrink-0 items-center justify-between px-3">
         <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">文件夹</span>
