@@ -9,6 +9,7 @@ interface NoteStore {
   selectedFolderId: string | null;
   selectedNoteId: string | null;
   editorContent: string;
+  isLoadingFromFileSystem: boolean; // 是否从文件系统加载
 
   // 操作方法 - 文件夹
   setFolders: (folders: Folder[]) => void;
@@ -23,6 +24,10 @@ interface NoteStore {
   updateNoteContent: (content: string) => void;
   deleteNote: (noteId: string) => void;
 
+  // 文件系统相关
+  loadFromFileSystem: (data: { folders: Folder[]; notes: Note[] }) => void;
+  saveNoteToFileSystem: (noteId: string, content: string) => Promise<void>;
+
   // 工具方法
   getSelectedNote: () => Note | undefined;
   getNotesByFolder: (folderId: string) => Note[];
@@ -36,6 +41,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   selectedFolderId: null,
   selectedNoteId: null,
   editorContent: "",
+  isLoadingFromFileSystem: false,
 
   // 文件夹操作
   setFolders: (folders) => set({ folders }),
@@ -103,6 +109,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const { selectedNoteId } = get();
     if (!selectedNoteId) return;
 
+    // 更新内存中的内容
     set((state) => ({
       editorContent: content,
       notes: state.notes.map((note) =>
@@ -115,6 +122,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
           : note
       )
     }));
+
+    // 如果笔记有文件路径，立即保存到文件系统
+    const note = get().notes.find((n) => n.id === selectedNoteId);
+    if (note?.filePath) {
+      get().saveNoteToFileSystem(selectedNoteId, content);
+    }
   },
 
   deleteNote: (noteId) => {
@@ -135,6 +148,31 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   getNotesByFolder: (folderId) => {
     const { notes } = get();
     return notes.filter((n) => n.folderId === folderId);
+  },
+
+  // 从文件系统加载数据
+  loadFromFileSystem: (data) => {
+    set({
+      folders: data.folders,
+      notes: data.notes,
+      selectedFolderId: null,
+      selectedNoteId: null,
+      editorContent: "",
+      isLoadingFromFileSystem: true
+    });
+  },
+
+  // 保存笔记到文件系统
+  saveNoteToFileSystem: async (noteId, content) => {
+    const note = get().notes.find((n) => n.id === noteId);
+    if (!note?.filePath) return;
+
+    try {
+      await window.api.file.write(note.filePath, content);
+      console.log("笔记已保存:", note.filePath);
+    } catch (error) {
+      console.error("保存笔记失败:", error);
+    }
   },
 
   initWithDemoData: () => {
