@@ -20,9 +20,49 @@ export interface ThemeAPI {
   onChanged: (callback: (theme: Theme) => void) => () => void;
 }
 
+// 工作区 API 接口
+export interface WorkspaceAPI {
+  select: () => Promise<string | null>;
+  getCurrent: () => Promise<string | null>;
+  scan: (workspacePath: string) => Promise<{
+    folders: Array<{ id: string; name: string; path: string; noteCount: number }>;
+    notes: Array<{
+      id: string;
+      title: string;
+      content: string;
+      fileName: string;
+      filePath: string;
+      folderId: string | null;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  }>;
+  getRecent: () => Promise<string[]>;
+}
+
+// 文件 API 接口
+export interface FileAPI {
+  read: (filePath: string) => Promise<{ content: string; mtime: number }>;
+  write: (filePath: string, content: string) => Promise<{ mtime: number }>;
+  create: (filePath: string, content: string) => Promise<void>;
+  delete: (filePath: string) => Promise<void>;
+  onChanged: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
+  onAdded: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
+  onDeleted: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
+}
+
+// 文件夹 API 接口
+export interface FolderAPI {
+  create: (folderPath: string) => Promise<void>;
+  delete: (folderPath: string) => Promise<void>;
+}
+
 // 扩展的 API 接口
 export interface API {
   theme: ThemeAPI;
+  workspace: WorkspaceAPI;
+  file: FileAPI;
+  folder: FolderAPI;
 }
 
 declare global {

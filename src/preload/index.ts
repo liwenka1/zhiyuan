@@ -29,6 +29,116 @@ const api = {
         ipcRenderer.removeListener("theme:changed", listener);
       };
     }
+  },
+
+  workspace: {
+    /**
+     * 选择工作区文件夹
+     */
+    select: (): Promise<string | null> => ipcRenderer.invoke("workspace:select"),
+
+    /**
+     * 获取当前工作区路径
+     */
+    getCurrent: (): Promise<string | null> => ipcRenderer.invoke("workspace:getCurrent"),
+
+    /**
+     * 扫描工作区
+     */
+    scan: (
+      workspacePath: string
+    ): Promise<{
+      folders: Array<{ id: string; name: string; path: string; noteCount: number }>;
+      notes: Array<{
+        id: string;
+        title: string;
+        content: string;
+        fileName: string;
+        filePath: string;
+        folderId: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }> => ipcRenderer.invoke("workspace:scan", workspacePath),
+
+    /**
+     * 获取最近打开的工作区
+     */
+    getRecent: (): Promise<string[]> => ipcRenderer.invoke("workspace:getRecent")
+  },
+
+  file: {
+    /**
+     * 读取文件
+     */
+    read: (filePath: string): Promise<{ content: string; mtime: number }> => ipcRenderer.invoke("file:read", filePath),
+
+    /**
+     * 写入文件
+     */
+    write: (filePath: string, content: string): Promise<{ mtime: number }> =>
+      ipcRenderer.invoke("file:write", filePath, content),
+
+    /**
+     * 创建文件
+     */
+    create: (filePath: string, content: string): Promise<void> => ipcRenderer.invoke("file:create", filePath, content),
+
+    /**
+     * 删除文件
+     */
+    delete: (filePath: string): Promise<void> => ipcRenderer.invoke("file:delete", filePath),
+
+    /**
+     * 监听文件变化
+     */
+    onChanged: (callback: (data: { filePath: string; fullPath: string }) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { filePath: string; fullPath: string }) => {
+        callback(data);
+      };
+      ipcRenderer.on("file:changed", listener);
+      return () => {
+        ipcRenderer.removeListener("file:changed", listener);
+      };
+    },
+
+    /**
+     * 监听文件添加
+     */
+    onAdded: (callback: (data: { filePath: string; fullPath: string }) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { filePath: string; fullPath: string }) => {
+        callback(data);
+      };
+      ipcRenderer.on("file:added", listener);
+      return () => {
+        ipcRenderer.removeListener("file:added", listener);
+      };
+    },
+
+    /**
+     * 监听文件删除
+     */
+    onDeleted: (callback: (data: { filePath: string; fullPath: string }) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { filePath: string; fullPath: string }) => {
+        callback(data);
+      };
+      ipcRenderer.on("file:deleted", listener);
+      return () => {
+        ipcRenderer.removeListener("file:deleted", listener);
+      };
+    }
+  },
+
+  folder: {
+    /**
+     * 创建文件夹
+     */
+    create: (folderPath: string): Promise<void> => ipcRenderer.invoke("folder:create", folderPath),
+
+    /**
+     * 删除文件夹
+     */
+    delete: (folderPath: string): Promise<void> => ipcRenderer.invoke("folder:delete", folderPath)
   }
 };
 
