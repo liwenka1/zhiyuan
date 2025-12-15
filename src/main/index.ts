@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { themeManager } from "./theme";
 import { registerThemeHandlers } from "./ipc/theme-handler";
+import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
 
 function createWindow(): void {
   // Create the browser window.
@@ -16,7 +17,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
-      preload: join(__dirname, "../preload/index.js"),
+      preload: join(__dirname, "../preload/index.cjs"),
       sandbox: false
     }
   });
@@ -58,6 +59,9 @@ app.whenReady().then(() => {
 
   // 注册主题相关的 IPC 处理器
   registerThemeHandlers();
+
+  // 注册工作区和文件系统相关的 IPC 处理器
+  registerWorkspaceHandlers();
 
   // IPC test
   ipcMain.on("ping", () => console.log("pong"));
