@@ -5,10 +5,25 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        output: {
+          format: "es" // 输出 ESM 格式
+        }
+      }
+    }
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
+    build: {
+      rollupOptions: {
+        output: {
+          format: "cjs", // CommonJS 格式
+          entryFileNames: "[name].cjs" // 输出 .cjs 文件
+        }
+      }
+    }
   },
   renderer: {
     resolve: {
