@@ -14,13 +14,13 @@ interface NoteStore {
   // 操作方法 - 文件夹
   setFolders: (folders: Folder[]) => void;
   selectFolder: (folderId: string | null) => void;
-  createFolder: (name: string) => void;
+  createFolder: (name: string) => Promise<void>;
   deleteFolder: (folderId: string) => void;
 
   // 操作方法 - 笔记
   setNotes: (notes: Note[]) => void;
   selectNote: (noteId: string) => void;
-  createNote: (folderId?: string) => void;
+  createNote: (folderId?: string) => Promise<void>;
   updateNoteContent: (content: string) => void;
   deleteNote: (noteId: string) => void;
 
@@ -54,17 +54,38 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     });
   },
 
-  createFolder: (name) => {
-    const newFolder: Folder = {
-      id: Date.now().toString(),
-      name,
-      noteCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    set((state) => ({
-      folders: [...state.folders, newFolder]
-    }));
+  createFolder: async (name) => {
+    // 从工作区 store 获取当前工作区路径
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+
+    if (!workspacePath) {
+      console.error("没有工作区路径，无法创建文件夹");
+      return;
+    }
+
+    try {
+      const folderPath = `${workspacePath}/${name}`;
+
+      // 在文件系统中创建文件夹
+      await window.api.folder.create(folderPath);
+
+      const newFolder: Folder = {
+        id: name, // 使用文件夹名作为 ID
+        name,
+        path: folderPath,
+        noteCount: 0,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      set((state) => ({
+        folders: [...state.folders, newFolder]
+      }));
+
+      console.log("文件夹已创建:", folderPath);
+    } catch (error) {
+      console.error("创建文件夹失败:", error);
+    }
   },
 
   deleteFolder: (folderId) => {
@@ -88,21 +109,60 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
   },
 
-  createNote: (folderId) => {
-    const newNote: Note = {
-      id: Date.now().toString(),
-      title: "无标题笔记",
-      content: "# 无标题笔记\n\n开始写作...",
-      folderId: folderId || get().selectedFolderId || undefined,
-      isPinned: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    set((state) => ({
-      notes: [...state.notes, newNote],
-      selectedNoteId: newNote.id,
-      editorContent: newNote.content
-    }));
+  createNote: async (folderId) => {
+    // 从工作区 store 获取当前工作区路径
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+
+    if (!workspacePath) {
+      console.error("没有工作区路径，无法创建笔记");
+      return;
+    }
+
+    try {
+      const targetFolderId = folderId || get().selectedFolderId || null;
+      const fileName = `无标题笔记_${Date.now()}.md`;
+      const content = "# 无标题笔记\n\n开始写作...";
+
+      // 确定文件路径
+      let filePath: string;
+      if (targetFolderId) {
+        // 在指定文件夹中创建
+        const folder = get().folders.find((f) => f.id === targetFolderId);
+        if (folder?.path) {
+          filePath = `${folder.path}/${fileName}`;
+        } else {
+          filePath = `${workspacePath}/${targetFolderId}/${fileName}`;
+        }
+      } else {
+        // 在工作区根目录创建
+        filePath = `${workspacePath}/${fileName}`;
+      }
+
+      // 在文件系统中创建文件
+      await window.api.file.create(filePath, content);
+
+      const newNote: Note = {
+        id: filePath.replace(workspacePath + "/", ""), // 使用相对路径作为 ID
+        title: "无标题笔记",
+        content,
+        fileName,
+        filePath,
+        folderId: targetFolderId || undefined,
+        isPinned: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      set((state) => ({
+        notes: [...state.notes, newNote],
+        selectedNoteId: newNote.id,
+        editorContent: newNote.content
+      }));
+
+      console.log("笔记已创建:", filePath);
+    } catch (error) {
+      console.error("创建笔记失败:", error);
+    }
   },
 
   updateNoteContent: (content) => {
