@@ -4,6 +4,7 @@
 export interface Folder {
   id: string;
   name: string;
+  path?: string; // 文件夹路径
   noteCount?: number;
   createdAt?: string;
   updatedAt?: string;
@@ -16,7 +17,9 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  folderId?: string;
+  fileName?: string; // 文件名
+  filePath?: string; // 文件路径
+  folderId?: string | null; // 所属文件夹 ID，null 表示根目录
   isPinned?: boolean;
   createdAt?: string;
   updatedAt?: string;
