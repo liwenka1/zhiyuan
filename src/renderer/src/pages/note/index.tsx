@@ -26,6 +26,13 @@ export function NotePage() {
 
   // 对话框状态
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [showRenameNoteDialog, setShowRenameNoteDialog] = useState(false);
+  const [noteToRename, setNoteToRename] = useState<{
+    id: string;
+    title: string;
+    updatedAt?: string;
+    isPinned?: boolean;
+  } | null>(null);
 
   // 状态和方法
   const folders = useNoteStore((state) => state.folders);
@@ -42,6 +49,8 @@ export function NotePage() {
   const createNote = useNoteStore((state) => state.createNote);
   const deleteFolder = useNoteStore((state) => state.deleteFolder);
   const deleteNote = useNoteStore((state) => state.deleteNote);
+  const renameNote = useNoteStore((state) => state.renameNote);
+  const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
@@ -105,6 +114,35 @@ export function NotePage() {
     } catch (error) {
       console.error("删除笔记失败:", error);
       alert("删除笔记失败，请重试");
+    }
+  };
+
+  // 重命名笔记 - 打开对话框
+  const handleRenameNote = (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    setNoteToRename(note);
+    setShowRenameNoteDialog(true);
+  };
+
+  // 确认重命名笔记
+  const handleConfirmRenameNote = async (newTitle: string) => {
+    if (!noteToRename || !newTitle || newTitle === noteToRename.title) return;
+
+    try {
+      await renameNote(noteToRename.id, newTitle);
+      setNoteToRename(null);
+    } catch (error) {
+      console.error("重命名笔记失败:", error);
+      alert("重命名笔记失败，请重试");
+    }
+  };
+
+  // 复制笔记
+  const handleDuplicateNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    try {
+      await duplicateNote(note.id);
+    } catch (error) {
+      console.error("复制笔记失败:", error);
+      alert("复制笔记失败，请重试");
     }
   };
 
@@ -234,6 +272,8 @@ export function NotePage() {
             onCreateNote={handleCreateNote}
             onShowNoteInExplorer={handleShowNoteInExplorer}
             onDeleteNote={handleDeleteNote}
+            onRenameNote={handleRenameNote}
+            onDuplicateNote={handleDuplicateNote}
           />
         }
         mainContent={
@@ -254,6 +294,17 @@ export function NotePage() {
         description="请输入文件夹名称"
         placeholder="例如：工作、学习、生活..."
         onConfirm={handleConfirmCreateFolder}
+      />
+
+      {/* 重命名笔记对话框 */}
+      <InputDialog
+        open={showRenameNoteDialog}
+        onOpenChange={setShowRenameNoteDialog}
+        title="重命名笔记"
+        description="请输入新的笔记名称"
+        placeholder="笔记名称"
+        defaultValue={noteToRename?.title}
+        onConfirm={handleConfirmRenameNote}
       />
     </>
   );
