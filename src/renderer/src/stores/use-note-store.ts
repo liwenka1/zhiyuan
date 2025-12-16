@@ -143,7 +143,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       const newNote: Note = {
         id: filePath.replace(workspacePath + "/", ""), // 使用相对路径作为 ID
-        title: "无标题笔记",
+        title: fileName.replace(".md", ""), // 使用文件名作为标题（去掉 .md 后缀）
         content,
         fileName,
         filePath,

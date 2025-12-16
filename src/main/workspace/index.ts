@@ -127,9 +127,8 @@ export const workspaceManager = {
       const stats = await fs.promises.stat(filePath);
       const fileName = path.basename(filePath);
 
-      // 从内容中提取标题（第一个 # 标题）
-      const titleMatch = content.match(/^#\s+(.+)$/m);
-      const title = titleMatch ? titleMatch[1].trim() : fileName.replace(".md", "");
+      // 直接使用文件名作为标题（去掉 .md 后缀）
+      const title = fileName.replace(".md", "");
 
       // 生成相对路径作为 ID
       const relativePath = path.relative(workspacePath, filePath);
