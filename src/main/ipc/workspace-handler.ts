@@ -24,6 +24,8 @@ export function registerWorkspaceHandlers(): void {
 
   // 扫描工作区
   ipcMain.handle("workspace:scan", async (_, workspacePath: string) => {
+    // 扫描工作区时也启动文件监听
+    fileWatcher.startWatching(workspacePath);
     return await workspaceManager.scanWorkspace(workspacePath);
   });
 
@@ -86,6 +88,4 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle("shell:openPath", async (_, fullPath: string) => {
     return await shell.openPath(fullPath);
   });
-
-  console.log("工作区 IPC 处理器已注册");
 }
