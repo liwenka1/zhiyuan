@@ -88,7 +88,6 @@ export function NotePage() {
     try {
       await window.api.folder.delete(folderPath);
       deleteFolder(folder.id);
-      console.log("文件夹已移至回收站:", folderPath);
     } catch (error) {
       console.error("删除文件夹失败:", error);
       alert("删除文件夹失败，请重试");
@@ -103,7 +102,6 @@ export function NotePage() {
     try {
       await window.api.file.delete(fullNote.filePath);
       deleteNote(note.id);
-      console.log("笔记已移至回收站:", fullNote.filePath);
     } catch (error) {
       console.error("删除笔记失败:", error);
       alert("删除笔记失败，请重试");
@@ -122,26 +120,63 @@ export function NotePage() {
           setWorkspacePath(savedWorkspacePath);
           const data = await window.api.workspace.scan(savedWorkspacePath);
           loadFromFileSystem(data);
-          console.log("已加载工作区:", savedWorkspacePath);
         } else {
           // 没有保存的工作区，创建默认工作区
-          console.log("首次启动，创建默认工作区...");
           const defaultWorkspacePath = await window.api.workspace.createDefault();
           setWorkspacePath(defaultWorkspacePath);
           const data = await window.api.workspace.scan(defaultWorkspacePath);
           loadFromFileSystem(data);
-          console.log("已创建并加载默认工作区:", defaultWorkspacePath);
         }
       } catch (error) {
         console.error("初始化工作区失败:", error);
         // 出错时使用演示数据作为后备方案
-        console.log("使用演示数据作为后备方案");
         initWithDemoData();
       }
     };
 
     initWorkspace();
   }, [initWithDemoData, loadFromFileSystem, setWorkspacePath]);
+
+  // 监听文件系统变化
+  useEffect(() => {
+    // 获取处理方法
+    const handleFileAdded = useNoteStore.getState().handleFileAdded;
+    const handleFileDeleted = useNoteStore.getState().handleFileDeleted;
+    const handleFileChanged = useNoteStore.getState().handleFileChanged;
+    const handleFolderAdded = useNoteStore.getState().handleFolderAdded;
+    const handleFolderDeleted = useNoteStore.getState().handleFolderDeleted;
+
+    // 注册文件监听器
+    const unsubscribeAdded = window.api.file.onAdded((data) => {
+      handleFileAdded(data.filePath, data.fullPath);
+    });
+
+    const unsubscribeDeleted = window.api.file.onDeleted((data) => {
+      handleFileDeleted(data.filePath);
+    });
+
+    const unsubscribeChanged = window.api.file.onChanged((data) => {
+      handleFileChanged(data.filePath, data.fullPath);
+    });
+
+    // 注册文件夹监听器
+    const unsubscribeFolderAdded = window.api.folder.onAdded((data) => {
+      handleFolderAdded(data.folderPath, data.fullPath);
+    });
+
+    const unsubscribeFolderDeleted = window.api.folder.onDeleted((data) => {
+      handleFolderDeleted(data.folderPath);
+    });
+
+    // 清理监听器
+    return () => {
+      unsubscribeAdded();
+      unsubscribeDeleted();
+      unsubscribeChanged();
+      unsubscribeFolderAdded();
+      unsubscribeFolderDeleted();
+    };
+  }, []);
 
   // 幻灯片模式：全屏展示
   if (viewMode === "presentation") {
