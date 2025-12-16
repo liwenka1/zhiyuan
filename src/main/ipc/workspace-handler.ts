@@ -69,6 +69,16 @@ export function registerWorkspaceHandlers(): void {
     return await fileSystem.deleteFile(filePath);
   });
 
+  // 重命名文件
+  ipcMain.handle("file:rename", async (_, oldPath: string, newPath: string) => {
+    return await fileSystem.renameFile(oldPath, newPath);
+  });
+
+  // 复制文件
+  ipcMain.handle("file:copy", async (_, sourcePath: string, destPath: string) => {
+    return await fileSystem.copyFile(sourcePath, destPath);
+  });
+
   // 创建文件夹
   ipcMain.handle("folder:create", async (_, folderPath: string) => {
     return await fileSystem.createFolder(folderPath);
