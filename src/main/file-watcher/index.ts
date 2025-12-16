@@ -18,15 +18,16 @@ class FileWatcher {
 
     this.workspacePath = workspacePath;
 
-    // 监听所有 .md 文件
-    this.watcher = chokidar.watch(`${workspacePath}/**/*.md`, {
-      ignoreInitial: true, // 忽略初始扫描
+    // 直接监听工作区目录
+    this.watcher = chokidar.watch(workspacePath, {
+      ignoreInitial: true,
+      persistent: true,
       awaitWriteFinish: {
-        // 等待写入完成，避免读取不完整的文件
         stabilityThreshold: 100,
         pollInterval: 50
       },
-      ignored: /(^|[/\\])\../ // 忽略隐藏文件
+      ignored: /(^|[/\\])\../, // 忽略隐藏文件
+      depth: 99
     });
 
     // 文件修改事件
@@ -44,7 +45,20 @@ class FileWatcher {
       this.handleFileDelete(filePath);
     });
 
-    console.log("文件监听已启动:", workspacePath);
+    // 文件夹添加事件
+    this.watcher.on("addDir", (dirPath: string) => {
+      this.handleFolderAdd(dirPath);
+    });
+
+    // 文件夹删除事件
+    this.watcher.on("unlinkDir", (dirPath: string) => {
+      this.handleFolderDelete(dirPath);
+    });
+
+    // 错误处理
+    this.watcher.on("error", (error) => {
+      console.error("文件监听器错误:", error);
+    });
   }
 
   /**
@@ -54,7 +68,7 @@ class FileWatcher {
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;
-      console.log("文件监听已停止");
+      this.workspacePath = null;
     }
   }
 
@@ -64,8 +78,10 @@ class FileWatcher {
   private handleFileChange(filePath: string): void {
     if (!this.workspacePath) return;
 
+    // 只处理 .md 文件
+    if (!filePath.endsWith(".md")) return;
+
     const relativePath = path.relative(this.workspacePath, filePath);
-    console.log("检测到文件修改:", relativePath);
 
     // 通知渲染进程
     const windows = BrowserWindow.getAllWindows();
@@ -83,8 +99,10 @@ class FileWatcher {
   private handleFileAdd(filePath: string): void {
     if (!this.workspacePath) return;
 
+    // 只处理 .md 文件
+    if (!filePath.endsWith(".md")) return;
+
     const relativePath = path.relative(this.workspacePath, filePath);
-    console.log("检测到文件添加:", relativePath);
 
     // 通知渲染进程
     const windows = BrowserWindow.getAllWindows();
@@ -102,8 +120,10 @@ class FileWatcher {
   private handleFileDelete(filePath: string): void {
     if (!this.workspacePath) return;
 
+    // 只处理 .md 文件
+    if (!filePath.endsWith(".md")) return;
+
     const relativePath = path.relative(this.workspacePath, filePath);
-    console.log("检测到文件删除:", relativePath);
 
     // 通知渲染进程
     const windows = BrowserWindow.getAllWindows();
@@ -111,6 +131,52 @@ class FileWatcher {
       windows[0].webContents.send("file:deleted", {
         filePath: relativePath,
         fullPath: filePath
+      });
+    }
+  }
+
+  /**
+   * 处理文件夹添加
+   */
+  private handleFolderAdd(dirPath: string): void {
+    if (!this.workspacePath) return;
+
+    const relativePath = path.relative(this.workspacePath, dirPath);
+
+    // 忽略工作区根目录
+    if (!relativePath || relativePath === ".") {
+      return;
+    }
+
+    // 通知渲染进程
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      windows[0].webContents.send("folder:added", {
+        folderPath: relativePath,
+        fullPath: dirPath
+      });
+    }
+  }
+
+  /**
+   * 处理文件夹删除
+   */
+  private handleFolderDelete(dirPath: string): void {
+    if (!this.workspacePath) return;
+
+    const relativePath = path.relative(this.workspacePath, dirPath);
+
+    // 忽略工作区根目录
+    if (!relativePath || relativePath === ".") {
+      return;
+    }
+
+    // 通知渲染进程
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      windows[0].webContents.send("folder:deleted", {
+        folderPath: relativePath,
+        fullPath: dirPath
       });
     }
   }
