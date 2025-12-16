@@ -40,6 +40,7 @@ export function NotePage() {
   const selectedFolderId = useNoteStore((state) => state.selectedFolderId);
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
   const editorContent = useNoteStore((state) => state.editorContent);
+  const searchKeyword = useNoteStore((state) => state.searchKeyword);
 
   const selectFolder = useNoteStore((state) => state.selectFolder);
   const selectNote = useNoteStore((state) => state.selectNote);
@@ -51,6 +52,7 @@ export function NotePage() {
   const deleteNote = useNoteStore((state) => state.deleteNote);
   const renameNote = useNoteStore((state) => state.renameNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
+  const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
@@ -223,7 +225,15 @@ export function NotePage() {
 
   // 笔记模式：三栏布局
   // 根据选中的文件夹过滤笔记，如果没有选中文件夹则显示所有笔记
-  const filteredNotes = selectedFolderId ? notes.filter((note) => note.folderId === selectedFolderId) : notes;
+  let filteredNotes = selectedFolderId ? notes.filter((note) => note.folderId === selectedFolderId) : notes;
+
+  // 根据搜索关键词过滤笔记（搜索标题和内容）
+  if (searchKeyword.trim()) {
+    const keyword = searchKeyword.toLowerCase();
+    filteredNotes = filteredNotes.filter(
+      (note) => note.title.toLowerCase().includes(keyword) || note.content.toLowerCase().includes(keyword)
+    );
+  }
 
   // 格式化笔记列表数据（置顶笔记排在前面）
   const formattedNotes = filteredNotes
@@ -268,8 +278,10 @@ export function NotePage() {
           <NoteList
             notes={formattedNotes}
             selectedNoteId={selectedNoteId ?? undefined}
+            searchKeyword={searchKeyword}
             onSelectNote={selectNote}
             onCreateNote={handleCreateNote}
+            onSearchChange={setSearchKeyword}
             onShowNoteInExplorer={handleShowNoteInExplorer}
             onDeleteNote={handleDeleteNote}
             onRenameNote={handleRenameNote}

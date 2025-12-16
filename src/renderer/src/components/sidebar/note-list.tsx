@@ -24,8 +24,10 @@ interface Note {
 interface NoteListProps {
   notes?: Note[];
   selectedNoteId?: string;
+  searchKeyword?: string;
   onSelectNote?: (noteId: string) => void;
   onCreateNote?: () => void;
+  onSearchChange?: (keyword: string) => void;
   onShowNoteInExplorer?: (note: Note) => void;
   onDeleteNote?: (note: Note) => void;
   onRenameNote?: (note: Note) => void;
@@ -35,8 +37,10 @@ interface NoteListProps {
 export function NoteList({
   notes = [],
   selectedNoteId,
+  searchKeyword = "",
   onSelectNote,
   onCreateNote,
+  onSearchChange,
   onShowNoteInExplorer,
   onDeleteNote,
   onRenameNote,
@@ -51,6 +55,8 @@ export function NoteList({
           <Input
             type="search"
             placeholder="搜索笔记..."
+            value={searchKeyword}
+            onChange={(e) => onSearchChange?.(e.target.value)}
             className="bg-muted/50 h-8 border-none pl-8 text-sm focus-visible:ring-1"
           />
         </div>
@@ -85,8 +91,10 @@ export function NoteList({
               transition={{ duration: 0.3 }}
             >
               <Inbox className="empty-state-icon mb-3 h-10 w-10" />
-              <p className="text-sm font-medium">暂无笔记</p>
-              <p className="text-tertiary-foreground mt-1 text-xs">选择文件夹或创建新笔记</p>
+              <p className="text-sm font-medium">{searchKeyword ? "未找到相关笔记" : "暂无笔记"}</p>
+              <p className="text-tertiary-foreground mt-1 text-xs">
+                {searchKeyword ? "尝试使用其他关键词搜索" : "选择文件夹或创建新笔记"}
+              </p>
             </motion.div>
           ) : (
             <div className="space-y-0.5 p-2">
