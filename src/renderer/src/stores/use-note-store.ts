@@ -23,6 +23,8 @@ interface NoteStore {
   createNote: (folderId?: string) => Promise<void>;
   updateNoteContent: (content: string) => void;
   deleteNote: (noteId: string) => void;
+  renameNote: (noteId: string, newTitle: string) => Promise<void>;
+  duplicateNote: (noteId: string) => Promise<void>;
 
   // 文件系统相关
   loadFromFileSystem: (data: { folders: Folder[]; notes: Note[] }) => void;
@@ -202,6 +204,104 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       selectedNoteId: state.selectedNoteId === noteId ? null : state.selectedNoteId,
       editorContent: state.selectedNoteId === noteId ? "" : state.editorContent
     }));
+  },
+
+  renameNote: async (noteId, newTitle) => {
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const note = get().notes.find((n) => n.id === noteId);
+
+    if (!workspacePath || !note?.filePath) {
+      console.error("没有工作区路径或笔记文件路径，无法重命名");
+      return;
+    }
+
+    try {
+      // 构建新的文件路径
+      const pathParts = note.filePath.split("/");
+      const oldFileName = pathParts[pathParts.length - 1];
+      const newFileName = `${newTitle}.md`;
+      pathParts[pathParts.length - 1] = newFileName;
+      const newFilePath = pathParts.join("/");
+
+      // 在文件系统中重命名
+      await window.api.file.rename(note.filePath, newFilePath);
+
+      // 更新 store 中的笔记信息
+      const newNoteId = note.id.replace(oldFileName, newFileName);
+      set((state) => ({
+        notes: state.notes.map((n) =>
+          n.id === noteId
+            ? {
+                ...n,
+                id: newNoteId,
+                title: newTitle,
+                fileName: newFileName,
+                filePath: newFilePath,
+                updatedAt: new Date().toISOString()
+              }
+            : n
+        ),
+        selectedNoteId: state.selectedNoteId === noteId ? newNoteId : state.selectedNoteId
+      }));
+    } catch (error) {
+      console.error("重命名笔记失败:", error);
+      throw error;
+    }
+  },
+
+  duplicateNote: async (noteId) => {
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const note = get().notes.find((n) => n.id === noteId);
+
+    if (!workspacePath || !note?.filePath || !note.fileName) {
+      console.error("没有工作区路径或笔记文件路径，无法复制");
+      return;
+    }
+
+    try {
+      // 查找已存在的副本，确定新的序号
+      const allNotes = get().notes;
+      const copyPattern = new RegExp(`^${note.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} Copy (\\d+)$`);
+      const existingCopies = allNotes
+        .map((n) => {
+          const match = n.title.match(copyPattern);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((num) => num > 0);
+
+      // 确定新的副本序号（从1开始，或者比最大序号大1）
+      const nextCopyNumber = existingCopies.length > 0 ? Math.max(...existingCopies) + 1 : 1;
+      const newTitle = `${note.title} Copy ${nextCopyNumber}`;
+      const newFileName = `${newTitle}.md`;
+
+      // 构建新的文件路径
+      const pathParts = note.filePath.split("/");
+      pathParts[pathParts.length - 1] = newFileName;
+      const newFilePath = pathParts.join("/");
+
+      // 在文件系统中复制文件
+      await window.api.file.copy(note.filePath, newFilePath);
+
+      // 创建新笔记对象
+      const newNoteId = note.id.replace(note.fileName, newFileName);
+      const newNote: Note = {
+        ...note,
+        id: newNoteId,
+        title: newTitle,
+        fileName: newFileName,
+        filePath: newFilePath,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // 添加到笔记列表
+      set((state) => ({
+        notes: [...state.notes, newNote]
+      }));
+    } catch (error) {
+      console.error("复制笔记失败:", error);
+      throw error;
+    }
   },
 
   // 工具方法
