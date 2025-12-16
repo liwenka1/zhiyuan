@@ -20,8 +20,6 @@ export function WorkspaceSelector() {
         // 扫描并加载工作区内容
         const data = await window.api.workspace.scan(selectedPath);
         loadFromFileSystem(data);
-
-        console.log("工作区已加载:", selectedPath);
       }
     } catch (error) {
       console.error("选择工作区失败:", error);

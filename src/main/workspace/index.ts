@@ -168,19 +168,15 @@ export const workspaceManager = {
 
       // 1. 创建工作区根目录
       await fs.promises.mkdir(workspacePath, { recursive: true });
-      console.log("已创建工作区目录:", workspacePath);
 
       // 2. 创建默认文件夹
       await fs.promises.mkdir(defaultFolderPath, { recursive: true });
-      console.log("已创建默认文件夹:", defaultFolderPath);
 
       // 3. 创建用户指南文件
       await fs.promises.writeFile(guideFilePath, USER_GUIDE_CONTENT, "utf-8");
-      console.log("已创建用户指南:", guideFilePath);
 
       // 4. 保存工作区路径到配置
       configManager.setWorkspacePath(workspacePath);
-      console.log("已保存工作区配置");
 
       return workspacePath;
     } catch (error) {

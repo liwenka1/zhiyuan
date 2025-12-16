@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain } from "electron";
+import { app, shell, BrowserWindow } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
@@ -62,9 +62,6 @@ app.whenReady().then(() => {
 
   // 注册工作区和文件系统相关的 IPC 处理器
   registerWorkspaceHandlers();
-
-  // IPC test
-  ipcMain.on("ping", () => console.log("pong"));
 
   createWindow();
 
