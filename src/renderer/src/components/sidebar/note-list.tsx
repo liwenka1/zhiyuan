@@ -11,7 +11,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger
 } from "@/components/ui/context-menu";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 
 interface Note {
@@ -135,11 +135,11 @@ export function NoteList({
                       {note.updatedAt && (
                         <p
                           className={cn(
-                            "mt-1.5 pl-[22px] text-[11px]",
+                            "mt-1.5 text-[11px]",
                             isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
                           )}
                         >
-                          {note.updatedAt}
+                          {formatDateTime(note.updatedAt)}
                         </p>
                       )}
                     </motion.div>
