@@ -1,23 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { MainLayout } from "@/layouts/main-layout";
 import { FolderTree } from "@/components/sidebar/folder-tree";
 import { NoteList } from "@/components/sidebar/note-list";
 import { EditorArea } from "@/components/editor/editor-area";
 import { InputDialog } from "@/components/ui/input-dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
 import { useNoteStore } from "@/stores/use-note-store";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { useViewStore } from "@/stores/use-view-store";
 import { PresentationMode } from "./modes/presentation-mode";
+import { useState } from "react";
 
 /**
  * 笔记页面
@@ -35,13 +26,6 @@ export function NotePage() {
 
   // 对话框状态
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    type: "folder" | "note";
-    id: string;
-    name: string;
-    path?: string;
-  } | null>(null);
 
   // 状态和方法
   const folders = useNoteStore((state) => state.folders);
@@ -96,58 +80,33 @@ export function NotePage() {
     }
   };
 
-  // 删除文件夹 - 打开确认对话框
-  const handleDeleteFolder = (folder: { id: string; name: string; noteCount?: number }) => {
+  // 删除文件夹 - 直接删除
+  const handleDeleteFolder = async (folder: { id: string; name: string; noteCount?: number }) => {
     if (!workspacePath) return;
     const folderPath = `${workspacePath}/${folder.name}`;
-    setDeleteTarget({
-      type: "folder",
-      id: folder.id,
-      name: folder.name,
-      path: folderPath
-    });
-    setShowDeleteDialog(true);
+
+    try {
+      await window.api.folder.delete(folderPath);
+      deleteFolder(folder.id);
+      console.log("文件夹已移至回收站:", folderPath);
+    } catch (error) {
+      console.error("删除文件夹失败:", error);
+      alert("删除文件夹失败，请重试");
+    }
   };
 
-  // 删除笔记 - 打开确认对话框
-  const handleDeleteNote = (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+  // 删除笔记 - 直接删除
+  const handleDeleteNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
     const fullNote = notes.find((n) => n.id === note.id);
     if (!fullNote?.filePath) return;
 
-    setDeleteTarget({
-      type: "note",
-      id: note.id,
-      name: note.title,
-      path: fullNote.filePath
-    });
-    setShowDeleteDialog(true);
-  };
-
-  // 确认删除
-  const handleConfirmDelete = async () => {
-    if (!deleteTarget) return;
-
     try {
-      if (deleteTarget.type === "folder") {
-        // 删除文件夹
-        if (deleteTarget.path) {
-          await window.api.folder.delete(deleteTarget.path);
-          deleteFolder(deleteTarget.id);
-          console.log("文件夹已删除:", deleteTarget.path);
-        }
-      } else {
-        // 删除笔记
-        if (deleteTarget.path) {
-          await window.api.file.delete(deleteTarget.path);
-          deleteNote(deleteTarget.id);
-          console.log("笔记已删除:", deleteTarget.path);
-        }
-      }
-      setShowDeleteDialog(false);
-      setDeleteTarget(null);
+      await window.api.file.delete(fullNote.filePath);
+      deleteNote(note.id);
+      console.log("笔记已移至回收站:", fullNote.filePath);
     } catch (error) {
-      console.error("删除失败:", error);
-      alert(`删除${deleteTarget.type === "folder" ? "文件夹" : "笔记"}失败，请重试`);
+      console.error("删除笔记失败:", error);
+      alert("删除笔记失败，请重试");
     }
   };
 
@@ -261,35 +220,6 @@ export function NotePage() {
         placeholder="例如：工作、学习、生活..."
         onConfirm={handleConfirmCreateFolder}
       />
-
-      {/* 删除确认对话框 */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{deleteTarget?.type === "folder" ? "删除文件夹" : "删除笔记"}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteTarget?.type === "folder" ? (
-                <>
-                  确定要删除文件夹 <strong>&ldquo;{deleteTarget.name}&rdquo;</strong> 吗？
-                </>
-              ) : (
-                <>
-                  确定要删除笔记 <strong>&ldquo;{deleteTarget?.name}&rdquo;</strong> 吗？
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              删除
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

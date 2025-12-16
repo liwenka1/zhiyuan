@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { shell } from "electron";
 
 /**
  * 文件系统操作工具
@@ -39,10 +40,10 @@ export const fileSystem = {
   },
 
   /**
-   * 删除文件
+   * 删除文件（移动到回收站）
    */
   async deleteFile(filePath: string): Promise<void> {
-    await fs.promises.unlink(filePath);
+    await shell.trashItem(filePath);
   },
 
   /**
@@ -53,10 +54,10 @@ export const fileSystem = {
   },
 
   /**
-   * 删除文件夹
+   * 删除文件夹（移动到回收站）
    */
   async deleteFolder(folderPath: string): Promise<void> {
-    await fs.promises.rm(folderPath, { recursive: true, force: true });
+    await shell.trashItem(folderPath);
   },
 
   /**

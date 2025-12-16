@@ -139,7 +139,7 @@ export function FolderTree({
                     <span>在文件管理器中查看</span>
                   </ContextMenuItem>
                   <ContextMenuSeparator />
-                  <ContextMenuItem variant="destructive" onClick={() => onDeleteFolder?.(folder)}>
+                  <ContextMenuItem onClick={() => onDeleteFolder?.(folder)}>
                     <Trash2 className="h-4 w-4" />
                     <span>删除文件夹</span>
                   </ContextMenuItem>

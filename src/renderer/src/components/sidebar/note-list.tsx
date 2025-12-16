@@ -150,7 +150,7 @@ export function NoteList({
                       <span>在文件管理器中查看</span>
                     </ContextMenuItem>
                     <ContextMenuSeparator />
-                    <ContextMenuItem variant="destructive" onClick={() => onDeleteNote?.(note)}>
+                    <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
                       <Trash2 className="h-4 w-4" />
                       <span>删除笔记</span>
                     </ContextMenuItem>
