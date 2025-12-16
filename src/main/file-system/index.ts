@@ -77,5 +77,19 @@ export const fileSystem = {
    */
   async stat(filePath: string) {
     return await fs.promises.stat(filePath);
+  },
+
+  /**
+   * 重命名文件
+   */
+  async renameFile(oldPath: string, newPath: string): Promise<void> {
+    await fs.promises.rename(oldPath, newPath);
+  },
+
+  /**
+   * 复制文件
+   */
+  async copyFile(sourcePath: string, destPath: string): Promise<void> {
+    await fs.promises.copyFile(sourcePath, destPath);
   }
 };
