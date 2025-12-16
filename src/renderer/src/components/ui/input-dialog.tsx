@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from "react";
+import { useState, KeyboardEvent, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,13 @@ export function InputDialog({
   onConfirm
 }: InputDialogProps) {
   const [value, setValue] = useState(defaultValue);
+
+  // 当对话框打开或 defaultValue 改变时，更新输入值
+  useEffect(() => {
+    if (open) {
+      setValue(defaultValue);
+    }
+  }, [open, defaultValue]);
 
   const handleConfirm = () => {
     if (value.trim()) {
