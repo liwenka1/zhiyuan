@@ -48,6 +48,8 @@ export interface FileAPI {
   write: (filePath: string, content: string) => Promise<{ mtime: number }>;
   create: (filePath: string, content: string) => Promise<void>;
   delete: (filePath: string) => Promise<void>;
+  rename: (oldPath: string, newPath: string) => Promise<void>;
+  copy: (sourcePath: string, destPath: string) => Promise<void>;
   onChanged: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
   onAdded: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
   onDeleted: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;

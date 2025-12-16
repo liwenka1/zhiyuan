@@ -100,6 +100,17 @@ const api = {
     delete: (filePath: string): Promise<void> => ipcRenderer.invoke("file:delete", filePath),
 
     /**
+     * 重命名文件
+     */
+    rename: (oldPath: string, newPath: string): Promise<void> => ipcRenderer.invoke("file:rename", oldPath, newPath),
+
+    /**
+     * 复制文件
+     */
+    copy: (sourcePath: string, destPath: string): Promise<void> =>
+      ipcRenderer.invoke("file:copy", sourcePath, destPath),
+
+    /**
      * 监听文件变化
      */
     onChanged: (callback: (data: { filePath: string; fullPath: string }) => void): (() => void) => {
