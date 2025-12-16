@@ -148,7 +148,33 @@ const api = {
     /**
      * 删除文件夹
      */
-    delete: (folderPath: string): Promise<void> => ipcRenderer.invoke("folder:delete", folderPath)
+    delete: (folderPath: string): Promise<void> => ipcRenderer.invoke("folder:delete", folderPath),
+
+    /**
+     * 监听文件夹添加
+     */
+    onAdded: (callback: (data: { folderPath: string; fullPath: string }) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { folderPath: string; fullPath: string }) => {
+        callback(data);
+      };
+      ipcRenderer.on("folder:added", listener);
+      return () => {
+        ipcRenderer.removeListener("folder:added", listener);
+      };
+    },
+
+    /**
+     * 监听文件夹删除
+     */
+    onDeleted: (callback: (data: { folderPath: string; fullPath: string }) => void): (() => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, data: { folderPath: string; fullPath: string }) => {
+        callback(data);
+      };
+      ipcRenderer.on("folder:deleted", listener);
+      return () => {
+        ipcRenderer.removeListener("folder:deleted", listener);
+      };
+    }
   },
 
   shell: {
