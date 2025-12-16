@@ -28,6 +28,15 @@ interface NoteStore {
   loadFromFileSystem: (data: { folders: Folder[]; notes: Note[] }) => void;
   saveNoteToFileSystem: (noteId: string, content: string) => Promise<void>;
 
+  // 文件监听处理
+  handleFileAdded: (filePath: string, fullPath: string) => Promise<void>;
+  handleFileDeleted: (filePath: string) => void;
+  handleFileChanged: (filePath: string, fullPath: string) => Promise<void>;
+
+  // 文件夹监听处理
+  handleFolderAdded: (folderPath: string, fullPath: string) => void;
+  handleFolderDeleted: (folderPath: string) => void;
+
   // 工具方法
   getSelectedNote: () => Note | undefined;
   getNotesByFolder: (folderId: string) => Note[];
@@ -81,8 +90,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       set((state) => ({
         folders: [...state.folders, newFolder]
       }));
-
-      console.log("文件夹已创建:", folderPath);
     } catch (error) {
       console.error("创建文件夹失败:", error);
     }
@@ -158,8 +165,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         selectedNoteId: newNote.id,
         editorContent: newNote.content
       }));
-
-      console.log("笔记已创建:", filePath);
     } catch (error) {
       console.error("创建笔记失败:", error);
     }
@@ -229,10 +234,162 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
     try {
       await window.api.file.write(note.filePath, content);
-      console.log("笔记已保存:", note.filePath);
     } catch (error) {
       console.error("保存笔记失败:", error);
     }
+  },
+
+  // 处理外部添加的文件
+  handleFileAdded: async (filePath, fullPath) => {
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    if (!workspacePath) return;
+
+    // 检查是否已存在（避免重复添加）
+    const existingNote = get().notes.find((n) => n.id === filePath);
+    if (existingNote) return;
+
+    try {
+      // 读取文件内容
+      const { content } = await window.api.file.read(fullPath);
+
+      // 解析文件路径，确定所属文件夹
+      const pathParts = filePath.split("/");
+      let folderId: string | null = null;
+
+      if (pathParts.length > 1) {
+        // 文件在子文件夹中
+        folderId = pathParts[0];
+      }
+
+      // 提取文件名
+      const fileName = pathParts[pathParts.length - 1];
+
+      // 创建新笔记对象
+      const newNote: Note = {
+        id: filePath,
+        title: fileName.replace(".md", ""),
+        content,
+        fileName,
+        filePath: fullPath,
+        folderId: folderId || undefined,
+        isPinned: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      // 添加到笔记列表
+      set((state) => ({
+        notes: [...state.notes, newNote]
+      }));
+
+      // 更新文件夹的笔记数量
+      if (folderId) {
+        set((state) => ({
+          folders: state.folders.map((folder) =>
+            folder.id === folderId ? { ...folder, noteCount: (folder.noteCount || 0) + 1 } : folder
+          )
+        }));
+      }
+    } catch (error) {
+      console.error("处理添加的文件失败:", error);
+    }
+  },
+
+  // 处理外部删除的文件
+  handleFileDeleted: (filePath) => {
+    const note = get().notes.find((n) => n.id === filePath);
+    if (!note) return;
+
+    const folderId = note.folderId;
+
+    // 从笔记列表中移除
+    set((state) => ({
+      notes: state.notes.filter((n) => n.id !== filePath),
+      // 如果删除的是当前选中的笔记，清空选中状态
+      selectedNoteId: state.selectedNoteId === filePath ? null : state.selectedNoteId,
+      editorContent: state.selectedNoteId === filePath ? "" : state.editorContent
+    }));
+
+    // 更新文件夹的笔记数量
+    if (folderId) {
+      set((state) => ({
+        folders: state.folders.map((folder) =>
+          folder.id === folderId ? { ...folder, noteCount: Math.max(0, (folder.noteCount || 0) - 1) } : folder
+        )
+      }));
+    }
+  },
+
+  // 处理外部修改的文件
+  handleFileChanged: async (filePath, fullPath) => {
+    const note = get().notes.find((n) => n.id === filePath);
+    if (!note) return;
+
+    try {
+      // 读取更新后的内容
+      const { content } = await window.api.file.read(fullPath);
+
+      const { selectedNoteId } = get();
+      const isCurrentlyEditing = selectedNoteId === filePath;
+
+      // 更新笔记内容
+      set((state) => ({
+        notes: state.notes.map((n) =>
+          n.id === filePath
+            ? {
+                ...n,
+                content,
+                updatedAt: new Date().toISOString()
+              }
+            : n
+        ),
+        // 如果是当前正在编辑的笔记，同时更新编辑器内容
+        editorContent: isCurrentlyEditing ? content : state.editorContent
+      }));
+    } catch (error) {
+      console.error("处理修改的文件失败:", error);
+    }
+  },
+
+  // 处理外部添加的文件夹
+  handleFolderAdded: (folderPath, fullPath) => {
+    // 检查是否已存在（避免重复添加）
+    const existingFolder = get().folders.find((f) => f.id === folderPath);
+    if (existingFolder) return;
+
+    // 创建新文件夹对象
+    const newFolder: Folder = {
+      id: folderPath,
+      name: folderPath,
+      path: fullPath,
+      noteCount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    // 添加到文件夹列表
+    set((state) => ({
+      folders: [...state.folders, newFolder]
+    }));
+  },
+
+  // 处理外部删除的文件夹
+  handleFolderDeleted: (folderPath) => {
+    const folder = get().folders.find((f) => f.id === folderPath);
+    if (!folder) return;
+
+    const { selectedNoteId, notes } = get();
+    const currentNote = notes.find((n) => n.id === selectedNoteId);
+    const shouldClearSelection = currentNote?.folderId === folderPath;
+
+    // 从文件夹列表中移除
+    set((state) => ({
+      folders: state.folders.filter((f) => f.id !== folderPath),
+      notes: state.notes.filter((n) => n.folderId !== folderPath),
+      selectedFolderId: state.selectedFolderId === folderPath ? null : state.selectedFolderId,
+      selectedNoteId: shouldClearSelection ? null : state.selectedNoteId,
+      editorContent: shouldClearSelection ? "" : state.editorContent
+    }));
   },
 
   initWithDemoData: () => {
