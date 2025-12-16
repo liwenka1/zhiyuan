@@ -10,6 +10,7 @@ interface NoteStore {
   selectedNoteId: string | null;
   editorContent: string;
   isLoadingFromFileSystem: boolean; // 是否从文件系统加载
+  searchKeyword: string; // 搜索关键词
 
   // 操作方法 - 文件夹
   setFolders: (folders: Folder[]) => void;
@@ -25,6 +26,9 @@ interface NoteStore {
   deleteNote: (noteId: string) => void;
   renameNote: (noteId: string, newTitle: string) => Promise<void>;
   duplicateNote: (noteId: string) => Promise<void>;
+
+  // 搜索相关
+  setSearchKeyword: (keyword: string) => void;
 
   // 文件系统相关
   loadFromFileSystem: (data: { folders: Folder[]; notes: Note[] }) => void;
@@ -53,6 +57,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   selectedNoteId: null,
   editorContent: "",
   isLoadingFromFileSystem: false,
+  searchKeyword: "",
 
   // 文件夹操作
   setFolders: (folders) => set({ folders }),
@@ -61,7 +66,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     set({
       selectedFolderId: folderId,
       selectedNoteId: null,
-      editorContent: ""
+      editorContent: "",
+      searchKeyword: "" // 切换文件夹时清空搜索
     });
   },
 
@@ -118,6 +124,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
   },
 
+  // 搜索相关
+  setSearchKeyword: (keyword) => set({ searchKeyword: keyword }),
+
   createNote: async (folderId) => {
     // 从工作区 store 获取当前工作区路径
     const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
@@ -129,8 +138,22 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
     try {
       const targetFolderId = folderId || get().selectedFolderId || null;
-      const fileName = `无标题笔记_${Date.now()}.md`;
-      const content = "# 无标题笔记\n\n开始写作...";
+
+      // 查找已存在的无标题笔记，确定新的序号
+      const allNotes = get().notes;
+      const untitledPattern = /^无标题笔记 (\d+)$/;
+      const existingNumbers = allNotes
+        .map((n) => {
+          const match = n.title.match(untitledPattern);
+          return match ? parseInt(match[1], 10) : 0;
+        })
+        .filter((num) => num > 0);
+
+      // 确定新的笔记序号（从1开始，或者比最大序号大1）
+      const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+      const title = `无标题笔记 ${nextNumber}`;
+      const fileName = `${title}.md`;
+      const content = `# ${title}\n\n开始写作...`;
 
       // 确定文件路径
       let filePath: string;
@@ -152,7 +175,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       const newNote: Note = {
         id: filePath.replace(workspacePath + "/", ""), // 使用相对路径作为 ID
-        title: fileName.replace(".md", ""), // 使用文件名作为标题（去掉 .md 后缀）
+        title, // 使用生成的标题
         content,
         fileName,
         filePath,
@@ -323,7 +346,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       selectedFolderId: null,
       selectedNoteId: null,
       editorContent: "",
-      isLoadingFromFileSystem: true
+      isLoadingFromFileSystem: true,
+      searchKeyword: "" // 重新加载时清空搜索
     });
   },
 
