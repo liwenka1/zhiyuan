@@ -1,4 +1,4 @@
-import { FileText, Inbox, SquarePen, Pin, Search, Eye, Trash2 } from "lucide-react";
+import { FileText, Inbox, SquarePen, Pin, Search, Eye, Trash2, Copy, Pencil } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -28,6 +28,8 @@ interface NoteListProps {
   onCreateNote?: () => void;
   onShowNoteInExplorer?: (note: Note) => void;
   onDeleteNote?: (note: Note) => void;
+  onRenameNote?: (note: Note) => void;
+  onDuplicateNote?: (note: Note) => void;
 }
 
 export function NoteList({
@@ -36,7 +38,9 @@ export function NoteList({
   onSelectNote,
   onCreateNote,
   onShowNoteInExplorer,
-  onDeleteNote
+  onDeleteNote,
+  onRenameNote,
+  onDuplicateNote
 }: NoteListProps) {
   return (
     <div className="flex h-full flex-col">
@@ -71,95 +75,106 @@ export function NoteList({
       </div>
 
       {/* 笔记列表 */}
-      <ScrollArea className="flex-1">
-        {notes.length === 0 ? (
-          <motion.div
-            className="empty-state text-muted-foreground flex h-full flex-col items-center justify-center p-6 text-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Inbox className="empty-state-icon mb-3 h-10 w-10" />
-            <p className="text-sm font-medium">暂无笔记</p>
-            <p className="text-tertiary-foreground mt-1 text-xs">选择文件夹或创建新笔记</p>
-          </motion.div>
-        ) : (
-          <div className="space-y-0.5 p-2">
-            {notes.map((note, index) => {
-              const isSelected = selectedNoteId === note.id;
-              return (
-                <ContextMenu key={note.id}>
-                  <ContextMenuTrigger asChild>
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{
-                        opacity: 1,
-                        x: 0,
-                        backgroundColor: getSelectionBgColor(isSelected)
-                      }}
-                      whileHover={{
-                        backgroundColor: getHoverBgColor(isSelected)
-                      }}
-                      transition={{ duration: 0.2, delay: index * 0.03 }}
-                      className="note-item cursor-pointer rounded-md px-3 py-3"
-                      onClick={() => onSelectNote?.(note.id)}
-                    >
-                      {/* 标题行 */}
-                      <div className="flex items-start gap-2">
-                        {note.isPinned ? (
-                          <Pin
-                            className={cn(
-                              "mt-0.5 h-3.5 w-3.5 shrink-0",
-                              isSelected ? "text-highlight" : "text-highlight/70"
-                            )}
-                          />
-                        ) : (
-                          <FileText
-                            className={cn(
-                              "mt-0.5 h-3.5 w-3.5 shrink-0",
-                              isSelected ? "text-foreground" : "text-muted-foreground"
-                            )}
-                          />
-                        )}
-                        <h3
-                          className={cn(
-                            "truncate-text flex-1 text-sm leading-tight font-medium",
-                            isSelected ? "text-foreground" : "text-foreground/90"
+      <ScrollArea className="flex-1 overflow-hidden">
+        <div className="h-full">
+          {notes.length === 0 ? (
+            <motion.div
+              className="empty-state text-muted-foreground flex h-full flex-col items-center justify-center p-6 text-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Inbox className="empty-state-icon mb-3 h-10 w-10" />
+              <p className="text-sm font-medium">暂无笔记</p>
+              <p className="text-tertiary-foreground mt-1 text-xs">选择文件夹或创建新笔记</p>
+            </motion.div>
+          ) : (
+            <div className="space-y-0.5 p-2">
+              {notes.map((note, index) => {
+                const isSelected = selectedNoteId === note.id;
+                return (
+                  <ContextMenu key={note.id}>
+                    <ContextMenuTrigger asChild>
+                      <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{
+                          opacity: 1,
+                          x: 0,
+                          backgroundColor: getSelectionBgColor(isSelected)
+                        }}
+                        whileHover={{
+                          backgroundColor: getHoverBgColor(isSelected)
+                        }}
+                        transition={{ duration: 0.2, delay: index * 0.03 }}
+                        className="note-item cursor-pointer overflow-hidden rounded-md px-3 py-3"
+                        onClick={() => onSelectNote?.(note.id)}
+                      >
+                        {/* 标题行 */}
+                        <div className="flex min-w-0 items-start gap-2">
+                          {note.isPinned ? (
+                            <Pin
+                              className={cn(
+                                "mt-0.5 h-3.5 w-3.5 shrink-0",
+                                isSelected ? "text-highlight" : "text-highlight/70"
+                              )}
+                            />
+                          ) : (
+                            <FileText
+                              className={cn(
+                                "mt-0.5 h-3.5 w-3.5 shrink-0",
+                                isSelected ? "text-foreground" : "text-muted-foreground"
+                              )}
+                            />
                           )}
-                        >
-                          {note.title}
-                        </h3>
-                      </div>
+                          <div
+                            className={cn(
+                              "min-w-0 flex-1 truncate text-sm leading-tight font-medium",
+                              isSelected ? "text-foreground" : "text-foreground/90"
+                            )}
+                          >
+                            {note.title}
+                          </div>
+                        </div>
 
-                      {/* 日期行 */}
-                      {note.updatedAt && (
-                        <p
-                          className={cn(
-                            "mt-1.5 text-[11px]",
-                            isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
-                          )}
-                        >
-                          {formatDateTime(note.updatedAt)}
-                        </p>
-                      )}
-                    </motion.div>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
-                      <Eye className="h-4 w-4" />
-                      <span>在文件管理器中查看</span>
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
-                      <Trash2 className="h-4 w-4" />
-                      <span>删除笔记</span>
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              );
-            })}
-          </div>
-        )}
+                        {/* 日期行 */}
+                        {note.updatedAt && (
+                          <p
+                            className={cn(
+                              "mt-1.5 text-[11px]",
+                              isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
+                            )}
+                          >
+                            {formatDateTime(note.updatedAt)}
+                          </p>
+                        )}
+                      </motion.div>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
+                        <Eye className="h-4 w-4" />
+                        <span>在文件管理器中查看</span>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onRenameNote?.(note)}>
+                        <Pencil className="h-4 w-4" />
+                        <span>重命名</span>
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => onDuplicateNote?.(note)}>
+                        <Copy className="h-4 w-4" />
+                        <span>创建副本</span>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span>删除笔记</span>
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </ScrollArea>
     </div>
   );
