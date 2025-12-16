@@ -36,11 +36,10 @@
   .allow-select {
     user-select: text;
   }
+}
 
-  /* 截断文本 */
-  .truncate-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
+/* 修复 Radix ScrollArea 的内联样式导致文本截断失效的问题 */
+[data-radix-scroll-area-viewport] > div {
+  min-width: 0 !important;
+  display: block !important;
 }
