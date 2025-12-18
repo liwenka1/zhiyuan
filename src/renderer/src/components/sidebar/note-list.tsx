@@ -114,7 +114,7 @@ export function NoteList({
                           backgroundColor: getHoverBgColor(isSelected)
                         }}
                         transition={{ duration: 0.2, delay: index * 0.03 }}
-                        className="note-item cursor-pointer overflow-hidden rounded-md px-3 py-3"
+                        className="note-item cursor-pointer overflow-hidden rounded-md px-3 py-2"
                         onClick={() => onSelectNote?.(note.id)}
                       >
                         {/* 标题行 */}

@@ -35,18 +35,16 @@ export function WorkspaceSelector() {
   };
 
   return (
-    <div className="flex h-12 shrink-0 items-center px-3">
-      <Button
-        variant="ghost"
-        className="text-muted-foreground hover:text-foreground h-8 w-full justify-between text-xs font-medium"
-        onClick={handleSelectWorkspace}
-      >
-        <div className="flex items-center gap-2">
-          <FolderOpen className="h-4 w-4" />
-          <span className="truncate">{getWorkspaceName()}</span>
-        </div>
-        <ChevronDown className="h-3 w-3 opacity-50" />
-      </Button>
-    </div>
+    <Button
+      variant="ghost"
+      className="text-muted-foreground hover:text-foreground h-8 w-full justify-between text-xs font-medium"
+      onClick={handleSelectWorkspace}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <FolderOpen className="h-4 w-4 shrink-0" />
+        <span className="truncate">{getWorkspaceName()}</span>
+      </div>
+      <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
+    </Button>
   );
 }

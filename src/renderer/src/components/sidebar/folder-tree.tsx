@@ -48,22 +48,18 @@ export function FolderTree({
 
   return (
     <div className="flex h-full flex-col">
-      {/* 工作区选择器 */}
-      <WorkspaceSelector />
-
-      {/* 分隔线 */}
-      <div className="border-divider border-b" />
-
-      {/* 顶部工具栏 */}
-      <div className="flex h-12 shrink-0 items-center justify-between px-3">
-        <span className="text-muted-foreground text-xs font-medium tracking-wider uppercase">文件夹</span>
+      {/* 工作区选择器和新建文件夹 */}
+      <div className="flex h-12 shrink-0 items-center gap-2 px-3">
+        <div className="min-w-0 flex-1">
+          <WorkspaceSelector />
+        </div>
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0"
+                className="h-7 w-7 shrink-0 p-0"
                 aria-label="新建文件夹"
                 onClick={onCreateFolder}
               >
