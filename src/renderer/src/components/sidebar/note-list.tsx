@@ -54,7 +54,7 @@ export function NoteList({
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
           <Input
             type="search"
-            placeholder="搜索笔记..."
+            placeholder="搜索"
             value={searchKeyword}
             onChange={(e) => onSearchChange?.(e.target.value)}
             className="bg-muted/50 h-8 border-none pl-8 text-sm focus-visible:ring-1"
