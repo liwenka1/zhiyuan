@@ -59,6 +59,7 @@ export interface FileAPI {
 export interface FolderAPI {
   create: (folderPath: string) => Promise<void>;
   delete: (folderPath: string) => Promise<void>;
+  rename: (oldPath: string, newPath: string) => Promise<void>;
   onAdded: (callback: (data: { folderPath: string; fullPath: string }) => void) => () => void;
   onDeleted: (callback: (data: { folderPath: string; fullPath: string }) => void) => () => void;
 }

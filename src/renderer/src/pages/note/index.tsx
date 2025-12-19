@@ -22,11 +22,17 @@ export function NotePage() {
   // 对话框状态
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
   const [showRenameNoteDialog, setShowRenameNoteDialog] = useState(false);
+  const [showRenameFolderDialog, setShowRenameFolderDialog] = useState(false);
   const [noteToRename, setNoteToRename] = useState<{
     id: string;
     title: string;
     updatedAt?: string;
     isPinned?: boolean;
+  } | null>(null);
+  const [folderToRename, setFolderToRename] = useState<{
+    id: string;
+    name: string;
+    noteCount?: number;
   } | null>(null);
 
   // 状态和方法
@@ -46,6 +52,7 @@ export function NotePage() {
   const deleteFolder = useNoteStore((state) => state.deleteFolder);
   const deleteNote = useNoteStore((state) => state.deleteNote);
   const renameNote = useNoteStore((state) => state.renameNote);
+  const renameFolder = useNoteStore((state) => state.renameFolder);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
@@ -120,6 +127,12 @@ export function NotePage() {
     setShowRenameNoteDialog(true);
   };
 
+  // 重命名文件夹 - 打开对话框
+  const handleRenameFolder = (folder: { id: string; name: string; noteCount?: number }) => {
+    setFolderToRename(folder);
+    setShowRenameFolderDialog(true);
+  };
+
   // 确认重命名笔记
   const handleConfirmRenameNote = async (newTitle: string) => {
     if (!noteToRename || !newTitle || newTitle === noteToRename.title) return;
@@ -130,6 +143,19 @@ export function NotePage() {
     } catch (error) {
       console.error("重命名笔记失败:", error);
       alert("重命名笔记失败，请重试");
+    }
+  };
+
+  // 确认重命名文件夹
+  const handleConfirmRenameFolder = async (newName: string) => {
+    if (!folderToRename || !newName || newName === folderToRename.name) return;
+
+    try {
+      await renameFolder(folderToRename.id, newName);
+      setFolderToRename(null);
+    } catch (error) {
+      console.error("重命名文件夹失败:", error);
+      alert("重命名文件夹失败，请重试");
     }
   };
 
@@ -262,6 +288,7 @@ export function NotePage() {
             onCreateFolder={handleCreateFolder}
             onShowFolderInExplorer={handleShowFolderInExplorer}
             onDeleteFolder={handleDeleteFolder}
+            onRenameFolder={handleRenameFolder}
           />
         }
         rightSidebar={
@@ -296,6 +323,17 @@ export function NotePage() {
         description="请输入文件夹名称"
         placeholder="例如：工作、学习、生活..."
         onConfirm={handleConfirmCreateFolder}
+      />
+
+      {/* 重命名文件夹对话框 */}
+      <InputDialog
+        open={showRenameFolderDialog}
+        onOpenChange={setShowRenameFolderDialog}
+        title="重命名文件夹"
+        description="请输入新的文件夹名称"
+        placeholder="文件夹名称"
+        defaultValue={folderToRename?.name}
+        onConfirm={handleConfirmRenameFolder}
       />
 
       {/* 重命名笔记对话框 */}

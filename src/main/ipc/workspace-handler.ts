@@ -89,6 +89,11 @@ export function registerWorkspaceHandlers(): void {
     return await fileSystem.deleteFolder(folderPath);
   });
 
+  // 重命名文件夹
+  ipcMain.handle("folder:rename", async (_, oldPath: string, newPath: string) => {
+    return await fileSystem.renameFolder(oldPath, newPath);
+  });
+
   // 在文件管理器中显示文件
   ipcMain.handle("shell:showItemInFolder", (_, fullPath: string) => {
     shell.showItemInFolder(fullPath);

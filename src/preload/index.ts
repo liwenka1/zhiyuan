@@ -162,6 +162,11 @@ const api = {
     delete: (folderPath: string): Promise<void> => ipcRenderer.invoke("folder:delete", folderPath),
 
     /**
+     * 重命名文件夹
+     */
+    rename: (oldPath: string, newPath: string): Promise<void> => ipcRenderer.invoke("folder:rename", oldPath, newPath),
+
+    /**
      * 监听文件夹添加
      */
     onAdded: (callback: (data: { folderPath: string; fullPath: string }) => void): (() => void) => {

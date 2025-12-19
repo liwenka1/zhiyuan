@@ -87,6 +87,13 @@ export const fileSystem = {
   },
 
   /**
+   * 重命名文件夹
+   */
+  async renameFolder(oldPath: string, newPath: string): Promise<void> {
+    await fs.promises.rename(oldPath, newPath);
+  },
+
+  /**
    * 复制文件
    */
   async copyFile(sourcePath: string, destPath: string): Promise<void> {

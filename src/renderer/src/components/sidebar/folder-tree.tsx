@@ -1,4 +1,4 @@
-import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, RefreshCw } from "lucide-react";
+import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, RefreshCw, Pencil } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ interface FolderTreeProps {
   onCreateFolder?: () => void;
   onShowFolderInExplorer?: (folder: FolderItem) => void;
   onDeleteFolder?: (folder: FolderItem) => void;
+  onRenameFolder?: (folder: FolderItem) => void;
 }
 
 export function FolderTree({
@@ -42,7 +43,8 @@ export function FolderTree({
   onSelectFolder,
   onCreateFolder,
   onShowFolderInExplorer,
-  onDeleteFolder
+  onDeleteFolder,
+  onRenameFolder
 }: FolderTreeProps) {
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
@@ -169,6 +171,11 @@ export function FolderTree({
                   <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
                     <FolderOpen className="h-4 w-4" />
                     <span>在文件管理器中查看</span>
+                  </ContextMenuItem>
+                  <ContextMenuSeparator />
+                  <ContextMenuItem onClick={() => onRenameFolder?.(folder)}>
+                    <Pencil className="h-4 w-4" />
+                    <span>重命名</span>
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => onDeleteFolder?.(folder)}>

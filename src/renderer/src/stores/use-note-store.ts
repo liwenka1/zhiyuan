@@ -18,6 +18,7 @@ interface NoteStore {
   selectFolder: (folderId: string | null) => void;
   createFolder: (name: string) => Promise<void>;
   deleteFolder: (folderId: string) => void;
+  renameFolder: (folderId: string, newName: string) => Promise<void>;
 
   // 操作方法 - 笔记
   setNotes: (notes: Note[]) => void;
@@ -108,6 +109,53 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       // 如果删除的是当前选中的文件夹，清空选中状态
       selectedFolderId: state.selectedFolderId === folderId ? null : state.selectedFolderId
     }));
+  },
+
+  renameFolder: async (folderId, newName) => {
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const folder = get().folders.find((f) => f.id === folderId);
+
+    if (!workspacePath || !folder?.path) {
+      console.error("没有工作区路径或文件夹路径，无法重命名");
+      return;
+    }
+
+    try {
+      // 构建新的文件夹路径
+      const newFolderPath = `${workspacePath}/${newName}`;
+
+      // 在文件系统中重命名文件夹
+      await window.api.folder.rename(folder.path, newFolderPath);
+
+      // 更新 store 中的文件夹信息
+      set((state) => ({
+        folders: state.folders.map((f) =>
+          f.id === folderId
+            ? {
+                ...f,
+                id: newName, // 使用新名称作为 ID
+                name: newName,
+                path: newFolderPath,
+                updatedAt: new Date().toISOString()
+              }
+            : f
+        ),
+        // 如果重命名的是当前选中的文件夹，更新选中状态
+        selectedFolderId: state.selectedFolderId === folderId ? newName : state.selectedFolderId,
+        // 更新该文件夹下所有笔记的 folderId
+        notes: state.notes.map((n) =>
+          n.folderId === folderId
+            ? {
+                ...n,
+                folderId: newName
+              }
+            : n
+        )
+      }));
+    } catch (error) {
+      console.error("重命名文件夹失败:", error);
+      throw error;
+    }
   },
 
   // 笔记操作
