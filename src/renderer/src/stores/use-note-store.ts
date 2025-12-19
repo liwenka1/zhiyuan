@@ -64,10 +64,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   selectFolder: (folderId) => {
     set({
-      selectedFolderId: folderId,
-      selectedNoteId: null,
-      editorContent: "",
-      searchKeyword: "" // 切换文件夹时清空搜索
+      selectedFolderId: folderId
     });
   },
 
