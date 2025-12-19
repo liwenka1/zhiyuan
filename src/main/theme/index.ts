@@ -58,6 +58,11 @@ class ThemeManager {
     const windows = BrowserWindow.getAllWindows();
 
     windows.forEach((window) => {
+      // 更新窗口背景色
+      const bgColor = currentTheme === "dark" ? "#232931" : "#FFFFFF";
+      window.setBackgroundColor(bgColor);
+
+      // 通知渲染进程主题已变化
       window.webContents.send("theme:changed", currentTheme);
     });
   }

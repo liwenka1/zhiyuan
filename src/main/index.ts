@@ -7,6 +7,12 @@ import { registerThemeHandlers } from "./ipc/theme-handler";
 import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
 
 function createWindow(): void {
+  // 获取当前主题对应的背景色
+  const getBackgroundColor = (): string => {
+    const theme = themeManager.getTheme();
+    return theme === "dark" ? "#232931" : "#FFFFFF";
+  };
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -15,6 +21,13 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     autoHideMenuBar: true,
+    backgroundColor: getBackgroundColor(),
+    // macOS: 隐藏标题栏但保留红黄绿按钮
+    ...(process.platform === "darwin"
+      ? {
+          titleBarStyle: "hidden"
+        }
+      : {}),
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.cjs"),
@@ -29,6 +42,13 @@ function createWindow(): void {
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url);
     return { action: "deny" };
+  });
+
+  // 监听主题变化，动态更新窗口背景色
+  mainWindow.webContents.on("ipc-message", (_event, channel) => {
+    if (channel === "theme:changed") {
+      mainWindow.setBackgroundColor(getBackgroundColor());
+    }
   });
 
   // HMR for renderer base on electron-vite cli.

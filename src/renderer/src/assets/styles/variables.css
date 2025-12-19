@@ -73,6 +73,7 @@
     --notelist-width: 17.5rem;
     --notelist-max-width: 37.5rem;
     --titlebar-height: 3.25rem;
+    --titlebar-height-mac: 0.75rem;
 
     /* 编辑器 */
     --editor-font: "SF Pro Text", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;

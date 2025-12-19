@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 
 interface MainLayoutProps {
@@ -8,8 +8,20 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayoutProps) {
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    // 检测是否为 macOS
+    setIsMac(navigator.userAgent.toLowerCase().includes("mac"));
+  }, []);
+
   return (
-    <div className="bg-background flex h-screen w-full overflow-hidden">
+    <div
+      className="bg-background flex h-screen w-full overflow-hidden"
+      style={{
+        paddingTop: isMac ? "var(--titlebar-height-mac)" : "0px"
+      }}
+    >
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* 左侧文件夹树 */}
         <ResizablePanel defaultSize={12} minSize={10} maxSize={20} className="bg-card">
