@@ -24,7 +24,7 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
     >
       <ResizablePanelGroup direction="horizontal" className="h-full">
         {/* 左侧文件夹树 */}
-        <ResizablePanel defaultSize={12} minSize={10} maxSize={20} className="bg-card">
+        <ResizablePanel defaultSize={15} minSize={15} maxSize={20} className="bg-card">
           <aside className="no-select h-full">{leftSidebar}</aside>
         </ResizablePanel>
 
@@ -32,7 +32,7 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
         <ResizableHandle className="bg-divider hover:bg-highlight/50 w-px transition-colors duration-150" />
 
         {/* 中间笔记列表 */}
-        <ResizablePanel defaultSize={22} minSize={15} maxSize={35} className="bg-card">
+        <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="bg-card">
           <aside className="no-select h-full">{rightSidebar}</aside>
         </ResizablePanel>
 
@@ -40,7 +40,7 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
         <ResizableHandle className="bg-divider hover:bg-highlight/50 w-px transition-colors duration-150" />
 
         {/* 右侧编辑区 */}
-        <ResizablePanel defaultSize={66} className="bg-background">
+        <ResizablePanel defaultSize={60} className="bg-background">
           <main className="allow-select h-full min-w-0 overflow-hidden">{mainContent}</main>
         </ResizablePanel>
       </ResizablePanelGroup>

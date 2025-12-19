@@ -13,7 +13,6 @@ import {
 import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { ThemeToggle } from "@/components/theme";
-import { WorkspaceSelector } from "@/components/workspace/workspace-selector";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { useNoteStore } from "@/stores/use-note-store";
 
@@ -73,8 +72,7 @@ export function FolderTree({
   return (
     <div className="flex h-full flex-col">
       {/* 工作区名称 + 切换按钮 + 新建文件夹按钮 */}
-      <div className="flex h-12 shrink-0 items-center gap-2 px-3">
-        <WorkspaceSelector />
+      <div className="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
         <TooltipProvider delayDuration={300}>
           <Tooltip>
             <TooltipTrigger asChild>
