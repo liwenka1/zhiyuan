@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Folder, Note } from "@/types";
 import { DEMO_FOLDERS, DEMO_NOTES } from "@/constants/demo-data";
+import { formatMarkdown } from "@/lib/formatter";
 
 interface NoteStore {
   // 状态
@@ -23,6 +24,7 @@ interface NoteStore {
   selectNote: (noteId: string) => void;
   createNote: (folderId?: string) => Promise<void>;
   updateNoteContent: (content: string) => void;
+  formatCurrentNote: () => Promise<void>;
   deleteNote: (noteId: string) => void;
   renameNote: (noteId: string, newTitle: string) => Promise<void>;
   duplicateNote: (noteId: string) => Promise<void>;
@@ -214,6 +216,21 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const note = get().notes.find((n) => n.id === selectedNoteId);
     if (note?.filePath) {
       get().saveNoteToFileSystem(selectedNoteId, content);
+    }
+  },
+
+  formatCurrentNote: async () => {
+    const { selectedNoteId, editorContent } = get();
+    if (!selectedNoteId) return;
+
+    try {
+      // 格式化当前编辑器内容
+      const formattedContent = await formatMarkdown(editorContent);
+
+      // 更新笔记内容（这会触发保存）
+      get().updateNoteContent(formattedContent);
+    } catch (error) {
+      console.error("格式化笔记失败:", error);
     }
   },
 
