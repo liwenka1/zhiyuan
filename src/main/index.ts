@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from "electron";
+import { app, shell, BrowserWindow, screen } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
@@ -13,12 +13,21 @@ function createWindow(): void {
     return theme === "dark" ? "#232931" : "#FFFFFF";
   };
 
+  // 计算窗口初始位置
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+  const windowWidth = 1280;
+  const windowHeight = 752;
+  const x = Math.round((screenWidth - windowWidth) / 2);
+  const y = Math.round(screenHeight * 0.15);
+
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 752,
+    width: windowWidth,
+    height: windowHeight,
     minWidth: 1000,
     minHeight: 600,
+    x: x,
+    y: y,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: getBackgroundColor(),
