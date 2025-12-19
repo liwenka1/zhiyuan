@@ -1,4 +1,4 @@
-import { Eye, FileText, Presentation, Wand2 } from "lucide-react";
+import { Eye, FileText, Wand2 } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -13,7 +13,6 @@ interface EditorToolbarProps {
 export function EditorToolbar({ fileName }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
-  const setViewMode = useViewStore((state) => state.setViewMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
 
   const handleFormat = () => {
@@ -55,24 +54,6 @@ export function EditorToolbar({ fileName }: EditorToolbarProps) {
             </TooltipTrigger>
             <TooltipContent side="bottom">
               <p>预览模式</p>
-            </TooltipContent>
-          </Tooltip>
-
-          {/* 演示按钮 */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                aria-label="演示"
-                onClick={() => setViewMode("presentation")}
-              >
-                <Presentation className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>演示模式</p>
             </TooltipContent>
           </Tooltip>
 

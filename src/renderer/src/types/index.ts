@@ -36,9 +36,8 @@ export interface EditorState {
 /**
  * 页面级视图模式
  * note: 笔记页面（三栏布局）
- * presentation: 幻灯片演示（全屏）
  */
-export type ViewMode = "note" | "presentation";
+export type ViewMode = "note";
 
 /**
  * 编辑区视图模式
@@ -53,14 +52,4 @@ export type EditorViewMode = "edit" | "preview";
 export interface PreviewConfig {
   showToc: boolean; // 是否显示目录
   syncScroll: boolean; // 是否同步滚动（分屏模式）
-}
-
-/**
- * 幻灯片配置
- */
-export interface PresentationConfig {
-  currentSlide: number; // 当前幻灯片索引
-  totalSlides: number; // 总幻灯片数
-  autoPlay: boolean; // 是否自动播放
-  interval: number; // 自动播放间隔（秒）
 }

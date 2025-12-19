@@ -6,20 +6,15 @@ import { EditorArea } from "@/components/editor/editor-area";
 import { InputDialog } from "@/components/ui/input-dialog";
 import { useNoteStore } from "@/stores/use-note-store";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
-import { useViewStore } from "@/stores/use-view-store";
-import { PresentationMode } from "./modes/presentation-mode";
 import { useState } from "react";
 
 /**
  * 笔记页面
  * 负责：
  * - 初始化演示数据或从文件系统加载
- * - 管理页面级模式切换（note / presentation）
- * - 笔记模式：三栏布局（文件夹树 + 笔记列表 + 编辑区）
- * - 演示模式：全屏幻灯片
+ * - 管理笔记模式：三栏布局（文件夹树 + 笔记列表 + 编辑区）
  */
 export function NotePage() {
-  const viewMode = useViewStore((state) => state.viewMode);
   const initWithDemoData = useNoteStore((state) => state.initWithDemoData);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
@@ -217,11 +212,6 @@ export function NotePage() {
       unsubscribeFolderDeleted();
     };
   }, []);
-
-  // 幻灯片模式：全屏展示
-  if (viewMode === "presentation") {
-    return <PresentationMode />;
-  }
 
   // 笔记模式：三栏布局
   // 根据选中的文件夹过滤笔记，如果没有选中文件夹则显示所有笔记

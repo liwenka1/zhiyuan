@@ -1,8 +1,8 @@
 import { create } from "zustand";
-import { ViewMode, EditorViewMode, PreviewConfig, PresentationConfig } from "@/types";
+import { ViewMode, EditorViewMode, PreviewConfig } from "@/types";
 
 interface ViewStore {
-  // 页面级模式（note 或 presentation）
+  // 页面级模式（note）
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
 
@@ -17,17 +17,8 @@ interface ViewStore {
   toggleToc: () => void;
   toggleSyncScroll: () => void;
 
-  // 幻灯片配置
-  presentationConfig: PresentationConfig;
-  setPresentationConfig: (config: Partial<PresentationConfig>) => void;
-  nextSlide: () => void;
-  prevSlide: () => void;
-  goToSlide: (index: number) => void;
-  toggleAutoPlay: () => void;
-
   // 工具方法
   isNoteMode: () => boolean;
-  isPresentationMode: () => boolean;
   isEditMode: () => boolean;
   isPreviewMode: () => boolean;
 }
@@ -40,13 +31,6 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   previewConfig: {
     showToc: true,
     syncScroll: true
-  },
-
-  presentationConfig: {
-    currentSlide: 0,
-    totalSlides: 0,
-    autoPlay: false,
-    interval: 5
   },
 
   // 页面级模式切换
@@ -82,55 +66,8 @@ export const useViewStore = create<ViewStore>((set, get) => ({
       }
     })),
 
-  // 幻灯片配置
-  setPresentationConfig: (config) =>
-    set((state) => ({
-      presentationConfig: { ...state.presentationConfig, ...config }
-    })),
-
-  nextSlide: () =>
-    set((state) => {
-      const { currentSlide, totalSlides } = state.presentationConfig;
-      const nextIndex = Math.min(currentSlide + 1, totalSlides - 1);
-      return {
-        presentationConfig: {
-          ...state.presentationConfig,
-          currentSlide: nextIndex
-        }
-      };
-    }),
-
-  prevSlide: () =>
-    set((state) => {
-      const { currentSlide } = state.presentationConfig;
-      const prevIndex = Math.max(currentSlide - 1, 0);
-      return {
-        presentationConfig: {
-          ...state.presentationConfig,
-          currentSlide: prevIndex
-        }
-      };
-    }),
-
-  goToSlide: (index) =>
-    set((state) => ({
-      presentationConfig: {
-        ...state.presentationConfig,
-        currentSlide: index
-      }
-    })),
-
-  toggleAutoPlay: () =>
-    set((state) => ({
-      presentationConfig: {
-        ...state.presentationConfig,
-        autoPlay: !state.presentationConfig.autoPlay
-      }
-    })),
-
   // 工具方法
   isNoteMode: () => get().viewMode === "note",
-  isPresentationMode: () => get().viewMode === "presentation",
   isEditMode: () => get().editorMode === "edit",
   isPreviewMode: () => get().editorMode === "preview"
 }));
