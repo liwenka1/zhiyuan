@@ -9,8 +9,8 @@ import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    width: 1280,
+    height: 752,
     minWidth: 1000,
     minHeight: 600,
     show: false,
