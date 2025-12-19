@@ -13,6 +13,16 @@ function createWindow(): void {
     return theme === "dark" ? "#232931" : "#FFFFFF";
   };
 
+  // 获取标题栏覆盖层配置（用于 Windows）
+  const getTitleBarOverlay = () => {
+    const theme = themeManager.getTheme();
+    return {
+      color: theme === "dark" ? "#232931" : "#FFFFFF",
+      symbolColor: theme === "dark" ? "#FFFFFF" : "#000000",
+      height: 32
+    };
+  };
+
   // 计算窗口初始位置
   const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
   const windowWidth = 1280;
@@ -37,6 +47,13 @@ function createWindow(): void {
           titleBarStyle: "hidden"
         }
       : {}),
+    // Windows: 使用 titleBarOverlay 自定义标题栏颜色，不显示图标
+    ...(process.platform === "win32"
+      ? {
+          titleBarStyle: "hidden",
+          titleBarOverlay: getTitleBarOverlay()
+        }
+      : {}),
     ...(process.platform === "linux" ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.cjs"),
@@ -53,10 +70,14 @@ function createWindow(): void {
     return { action: "deny" };
   });
 
-  // 监听主题变化，动态更新窗口背景色
+  // 监听主题变化，动态更新窗口背景色和标题栏
   mainWindow.webContents.on("ipc-message", (_event, channel) => {
     if (channel === "theme:changed") {
       mainWindow.setBackgroundColor(getBackgroundColor());
+      // Windows: 动态更新标题栏颜色
+      if (process.platform === "win32") {
+        mainWindow.setTitleBarOverlay(getTitleBarOverlay());
+      }
     }
   });
 

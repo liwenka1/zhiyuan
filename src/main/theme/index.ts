@@ -62,6 +62,14 @@ class ThemeManager {
       const bgColor = currentTheme === "dark" ? "#232931" : "#FFFFFF";
       window.setBackgroundColor(bgColor);
 
+      // Windows: 更新标题栏颜色
+      if (process.platform === "win32") {
+        window.setTitleBarOverlay({
+          color: bgColor,
+          symbolColor: currentTheme === "dark" ? "#FFFFFF" : "#000000"
+        });
+      }
+
       // 通知渲染进程主题已变化
       window.webContents.send("theme:changed", currentTheme);
     });

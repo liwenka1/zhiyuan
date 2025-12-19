@@ -1,5 +1,7 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { TitleBar } from "@/components/titlebar";
+import { usePlatform } from "@/components/titlebar/use-platform";
 
 interface MainLayoutProps {
   leftSidebar: ReactNode;
@@ -8,21 +10,25 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayoutProps) {
-  const [isMac, setIsMac] = useState(false);
+  const { isMac, isWindows } = usePlatform();
 
-  useEffect(() => {
-    // 检测是否为 macOS
-    setIsMac(navigator.userAgent.toLowerCase().includes("mac"));
-  }, []);
+  // 根据平台设置标题栏高度
+  const getTitleBarHeight = () => {
+    if (isMac) return "var(--titlebar-height-mac)";
+    if (isWindows) return "var(--titlebar-height-windows)";
+    return "0px";
+  };
 
   return (
     <div
       className="bg-background flex h-screen w-full overflow-hidden"
       style={{
-        paddingTop: isMac ? "var(--titlebar-height-mac)" : "0px"
+        paddingTop: getTitleBarHeight()
       }}
     >
-      <ResizablePanelGroup direction="horizontal" className="h-full">
+      {/* 自定义标题栏（Windows 拖拽区域） */}
+      <TitleBar />
+      <ResizablePanelGroup direction="horizontal" className={`h-full ${isWindows ? "border-border border-t" : ""}`}>
         {/* 左侧文件夹树 */}
         <ResizablePanel defaultSize={15} minSize={15} maxSize={20} className="bg-card">
           <aside className="no-select h-full">{leftSidebar}</aside>
