@@ -11,11 +11,10 @@ import { useState } from "react";
 /**
  * 笔记页面
  * 负责：
- * - 初始化演示数据或从文件系统加载
+ * - 从文件系统加载工作区数据
  * - 管理笔记模式：三栏布局（文件夹树 + 笔记列表 + 编辑区）
  */
 export function NotePage() {
-  const initWithDemoData = useNoteStore((state) => state.initWithDemoData);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
 
@@ -190,13 +189,13 @@ export function NotePage() {
         }
       } catch (error) {
         console.error("初始化工作区失败:", error);
-        // 出错时使用演示数据作为后备方案
-        initWithDemoData();
+        // 初始化失败，显示错误提示
+        alert("初始化工作区失败，请检查文件系统权限或重启应用");
       }
     };
 
     initWorkspace();
-  }, [initWithDemoData, loadFromFileSystem, setWorkspacePath]);
+  }, [loadFromFileSystem, setWorkspacePath]);
 
   // 监听文件系统变化
   useEffect(() => {

@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { Folder, Note } from "@/types";
-import { DEMO_FOLDERS, DEMO_NOTES } from "@/constants/demo-data";
 import { formatMarkdown } from "@/lib/formatter";
 
 interface NoteStore {
@@ -49,7 +48,6 @@ interface NoteStore {
   // 工具方法
   getSelectedNote: () => Note | undefined;
   getNotesByFolder: (folderId: string) => Note[];
-  initWithDemoData: () => void;
 }
 
 export const useNoteStore = create<NoteStore>((set, get) => ({
@@ -576,15 +574,5 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       selectedNoteId: shouldClearSelection ? null : state.selectedNoteId,
       editorContent: shouldClearSelection ? "" : state.editorContent
     }));
-  },
-
-  initWithDemoData: () => {
-    set({
-      folders: DEMO_FOLDERS,
-      notes: DEMO_NOTES,
-      selectedFolderId: null,
-      selectedNoteId: null,
-      editorContent: ""
-    });
   }
 }));
