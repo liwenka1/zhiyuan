@@ -5,6 +5,7 @@ import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useViewStore } from "@/stores/use-view-store";
 import { useNoteStore } from "@/stores/use-note-store";
+import { useTranslation } from "react-i18next";
 
 interface EditorToolbarProps {
   fileName?: string;
@@ -14,6 +15,7 @@ export function EditorToolbar({ fileName }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
+  const { t } = useTranslation("editor");
 
   const handleFormat = () => {
     formatCurrentNote();
@@ -45,7 +47,7 @@ export function EditorToolbar({ fileName }: EditorToolbarProps) {
               <Toggle
                 size="sm"
                 className="h-8 w-8 p-0"
-                aria-label="预览"
+                aria-label={t("toolbar.preview")}
                 pressed={editorMode === "preview"}
                 onPressedChange={() => toggleEditorMode("preview")}
               >
@@ -53,19 +55,25 @@ export function EditorToolbar({ fileName }: EditorToolbarProps) {
               </Toggle>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>预览模式</p>
+              <p>{t("toolbar.preview")}</p>
             </TooltipContent>
           </Tooltip>
 
           {/* 格式化按钮 */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="格式化" onClick={handleFormat}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label={t("toolbar.format")}
+                onClick={handleFormat}
+              >
                 <Wand2 className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>格式化</p>
+              <p>{t("toolbar.format")}</p>
             </TooltipContent>
           </Tooltip>
         </motion.div>

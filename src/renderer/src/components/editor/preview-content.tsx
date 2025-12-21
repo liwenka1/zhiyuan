@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
 import "@/assets/styles/preview.css";
+import { useTranslation } from "react-i18next";
 
 interface PreviewContentProps {
   content: string;
@@ -19,6 +20,8 @@ interface PreviewContentProps {
  * - TODO: 支持图表
  */
 export function PreviewContent({ content }: PreviewContentProps) {
+  const { t } = useTranslation("editor");
+
   return (
     <ScrollArea className="h-full">
       <div className="prose prose-slate dark:prose-invert max-w-none" style={{ padding: "var(--editor-padding)" }}>
@@ -27,7 +30,7 @@ export function PreviewContent({ content }: PreviewContentProps) {
             {content}
           </ReactMarkdown>
         ) : (
-          <div className="text-muted-foreground mt-8 text-center">暂无内容</div>
+          <div className="text-muted-foreground mt-8 text-center">{t("previewEmpty")}</div>
         )}
       </div>
     </ScrollArea>
