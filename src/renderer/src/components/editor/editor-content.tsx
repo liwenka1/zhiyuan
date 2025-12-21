@@ -7,9 +7,10 @@ import { useTranslation } from "react-i18next";
 interface EditorContentProps {
   content: string;
   onChange: (content: string) => void;
+  noteId?: string;
 }
 
-export function EditorContent({ content, onChange }: EditorContentProps) {
+export function EditorContent({ content, onChange, noteId }: EditorContentProps) {
   const theme = useThemeStore((state) => state.theme);
   const { extensions, theme: editorTheme } = useCodemirrorExtensions({ isDark: theme === "dark" });
   const { t } = useTranslation("editor");
@@ -17,6 +18,7 @@ export function EditorContent({ content, onChange }: EditorContentProps) {
   return (
     <ScrollArea className="h-full">
       <CodeMirror
+        key={noteId}
         value={content}
         height="auto"
         theme={editorTheme}

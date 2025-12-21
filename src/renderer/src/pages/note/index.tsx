@@ -310,6 +310,7 @@ export function NotePage() {
             onChange={updateNoteContent}
             hasNote={!!selectedNoteId}
             fileName={fileName}
+            noteId={selectedNoteId ?? undefined}
           />
         }
       />
