@@ -1,4 +1,4 @@
-import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, RefreshCw, Pencil } from "lucide-react";
+import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,7 @@ import {
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
-import { ThemeToggle } from "@/components/theme";
-import { useWorkspaceStore } from "@/stores/use-workspace-store";
-import { useNoteStore } from "@/stores/use-note-store";
+import { ThemeToggle, LanguageToggle, WorkspaceToggle } from "@/components/theme";
 
 // 特殊 ID 表示「全部笔记」
 export const ALL_NOTES_FOLDER_ID = "__all__";
@@ -49,49 +47,11 @@ export function FolderTree({
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
 
-  const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
-  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
-
-  // 处理切换工作区
-  const handleSwitchWorkspace = async () => {
-    try {
-      // 打开文件夹选择对话框
-      const selectedPath = await window.api.workspace.select();
-
-      if (selectedPath) {
-        // 更新工作区路径
-        setWorkspacePath(selectedPath);
-
-        // 扫描并加载工作区内容
-        const data = await window.api.workspace.scan(selectedPath);
-        loadFromFileSystem(data);
-      }
-    } catch (error) {
-      console.error("选择工作区失败:", error);
-    }
-  };
-
   return (
     <div className="flex h-full flex-col">
-      {/* 工作区名称 + 切换按钮 + 新建文件夹按钮 */}
+      {/* 顶部新建文件夹按钮 */}
       <div className="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
         <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 shrink-0 p-0"
-                aria-label="切换工作区"
-                onClick={handleSwitchWorkspace}
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>切换工作区</p>
-            </TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -189,9 +149,11 @@ export function FolderTree({
         </div>
       </ScrollArea>
 
-      {/* 底部主题切换按钮 */}
-      <div className="border-divider flex h-12 shrink-0 items-center justify-center border-t px-3">
+      {/* 底部全局设置按钮：切换工作区 + 主题切换 + 语言切换 */}
+      <div className="border-divider flex h-12 shrink-0 items-center justify-center gap-2 border-t px-3">
+        <WorkspaceToggle />
         <ThemeToggle />
+        <LanguageToggle />
       </div>
     </div>
   );

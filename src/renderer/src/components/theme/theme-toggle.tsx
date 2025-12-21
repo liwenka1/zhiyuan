@@ -21,7 +21,7 @@ export function ThemeToggle() {
             <Icon className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
-        <TooltipContent side="right">
+        <TooltipContent side="top">
           <p>{tooltipText}</p>
         </TooltipContent>
       </Tooltip>
