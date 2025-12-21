@@ -13,9 +13,14 @@ interface MainLayoutProps {
 export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayoutProps) {
   const { isMac, isWindows } = usePlatform();
 
-  // 标题栏高度样式
-  const titleBarStyle: CSSProperties = {
-    paddingTop: isMac ? "var(--titlebar-height-mac)" : isWindows ? "var(--titlebar-height-windows)" : "0px"
+  // 外层容器样式（Windows 的 padding 在外层）
+  const outerStyle: CSSProperties = {
+    paddingTop: isWindows ? "calc(var(--titlebar-height-windows) + 1px)" : "0px"
+  };
+
+  // 内层容器样式（Mac 的 padding 在内层）
+  const innerStyle: CSSProperties = {
+    paddingTop: isMac ? "var(--titlebar-height-mac)" : "0px"
   };
 
   // 分割线样式（macOS 下延伸到顶部）
@@ -29,13 +34,13 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
     : undefined;
 
   return (
-    <div className="bg-background flex h-screen w-full overflow-hidden">
+    <div className="bg-background flex h-screen w-full overflow-hidden" style={outerStyle}>
       {/* 自定义标题栏（Windows 拖拽区域） */}
       <TitleBar />
       <ResizablePanelGroup
         direction="horizontal"
         className={cn("h-full", isWindows && "border-border border-t")}
-        style={titleBarStyle}
+        style={innerStyle}
       >
         {/* 左侧文件夹树 */}
         <ResizablePanel defaultSize={15} minSize={15} maxSize={20} className="bg-card">
