@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/context-menu";
 import { cn, formatDateTime } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
+import { useTranslation } from "react-i18next";
 
 interface Note {
   id: string;
@@ -46,6 +47,8 @@ export function NoteList({
   onRenameNote,
   onDuplicateNote
 }: NoteListProps) {
+  const { t } = useTranslation("note");
+
   return (
     <div className="flex h-full flex-col">
       {/* 顶部搜索栏 */}
@@ -54,7 +57,7 @@ export function NoteList({
           <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
           <Input
             type="search"
-            placeholder="搜索"
+            placeholder={t("search")}
             value={searchKeyword}
             onChange={(e) => onSearchChange?.(e.target.value)}
             className="bg-muted/50 h-8 border-none pl-8 text-sm focus-visible:ring-1"
@@ -67,14 +70,14 @@ export function NoteList({
                 variant="ghost"
                 size="sm"
                 className="h-7 w-7 shrink-0 p-0"
-                aria-label="新建笔记"
+                aria-label={t("newNote")}
                 onClick={onCreateNote}
               >
                 <SquarePen className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>新建笔记</p>
+              <p>{t("newNote")}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -90,9 +93,9 @@ export function NoteList({
             transition={{ duration: 0.3 }}
           >
             <Inbox className="empty-state-icon mb-3 h-10 w-10" />
-            <p className="text-sm font-medium">{searchKeyword ? "未找到相关笔记" : "暂无笔记"}</p>
+            <p className="text-sm font-medium">{searchKeyword ? t("emptyState.noResults") : t("emptyState.noNotes")}</p>
             <p className="text-tertiary-foreground mt-1 text-xs">
-              {searchKeyword ? "尝试使用其他关键词搜索" : "选择文件夹或创建新笔记"}
+              {searchKeyword ? t("emptyState.tryOtherKeywords") : t("emptyState.createOrSelect")}
             </p>
           </motion.div>
         ) : (
@@ -159,21 +162,21 @@ export function NoteList({
                   <ContextMenuContent>
                     <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
                       <Eye className="h-4 w-4" />
-                      <span>在文件管理器中查看</span>
+                      <span>{t("contextMenu.showInExplorer")}</span>
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onClick={() => onRenameNote?.(note)}>
                       <Pencil className="h-4 w-4" />
-                      <span>重命名</span>
+                      <span>{t("contextMenu.rename")}</span>
                     </ContextMenuItem>
                     <ContextMenuItem onClick={() => onDuplicateNote?.(note)}>
                       <Copy className="h-4 w-4" />
-                      <span>创建副本</span>
+                      <span>{t("contextMenu.duplicate")}</span>
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
                       <Trash2 className="h-4 w-4" />
-                      <span>删除笔记</span>
+                      <span>{t("contextMenu.delete")}</span>
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>

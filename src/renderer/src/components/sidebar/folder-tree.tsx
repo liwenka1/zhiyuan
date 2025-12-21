@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { ThemeToggle, LanguageToggle, WorkspaceToggle } from "@/components/theme";
+import { useTranslation } from "react-i18next";
 
 // 特殊 ID 表示「全部笔记」
 export const ALL_NOTES_FOLDER_ID = "__all__";
@@ -44,6 +45,7 @@ export function FolderTree({
   onDeleteFolder,
   onRenameFolder
 }: FolderTreeProps) {
+  const { t } = useTranslation("sidebar");
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
 
@@ -58,14 +60,14 @@ export function FolderTree({
                 variant="ghost"
                 size="sm"
                 className="h-7 w-7 shrink-0 p-0"
-                aria-label="新建文件夹"
+                aria-label={t("newFolder")}
                 onClick={onCreateFolder}
               >
                 <FolderPlus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <p>新建文件夹</p>
+              <p>{t("newFolder")}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -93,7 +95,7 @@ export function FolderTree({
             onClick={() => onSelectFolder?.(null)}
           >
             <FileStack className="h-4 w-4 shrink-0" />
-            <div className="min-w-0 flex-1 truncate text-sm">全部笔记</div>
+            <div className="min-w-0 flex-1 truncate text-sm">{t("allNotes")}</div>
             <span className="text-tertiary-foreground shrink-0 text-xs tabular-nums">{totalNoteCount}</span>
           </motion.div>
 
@@ -130,17 +132,17 @@ export function FolderTree({
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
                     <FolderOpen className="h-4 w-4" />
-                    <span>在文件管理器中查看</span>
+                    <span>{t("contextMenu.showInExplorer")}</span>
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => onRenameFolder?.(folder)}>
                     <Pencil className="h-4 w-4" />
-                    <span>重命名</span>
+                    <span>{t("contextMenu.rename")}</span>
                   </ContextMenuItem>
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => onDeleteFolder?.(folder)}>
                     <Trash2 className="h-4 w-4" />
-                    <span>删除文件夹</span>
+                    <span>{t("contextMenu.deleteFolder")}</span>
                   </ContextMenuItem>
                 </ContextMenuContent>
               </ContextMenu>
