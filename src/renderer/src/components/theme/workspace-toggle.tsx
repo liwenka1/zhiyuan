@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { useNoteStore } from "@/stores/use-note-store";
+import { useTranslation } from "react-i18next";
 
 export function WorkspaceToggle() {
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
+  const { t } = useTranslation("common");
 
   // 处理切换工作区
   const handleSwitchWorkspace = async () => {
@@ -36,13 +38,13 @@ export function WorkspaceToggle() {
             size="sm"
             className="h-8 w-8 p-0"
             onClick={handleSwitchWorkspace}
-            aria-label="切换工作区"
+            aria-label={t("workspace.switch")}
           >
             <FolderSync className="h-4 w-4" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top">
-          <p>切换工作区</p>
+          <p>{t("workspace.switch")}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
