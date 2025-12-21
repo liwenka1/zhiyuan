@@ -1,0 +1,13 @@
+{
+  "theme": {
+    "light": "浅色模式",
+    "dark": "深色模式"
+  },
+  "language": {
+    "current": "中文（点击切换）",
+    "switch": "切换到 English"
+  },
+  "workspace": {
+    "switch": "切换工作区"
+  }
+}

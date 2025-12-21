@@ -1,0 +1,16 @@
+{
+  "search": "Search",
+  "newNote": "New Note",
+  "emptyState": {
+    "noResults": "No matching notes found",
+    "noNotes": "No notes yet",
+    "tryOtherKeywords": "Try using different keywords",
+    "createOrSelect": "Select a folder or create a new note"
+  },
+  "contextMenu": {
+    "showInExplorer": "Show in File Manager",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "delete": "Delete Note"
+  }
+}

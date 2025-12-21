@@ -1,0 +1,13 @@
+{
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode"
+  },
+  "language": {
+    "current": "English (Click to switch)",
+    "switch": "Switch to 中文"
+  },
+  "workspace": {
+    "switch": "Switch Workspace"
+  }
+}

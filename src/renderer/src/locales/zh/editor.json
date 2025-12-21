@@ -1,0 +1,12 @@
+{
+  "appName": "轻言",
+  "emptyState": {
+    "title": "选择或创建一篇笔记开始写作"
+  },
+  "toolbar": {
+    "preview": "预览模式",
+    "format": "格式化"
+  },
+  "placeholder": "开始编写你的笔记...",
+  "previewEmpty": "暂无内容"
+}

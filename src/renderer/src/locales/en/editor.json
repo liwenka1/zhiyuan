@@ -1,0 +1,12 @@
+{
+  "appName": "QingYan",
+  "emptyState": {
+    "title": "Select or create a note to start writing"
+  },
+  "toolbar": {
+    "preview": "Preview Mode",
+    "format": "Format"
+  },
+  "placeholder": "Start writing your note...",
+  "previewEmpty": "No content"
+}

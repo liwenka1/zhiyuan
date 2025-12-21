@@ -1,0 +1,16 @@
+{
+  "search": "搜索",
+  "newNote": "新建笔记",
+  "emptyState": {
+    "noResults": "未找到相关笔记",
+    "noNotes": "暂无笔记",
+    "tryOtherKeywords": "尝试使用其他关键词搜索",
+    "createOrSelect": "选择文件夹或创建新笔记"
+  },
+  "contextMenu": {
+    "showInExplorer": "在文件管理器中查看",
+    "rename": "重命名",
+    "duplicate": "创建副本",
+    "delete": "删除笔记"
+  }
+}

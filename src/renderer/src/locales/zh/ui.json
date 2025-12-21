@@ -1,0 +1,7 @@
+{
+  "dialog": {
+    "placeholder": "请输入...",
+    "cancel": "取消",
+    "confirm": "确定"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "allNotes": "All Notes",
+  "newFolder": "New Folder",
+  "contextMenu": {
+    "showInExplorer": "Show in File Manager",
+    "rename": "Rename",
+    "deleteFolder": "Delete Folder"
+  }
+}
