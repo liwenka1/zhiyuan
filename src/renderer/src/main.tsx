@@ -1,4 +1,5 @@
 import "./assets/main.css";
+import "./lib/i18n"; // 初始化 i18n
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createRouter, createRootRoute, createHashHistory } from "@tanstack/react-router";
