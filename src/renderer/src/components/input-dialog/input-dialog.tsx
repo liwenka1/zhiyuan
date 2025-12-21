@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "react-i18next";
 
 interface InputDialogProps {
   open: boolean;
@@ -25,11 +26,15 @@ export function InputDialog({
   onOpenChange,
   title,
   description,
-  placeholder = "请输入...",
+  placeholder,
   defaultValue = "",
   onConfirm
 }: InputDialogProps) {
   const [value, setValue] = useState(defaultValue);
+  const { t } = useTranslation("ui");
+
+  // 使用翻译后的默认占位符
+  const actualPlaceholder = placeholder || t("dialog.placeholder");
 
   // 当对话框打开或 defaultValue 改变时，更新输入值
   useEffect(() => {
@@ -67,7 +72,7 @@ export function InputDialog({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <Input
-            placeholder={placeholder}
+            placeholder={actualPlaceholder}
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -76,10 +81,10 @@ export function InputDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleCancel}>
-            取消
+            {t("dialog.cancel")}
           </Button>
           <Button onClick={handleConfirm} disabled={!value.trim()}>
-            确定
+            {t("dialog.confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
