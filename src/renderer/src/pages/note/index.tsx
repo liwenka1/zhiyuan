@@ -3,7 +3,7 @@ import { MainLayout } from "@/layouts/main-layout";
 import { FolderTree } from "@/components/sidebar/folder-tree";
 import { NoteList } from "@/components/sidebar/note-list";
 import { EditorArea } from "@/components/editor/editor-area";
-import { InputDialog } from "@/components/ui/input-dialog";
+import { InputDialog } from "@renderer/components/input-dialog";
 import { useNoteStore } from "@/stores/use-note-store";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { useState } from "react";
