@@ -39,10 +39,13 @@
 
 /* 代码块 */
 .prose code {
+  font-family: var(--editor-font-mono);
   background-color: hsl(var(--editor-code-bg));
+  font-feature-settings: "liga" 1, "calt" 1; /* 启用连字 */
 }
 
 .prose pre {
+  font-family: var(--editor-font-mono);
   background-color: hsl(var(--editor-code-bg));
 }
 
@@ -57,6 +60,7 @@
 
 /* kbd */
 .prose kbd {
+  font-family: var(--editor-font-mono);
   color: hsl(var(--editor-tag));
   background-color: hsl(var(--muted));
   border: 1px solid hsl(var(--border));

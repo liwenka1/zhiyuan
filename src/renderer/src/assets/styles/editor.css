@@ -134,12 +134,13 @@
 /* 行内代码 */
 .cm-monospace,
 .cm-inline-code {
-  font-family: "Monaco", "Menlo", "Consolas", "Courier New", monospace;
+  font-family: var(--editor-font-mono);
   font-size: 0.9em;
   color: hsl(var(--editor-code));
   background-color: hsl(var(--editor-code-bg));
   padding: 2px 4px;
   border-radius: 3px;
+  font-feature-settings: "liga" 1, "calt" 1; /* 启用连字 */
 }
 
 /* 代码块 */
