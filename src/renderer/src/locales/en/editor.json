@@ -11,6 +11,8 @@
   "placeholder": "Start writing your note...",
   "previewEmpty": "No content",
   "toc": {
-    "empty": "No headings in document"
+    "empty": "No headings in document",
+    "pin": "Pin TOC",
+    "unpin": "Unpin TOC"
   }
 }

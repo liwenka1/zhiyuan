@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Eye, FileText, Wand2, List } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, FileText, Wand2, List, Pin, PinOff } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -21,12 +21,21 @@ export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
   const { t } = useTranslation("editor");
   const [tocOpen, setTocOpen] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
 
   const handleFormat = () => {
     formatCurrentNote();
   };
 
   const isPreviewMode = editorMode === "preview";
+
+  // 监听编辑模式变化，切换时关闭目录
+  useEffect(() => {
+    if (!isPreviewMode) {
+      setTocOpen(false);
+      setIsPinned(false); // 切换模式时取消固定
+    }
+  }, [isPreviewMode]);
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-between px-3">
@@ -104,9 +113,36 @@ export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
                 <p>{t("toolbar.toc")}</p>
               </TooltipContent>
             </Tooltip>
-            <PopoverContent align="end" className="w-80">
+            <PopoverContent
+              align="end"
+              className="w-80"
+              onInteractOutside={(e) => {
+                // 如果已固定，阻止点击外部关闭
+                if (isPinned) {
+                  e.preventDefault();
+                }
+              }}
+              onEscapeKeyDown={(e) => {
+                // 如果已固定，阻止 ESC 键关闭
+                if (isPinned) {
+                  e.preventDefault();
+                }
+              }}
+            >
               <div className="space-y-2">
-                <h4 className="leading-none font-medium">{t("toolbar.toc")}</h4>
+                {/* 头部：标题 + 固定按钮 */}
+                <div className="flex items-center justify-between">
+                  <h4 className="leading-none font-medium">{t("toolbar.toc")}</h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => setIsPinned(!isPinned)}
+                    aria-label={isPinned ? t("toc.unpin") : t("toc.pin")}
+                  >
+                    {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
                 <TableOfContents content={content} />
               </div>
             </PopoverContent>
