@@ -14,13 +14,7 @@ export function LanguageToggle() {
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-8 w-8 p-0"
-      onClick={handleToggle}
-      aria-label={t("language.switch")}
-    >
+    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleToggle} aria-label={t("language.switch")}>
       <Languages className="h-4 w-4" />
     </Button>
   );
