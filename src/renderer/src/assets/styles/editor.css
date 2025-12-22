@@ -51,7 +51,7 @@
 /* 行号 */
 .cm-lineNumbers {
   color: hsl(var(--muted-foreground));
-  font-size: 12px;
+  font-size: 14px;
 }
 
 /* 折叠标记 */

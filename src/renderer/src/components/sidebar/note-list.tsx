@@ -140,7 +140,7 @@ export function NoteList({
                       {note.updatedAt && (
                         <p
                           className={cn(
-                            "mt-1.5 text-[11px]",
+                            "mt-1.5 text-xs",
                             isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
                           )}
                         >
