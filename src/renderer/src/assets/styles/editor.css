@@ -140,7 +140,9 @@
   background-color: hsl(var(--editor-code-bg));
   padding: 2px 4px;
   border-radius: 3px;
-  font-feature-settings: "liga" 1, "calt" 1; /* 启用连字 */
+  font-feature-settings:
+    "liga" 1,
+    "calt" 1; /* 启用连字 */
 }
 
 /* 代码块 */

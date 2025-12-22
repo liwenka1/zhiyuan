@@ -30,7 +30,9 @@
   font-style: normal;
   font-display: swap;
   /* 启用 OpenType 特性 */
-  font-feature-settings: "liga" 1, "calt" 1; /* 连字符 */
+  font-feature-settings:
+    "liga" 1,
+    "calt" 1; /* 连字符 */
 }
 
 /**
@@ -46,4 +48,3 @@
  *    font-display: swap - 优先显示回退字体，避免 FOIT (Flash of Invisible Text)
  *    用户体验优先，即使字体未加载也能看到内容
  */
-

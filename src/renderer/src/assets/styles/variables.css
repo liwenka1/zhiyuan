@@ -77,7 +77,8 @@
     --titlebar-height-windows: 32px;
 
     /* 编辑器 */
-    --editor-font: "LXGW WenKai", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    --editor-font:
+      "LXGW WenKai", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     --editor-font-mono: "JetBrains Mono", "SF Mono", "Monaco", "Consolas", "Courier New", monospace;
     --editor-font-size: 1rem;
     --editor-line-height: 1.3;
