@@ -1,6 +1,5 @@
 import { FolderSync } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { useNoteStore } from "@/stores/use-note-store";
 import { useTranslation } from "react-i18next";
@@ -30,23 +29,14 @@ export function WorkspaceToggle() {
   };
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={handleSwitchWorkspace}
-            aria-label={t("workspace.switch")}
-          >
-            <FolderSync className="h-4 w-4" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <p>{t("workspace.switch")}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-8 w-8 p-0"
+      onClick={handleSwitchWorkspace}
+      aria-label={t("workspace.switch")}
+    >
+      <FolderSync className="h-4 w-4" />
+    </Button>
   );
 }

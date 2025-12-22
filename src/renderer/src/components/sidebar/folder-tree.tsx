@@ -2,7 +2,6 @@ import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil } from "lucid
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -53,24 +52,15 @@ export function FolderTree({
     <div className="flex h-full flex-col">
       {/* 顶部新建文件夹按钮 */}
       <div className="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 shrink-0 p-0"
-                aria-label={t("newFolder")}
-                onClick={onCreateFolder}
-              >
-                <FolderPlus className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>{t("newFolder")}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 shrink-0 p-0"
+          aria-label={t("newFolder")}
+          onClick={onCreateFolder}
+        >
+          <FolderPlus className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* 文件夹列表 */}

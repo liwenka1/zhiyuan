@@ -3,7 +3,6 @@ import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -63,24 +62,15 @@ export function NoteList({
             className="bg-muted/50 h-8 border-none pl-8 text-sm focus-visible:ring-1"
           />
         </div>
-        <TooltipProvider delayDuration={300}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 shrink-0 p-0"
-                aria-label={t("newNote")}
-                onClick={onCreateNote}
-              >
-                <SquarePen className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p>{t("newNote")}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 shrink-0 p-0"
+          aria-label={t("newNote")}
+          onClick={onCreateNote}
+        >
+          <SquarePen className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* 笔记列表 */}
