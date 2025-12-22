@@ -22,7 +22,7 @@ export function EmptyEditor() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.15 }}
       >
-        轻言
+        纸鸢
       </motion.h2>
       <motion.p
         className="text-sm"

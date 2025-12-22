@@ -5,7 +5,7 @@
  */
 export const USER_GUIDE_CONTENT = `# 用户指南
 
-欢迎使用轻言笔记！这是一个简洁高效的 Markdown 笔记应用。
+欢迎使用纸鸢！这是一个简洁高效的 Markdown 笔记应用。
 
 ---
 

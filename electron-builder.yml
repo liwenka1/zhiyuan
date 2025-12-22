@@ -1,5 +1,5 @@
-appId: com.electron.app
-productName: xx-note
+appId: com.zhiyuan.note
+productName: 纸鸢
 directories:
   buildResources: build
 files:
