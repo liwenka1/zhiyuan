@@ -58,7 +58,7 @@ export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
         {/* 预览按钮 */}
         <Toggle
           size="sm"
-          className="h-8 w-8 p-0"
+          className="data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
           aria-label={t("toolbar.preview")}
           pressed={editorMode === "preview"}
           onPressedChange={() => toggleEditorMode("preview")}
@@ -73,6 +73,7 @@ export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
           className="h-8 w-8 p-0"
           aria-label={t("toolbar.format")}
           onClick={handleFormat}
+          disabled={isPreviewMode}
         >
           <Wand2 className="h-4 w-4" />
         </Button>
@@ -90,41 +91,41 @@ export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
               <List className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              className="w-80"
-              onInteractOutside={(e) => {
-                // 如果已固定，阻止点击外部关闭
-                if (isPinned) {
-                  e.preventDefault();
-                }
-              }}
-              onEscapeKeyDown={(e) => {
-                // 如果已固定，阻止 ESC 键关闭
-                if (isPinned) {
-                  e.preventDefault();
-                }
-              }}
-            >
-              <div className="space-y-2">
-                {/* 头部：标题 + 固定按钮 */}
-                <div className="flex items-center justify-between">
-                  <h4 className="leading-none font-medium">{t("toolbar.toc")}</h4>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => setIsPinned(!isPinned)}
-                    aria-label={isPinned ? t("toc.unpin") : t("toc.pin")}
-                  >
-                    {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
-                  </Button>
-                </div>
-                <TableOfContents content={content} />
+          <PopoverContent
+            align="end"
+            className="w-80"
+            onInteractOutside={(e) => {
+              // 如果已固定，阻止点击外部关闭
+              if (isPinned) {
+                e.preventDefault();
+              }
+            }}
+            onEscapeKeyDown={(e) => {
+              // 如果已固定，阻止 ESC 键关闭
+              if (isPinned) {
+                e.preventDefault();
+              }
+            }}
+          >
+            <div className="space-y-2">
+              {/* 头部：标题 + 固定按钮 */}
+              <div className="flex items-center justify-between">
+                <h4 className="leading-none font-medium">{t("toolbar.toc")}</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0"
+                  onClick={() => setIsPinned(!isPinned)}
+                  aria-label={isPinned ? t("toc.unpin") : t("toc.pin")}
+                >
+                  {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                </Button>
               </div>
-            </PopoverContent>
-          </Popover>
-        </motion.div>
-      </div>
+              <TableOfContents content={content} />
+            </div>
+          </PopoverContent>
+        </Popover>
+      </motion.div>
+    </div>
   );
 }
