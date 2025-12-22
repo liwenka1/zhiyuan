@@ -2,6 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeRaw from "rehype-raw";
+import rehypeSlug from "rehype-slug";
 import "@/assets/styles/preview.css";
 import { useTranslation } from "react-i18next";
 
@@ -23,10 +24,10 @@ export function PreviewContent({ content }: PreviewContentProps) {
   const { t } = useTranslation("editor");
 
   return (
-    <ScrollArea className="h-full">
+    <ScrollArea className="h-full" id="preview-scroll-area">
       <div className="prose prose-slate dark:prose-invert max-w-none" style={{ padding: "var(--editor-padding)" }}>
         {content ? (
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSlug]}>
             {content}
           </ReactMarkdown>
         ) : (

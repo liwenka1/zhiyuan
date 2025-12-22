@@ -5,8 +5,12 @@
   },
   "toolbar": {
     "preview": "Preview Mode",
-    "format": "Format"
+    "format": "Format",
+    "toc": "Table of Contents"
   },
   "placeholder": "Start writing your note...",
-  "previewEmpty": "No content"
+  "previewEmpty": "No content",
+  "toc": {
+    "empty": "No headings in document"
+  }
 }

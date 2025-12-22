@@ -5,8 +5,12 @@
   },
   "toolbar": {
     "preview": "预览模式",
-    "format": "格式化"
+    "format": "格式化",
+    "toc": "目录"
   },
   "placeholder": "开始编写你的笔记...",
-  "previewEmpty": "暂无内容"
+  "previewEmpty": "暂无内容",
+  "toc": {
+    "empty": "文档中没有标题"
+  }
 }

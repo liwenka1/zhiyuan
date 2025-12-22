@@ -1,25 +1,32 @@
-import { Eye, FileText, Wand2 } from "lucide-react";
+import { useState } from "react";
+import { Eye, FileText, Wand2, List } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { TableOfContents } from "./table-of-contents";
 import { useViewStore } from "@/stores/use-view-store";
 import { useNoteStore } from "@/stores/use-note-store";
 import { useTranslation } from "react-i18next";
 
 interface EditorToolbarProps {
   fileName?: string;
+  content?: string;
 }
 
-export function EditorToolbar({ fileName }: EditorToolbarProps) {
+export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
   const { t } = useTranslation("editor");
+  const [tocOpen, setTocOpen] = useState(false);
 
   const handleFormat = () => {
     formatCurrentNote();
   };
+
+  const isPreviewMode = editorMode === "preview";
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-between px-3">
@@ -76,6 +83,34 @@ export function EditorToolbar({ fileName }: EditorToolbarProps) {
               <p>{t("toolbar.format")}</p>
             </TooltipContent>
           </Tooltip>
+
+          {/* 目录按钮 */}
+          <Popover open={tocOpen} onOpenChange={setTocOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    aria-label={t("toolbar.toc")}
+                    disabled={!isPreviewMode}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p>{t("toolbar.toc")}</p>
+              </TooltipContent>
+            </Tooltip>
+            <PopoverContent align="end" className="w-80">
+              <div className="space-y-2">
+                <h4 className="leading-none font-medium">{t("toolbar.toc")}</h4>
+                <TableOfContents content={content} />
+              </div>
+            </PopoverContent>
+          </Popover>
         </motion.div>
       </TooltipProvider>
     </div>

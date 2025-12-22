@@ -34,7 +34,7 @@ export function EditorArea({ content = "", onChange, hasNote = false, fileName, 
   // 根据编辑器模式渲染不同内容
   return (
     <div className="flex h-full flex-col">
-      <EditorToolbar fileName={fileName} />
+      <EditorToolbar fileName={fileName} content={content} />
       <div className="flex-1 overflow-hidden">
         {editorMode === "edit" && <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />}
         {editorMode === "preview" && <PreviewContent content={content} />}
