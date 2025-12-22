@@ -1,0 +1,49 @@
+/* 纸鸢 - 字体声明文件 */
+
+/**
+ * 霞鹜文楷 - 中文正文字体
+ * 风格：手写楷体，温润优雅
+ * 用途：UI界面、编辑器、预览区
+ */
+@font-face {
+  font-family: "LXGW WenKai";
+  src: url("/fonts/LXGWWenKai-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap; /* 先显示回退字体，加载后切换，避免白屏 */
+}
+
+/**
+ * 支持粗体（浏览器自动合成）
+ * 当使用 font-weight: bold 时，浏览器会基于 Regular 自动生成粗体
+ */
+
+/**
+ * JetBrains Mono - 代码字体
+ * 风格：现代等宽，支持连字
+ * 用途：代码块、行内代码、kbd
+ */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/fonts/JetBrainsMono-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+  /* 启用 OpenType 特性 */
+  font-feature-settings: "liga" 1, "calt" 1; /* 连字符 */
+}
+
+/**
+ * 字体回退策略说明：
+ * 
+ * 1. 中文字体回退链：
+ *    LXGW WenKai → PingFang SC (macOS) → Microsoft YaHei (Windows) → 系统默认
+ * 
+ * 2. 代码字体回退链：
+ *    JetBrains Mono → SF Mono (macOS) → Consolas (Windows) → monospace
+ * 
+ * 3. 加载策略：
+ *    font-display: swap - 优先显示回退字体，避免 FOIT (Flash of Invisible Text)
+ *    用户体验优先，即使字体未加载也能看到内容
+ */
+
