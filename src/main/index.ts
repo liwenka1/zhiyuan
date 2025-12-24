@@ -5,6 +5,7 @@ import icon from "../../resources/icon.png?asset";
 import { themeManager } from "./theme";
 import { registerThemeHandlers } from "./ipc/theme-handler";
 import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
+import { registerExportHandlers } from "./ipc/export-handler";
 
 function createWindow(): void {
   // 获取当前主题对应的背景色
@@ -112,6 +113,9 @@ app.whenReady().then(() => {
 
   // 注册工作区和文件系统相关的 IPC 处理器
   registerWorkspaceHandlers();
+
+  // 注册导出相关的 IPC 处理器
+  registerExportHandlers();
 
   createWindow();
 
