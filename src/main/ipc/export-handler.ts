@@ -111,10 +111,10 @@ export function registerExportHandlers(): void {
         printBackground: true, // 打印背景色
         pageSize: "A4",
         margins: {
-          top: 0.5,
-          bottom: 0.5,
-          left: 0.5,
-          right: 0.5
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0
         }
       });
 
