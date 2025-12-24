@@ -1,4 +1,4 @@
-import { FileText, Inbox, SquarePen, Pin, Search, Eye, Trash2, Copy, Pencil } from "lucide-react";
+import { FileText, Inbox, SquarePen, Pin, Search, Eye, Trash2, Copy, Pencil, Download } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,9 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubTrigger,
+  ContextMenuSubContent,
   ContextMenuTrigger
 } from "@/components/ui/context-menu";
 import { cn, formatDateTime } from "@/lib/utils";
@@ -32,6 +35,7 @@ interface NoteListProps {
   onDeleteNote?: (note: Note) => void;
   onRenameNote?: (note: Note) => void;
   onDuplicateNote?: (note: Note) => void;
+  onExportNote?: (note: Note, format: "html" | "pdf") => void;
 }
 
 export function NoteList({
@@ -44,7 +48,8 @@ export function NoteList({
   onShowNoteInExplorer,
   onDeleteNote,
   onRenameNote,
-  onDuplicateNote
+  onDuplicateNote,
+  onExportNote
 }: NoteListProps) {
   const { t } = useTranslation("note");
 
@@ -163,6 +168,21 @@ export function NoteList({
                       <Copy className="h-4 w-4" />
                       <span>{t("contextMenu.duplicate")}</span>
                     </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuSub>
+                      <ContextMenuSubTrigger>
+                        <Download className="h-4 w-4" />
+                        <span>{t("contextMenu.export")}</span>
+                      </ContextMenuSubTrigger>
+                      <ContextMenuSubContent>
+                        <ContextMenuItem onClick={() => onExportNote?.(note, "html")}>
+                          <span>{t("contextMenu.exportAsHTML")}</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => onExportNote?.(note, "pdf")}>
+                          <span>{t("contextMenu.exportAsPDF")}</span>
+                        </ContextMenuItem>
+                      </ContextMenuSubContent>
+                    </ContextMenuSub>
                     <ContextMenuSeparator />
                     <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
                       <Trash2 className="h-4 w-4" />

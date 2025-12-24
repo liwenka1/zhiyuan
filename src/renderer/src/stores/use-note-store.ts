@@ -48,6 +48,10 @@ interface NoteStore {
   // 工具方法
   getSelectedNote: () => Note | undefined;
   getNotesByFolder: (folderId: string) => Note[];
+
+  // 导出方法
+  exportNoteAsHTML: (noteId: string, isDark: boolean) => Promise<void>;
+  exportNoteAsPDF: (noteId: string, isDark: boolean) => Promise<void>;
 }
 
 export const useNoteStore = create<NoteStore>((set, get) => ({
@@ -574,5 +578,95 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       selectedNoteId: shouldClearSelection ? null : state.selectedNoteId,
       editorContent: shouldClearSelection ? "" : state.editorContent
     }));
+  },
+
+  // 导出笔记为 HTML
+  exportNoteAsHTML: async (noteId, isDark) => {
+    const note = get().notes.find((n) => n.id === noteId);
+    if (!note) {
+      console.error("笔记不存在");
+      throw new Error("笔记不存在");
+    }
+
+    try {
+      // 1. 获取下载目录
+      const downloadsPath = await window.api.export.getDownloadsPath();
+
+      // 2. 显示保存对话框
+      const defaultFileName = `${note.title}.html`;
+      const filePath = await window.api.export.showSaveDialog({
+        title: "导出为 HTML",
+        defaultPath: `${downloadsPath}/${defaultFileName}`,
+        filters: [
+          { name: "HTML 文件", extensions: ["html"] },
+          { name: "所有文件", extensions: ["*"] }
+        ]
+      });
+
+      // 用户取消了保存
+      if (!filePath) {
+        return;
+      }
+
+      // 3. 将 Markdown 转换为 HTML
+      const htmlBody = await window.api.export.markdownToHTML(note.content);
+
+      // 4. 生成完整的 HTML 文档
+      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
+      const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
+
+      // 5. 保存文件
+      await window.api.export.saveHTMLFile(filePath, fullHTML);
+
+      console.log("导出成功:", filePath);
+    } catch (error) {
+      console.error("导出 HTML 失败:", error);
+      throw error;
+    }
+  },
+
+  // 导出笔记为 PDF
+  exportNoteAsPDF: async (noteId, isDark) => {
+    const note = get().notes.find((n) => n.id === noteId);
+    if (!note) {
+      console.error("笔记不存在");
+      throw new Error("笔记不存在");
+    }
+
+    try {
+      // 1. 获取下载目录
+      const downloadsPath = await window.api.export.getDownloadsPath();
+
+      // 2. 显示保存对话框
+      const defaultFileName = `${note.title}.pdf`;
+      const filePath = await window.api.export.showSaveDialog({
+        title: "导出为 PDF",
+        defaultPath: `${downloadsPath}/${defaultFileName}`,
+        filters: [
+          { name: "PDF 文件", extensions: ["pdf"] },
+          { name: "所有文件", extensions: ["*"] }
+        ]
+      });
+
+      // 用户取消了保存
+      if (!filePath) {
+        return;
+      }
+
+      // 3. 将 Markdown 转换为 HTML
+      const htmlBody = await window.api.export.markdownToHTML(note.content);
+
+      // 4. 生成完整的 HTML 文档
+      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
+      const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
+
+      // 5. 导出为 PDF
+      await window.api.export.exportAsPDF(fullHTML, filePath);
+
+      console.log("导出 PDF 成功:", filePath);
+    } catch (error) {
+      console.error("导出 PDF 失败:", error);
+      throw error;
+    }
   }
 }));

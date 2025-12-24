@@ -6,7 +6,9 @@ import { EditorArea } from "@/components/editor/editor-area";
 import { InputDialog } from "@renderer/components/input-dialog";
 import { useNoteStore } from "@/stores/use-note-store";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
+import { useThemeStore } from "@/stores/use-theme-store";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 /**
  * 笔记页面
@@ -15,8 +17,10 @@ import { useState } from "react";
  * - 管理笔记模式：三栏布局（文件夹树 + 笔记列表 + 编辑区）
  */
 export function NotePage() {
+  const { t } = useTranslation("note");
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
+  const theme = useThemeStore((state) => state.theme);
 
   // 对话框状态
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
@@ -54,6 +58,8 @@ export function NotePage() {
   const renameFolder = useNoteStore((state) => state.renameFolder);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);
+  const exportNoteAsHTML = useNoteStore((state) => state.exportNoteAsHTML);
+  const exportNoteAsPDF = useNoteStore((state) => state.exportNoteAsPDF);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
@@ -165,6 +171,26 @@ export function NotePage() {
     } catch (error) {
       console.error("复制笔记失败:", error);
       alert("复制笔记失败，请重试");
+    }
+  };
+
+  // 导出笔记
+  const handleExportNote = async (
+    note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
+    format: "html" | "pdf"
+  ) => {
+    try {
+      const isDark = theme === "dark";
+      if (format === "html") {
+        await exportNoteAsHTML(note.id, isDark);
+        console.log(t("export.success"));
+      } else if (format === "pdf") {
+        await exportNoteAsPDF(note.id, isDark);
+        console.log(t("export.success"));
+      }
+    } catch (error) {
+      console.error("导出笔记失败:", error);
+      alert(t("export.failed"));
     }
   };
 
@@ -302,6 +328,7 @@ export function NotePage() {
             onDeleteNote={handleDeleteNote}
             onRenameNote={handleRenameNote}
             onDuplicateNote={handleDuplicateNote}
+            onExportNote={handleExportNote}
           />
         }
         mainContent={
