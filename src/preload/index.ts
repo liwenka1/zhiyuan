@@ -203,6 +203,39 @@ const api = {
      * 在文件管理器中打开文件夹
      */
     openPath: (fullPath: string): Promise<string> => ipcRenderer.invoke("shell:openPath", fullPath)
+  },
+
+  export: {
+    /**
+     * 将 Markdown 转换为 HTML
+     */
+    markdownToHTML: (markdown: string): Promise<string> => ipcRenderer.invoke("export:markdown-to-html", markdown),
+
+    /**
+     * 显示保存对话框
+     */
+    showSaveDialog: (options: {
+      title: string;
+      defaultPath: string;
+      filters: Array<{ name: string; extensions: string[] }>;
+    }): Promise<string | null> => ipcRenderer.invoke("export:show-save-dialog", options),
+
+    /**
+     * 保存 HTML 文件
+     */
+    saveHTMLFile: (filePath: string, htmlContent: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke("export:save-html-file", filePath, htmlContent),
+
+    /**
+     * 导出为 PDF
+     */
+    exportAsPDF: (htmlContent: string, filePath: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke("export:export-as-pdf", htmlContent, filePath),
+
+    /**
+     * 获取用户下载目录
+     */
+    getDownloadsPath: (): Promise<string> => ipcRenderer.invoke("export:get-downloads-path")
   }
 };
 

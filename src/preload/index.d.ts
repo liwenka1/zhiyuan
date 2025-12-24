@@ -70,6 +70,19 @@ export interface ShellAPI {
   openPath: (fullPath: string) => Promise<string>;
 }
 
+// 导出 API 接口
+export interface ExportAPI {
+  markdownToHTML: (markdown: string) => Promise<string>;
+  showSaveDialog: (options: {
+    title: string;
+    defaultPath: string;
+    filters: Array<{ name: string; extensions: string[] }>;
+  }) => Promise<string | null>;
+  saveHTMLFile: (filePath: string, htmlContent: string) => Promise<{ success: boolean }>;
+  exportAsPDF: (htmlContent: string, filePath: string) => Promise<{ success: boolean }>;
+  getDownloadsPath: () => Promise<string>;
+}
+
 // 扩展的 API 接口
 export interface API {
   theme: ThemeAPI;
@@ -77,6 +90,7 @@ export interface API {
   file: FileAPI;
   folder: FolderAPI;
   shell: ShellAPI;
+  export: ExportAPI;
 }
 
 declare global {
