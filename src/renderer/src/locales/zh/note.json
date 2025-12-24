@@ -11,6 +11,14 @@
     "showInExplorer": "在文件管理器中查看",
     "rename": "重命名",
     "duplicate": "创建副本",
+    "export": "导出",
+    "exportAsHTML": "导出为 HTML",
+    "exportAsPDF": "导出为 PDF",
     "delete": "删除笔记"
+  },
+  "export": {
+    "success": "导出成功",
+    "failed": "导出失败",
+    "cancelled": "已取消导出"
   }
 }

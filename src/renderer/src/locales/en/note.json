@@ -11,6 +11,14 @@
     "showInExplorer": "Show in File Manager",
     "rename": "Rename",
     "duplicate": "Duplicate",
+    "export": "Export",
+    "exportAsHTML": "Export as HTML",
+    "exportAsPDF": "Export as PDF",
     "delete": "Delete Note"
+  },
+  "export": {
+    "success": "Export successful",
+    "failed": "Export failed",
+    "cancelled": "Export cancelled"
   }
 }
