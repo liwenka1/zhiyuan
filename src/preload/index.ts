@@ -235,7 +235,18 @@ const api = {
     /**
      * 获取用户下载目录
      */
-    getDownloadsPath: (): Promise<string> => ipcRenderer.invoke("export:get-downloads-path")
+    getDownloadsPath: (): Promise<string> => ipcRenderer.invoke("export:get-downloads-path"),
+
+    /**
+     * 将 HTML 中的 CSS 内联化（用于微信公众号）
+     */
+    inlineCSS: (htmlContent: string): Promise<string> => ipcRenderer.invoke("export:inline-css", htmlContent),
+
+    /**
+     * 复制 HTML 到剪贴板（用于微信公众号）
+     */
+    copyHTMLToClipboard: (htmlContent: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke("export:copy-html-to-clipboard", htmlContent)
   }
 };
 

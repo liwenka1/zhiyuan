@@ -52,6 +52,7 @@ interface NoteStore {
   // 导出方法
   exportNoteAsHTML: (noteId: string, isDark: boolean) => Promise<void>;
   exportNoteAsPDF: (noteId: string, isDark: boolean) => Promise<void>;
+  copyNoteToWechat: (noteId: string) => Promise<void>;
 }
 
 export const useNoteStore = create<NoteStore>((set, get) => ({
@@ -666,6 +667,35 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       console.log("导出 PDF 成功:", filePath);
     } catch (error) {
       console.error("导出 PDF 失败:", error);
+      throw error;
+    }
+  },
+
+  // 复制笔记到微信公众号
+  copyNoteToWechat: async (noteId) => {
+    const note = get().notes.find((n) => n.id === noteId);
+    if (!note) {
+      console.error("笔记不存在");
+      throw new Error("笔记不存在");
+    }
+
+    try {
+      // 1. 将 Markdown 转换为 HTML
+      const htmlBody = await window.api.export.markdownToHTML(note.content);
+
+      // 2. 生成适配微信公众号的 HTML 文档
+      const { generateWechatHTMLDocument } = await import("@/lib/wechat-html");
+      const wechatHTML = generateWechatHTMLDocument(note.title, htmlBody);
+
+      // 3. 将 CSS 内联化
+      const inlinedHTML = await window.api.export.inlineCSS(wechatHTML);
+
+      // 4. 复制到剪贴板
+      await window.api.export.copyHTMLToClipboard(inlinedHTML);
+
+      console.log("已复制到剪贴板，可直接粘贴到微信公众号编辑器");
+    } catch (error) {
+      console.error("复制到微信公众号失败:", error);
       throw error;
     }
   }

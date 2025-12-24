@@ -14,11 +14,14 @@
     "export": "导出",
     "exportAsHTML": "导出为 HTML",
     "exportAsPDF": "导出为 PDF",
+    "copyToWechat": "复制到微信公众号",
     "delete": "删除笔记"
   },
   "export": {
     "success": "导出成功",
     "failed": "导出失败",
-    "cancelled": "已取消导出"
+    "cancelled": "已取消导出",
+    "wechatSuccess": "已复制到剪贴板，可直接粘贴到微信公众号编辑器",
+    "wechatFailed": "复制到微信公众号失败"
   }
 }

@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app, BrowserWindow } from "electron";
+import { ipcMain, dialog, app, BrowserWindow, clipboard } from "electron";
 import * as fs from "fs/promises";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
@@ -7,6 +7,7 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
 import rehypeStringify from "rehype-stringify";
+import juice from "juice";
 
 /**
  * 注册导出相关的 IPC handlers
@@ -130,6 +131,38 @@ export function registerExportHandlers(): void {
       if (pdfWindow && !pdfWindow.isDestroyed()) {
         pdfWindow.close();
       }
+    }
+  });
+
+  // 将 HTML 中的 CSS 内联化（用于微信公众号）
+  ipcMain.handle("export:inline-css", async (_, htmlContent: string) => {
+    try {
+      // 使用 juice 将 <style> 标签中的 CSS 内联到 HTML 标签的 style 属性中
+      const inlinedHtml = juice(htmlContent, {
+        preserveMediaQueries: false,
+        preserveFontFaces: false,
+        removeStyleTags: true,
+        applyStyleTags: true,
+        applyWidthAttributes: false,
+        applyHeightAttributes: false
+      });
+
+      return inlinedHtml;
+    } catch (error) {
+      console.error("CSS 内联化失败:", error);
+      throw error;
+    }
+  });
+
+  // 复制 HTML 到剪贴板（用于微信公众号）
+  ipcMain.handle("export:copy-html-to-clipboard", async (_, htmlContent: string) => {
+    try {
+      // 将 HTML 内容写入剪贴板
+      clipboard.writeHTML(htmlContent);
+      return { success: true };
+    } catch (error) {
+      console.error("复制到剪贴板失败:", error);
+      throw error;
     }
   });
 }

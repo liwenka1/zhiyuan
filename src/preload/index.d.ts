@@ -81,6 +81,8 @@ export interface ExportAPI {
   saveHTMLFile: (filePath: string, htmlContent: string) => Promise<{ success: boolean }>;
   exportAsPDF: (htmlContent: string, filePath: string) => Promise<{ success: boolean }>;
   getDownloadsPath: () => Promise<string>;
+  inlineCSS: (htmlContent: string) => Promise<string>;
+  copyHTMLToClipboard: (htmlContent: string) => Promise<{ success: boolean }>;
 }
 
 // 扩展的 API 接口

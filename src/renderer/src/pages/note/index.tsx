@@ -60,6 +60,7 @@ export function NotePage() {
   const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);
   const exportNoteAsHTML = useNoteStore((state) => state.exportNoteAsHTML);
   const exportNoteAsPDF = useNoteStore((state) => state.exportNoteAsPDF);
+  const copyNoteToWechat = useNoteStore((state) => state.copyNoteToWechat);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
@@ -191,6 +192,17 @@ export function NotePage() {
     } catch (error) {
       console.error("导出笔记失败:", error);
       alert(t("export.failed"));
+    }
+  };
+
+  // 复制笔记到微信公众号
+  const handleCopyToWechat = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    try {
+      await copyNoteToWechat(note.id);
+      alert(t("export.wechatSuccess"));
+    } catch (error) {
+      console.error("复制到微信公众号失败:", error);
+      alert(t("export.wechatFailed"));
     }
   };
 
@@ -329,6 +341,7 @@ export function NotePage() {
             onRenameNote={handleRenameNote}
             onDuplicateNote={handleDuplicateNote}
             onExportNote={handleExportNote}
+            onCopyToWechat={handleCopyToWechat}
           />
         }
         mainContent={

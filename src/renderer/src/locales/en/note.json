@@ -14,11 +14,14 @@
     "export": "Export",
     "exportAsHTML": "Export as HTML",
     "exportAsPDF": "Export as PDF",
+    "copyToWechat": "Copy to WeChat Official Account",
     "delete": "Delete Note"
   },
   "export": {
     "success": "Export successful",
     "failed": "Export failed",
-    "cancelled": "Export cancelled"
+    "cancelled": "Export cancelled",
+    "wechatSuccess": "Copied to clipboard, paste it to WeChat editor",
+    "wechatFailed": "Failed to copy to WeChat"
   }
 }

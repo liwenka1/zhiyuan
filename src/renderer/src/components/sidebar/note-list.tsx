@@ -36,6 +36,7 @@ interface NoteListProps {
   onRenameNote?: (note: Note) => void;
   onDuplicateNote?: (note: Note) => void;
   onExportNote?: (note: Note, format: "html" | "pdf") => void;
+  onCopyToWechat?: (note: Note) => void;
 }
 
 export function NoteList({
@@ -49,7 +50,8 @@ export function NoteList({
   onDeleteNote,
   onRenameNote,
   onDuplicateNote,
-  onExportNote
+  onExportNote,
+  onCopyToWechat
 }: NoteListProps) {
   const { t } = useTranslation("note");
 
@@ -180,6 +182,9 @@ export function NoteList({
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => onExportNote?.(note, "pdf")}>
                           <span>{t("contextMenu.exportAsPDF")}</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => onCopyToWechat?.(note)}>
+                          <span>{t("contextMenu.copyToWechat")}</span>
                         </ContextMenuItem>
                       </ContextMenuSubContent>
                     </ContextMenuSub>
