@@ -1,70 +1,70 @@
 @layer base {
   :root {
-    /* 浅色主题 */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    /* 浅色主题 - 春日宣纸 */
+    --background: 40 20% 98%;
+    --foreground: 220 15% 26%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card: 40 18% 99%;
+    --card-foreground: 220 15% 26%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
+    --popover: 40 18% 99%;
+    --popover-foreground: 220 15% 26%;
 
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 220 15% 26%;
+    --primary-foreground: 40 20% 98%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
+    --secondary: 40 15% 94%;
+    --secondary-foreground: 220 15% 26%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 40 15% 94%;
+    --muted-foreground: 0 0% 48%;
 
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
+    --accent: 210 45% 95%;
+    --accent-foreground: 210 48% 38%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 355 70% 52%;
+    --destructive-foreground: 40 20% 98%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 211 100% 50%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 210 48% 45%;
 
     /* 特有变量 */
-    --selection: 211 100% 92%;
-    --divider: 0 0% 90%;
-    --tertiary-foreground: 0 0% 55%;
-    --link: 0 0% 23%;
-    --highlight: 211 100% 50%;
+    --selection: 210 60% 92%;
+    --divider: 40 10% 88%;
+    --tertiary-foreground: 0 0% 52%;
+    --link: 220 15% 26%;
+    --highlight: 210 48% 45%;
 
     /* 编辑器语法高亮颜色 */
-    --editor-heading: 0 0% 9%;
-    --editor-strong: 0 0% 9%;
-    --editor-emphasis: 0 0% 25%;
-    --editor-link: 211 100% 50%;
-    --editor-url: 0 0% 45%;
-    --editor-code: 280 100% 40%;
-    --editor-code-bg: 0 0% 96%;
-    --editor-quote: 0 0% 45%;
-    --editor-list-marker: 211 100% 50%;
-    --editor-hr: 0 0% 80%;
-    --editor-tag: 155 60% 35%;
-    --editor-attribute: 25 100% 45%;
-    --editor-string: 155 60% 35%;
-    --editor-comment: 0 0% 55%;
-    --editor-meta: 0 0% 55%;
-    --editor-strikethrough: 0 0% 55%;
-    --editor-mark-bg: 45 100% 70%;
+    --editor-heading: 210 48% 42%;
+    --editor-strong: 220 15% 26%;
+    --editor-emphasis: 220 12% 38%;
+    --editor-link: 195 58% 45%;
+    --editor-url: 0 0% 48%;
+    --editor-code: 280 55% 45%;
+    --editor-code-bg: 150 18% 94%;
+    --editor-quote: 0 0% 48%;
+    --editor-list-marker: 40 70% 48%;
+    --editor-hr: 40 8% 82%;
+    --editor-tag: 155 50% 40%;
+    --editor-attribute: 25 85% 50%;
+    --editor-string: 155 50% 40%;
+    --editor-comment: 0 0% 54%;
+    --editor-meta: 0 0% 54%;
+    --editor-strikethrough: 0 0% 54%;
+    --editor-mark-bg: 45 90% 68%;
 
     /* 编辑器专用颜色 */
-    --editor-title: 262 61% 45%;
-    --editor-link: 171 81% 46%;
-    --editor-list: 36 39% 33%;
+    --editor-title: 210 48% 42%;
+    --editor-link: 195 58% 45%;
+    --editor-list: 40 70% 48%;
 
     /* 预览专用颜色 */
-    --preview-title: 0 0% 26%;
-    --preview-link: 207 100% 44%;
-    --preview-list: 0 0% 26%;
-    --preview-code-bg: 0 0% 96%;
+    --preview-title: 210 48% 42%;
+    --preview-link: 195 58% 45%;
+    --preview-list: 220 15% 26%;
+    --preview-code-bg: 150 18% 94%;
 
     /* 布局尺寸 */
     --sidebar-width: 8.625rem;
@@ -90,70 +90,70 @@
   }
 
   .dark {
-    /* 深色主题 */
-    --background: 210 14% 16%;
-    --foreground: 0 0% 95%;
+    /* 深色主题 - 松烟墨池 */
+    --background: 220 16% 13%;
+    --foreground: 40 12% 89%;
 
-    --card: 210 14% 16%;
-    --card-foreground: 0 0% 95%;
+    --card: 220 15% 16%;
+    --card-foreground: 40 12% 89%;
 
-    --popover: 210 14% 16%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 15% 16%;
+    --popover-foreground: 40 12% 89%;
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 210 14% 16%;
+    --primary: 40 12% 89%;
+    --primary-foreground: 220 16% 13%;
 
-    --secondary: 210 14% 22%;
-    --secondary-foreground: 0 0% 95%;
+    --secondary: 220 14% 19%;
+    --secondary-foreground: 40 12% 89%;
 
-    --muted: 210 14% 22%;
-    --muted-foreground: 0 0% 60%;
+    --muted: 220 14% 19%;
+    --muted-foreground: 0 0% 58%;
 
-    --accent: 210 14% 22%;
-    --accent-foreground: 0 0% 95%;
+    --accent: 220 16% 22%;
+    --accent-foreground: 200 65% 68%;
 
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 355 65% 55%;
+    --destructive-foreground: 40 12% 89%;
 
-    --border: 210 14% 22%;
-    --input: 210 14% 22%;
-    --ring: 211 100% 55%;
+    --border: 220 12% 24%;
+    --input: 220 12% 24%;
+    --ring: 200 65% 58%;
 
     /* 深色特有变量 */
-    --selection: 211 60% 25%;
-    --divider: 210 14% 22%;
-    --tertiary-foreground: 0 0% 50%;
-    --link: 0 0% 78%;
-    --highlight: 211 100% 55%;
+    --selection: 200 45% 25%;
+    --divider: 220 12% 24%;
+    --tertiary-foreground: 0 0% 55%;
+    --link: 40 12% 89%;
+    --highlight: 200 65% 58%;
 
     /* 编辑器语法高亮颜色 */
-    --editor-heading: 0 0% 95%;
-    --editor-strong: 0 0% 95%;
-    --editor-emphasis: 0 0% 75%;
-    --editor-link: 211 100% 65%;
-    --editor-url: 0 0% 65%;
-    --editor-code: 280 100% 75%;
-    --editor-code-bg: 210 14% 22%;
-    --editor-quote: 0 0% 65%;
-    --editor-list-marker: 211 100% 65%;
-    --editor-hr: 0 0% 35%;
-    --editor-tag: 155 60% 60%;
-    --editor-attribute: 25 100% 65%;
-    --editor-string: 155 60% 60%;
+    --editor-heading: 200 65% 68%;
+    --editor-strong: 40 12% 89%;
+    --editor-emphasis: 40 8% 72%;
+    --editor-link: 170 45% 58%;
+    --editor-url: 0 0% 62%;
+    --editor-code: 280 50% 70%;
+    --editor-code-bg: 220 18% 17%;
+    --editor-quote: 0 0% 62%;
+    --editor-list-marker: 40 50% 65%;
+    --editor-hr: 220 10% 32%;
+    --editor-tag: 155 45% 58%;
+    --editor-attribute: 25 75% 62%;
+    --editor-string: 155 45% 58%;
     --editor-comment: 0 0% 55%;
-    --editor-meta: 0 0% 60%;
-    --editor-strikethrough: 0 0% 60%;
-    --editor-mark-bg: 45 100% 40%;
+    --editor-meta: 0 0% 58%;
+    --editor-strikethrough: 0 0% 58%;
+    --editor-mark-bg: 45 80% 45%;
 
     /* 编辑器专用颜色 */
-    --editor-title: 262 82% 65%;
-    --editor-link: 171 100% 69%;
-    --editor-list: 0 0% 72%;
+    --editor-title: 200 65% 68%;
+    --editor-link: 170 45% 58%;
+    --editor-list: 40 50% 65%;
 
     /* 预览专用颜色 */
-    --preview-title: 0 0% 90%;
-    --preview-link: 206 100% 64%;
-    --preview-list: 0 0% 90%;
-    --preview-code-bg: 210 14% 22%;
+    --preview-title: 200 65% 68%;
+    --preview-link: 170 45% 58%;
+    --preview-list: 40 12% 89%;
+    --preview-code-bg: 220 18% 17%;
   }
 }

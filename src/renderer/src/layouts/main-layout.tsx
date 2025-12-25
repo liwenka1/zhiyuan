@@ -43,7 +43,7 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
         style={innerStyle}
       >
         {/* 左侧文件夹树 */}
-        <ResizablePanel defaultSize={15} minSize={15} maxSize={20} className="bg-card">
+        <ResizablePanel defaultSize={15} minSize={15} maxSize={20} className="bg-background">
           <aside className="no-select h-full">{leftSidebar}</aside>
         </ResizablePanel>
 
@@ -51,7 +51,7 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
         <ResizableHandle className={handleClassName} style={handleStyle} />
 
         {/* 中间笔记列表 */}
-        <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="bg-card">
+        <ResizablePanel defaultSize={25} minSize={20} maxSize={35} className="bg-background">
           <aside className="no-select h-full">{rightSidebar}</aside>
         </ResizablePanel>
 

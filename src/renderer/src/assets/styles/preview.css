@@ -40,7 +40,7 @@
 /* 代码块 */
 .prose code {
   font-family: var(--editor-font-mono);
-  background-color: hsl(var(--editor-code-bg));
+  background-color: hsl(var(--preview-code-bg));
   font-feature-settings:
     "liga" 1,
     "calt" 1; /* 启用连字 */
@@ -48,7 +48,7 @@
 
 .prose pre {
   font-family: var(--editor-font-mono);
-  background-color: hsl(var(--editor-code-bg));
+  background-color: hsl(var(--preview-code-bg));
 }
 
 .prose pre code {

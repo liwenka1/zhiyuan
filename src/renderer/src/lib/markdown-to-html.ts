@@ -9,46 +9,48 @@
  */
 function getThemeColors(isDark: boolean) {
   if (isDark) {
+    // 深色主题 - 松烟墨池
     return {
-      background: "hsl(210, 14%, 16%)",
-      foreground: "hsl(0, 0%, 95%)",
-      mutedForeground: "hsl(0, 0%, 60%)",
-      border: "hsl(210, 14%, 22%)",
-      previewTitle: "hsl(0, 0%, 90%)",
-      previewLink: "hsl(206, 100%, 64%)",
-      previewList: "hsl(0, 0%, 90%)",
-      editorStrong: "hsl(0, 0%, 95%)",
-      editorEmphasis: "hsl(0, 0%, 75%)",
-      editorCode: "hsl(280, 100%, 75%)",
-      editorCodeBg: "hsl(210, 14%, 22%)",
-      editorQuote: "hsl(0, 0%, 65%)",
-      editorHr: "hsl(0, 0%, 35%)",
-      editorTag: "hsl(155, 60%, 60%)",
-      editorMeta: "hsl(0, 0%, 60%)",
-      editorMarkBg: "hsl(45, 100%, 40%)",
-      muted: "hsl(210, 14%, 22%)",
-      previewCodeBg: "hsl(210, 14%, 22%)"
+      background: "hsl(220, 16%, 13%)",
+      foreground: "hsl(40, 12%, 89%)",
+      mutedForeground: "hsl(0, 0%, 58%)",
+      border: "hsl(220, 12%, 24%)",
+      previewTitle: "hsl(200, 65%, 68%)",
+      previewLink: "hsl(170, 45%, 58%)",
+      previewList: "hsl(40, 12%, 89%)",
+      editorStrong: "hsl(40, 12%, 89%)",
+      editorEmphasis: "hsl(40, 8%, 72%)",
+      editorCode: "hsl(280, 50%, 70%)",
+      editorCodeBg: "hsl(220, 18%, 17%)",
+      editorQuote: "hsl(0, 0%, 62%)",
+      editorHr: "hsl(220, 10%, 32%)",
+      editorTag: "hsl(155, 45%, 58%)",
+      editorMeta: "hsl(0, 0%, 58%)",
+      editorMarkBg: "hsl(45, 80%, 45%)",
+      muted: "hsl(220, 14%, 19%)",
+      previewCodeBg: "hsl(220, 18%, 17%)"
     };
   } else {
+    // 浅色主题 - 春日宣纸
     return {
-      background: "hsl(0, 0%, 100%)",
-      foreground: "hsl(0, 0%, 9%)",
-      mutedForeground: "hsl(0, 0%, 45%)",
-      border: "hsl(0, 0%, 90%)",
-      previewTitle: "hsl(0, 0%, 26%)",
-      previewLink: "hsl(207, 100%, 44%)",
-      previewList: "hsl(0, 0%, 26%)",
-      editorStrong: "hsl(0, 0%, 9%)",
-      editorEmphasis: "hsl(0, 0%, 25%)",
-      editorCode: "hsl(280, 100%, 40%)",
-      editorCodeBg: "hsl(0, 0%, 96%)",
-      editorQuote: "hsl(0, 0%, 45%)",
-      editorHr: "hsl(0, 0%, 80%)",
-      editorTag: "hsl(155, 60%, 35%)",
-      editorMeta: "hsl(0, 0%, 55%)",
-      editorMarkBg: "hsl(45, 100%, 70%)",
-      muted: "hsl(0, 0%, 96%)",
-      previewCodeBg: "hsl(0, 0%, 96%)"
+      background: "hsl(40, 20%, 98%)",
+      foreground: "hsl(220, 15%, 26%)",
+      mutedForeground: "hsl(0, 0%, 48%)",
+      border: "hsl(40, 10%, 88%)",
+      previewTitle: "hsl(210, 48%, 42%)",
+      previewLink: "hsl(195, 58%, 45%)",
+      previewList: "hsl(220, 15%, 26%)",
+      editorStrong: "hsl(220, 15%, 26%)",
+      editorEmphasis: "hsl(220, 12%, 38%)",
+      editorCode: "hsl(280, 55%, 45%)",
+      editorCodeBg: "hsl(150, 18%, 94%)",
+      editorQuote: "hsl(0, 0%, 48%)",
+      editorHr: "hsl(40, 8%, 82%)",
+      editorTag: "hsl(155, 50%, 40%)",
+      editorMeta: "hsl(0, 0%, 54%)",
+      editorMarkBg: "hsl(45, 90%, 68%)",
+      muted: "hsl(40, 15%, 94%)",
+      previewCodeBg: "hsl(150, 18%, 94%)"
     };
   }
 }
