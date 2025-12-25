@@ -8,11 +8,10 @@ interface EditorAreaProps {
   content?: string;
   onChange?: (content: string) => void;
   hasNote?: boolean;
-  fileName?: string;
   noteId?: string;
 }
 
-export function EditorArea({ content = "", onChange, hasNote = false, fileName, noteId }: EditorAreaProps) {
+export function EditorArea({ content = "", onChange, hasNote = false, noteId }: EditorAreaProps) {
   const editorMode = useViewStore((state) => state.editorMode);
 
   const handleContentChange = (value: string) => {
@@ -34,7 +33,7 @@ export function EditorArea({ content = "", onChange, hasNote = false, fileName, 
   // 根据编辑器模式渲染不同内容
   return (
     <div className="flex h-full flex-col">
-      <EditorToolbar fileName={fileName} content={content} />
+      <EditorToolbar content={content} />
       <div className="flex-1 overflow-hidden">
         {editorMode === "edit" && <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />}
         {editorMode === "preview" && <PreviewContent content={content} />}

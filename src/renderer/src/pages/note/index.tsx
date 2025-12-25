@@ -49,7 +49,6 @@ export function NotePage() {
   const selectFolder = useNoteStore((state) => state.selectFolder);
   const selectNote = useNoteStore((state) => state.selectNote);
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
-  const getSelectedNote = useNoteStore((state) => state.getSelectedNote);
   const createFolder = useNoteStore((state) => state.createFolder);
   const createNote = useNoteStore((state) => state.createNote);
   const deleteFolder = useNoteStore((state) => state.deleteFolder);
@@ -303,10 +302,6 @@ export function NotePage() {
       isPinned: note.isPinned
     }));
 
-  // 获取当前选中笔记的标题
-  const currentNote = getSelectedNote();
-  const fileName = currentNote?.title;
-
   // 计算每个文件夹的真实笔记数量
   const foldersWithCount = folders.map((folder) => ({
     ...folder,
@@ -349,7 +344,6 @@ export function NotePage() {
             content={editorContent}
             onChange={updateNoteContent}
             hasNote={!!selectedNoteId}
-            fileName={fileName}
             noteId={selectedNoteId ?? undefined}
           />
         }

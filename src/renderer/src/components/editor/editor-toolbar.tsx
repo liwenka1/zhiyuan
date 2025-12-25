@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, FileText, Wand2, List, Pin, PinOff } from "lucide-react";
+import { Eye, Wand2, List, Pin, PinOff } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -10,11 +10,10 @@ import { useNoteStore } from "@/stores/use-note-store";
 import { useTranslation } from "react-i18next";
 
 interface EditorToolbarProps {
-  fileName?: string;
   content?: string;
 }
 
-export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
+export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
@@ -37,18 +36,8 @@ export function EditorToolbar({ fileName, content = "" }: EditorToolbarProps) {
   }, [isPreviewMode]);
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between px-3">
-      {/* 左侧：文件名 */}
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {fileName && (
-          <>
-            <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
-            <span className="text-foreground truncate text-sm font-medium">{fileName}</span>
-          </>
-        )}
-      </div>
-
-      {/* 右侧：工具按钮 */}
+    <div className="flex h-12 shrink-0 items-center justify-end px-3">
+      {/* 工具按钮 */}
       <motion.div
         className="flex shrink-0 items-center gap-1"
         initial={{ opacity: 0 }}
