@@ -9,9 +9,10 @@ interface EditorAreaProps {
   onChange?: (content: string) => void;
   hasNote?: boolean;
   noteId?: string;
+  notePath?: string; // 笔记的完整文件路径，用于解析相对资源路径
 }
 
-export function EditorArea({ content = "", onChange, hasNote = false, noteId }: EditorAreaProps) {
+export function EditorArea({ content = "", onChange, hasNote = false, noteId, notePath }: EditorAreaProps) {
   const editorMode = useViewStore((state) => state.editorMode);
 
   const handleContentChange = (value: string) => {
@@ -36,7 +37,7 @@ export function EditorArea({ content = "", onChange, hasNote = false, noteId }: 
       <EditorToolbar content={content} />
       <div className="flex-1 overflow-hidden">
         {editorMode === "edit" && <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />}
-        {editorMode === "preview" && <PreviewContent content={content} />}
+        {editorMode === "preview" && <PreviewContent content={content} notePath={notePath} />}
       </div>
     </div>
   );

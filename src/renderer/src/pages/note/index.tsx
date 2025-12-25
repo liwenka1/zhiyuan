@@ -345,6 +345,7 @@ export function NotePage() {
             onChange={updateNoteContent}
             hasNote={!!selectedNoteId}
             noteId={selectedNoteId ?? undefined}
+            notePath={notes.find((n) => n.id === selectedNoteId)?.filePath}
           />
         }
       />
