@@ -4,3 +4,4 @@
  */
 
 export type { Theme } from "./theme";
+export { ThemeColors, getThemeBackgroundColor, getThemeForegroundColor } from "./theme";

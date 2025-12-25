@@ -7,20 +7,21 @@ import { registerThemeHandlers } from "./ipc/theme-handler";
 import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
 import { registerExportHandlers } from "./ipc/export-handler";
 import { pathToFileURL } from "url";
+import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
 
 function createWindow(): void {
   // 获取当前主题对应的背景色
   const getBackgroundColor = (): string => {
     const theme = themeManager.getTheme();
-    return theme === "dark" ? "#232931" : "#FFFFFF";
+    return getThemeBackgroundColor(theme);
   };
 
   // 获取标题栏覆盖层配置（用于 Windows）
   const getTitleBarOverlay = () => {
     const theme = themeManager.getTheme();
     return {
-      color: theme === "dark" ? "#232931" : "#FFFFFF",
-      symbolColor: theme === "dark" ? "#FFFFFF" : "#000000",
+      color: getThemeBackgroundColor(theme),
+      symbolColor: getThemeForegroundColor(theme),
       height: 32
     };
   };

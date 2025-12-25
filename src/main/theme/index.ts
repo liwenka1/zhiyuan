@@ -1,5 +1,6 @@
 import { nativeTheme, BrowserWindow } from "electron";
 import type { Theme } from "@shared";
+import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
 
 /**
  * 主题管理器
@@ -58,15 +59,15 @@ class ThemeManager {
     const windows = BrowserWindow.getAllWindows();
 
     windows.forEach((window) => {
-      // 更新窗口背景色
-      const bgColor = currentTheme === "dark" ? "#232931" : "#FFFFFF";
+      // 更新窗口背景色（使用共享的主题颜色配置）
+      const bgColor = getThemeBackgroundColor(currentTheme);
       window.setBackgroundColor(bgColor);
 
       // Windows: 更新标题栏颜色
       if (process.platform === "win32") {
         window.setTitleBarOverlay({
           color: bgColor,
-          symbolColor: currentTheme === "dark" ? "#FFFFFF" : "#000000"
+          symbolColor: getThemeForegroundColor(currentTheme)
         });
       }
 
