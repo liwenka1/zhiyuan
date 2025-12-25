@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, screen } from "electron";
+import { app, shell, BrowserWindow, screen, protocol, net } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
@@ -6,6 +6,7 @@ import { themeManager } from "./theme";
 import { registerThemeHandlers } from "./ipc/theme-handler";
 import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
 import { registerExportHandlers } from "./ipc/export-handler";
+import { pathToFileURL } from "url";
 
 function createWindow(): void {
   // 获取当前主题对应的背景色
@@ -91,10 +92,59 @@ function createWindow(): void {
   }
 }
 
+// 注册自定义协议用于加载本地资源（支持中文路径）
+// 必须在 app.whenReady() 之前调用
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: "local-resource",
+    privileges: {
+      bypassCSP: true,
+      supportFetchAPI: true,
+      stream: true,
+      standard: true,
+      secure: true
+    }
+  }
+]);
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // 注册 local-resource:// 协议处理器
+  // 用于加载本地文件资源，正确处理中文路径
+  protocol.handle("local-resource", (request) => {
+    try {
+      // 解析 URL
+      const url = new URL(request.url);
+      // 获取路径部分：hostname + pathname
+      // 对于 local-resource://D:/path/file.jpg
+      // hostname = "d" (Windows 盘符，会被小写化)
+      // pathname = "/path/file.jpg"
+      // 需要重新组合为 D:/path/file.jpg
+      let filePath: string;
+
+      if (process.platform === "win32") {
+        // Windows: 重新组合盘符和路径
+        // hostname 是盘符（小写），需要转为大写
+        const drive = url.hostname.toUpperCase();
+        // pathname 以 / 开头
+        const pathPart = decodeURIComponent(url.pathname);
+        filePath = `${drive}:${pathPart}`;
+      } else {
+        // macOS/Linux: 直接使用 pathname
+        filePath = decodeURIComponent(url.pathname);
+      }
+
+      // 使用 pathToFileURL 正确处理路径
+      const fileUrl = pathToFileURL(filePath).href;
+      return net.fetch(fileUrl);
+    } catch (error) {
+      console.error("local-resource protocol error:", error, request.url);
+      return new Response("File not found", { status: 404 });
+    }
+  });
+
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
 
