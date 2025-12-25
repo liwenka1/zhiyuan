@@ -609,8 +609,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         return;
       }
 
-      // 3. 将 Markdown 转换为 HTML
-      const htmlBody = await window.api.export.markdownToHTML(note.content);
+      // 3. 将 Markdown 转换为 HTML（传入笔记路径以解析相对资源路径）
+      const htmlBody = await window.api.export.markdownToHTML(note.content, note.filePath);
 
       // 4. 生成完整的 HTML 文档
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
@@ -654,8 +654,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         return;
       }
 
-      // 3. 将 Markdown 转换为 HTML
-      const htmlBody = await window.api.export.markdownToHTML(note.content);
+      // 3. 将 Markdown 转换为 HTML（传入笔记路径以解析相对资源路径）
+      const htmlBody = await window.api.export.markdownToHTML(note.content, note.filePath);
 
       // 4. 生成完整的 HTML 文档
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
@@ -680,8 +680,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
 
     try {
-      // 1. 将 Markdown 转换为 HTML
-      const htmlBody = await window.api.export.markdownToHTML(note.content);
+      // 1. 将 Markdown 转换为 HTML（传入笔记路径以解析相对资源路径）
+      // 注意：微信公众号不支持本地 file:// 协议的图片，相对路径图片需要先上传到网络
+      const htmlBody = await window.api.export.markdownToHTML(note.content, note.filePath);
 
       // 2. 生成适配微信公众号的 HTML 文档
       const { generateWechatHTMLDocument } = await import("@/lib/wechat-html");

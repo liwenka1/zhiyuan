@@ -208,8 +208,11 @@ const api = {
   export: {
     /**
      * 将 Markdown 转换为 HTML
+     * @param markdown Markdown 内容
+     * @param notePath 可选，笔记的完整文件路径，用于将相对路径转换为绝对路径
      */
-    markdownToHTML: (markdown: string): Promise<string> => ipcRenderer.invoke("export:markdown-to-html", markdown),
+    markdownToHTML: (markdown: string, notePath?: string): Promise<string> =>
+      ipcRenderer.invoke("export:markdown-to-html", markdown, notePath),
 
     /**
      * 显示保存对话框

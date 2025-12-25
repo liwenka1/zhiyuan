@@ -72,7 +72,12 @@ export interface ShellAPI {
 
 // 导出 API 接口
 export interface ExportAPI {
-  markdownToHTML: (markdown: string) => Promise<string>;
+  /**
+   * 将 Markdown 转换为 HTML
+   * @param markdown Markdown 内容
+   * @param notePath 可选，笔记的完整文件路径，用于将相对路径转换为绝对路径
+   */
+  markdownToHTML: (markdown: string, notePath?: string) => Promise<string>;
   showSaveDialog: (options: {
     title: string;
     defaultPath: string;

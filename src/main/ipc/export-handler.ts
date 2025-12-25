@@ -1,5 +1,7 @@
 import { ipcMain, dialog, app, BrowserWindow, clipboard } from "electron";
 import * as fs from "fs/promises";
+import * as path from "path";
+import { pathToFileURL } from "url";
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
@@ -10,11 +12,53 @@ import rehypeStringify from "rehype-stringify";
 import juice from "juice";
 
 /**
+ * 判断是否为相对路径
+ */
+function isRelativePath(src: string): boolean {
+  if (!src) return false;
+  // 排除协议路径和 data URI（包括自定义协议 local-resource）
+  if (/^(https?:|data:|file:|blob:|#|mailto:|local-resource:)/.test(src)) return false;
+  return true;
+}
+
+/**
+ * 将 HTML 中的相对路径资源转换为绝对路径
+ * 使用 pathToFileURL 正确处理中文路径和特殊字符
+ * @param html HTML 内容
+ * @param notePath 笔记的完整文件路径
+ * @returns 转换后的 HTML
+ */
+function resolveHtmlResourcePaths(html: string, notePath: string): string {
+  if (!notePath) return html;
+
+  // 获取笔记所在目录
+  const noteDir = path.dirname(notePath);
+
+  // 匹配 src 和 href 属性中的路径
+  // 支持: img src, video src, audio src, source src, a href, link href 等
+  const attrRegex = /(src|href)=(["'])([^"']+)\2/gi;
+
+  return html.replace(attrRegex, (match, attr, quote, url) => {
+    if (isRelativePath(url)) {
+      // 处理 ./xxx 格式
+      const cleanUrl = url.replace(/^\.\//, "");
+      // 使用 path.join 构建完整路径，再用 pathToFileURL 转换
+      // 这样可以正确处理中文路径和特殊字符
+      const fullPath = path.join(noteDir, cleanUrl);
+      const fileUrl = pathToFileURL(fullPath).href;
+      return `${attr}=${quote}${fileUrl}${quote}`;
+    }
+    return match;
+  });
+}
+
+/**
  * 注册导出相关的 IPC handlers
  */
 export function registerExportHandlers(): void {
   // Markdown 转 HTML
-  ipcMain.handle("export:markdown-to-html", async (_, markdown: string) => {
+  // notePath 参数可选，用于将相对路径转换为绝对路径
+  ipcMain.handle("export:markdown-to-html", async (_, markdown: string, notePath?: string) => {
     try {
       // 使用 unified 处理 Markdown
       const file = await unified()
@@ -26,7 +70,14 @@ export function registerExportHandlers(): void {
         .use(rehypeStringify) // 转换为 HTML 字符串
         .process(markdown);
 
-      return String(file);
+      let html = String(file);
+
+      // 如果提供了笔记路径，将相对路径转换为绝对路径
+      if (notePath) {
+        html = resolveHtmlResourcePaths(html, notePath);
+      }
+
+      return html;
     } catch (error) {
       console.error("Markdown 转 HTML 失败:", error);
       throw error;
