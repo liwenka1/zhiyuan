@@ -45,17 +45,11 @@ function getDirectory(filePath: string): string {
 export function resolveResourcePath(src: string, notePath: string): string {
   if (!isRelativePath(src)) return src;
 
-  // 获取笔记所在目录
   const noteDir = getDirectory(notePath);
-
-  // 处理 ./xxx 格式
   const cleanSrc = src.replace(/^\.\//, "");
-
-  // 构建完整的本地路径
   const fullPath = `${noteDir}/${cleanSrc}`;
 
-  // 使用自定义协议 local-resource:// 来加载本地资源
-  // 这样可以正确处理中文路径和特殊字符
+  // 使用自定义协议加载本地资源，支持中文路径和特殊字符
   return `local-resource://${fullPath}`;
 }
 

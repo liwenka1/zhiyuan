@@ -116,28 +116,26 @@ app.whenReady().then(() => {
   // 用于加载本地文件资源，正确处理中文路径
   protocol.handle("local-resource", (request) => {
     try {
-      // 解析 URL
       const url = new URL(request.url);
-      // 获取路径部分：hostname + pathname
-      // 对于 local-resource://D:/path/file.jpg
-      // hostname = "d" (Windows 盘符，会被小写化)
-      // pathname = "/path/file.jpg"
-      // 需要重新组合为 D:/path/file.jpg
       let filePath: string;
 
       if (process.platform === "win32") {
         // Windows: 重新组合盘符和路径
-        // hostname 是盘符（小写），需要转为大写
+        // local-resource://D:/path/file.jpg -> D:/path/file.jpg
         const drive = url.hostname.toUpperCase();
-        // pathname 以 / 开头
         const pathPart = decodeURIComponent(url.pathname);
         filePath = `${drive}:${pathPart}`;
       } else {
-        // macOS/Linux: 直接使用 pathname
-        filePath = decodeURIComponent(url.pathname);
+        // macOS/Linux: 处理绝对路径
+        // local-resource:///Users/path/file.jpg -> /Users/path/file.jpg
+        if (url.hostname) {
+          // 兼容两个斜杠的格式
+          filePath = decodeURIComponent(`/${url.hostname}${url.pathname}`);
+        } else {
+          filePath = decodeURIComponent(url.pathname);
+        }
       }
 
-      // 使用 pathToFileURL 正确处理路径
       const fileUrl = pathToFileURL(filePath).href;
       return net.fetch(fileUrl);
     } catch (error) {
