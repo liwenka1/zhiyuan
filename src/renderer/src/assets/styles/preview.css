@@ -1,46 +1,46 @@
 /* Markdown 预览样式 */
 
 .prose {
-  --tw-prose-body: hsl(var(--foreground));
-  --tw-prose-headings: hsl(var(--preview-title));
-  --tw-prose-lead: hsl(var(--foreground));
-  --tw-prose-links: hsl(var(--preview-link));
-  --tw-prose-bold: hsl(var(--editor-strong));
-  --tw-prose-counters: hsl(var(--preview-list));
-  --tw-prose-bullets: hsl(var(--preview-list));
-  --tw-prose-hr: hsl(var(--editor-hr));
-  --tw-prose-quotes: hsl(var(--editor-quote));
-  --tw-prose-quote-borders: hsl(var(--border));
-  --tw-prose-captions: hsl(var(--muted-foreground));
-  --tw-prose-code: hsl(var(--editor-code));
-  --tw-prose-pre-code: hsl(var(--foreground));
-  --tw-prose-pre-bg: hsl(var(--preview-code-bg));
-  --tw-prose-th-borders: hsl(var(--border));
-  --tw-prose-td-borders: hsl(var(--border));
+  --tw-prose-body: var(--foreground);
+  --tw-prose-headings: var(--preview-title);
+  --tw-prose-lead: var(--foreground);
+  --tw-prose-links: var(--preview-link);
+  --tw-prose-bold: var(--editor-strong);
+  --tw-prose-counters: var(--preview-list);
+  --tw-prose-bullets: var(--preview-list);
+  --tw-prose-hr: var(--editor-hr);
+  --tw-prose-quotes: var(--editor-quote);
+  --tw-prose-quote-borders: var(--border);
+  --tw-prose-captions: var(--muted-foreground);
+  --tw-prose-code: var(--editor-code);
+  --tw-prose-pre-code: var(--foreground);
+  --tw-prose-pre-bg: var(--preview-code-bg);
+  --tw-prose-th-borders: var(--border);
+  --tw-prose-td-borders: var(--border);
 
   /* 深色模式 */
-  --tw-prose-invert-body: hsl(var(--foreground));
-  --tw-prose-invert-headings: hsl(var(--preview-title));
-  --tw-prose-invert-lead: hsl(var(--foreground));
-  --tw-prose-invert-links: hsl(var(--preview-link));
-  --tw-prose-invert-bold: hsl(var(--editor-strong));
-  --tw-prose-invert-counters: hsl(var(--preview-list));
-  --tw-prose-invert-bullets: hsl(var(--preview-list));
-  --tw-prose-invert-hr: hsl(var(--editor-hr));
-  --tw-prose-invert-quotes: hsl(var(--editor-quote));
-  --tw-prose-invert-quote-borders: hsl(var(--border));
-  --tw-prose-invert-captions: hsl(var(--muted-foreground));
-  --tw-prose-invert-code: hsl(var(--editor-code));
-  --tw-prose-invert-pre-code: hsl(var(--foreground));
-  --tw-prose-invert-pre-bg: hsl(var(--preview-code-bg));
-  --tw-prose-invert-th-borders: hsl(var(--border));
-  --tw-prose-invert-td-borders: hsl(var(--border));
+  --tw-prose-invert-body: var(--foreground);
+  --tw-prose-invert-headings: var(--preview-title);
+  --tw-prose-invert-lead: var(--foreground);
+  --tw-prose-invert-links: var(--preview-link);
+  --tw-prose-invert-bold: var(--editor-strong);
+  --tw-prose-invert-counters: var(--preview-list);
+  --tw-prose-invert-bullets: var(--preview-list);
+  --tw-prose-invert-hr: var(--editor-hr);
+  --tw-prose-invert-quotes: var(--editor-quote);
+  --tw-prose-invert-quote-borders: var(--border);
+  --tw-prose-invert-captions: var(--muted-foreground);
+  --tw-prose-invert-code: var(--editor-code);
+  --tw-prose-invert-pre-code: var(--foreground);
+  --tw-prose-invert-pre-bg: var(--preview-code-bg);
+  --tw-prose-invert-th-borders: var(--border);
+  --tw-prose-invert-td-borders: var(--border);
 }
 
 /* 代码块 */
 .prose code {
   font-family: var(--editor-font-mono);
-  background-color: hsl(var(--preview-code-bg));
+  background-color: var(--preview-code-bg);
   font-feature-settings:
     "liga" 1,
     "calt" 1; /* 启用连字 */
@@ -48,7 +48,7 @@
 
 .prose pre {
   font-family: var(--editor-font-mono);
-  background-color: hsl(var(--preview-code-bg));
+  background-color: var(--preview-code-bg);
 }
 
 .prose pre code {
@@ -57,24 +57,24 @@
 
 /* 斜体 */
 .prose em {
-  color: hsl(var(--editor-emphasis));
+  color: var(--editor-emphasis);
 }
 
 /* kbd */
 .prose kbd {
   font-family: var(--editor-font-mono);
-  color: hsl(var(--editor-tag));
-  background-color: hsl(var(--muted));
-  border: 1px solid hsl(var(--border));
+  color: var(--editor-tag);
+  background-color: var(--muted);
+  border: 1px solid var(--border);
 }
 
 /* 上下标 */
 .prose sup,
 .prose sub {
-  color: hsl(var(--editor-meta));
+  color: var(--editor-meta);
 }
 
 /* mark */
 .prose mark {
-  background-color: hsl(var(--editor-mark-bg));
+  background-color: var(--editor-mark-bg);
 }

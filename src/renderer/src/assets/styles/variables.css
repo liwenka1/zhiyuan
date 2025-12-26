@@ -1,70 +1,69 @@
 @layer base {
   :root {
     /* 浅色主题 - 春日宣纸 */
-    --background: 40 20% 98%;
-    --foreground: 220 15% 26%;
+    --background: hsl(40 20% 98%);
+    --foreground: hsl(220 15% 26%);
 
-    --card: 40 18% 99%;
-    --card-foreground: 220 15% 26%;
+    --card: hsl(40 18% 99%);
+    --card-foreground: hsl(220 15% 26%);
 
-    --popover: 40 18% 99%;
-    --popover-foreground: 220 15% 26%;
+    --popover: hsl(40 18% 99%);
+    --popover-foreground: hsl(220 15% 26%);
 
-    --primary: 220 15% 26%;
-    --primary-foreground: 40 20% 98%;
+    --primary: hsl(220 15% 26%);
+    --primary-foreground: hsl(40 20% 98%);
 
-    --secondary: 40 15% 94%;
-    --secondary-foreground: 220 15% 26%;
+    --secondary: hsl(40 15% 94%);
+    --secondary-foreground: hsl(220 15% 26%);
 
-    --muted: 40 15% 94%;
-    --muted-foreground: 0 0% 48%;
+    --muted: hsl(40 15% 94%);
+    --muted-foreground: hsl(0 0% 48%);
 
-    --accent: 210 45% 95%;
-    --accent-foreground: 210 48% 38%;
+    --accent: hsl(210 45% 95%);
+    --accent-foreground: hsl(210 48% 38%);
 
-    --destructive: 355 70% 52%;
-    --destructive-foreground: 40 20% 98%;
+    --destructive: hsl(355 70% 52%);
+    --destructive-foreground: hsl(40 20% 98%);
 
-    --border: 40 10% 88%;
-    --input: 40 10% 88%;
-    --ring: 210 48% 45%;
+    --border: hsl(40 10% 88%);
+    --input: hsl(40 10% 88%);
+    --ring: hsl(210 48% 45%);
 
     /* 特有变量 */
-    --selection: 210 60% 92%;
-    --divider: 40 10% 88%;
-    --tertiary-foreground: 0 0% 52%;
-    --link: 220 15% 26%;
-    --highlight: 210 48% 45%;
+    --selection: hsl(210 60% 92%);
+    --divider: hsl(40 10% 88%);
+    --tertiary-foreground: hsl(0 0% 52%);
+    --link: hsl(220 15% 26%);
+    --highlight: hsl(210 48% 45%);
 
     /* 编辑器语法高亮颜色 */
-    --editor-heading: 210 48% 42%;
-    --editor-strong: 220 15% 26%;
-    --editor-emphasis: 220 12% 38%;
-    --editor-link: 195 58% 45%;
-    --editor-url: 0 0% 48%;
-    --editor-code: 280 55% 45%;
-    --editor-code-bg: 150 18% 94%;
-    --editor-quote: 0 0% 48%;
-    --editor-list-marker: 40 70% 48%;
-    --editor-hr: 40 8% 82%;
-    --editor-tag: 155 50% 40%;
-    --editor-attribute: 25 85% 50%;
-    --editor-string: 155 50% 40%;
-    --editor-comment: 0 0% 54%;
-    --editor-meta: 0 0% 54%;
-    --editor-strikethrough: 0 0% 54%;
-    --editor-mark-bg: 45 90% 68%;
+    --editor-heading: hsl(210 48% 42%);
+    --editor-strong: hsl(220 15% 26%);
+    --editor-emphasis: hsl(220 12% 38%);
+    --editor-link: hsl(195 58% 45%);
+    --editor-url: hsl(0 0% 48%);
+    --editor-code: hsl(280 55% 45%);
+    --editor-code-bg: hsl(150 18% 94%);
+    --editor-quote: hsl(0 0% 48%);
+    --editor-list-marker: hsl(40 70% 48%);
+    --editor-hr: hsl(40 8% 82%);
+    --editor-tag: hsl(155 50% 40%);
+    --editor-attribute: hsl(25 85% 50%);
+    --editor-string: hsl(155 50% 40%);
+    --editor-comment: hsl(0 0% 54%);
+    --editor-meta: hsl(0 0% 54%);
+    --editor-strikethrough: hsl(0 0% 54%);
+    --editor-mark-bg: hsl(45 90% 68%);
 
     /* 编辑器专用颜色 */
-    --editor-title: 210 48% 42%;
-    --editor-link: 195 58% 45%;
-    --editor-list: 40 70% 48%;
+    --editor-title: hsl(210 48% 42%);
+    --editor-list: hsl(40 70% 48%);
 
     /* 预览专用颜色 */
-    --preview-title: 210 48% 42%;
-    --preview-link: 195 58% 45%;
-    --preview-list: 220 15% 26%;
-    --preview-code-bg: 150 18% 94%;
+    --preview-title: hsl(210 48% 42%);
+    --preview-link: hsl(195 58% 45%);
+    --preview-list: hsl(220 15% 26%);
+    --preview-code-bg: hsl(150 18% 94%);
 
     /* 布局尺寸 */
     --sidebar-width: 8.625rem;
@@ -91,69 +90,68 @@
 
   .dark {
     /* 深色主题 - 松烟墨池 */
-    --background: 220 16% 13%;
-    --foreground: 40 12% 89%;
+    --background: hsl(220 16% 13%);
+    --foreground: hsl(40 12% 89%);
 
-    --card: 220 15% 16%;
-    --card-foreground: 40 12% 89%;
+    --card: hsl(220 15% 16%);
+    --card-foreground: hsl(40 12% 89%);
 
-    --popover: 220 15% 16%;
-    --popover-foreground: 40 12% 89%;
+    --popover: hsl(220 15% 16%);
+    --popover-foreground: hsl(40 12% 89%);
 
-    --primary: 40 12% 89%;
-    --primary-foreground: 220 16% 13%;
+    --primary: hsl(40 12% 89%);
+    --primary-foreground: hsl(220 16% 13%);
 
-    --secondary: 220 14% 19%;
-    --secondary-foreground: 40 12% 89%;
+    --secondary: hsl(220 14% 19%);
+    --secondary-foreground: hsl(40 12% 89%);
 
-    --muted: 220 14% 19%;
-    --muted-foreground: 0 0% 58%;
+    --muted: hsl(220 14% 19%);
+    --muted-foreground: hsl(0 0% 58%);
 
-    --accent: 220 16% 22%;
-    --accent-foreground: 200 65% 68%;
+    --accent: hsl(220 16% 22%);
+    --accent-foreground: hsl(200 65% 68%);
 
-    --destructive: 355 65% 55%;
-    --destructive-foreground: 40 12% 89%;
+    --destructive: hsl(355 65% 55%);
+    --destructive-foreground: hsl(40 12% 89%);
 
-    --border: 220 12% 24%;
-    --input: 220 12% 24%;
-    --ring: 200 65% 58%;
+    --border: hsl(220 12% 24%);
+    --input: hsl(220 12% 24%);
+    --ring: hsl(200 65% 58%);
 
     /* 深色特有变量 */
-    --selection: 200 45% 25%;
-    --divider: 220 12% 24%;
-    --tertiary-foreground: 0 0% 55%;
-    --link: 40 12% 89%;
-    --highlight: 200 65% 58%;
+    --selection: hsl(200 45% 25%);
+    --divider: hsl(220 12% 24%);
+    --tertiary-foreground: hsl(0 0% 55%);
+    --link: hsl(40 12% 89%);
+    --highlight: hsl(200 65% 58%);
 
     /* 编辑器语法高亮颜色 */
-    --editor-heading: 200 65% 68%;
-    --editor-strong: 40 12% 89%;
-    --editor-emphasis: 40 8% 72%;
-    --editor-link: 170 45% 58%;
-    --editor-url: 0 0% 62%;
-    --editor-code: 280 50% 70%;
-    --editor-code-bg: 220 18% 17%;
-    --editor-quote: 0 0% 62%;
-    --editor-list-marker: 40 50% 65%;
-    --editor-hr: 220 10% 32%;
-    --editor-tag: 155 45% 58%;
-    --editor-attribute: 25 75% 62%;
-    --editor-string: 155 45% 58%;
-    --editor-comment: 0 0% 55%;
-    --editor-meta: 0 0% 58%;
-    --editor-strikethrough: 0 0% 58%;
-    --editor-mark-bg: 45 80% 45%;
+    --editor-heading: hsl(200 65% 68%);
+    --editor-strong: hsl(40 12% 89%);
+    --editor-emphasis: hsl(40 8% 72%);
+    --editor-link: hsl(170 45% 58%);
+    --editor-url: hsl(0 0% 62%);
+    --editor-code: hsl(280 50% 70%);
+    --editor-code-bg: hsl(220 18% 17%);
+    --editor-quote: hsl(0 0% 62%);
+    --editor-list-marker: hsl(40 50% 65%);
+    --editor-hr: hsl(220 10% 32%);
+    --editor-tag: hsl(155 45% 58%);
+    --editor-attribute: hsl(25 75% 62%);
+    --editor-string: hsl(155 45% 58%);
+    --editor-comment: hsl(0 0% 55%);
+    --editor-meta: hsl(0 0% 58%);
+    --editor-strikethrough: hsl(0 0% 58%);
+    --editor-mark-bg: hsl(45 80% 45%);
 
     /* 编辑器专用颜色 */
-    --editor-title: 200 65% 68%;
-    --editor-link: 170 45% 58%;
-    --editor-list: 40 50% 65%;
+    --editor-title: hsl(200 65% 68%);
+    --editor-list: hsl(40 50% 65%);
 
     /* 预览专用颜色 */
-    --preview-title: 200 65% 68%;
-    --preview-link: 170 45% 58%;
-    --preview-list: 40 12% 89%;
-    --preview-code-bg: 220 18% 17%;
+    --preview-title: hsl(200 65% 68%);
+    --preview-link: hsl(170 45% 58%);
+    --preview-list: hsl(40 12% 89%);
+    --preview-code-bg: hsl(220 18% 17%);
   }
 }

@@ -6,10 +6,10 @@
  */
 
 /**
- * 获取 CSS 变量对应的 HSL 颜色值
+ * 获取 CSS 变量对应的颜色值
  */
 export const getThemeColor = (variable: string): string => {
-  return `hsl(var(${variable}))`;
+  return `var(${variable})`;
 };
 
 /**

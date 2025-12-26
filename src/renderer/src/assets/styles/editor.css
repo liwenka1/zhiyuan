@@ -19,12 +19,12 @@
 }
 
 .cm-content {
-  caret-color: hsl(var(--foreground));
+  caret-color: var(--foreground);
 }
 
 /* 占位符 */
 .cm-placeholder {
-  color: hsl(var(--muted-foreground));
+  color: var(--muted-foreground);
   font-style: normal;
 }
 
@@ -35,40 +35,40 @@
 
 /* 选中文本 */
 .cm-selectionBackground {
-  background-color: hsl(var(--selection)) !important;
+  background-color: var(--selection) !important;
 }
 
 .cm-focused .cm-selectionBackground {
-  background-color: hsl(var(--selection)) !important;
+  background-color: var(--selection) !important;
 }
 
 /* 光标 */
 .cm-cursor {
-  border-left-color: hsl(var(--foreground));
+  border-left-color: var(--foreground);
   border-left-width: 1px;
 }
 
 /* 行号 */
 .cm-lineNumbers {
-  color: hsl(var(--muted-foreground));
+  color: var(--muted-foreground);
   font-size: 14px;
 }
 
 /* 折叠标记 */
 .cm-foldGutter {
-  color: hsl(var(--muted-foreground));
+  color: var(--muted-foreground);
 }
 
 /* 括号匹配 */
 .cm-matchingBracket {
-  background-color: hsl(var(--muted));
-  outline: 1px solid hsl(var(--border));
+  background-color: var(--muted);
+  outline: 1px solid var(--border);
   border-radius: 2px;
 }
 
 .cm-nonmatchingBracket {
-  background-color: hsl(var(--destructive) / 0.1);
-  outline: 1px solid hsl(var(--destructive));
+  background-color: color-mix(in srgb, var(--destructive) 10%, transparent);
+  outline: 1px solid var(--destructive);
   border-radius: 2px;
 }
 
@@ -76,17 +76,17 @@
 
 /* 标题 */
 .cm-header {
-  color: hsl(var(--editor-title));
+  color: var(--editor-title);
 }
 
 /* 删除线 */
 .cm-strikethrough {
-  color: hsl(var(--editor-strikethrough));
+  color: var(--editor-strikethrough);
 }
 
 /* 链接 */
 .cm-link {
-  color: hsl(var(--editor-link));
+  color: var(--editor-link);
 }
 
 .cm-link:hover {
@@ -96,37 +96,37 @@
 
 /* URL */
 .cm-url {
-  color: hsl(var(--editor-url));
+  color: var(--editor-url);
 }
 
 /* 引用块 */
 .cm-quote {
-  color: hsl(var(--editor-quote));
+  color: var(--editor-quote);
 }
 
 /* 列表标记 */
 .cm-list {
-  color: hsl(var(--editor-list));
+  color: var(--editor-list);
 }
 
 /* 分割线 */
 .cm-hr {
-  color: hsl(var(--editor-hr));
+  color: var(--editor-hr);
 }
 
 /* 注释 */
 .cm-comment {
-  color: hsl(var(--editor-comment));
+  color: var(--editor-comment);
   font-style: italic;
 }
 
 /* HTML 标签 */
 .cm-tag {
-  color: hsl(var(--editor-tag));
+  color: var(--editor-tag);
 }
 
 .cm-attribute {
-  color: hsl(var(--editor-attribute));
+  color: var(--editor-attribute);
 }
 
 /* 代码块样式 */
@@ -136,8 +136,8 @@
 .cm-inline-code {
   font-family: var(--editor-font-mono);
   font-size: 0.9em;
-  color: hsl(var(--editor-code));
-  background-color: hsl(var(--editor-code-bg));
+  color: var(--editor-code);
+  background-color: var(--editor-code-bg);
   padding: 2px 4px;
   border-radius: 3px;
   font-feature-settings:
@@ -147,7 +147,7 @@
 
 /* 代码块 */
 .cm-codeblock {
-  background-color: hsl(var(--editor-code-bg));
+  background-color: var(--editor-code-bg);
   border-radius: 6px;
 }
 
@@ -155,23 +155,23 @@
 
 /* 脚注引用 */
 .cm-footref {
-  color: hsl(var(--editor-link));
+  color: var(--editor-link);
   vertical-align: super;
   font-size: 0.8em;
 }
 
 /* 任务列表 */
 .cm-task-marker {
-  color: hsl(var(--editor-list-marker));
+  color: var(--editor-list-marker);
 }
 
 /* 表格 */
 .cm-table {
-  color: hsl(var(--foreground));
+  color: var(--foreground);
 }
 
 .cm-table-delimiter {
-  color: hsl(var(--tertiary-foreground));
+  color: var(--tertiary-foreground);
 }
 
 /* 性能优化 */

@@ -18,11 +18,11 @@ function createCustomTheme(isDark: boolean): Extension {
     {
       "&": {
         height: "auto",
-        backgroundColor: "hsl(var(--background))",
-        color: "hsl(var(--foreground))"
+        backgroundColor: "var(--background)",
+        color: "var(--foreground)"
       },
       ".cm-content": {
-        caretColor: "hsl(var(--foreground))",
+        caretColor: "var(--foreground)",
         padding: "var(--editor-padding)",
         fontFamily: "var(--editor-font)",
         fontSize: "var(--editor-font-size)",
@@ -39,48 +39,48 @@ function createCustomTheme(isDark: boolean): Extension {
         outline: "none"
       },
       ".cm-cursor, .cm-dropCursor": {
-        borderLeftColor: "hsl(var(--foreground))"
+        borderLeftColor: "var(--foreground)"
       },
       "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
         {
-          backgroundColor: "hsl(var(--selection))"
+          backgroundColor: "var(--selection)"
         },
       ".cm-activeLine": {
         backgroundColor: "transparent"
       },
       ".cm-selectionMatch": {
-        backgroundColor: "hsl(var(--selection) / 0.5)"
+        backgroundColor: "color-mix(in srgb, var(--selection) 50%, transparent)"
       },
       ".cm-matchingBracket, .cm-nonmatchingBracket": {
-        backgroundColor: "hsl(var(--muted))",
-        outline: "1px solid hsl(var(--border))"
+        backgroundColor: "var(--muted)",
+        outline: "1px solid var(--border)"
       },
       ".cm-gutters": {
-        backgroundColor: "hsl(var(--background))",
-        color: "hsl(var(--muted-foreground))",
+        backgroundColor: "var(--background)",
+        color: "var(--muted-foreground)",
         border: "none"
       },
       ".cm-activeLineGutter": {
         backgroundColor: "transparent"
       },
       ".cm-foldPlaceholder": {
-        backgroundColor: "hsl(var(--muted))",
+        backgroundColor: "var(--muted)",
         border: "none",
-        color: "hsl(var(--muted-foreground))"
+        color: "var(--muted-foreground)"
       },
       ".cm-tooltip": {
-        backgroundColor: "hsl(var(--popover))",
-        border: "1px solid hsl(var(--border))"
+        backgroundColor: "var(--popover)",
+        border: "1px solid var(--border)"
       },
       ".cm-tooltip .cm-tooltip-arrow:before": {
-        borderTopColor: "hsl(var(--border))"
+        borderTopColor: "var(--border)"
       },
       ".cm-tooltip .cm-tooltip-arrow:after": {
-        borderTopColor: "hsl(var(--popover))"
+        borderTopColor: "var(--popover)"
       },
       // 行内代码
       ".cm-line .cm-monospace": {
-        backgroundColor: "hsl(var(--editor-code-bg))",
+        backgroundColor: "var(--editor-code-bg)",
         borderRadius: "3px",
         padding: "2px 4px"
       }
@@ -91,57 +91,57 @@ function createCustomTheme(isDark: boolean): Extension {
   // 语法高亮样式
   const highlightStyle = HighlightStyle.define([
     // 标题
-    { tag: tags.heading1, fontWeight: "700", color: "hsl(var(--editor-title))" },
-    { tag: tags.heading2, fontWeight: "700", color: "hsl(var(--editor-title))" },
-    { tag: tags.heading3, fontWeight: "600", color: "hsl(var(--editor-title))" },
-    { tag: tags.heading4, fontWeight: "600", color: "hsl(var(--editor-title))" },
-    { tag: tags.heading5, fontWeight: "600", color: "hsl(var(--editor-title))" },
-    { tag: tags.heading6, fontWeight: "600", color: "hsl(var(--editor-title))" },
+    { tag: tags.heading1, fontWeight: "700", color: "var(--editor-title)" },
+    { tag: tags.heading2, fontWeight: "700", color: "var(--editor-title)" },
+    { tag: tags.heading3, fontWeight: "600", color: "var(--editor-title)" },
+    { tag: tags.heading4, fontWeight: "600", color: "var(--editor-title)" },
+    { tag: tags.heading5, fontWeight: "600", color: "var(--editor-title)" },
+    { tag: tags.heading6, fontWeight: "600", color: "var(--editor-title)" },
 
     // 标题标记
-    { tag: tags.processingInstruction, color: "hsl(var(--editor-title))" },
-    { tag: tags.heading, color: "hsl(var(--editor-title))" },
+    { tag: tags.processingInstruction, color: "var(--editor-title)" },
+    { tag: tags.heading, color: "var(--editor-title)" },
 
     // 删除线
-    { tag: tags.strikethrough, color: "hsl(var(--muted-foreground))" },
+    { tag: tags.strikethrough, color: "var(--muted-foreground)" },
 
     // 链接
-    { tag: tags.link, color: "hsl(var(--editor-link))" },
-    { tag: tags.url, color: "hsl(var(--editor-url))" },
+    { tag: tags.link, color: "var(--editor-link)" },
+    { tag: tags.url, color: "var(--editor-url)" },
 
     // 行内代码
-    { tag: tags.monospace, fontFamily: "ui-monospace, monospace", color: "hsl(var(--editor-code))" },
+    { tag: tags.monospace, fontFamily: "ui-monospace, monospace", color: "var(--editor-code)" },
 
     // 引用
-    { tag: tags.quote, color: "hsl(var(--editor-quote))" },
+    { tag: tags.quote, color: "var(--editor-quote)" },
 
     // 列表标记
-    { tag: tags.list, color: "hsl(var(--editor-list))" },
+    { tag: tags.list, color: "var(--editor-list)" },
 
     // 分割线
-    { tag: tags.contentSeparator, color: "hsl(var(--editor-hr))" },
+    { tag: tags.contentSeparator, color: "var(--editor-hr)" },
 
     // HTML标签和属性
-    { tag: tags.tagName, color: "hsl(var(--editor-tag))" },
-    { tag: tags.attributeName, color: "hsl(var(--editor-attribute))" },
-    { tag: tags.attributeValue, color: "hsl(var(--editor-string))" },
+    { tag: tags.tagName, color: "var(--editor-tag)" },
+    { tag: tags.attributeName, color: "var(--editor-attribute)" },
+    { tag: tags.attributeValue, color: "var(--editor-string)" },
 
     // 字符串
-    { tag: tags.string, color: "hsl(var(--editor-string))" },
+    { tag: tags.string, color: "var(--editor-string)" },
 
     // 关键字
-    { tag: tags.keyword, color: "hsl(var(--editor-link))", fontWeight: "500" },
+    { tag: tags.keyword, color: "var(--editor-link)", fontWeight: "500" },
 
     // 注释和元信息
-    { tag: tags.comment, color: "hsl(var(--editor-comment))", fontStyle: "italic" },
-    { tag: tags.meta, color: "hsl(var(--editor-meta))" },
+    { tag: tags.comment, color: "var(--editor-comment)", fontStyle: "italic" },
+    { tag: tags.meta, color: "var(--editor-meta)" },
 
     // 标点符号
-    { tag: tags.punctuation, color: "hsl(var(--tertiary-foreground))" },
-    { tag: tags.bracket, color: "hsl(var(--tertiary-foreground))" },
+    { tag: tags.punctuation, color: "var(--tertiary-foreground)" },
+    { tag: tags.bracket, color: "var(--tertiary-foreground)" },
 
     // 错误
-    { tag: tags.invalid, color: "hsl(var(--destructive))", textDecoration: "underline wavy" }
+    { tag: tags.invalid, color: "var(--destructive)", textDecoration: "underline wavy" }
   ]);
 
   return [baseTheme, syntaxHighlighting(highlightStyle)];
