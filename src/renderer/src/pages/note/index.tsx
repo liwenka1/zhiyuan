@@ -9,6 +9,7 @@ import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 /**
  * 笔记页面
@@ -183,14 +184,14 @@ export function NotePage() {
       const isDark = theme === "dark";
       if (format === "html") {
         await exportNoteAsHTML(note.id, isDark);
-        console.log(t("export.success"));
+        toast.success(t("export.success"));
       } else if (format === "pdf") {
         await exportNoteAsPDF(note.id, isDark);
-        console.log(t("export.success"));
+        toast.success(t("export.success"));
       }
     } catch (error) {
       console.error("导出笔记失败:", error);
-      alert(t("export.failed"));
+      toast.error(t("export.failed"));
     }
   };
 
@@ -198,10 +199,10 @@ export function NotePage() {
   const handleCopyToWechat = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
     try {
       await copyNoteToWechat(note.id);
-      alert(t("export.wechatSuccess"));
+      toast.success(t("export.wechatSuccess"));
     } catch (error) {
       console.error("复制到微信公众号失败:", error);
-      alert(t("export.wechatFailed"));
+      toast.error(t("export.wechatFailed"));
     }
   };
 

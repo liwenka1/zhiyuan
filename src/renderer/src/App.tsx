@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { NotePage } from "@/pages/note";
 import { useThemeStore } from "@/stores/use-theme-store";
+import { Toaster } from "@/components/ui/sonner";
 
 function App(): React.JSX.Element {
   const initTheme = useThemeStore((state) => state.initTheme);
@@ -10,7 +11,12 @@ function App(): React.JSX.Element {
     initTheme();
   }, [initTheme]);
 
-  return <NotePage />;
+  return (
+    <>
+      <NotePage />
+      <Toaster position="bottom-right" />
+    </>
+  );
 }
 
 export default App;
