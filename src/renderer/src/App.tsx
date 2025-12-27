@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { NotePage } from "@/pages/note";
-import { useThemeStore } from "@/stores/use-theme-store";
+import { useThemeStore } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
 
 function App(): React.JSX.Element {

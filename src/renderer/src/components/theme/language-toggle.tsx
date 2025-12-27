@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { useLanguageStore } from "@/stores/use-language-store";
+import { useLanguageStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 
 export function LanguageToggle() {

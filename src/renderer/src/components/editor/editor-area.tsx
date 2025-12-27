@@ -2,7 +2,7 @@ import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
-import { useViewStore } from "@/stores/use-view-store";
+import { useViewStore } from "@/stores";
 
 interface EditorAreaProps {
   content?: string;

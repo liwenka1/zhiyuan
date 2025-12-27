@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { TableOfContents } from "./table-of-contents";
-import { useViewStore } from "@/stores/use-view-store";
-import { useNoteStore } from "@/stores/use-note-store";
+import { useViewStore } from "@/stores";
+import { useNoteStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 
 interface EditorToolbarProps {

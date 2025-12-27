@@ -1,7 +1,7 @@
 import CodeMirror from "@uiw/react-codemirror";
 import { useCodemirrorExtensions } from "./hooks/use-codemirror";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useThemeStore } from "@/stores/use-theme-store";
+import { useThemeStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 
 interface EditorContentProps {

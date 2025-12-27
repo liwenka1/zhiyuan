@@ -1,7 +1,7 @@
 import { FolderSync } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useWorkspaceStore } from "@/stores/use-workspace-store";
-import { useNoteStore } from "@/stores/use-note-store";
+import { useWorkspaceStore } from "@/stores";
+import { useNoteStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 
 export function WorkspaceToggle() {
