@@ -317,9 +317,7 @@ ${htmlContent}
 }
 
 /**
- * 将 Markdown 内容转换为微信公众号格式的 HTML（需要在主进程中实现真正的转换）
+ * 将 Markdown 内容转换为微信公众号格式的 HTML
+ * 在渲染进程中直接处理，不需要通过 IPC
  */
-export async function markdownToWechatHTML(markdown: string): Promise<string> {
-  // 调用主进程的 API 进行转换
-  return await window.api.export.markdownToHTML(markdown);
-}
+export { markdownToHTML as markdownToWechatHTML } from "./markdown-processor";

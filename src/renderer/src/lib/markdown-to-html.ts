@@ -360,10 +360,7 @@ ${htmlContent}
 }
 
 /**
- * 将 Markdown 内容转换为 HTML（需要在主进程中实现真正的转换）
- * 这个函数只是一个接口定义，实际转换在主进程完成
+ * 将 Markdown 内容转换为 HTML
+ * 在渲染进程中直接处理，不需要通过 IPC
  */
-export async function markdownToHTML(markdown: string): Promise<string> {
-  // 调用主进程的 API 进行转换
-  return await window.api.export.markdownToHTML(markdown);
-}
+export { markdownToHTML } from "./markdown-processor";
