@@ -249,7 +249,26 @@ const api = {
      * 复制 HTML 到剪贴板（用于微信公众号）
      */
     copyHTMLToClipboard: (htmlContent: string): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke("export:copy-html-to-clipboard", htmlContent)
+      ipcRenderer.invoke("export:copy-html-to-clipboard", htmlContent),
+
+    /**
+     * 导出 HTML 资源包（包含所有图片等资源）
+     */
+    exportHTMLPackage: (
+      htmlContent: string,
+      outputPath: string,
+      notePath: string | undefined,
+      options?: {
+        packageType?: "folder" | "zip";
+        assetsFolder?: string;
+      }
+    ): Promise<{
+      success: boolean;
+      type: string;
+      outputPath: string;
+      filesCount: number;
+      copiedFiles: string[];
+    }> => ipcRenderer.invoke("export:export-html-package", htmlContent, outputPath, notePath, options)
   }
 };
 

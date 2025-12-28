@@ -216,4 +216,170 @@ export function registerExportHandlers(): void {
       throw error;
     }
   });
+
+  // 导出 HTML 资源包（包含所有图片等资源）
+  ipcMain.handle(
+    "export:export-html-package",
+    async (
+      _,
+      htmlContent: string,
+      outputPath: string,
+      notePath: string | undefined,
+      options: {
+        packageType?: "folder" | "zip"; // 导出为文件夹还是 ZIP
+        assetsFolder?: string; // 资源文件夹名称，默认 "assets"
+      } = {}
+    ) => {
+      try {
+        const packageType = options.packageType || "folder";
+        const assetsFolder = options.assetsFolder || "assets";
+
+        if (!notePath) {
+          // 没有笔记路径，直接保存 HTML
+          await fs.writeFile(outputPath, htmlContent, "utf-8");
+          return { success: true, type: "single-file" };
+        }
+
+        // 1. 确定输出目录
+        let outputDir: string;
+        let needsZip = false;
+
+        if (packageType === "zip") {
+          // ZIP 模式：创建临时目录
+          outputDir = path.join(app.getPath("temp"), `html-export-${Date.now()}`);
+          needsZip = true;
+        } else {
+          // 文件夹模式：使用用户选择的路径作为目录
+          outputDir = outputPath;
+        }
+
+        // 2. 创建输出目录和资源目录
+        await fs.mkdir(outputDir, { recursive: true });
+        const assetsDir = path.join(outputDir, assetsFolder);
+        await fs.mkdir(assetsDir, { recursive: true });
+
+        // 3. 收集并复制所有图片资源
+        const { processedHtml, copiedFiles } = await collectAndCopyAssets(
+          htmlContent,
+          notePath,
+          assetsDir,
+          assetsFolder
+        );
+
+        // 4. 保存 HTML 文件
+        const htmlFilePath = path.join(outputDir, "index.html");
+        await fs.writeFile(htmlFilePath, processedHtml, "utf-8");
+
+        // 5. 如果需要，创建 ZIP 文件
+        if (needsZip) {
+          // 这里需要一个 ZIP 库，我们先用简单的方式
+          // 实际项目中建议使用 archiver 或 jszip
+          console.log("ZIP 功能需要额外的库支持");
+          // TODO: 实现 ZIP 压缩
+        }
+
+        return {
+          success: true,
+          type: packageType,
+          outputPath: packageType === "zip" ? outputPath : outputDir,
+          filesCount: copiedFiles.length + 1, // +1 for HTML file
+          copiedFiles
+        };
+      } catch (error) {
+        console.error("导出 HTML 资源包失败:", error);
+        throw error;
+      }
+    }
+  );
+}
+
+/**
+ * 收集并复制所有资源文件
+ * @returns 处理后的 HTML 和已复制的文件列表
+ */
+async function collectAndCopyAssets(
+  html: string,
+  notePath: string,
+  assetsDir: string,
+  assetsFolderName: string
+): Promise<{ processedHtml: string; copiedFiles: string[] }> {
+  const noteDir = path.dirname(notePath);
+  const copiedFiles: string[] = [];
+  const fileMap = new Map<string, string>(); // 原路径 -> 新路径
+
+  // 匹配所有资源标签的 src/href 属性
+  const resourceRegex = /<(img|video|audio|source)[^>]+(src|href)=(["'])([^"']+)\3[^>]*>/gi;
+
+  const promises: Promise<void>[] = [];
+  const matches = html.matchAll(resourceRegex);
+
+  for (const match of matches) {
+    const src = match[4]; // 资源路径
+
+    // 只处理相对路径和 file:// 协议
+    if (isRelativePath(src) || src.startsWith("file://")) {
+      promises.push(
+        (async () => {
+          try {
+            let sourcePath: string;
+
+            if (src.startsWith("file://")) {
+              sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
+            } else {
+              const cleanSrc = src.replace(/^\.\//, "");
+              sourcePath = path.join(noteDir, cleanSrc);
+            }
+
+            // 检查文件是否存在
+            try {
+              await fs.access(sourcePath);
+            } catch {
+              console.warn(`资源文件不存在: ${sourcePath}`);
+              return;
+            }
+
+            // 生成新的文件名（保持原扩展名）
+            const ext = path.extname(sourcePath);
+            const basename = path.basename(sourcePath, ext);
+            const newFileName = `${basename}${ext}`;
+
+            // 复制文件到 assets 目录
+            const destPath = path.join(assetsDir, newFileName);
+
+            // 如果文件名冲突，添加序号
+            let counter = 1;
+            let finalDestPath = destPath;
+            while (copiedFiles.includes(finalDestPath)) {
+              const newName = `${basename}-${counter}${ext}`;
+              finalDestPath = path.join(assetsDir, newName);
+              counter++;
+            }
+
+            await fs.copyFile(sourcePath, finalDestPath);
+            copiedFiles.push(finalDestPath);
+
+            // 记录映射关系（相对路径）
+            const relativePath = `./${assetsFolderName}/${path.basename(finalDestPath)}`;
+            fileMap.set(src, relativePath);
+          } catch (error) {
+            console.error(`复制资源失败: ${src}`, error);
+          }
+        })()
+      );
+    }
+  }
+
+  // 等待所有文件复制完成
+  await Promise.all(promises);
+
+  // 替换 HTML 中的路径
+  let processedHtml = html;
+  fileMap.forEach((newPath, oldPath) => {
+    // 转义特殊字符
+    const escapedOldPath = oldPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(escapedOldPath, "g");
+    processedHtml = processedHtml.replace(regex, newPath);
+  });
+
+  return { processedHtml, copiedFiles };
 }

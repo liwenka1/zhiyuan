@@ -84,10 +84,25 @@ export interface ExportAPI {
     filters: Array<{ name: string; extensions: string[] }>;
   }) => Promise<string | null>;
   saveHTMLFile: (filePath: string, htmlContent: string) => Promise<{ success: boolean }>;
-  exportAsPDF: (htmlContent: string, filePath: string) => Promise<{ success: boolean }>;
+  exportAsPDF: (htmlContent: string, filePath: string, notePath?: string) => Promise<{ success: boolean }>;
   getDownloadsPath: () => Promise<string>;
   inlineCSS: (htmlContent: string) => Promise<string>;
   copyHTMLToClipboard: (htmlContent: string) => Promise<{ success: boolean }>;
+  exportHTMLPackage: (
+    htmlContent: string,
+    outputPath: string,
+    notePath: string | undefined,
+    options?: {
+      packageType?: "folder" | "zip";
+      assetsFolder?: string;
+    }
+  ) => Promise<{
+    success: boolean;
+    type: string;
+    outputPath: string;
+    filesCount: number;
+    copiedFiles: string[];
+  }>;
 }
 
 // 扩展的 API 接口

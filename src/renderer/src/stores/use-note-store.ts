@@ -593,19 +593,19 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       // 1. 获取下载目录
       const downloadsPath = await window.api.export.getDownloadsPath();
 
-      // 2. 显示保存对话框
-      const defaultFileName = `${note.title}.html`;
-      const filePath = await window.api.export.showSaveDialog({
-        title: "导出为 HTML",
-        defaultPath: `${downloadsPath}/${defaultFileName}`,
+      // 2. 显示保存对话框 - 选择文件夹
+      const defaultFolderName = `${note.title}`;
+      const folderPath = await window.api.export.showSaveDialog({
+        title: "导出为 HTML 资源包",
+        defaultPath: `${downloadsPath}/${defaultFolderName}`,
         filters: [
-          { name: "HTML 文件", extensions: ["html"] },
+          { name: "文件夹", extensions: [] },
           { name: "所有文件", extensions: ["*"] }
         ]
       });
 
       // 用户取消了保存
-      if (!filePath) {
+      if (!folderPath) {
         return;
       }
 
@@ -616,10 +616,14 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
       const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
 
-      // 5. 保存文件
-      await window.api.export.saveHTMLFile(filePath, fullHTML);
+      // 5. 导出为资源包（包含所有图片等资源）
+      const result = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, {
+        packageType: "folder",
+        assetsFolder: "assets"
+      });
 
-      console.log("导出成功:", filePath);
+      console.log("导出成功:", result);
+      console.log(`已导出 ${result.filesCount} 个文件到: ${result.outputPath}`);
     } catch (error) {
       console.error("导出 HTML 失败:", error);
       throw error;
