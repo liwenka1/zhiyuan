@@ -258,17 +258,11 @@ const api = {
       htmlContent: string,
       outputPath: string,
       notePath: string | undefined,
-      options?: {
-        packageType?: "folder" | "zip";
-        assetsFolder?: string;
-      }
+      assetsFolder?: string
     ): Promise<{
-      success: boolean;
-      type: string;
-      outputPath: string;
       filesCount: number;
       copiedFiles: string[];
-    }> => ipcRenderer.invoke("export:export-html-package", htmlContent, outputPath, notePath, options)
+    }> => ipcRenderer.invoke("export:export-html-package", htmlContent, outputPath, notePath, assetsFolder)
   }
 };
 

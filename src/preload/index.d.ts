@@ -92,14 +92,8 @@ export interface ExportAPI {
     htmlContent: string,
     outputPath: string,
     notePath: string | undefined,
-    options?: {
-      packageType?: "folder" | "zip";
-      assetsFolder?: string;
-    }
+    assetsFolder?: string
   ) => Promise<{
-    success: boolean;
-    type: string;
-    outputPath: string;
     filesCount: number;
     copiedFiles: string[];
   }>;
