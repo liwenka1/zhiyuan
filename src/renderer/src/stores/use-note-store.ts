@@ -609,21 +609,19 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         return;
       }
 
-      // 3. 将 Markdown 转换为 HTML（传入笔记路径以解析相对资源路径）
-      const htmlBody = await window.api.export.markdownToHTML(note.content, note.filePath);
+      // 3. 将 Markdown 转换为 HTML
+      const { markdownToHTML } = await import("@/lib/markdown-processor");
+      const htmlBody = await markdownToHTML(note.content);
 
       // 4. 生成完整的 HTML 文档
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
       const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
 
       // 5. 导出为资源包（包含所有图片等资源）
-      const result = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, {
-        packageType: "folder",
-        assetsFolder: "assets"
-      });
+      const result = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
 
       console.log("导出成功:", result);
-      console.log(`已导出 ${result.filesCount} 个文件到: ${result.outputPath}`);
+      console.log(`已导出 ${result.filesCount} 个文件`);
     } catch (error) {
       console.error("导出 HTML 失败:", error);
       throw error;
@@ -658,8 +656,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         return;
       }
 
-      // 3. 将 Markdown 转换为 HTML（传入笔记路径以解析相对资源路径）
-      const htmlBody = await window.api.export.markdownToHTML(note.content, note.filePath);
+      // 3. 将 Markdown 转换为 HTML
+      const { markdownToHTML } = await import("@/lib/markdown-processor");
+      const htmlBody = await markdownToHTML(note.content);
 
       // 4. 生成完整的 HTML 文档
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
@@ -684,16 +683,17 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
 
     try {
-      // 1. 将 Markdown 转换为 HTML（传入笔记路径以解析相对资源路径）
-      // 注意：微信公众号不支持本地 file:// 协议的图片，相对路径图片需要先上传到网络
-      const htmlBody = await window.api.export.markdownToHTML(note.content, note.filePath);
+      // 1. 将 Markdown 转换为 HTML
+      const { markdownToHTML } = await import("@/lib/markdown-processor");
+      const htmlBody = await markdownToHTML(note.content);
 
       // 2. 生成适配微信公众号的 HTML 文档
       const { generateWechatHTMLDocument } = await import("@/lib/wechat-html");
       const wechatHTML = generateWechatHTMLDocument(note.title, htmlBody);
 
-      // 3. 将 CSS 内联化
-      const inlinedHTML = await window.api.export.inlineCSS(wechatHTML);
+      // 3. 将 CSS 内联化（在渲染进程处理）
+      const { inlineCSS } = await import("@/lib/css-inliner");
+      const inlinedHTML = inlineCSS(wechatHTML);
 
       // 4. 复制到剪贴板
       await window.api.export.copyHTMLToClipboard(inlinedHTML);
