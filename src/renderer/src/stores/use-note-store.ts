@@ -664,8 +664,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
       const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
 
-      // 5. 导出为 PDF
-      await window.api.export.exportAsPDF(fullHTML, filePath);
+      // 5. 导出为 PDF（传入 notePath 以支持本地图片）
+      await window.api.export.exportAsPDF(fullHTML, filePath, note.filePath);
 
       console.log("导出 PDF 成功:", filePath);
     } catch (error) {

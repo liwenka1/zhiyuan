@@ -231,9 +231,10 @@ const api = {
 
     /**
      * 导出为 PDF
+     * @param notePath 可选，笔记的完整文件路径，用于将相对路径的图片转换为 Base64
      */
-    exportAsPDF: (htmlContent: string, filePath: string): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke("export:export-as-pdf", htmlContent, filePath),
+    exportAsPDF: (htmlContent: string, filePath: string, notePath?: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke("export:export-as-pdf", htmlContent, filePath, notePath),
 
     /**
      * 获取用户下载目录

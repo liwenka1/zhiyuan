@@ -1,6 +1,7 @@
 import { ipcMain, dialog, app, BrowserWindow, clipboard } from "electron";
 import * as fs from "fs/promises";
 import * as path from "path";
+import { tmpdir } from "os";
 
 /**
  * 判断是否为相对路径
@@ -10,6 +11,73 @@ function isRelativePath(src: string): boolean {
   // 排除协议路径和 data URI
   if (/^(https?:|data:|file:|blob:|#|mailto:|local-resource:)/.test(src)) return false;
   return true;
+}
+
+/**
+ * 获取图片的 MIME 类型
+ */
+function getImageMimeType(ext: string): string {
+  const mimeTypes: Record<string, string> = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".bmp": "image/bmp",
+    ".ico": "image/x-icon"
+  };
+  return mimeTypes[ext.toLowerCase()] || "application/octet-stream";
+}
+
+/**
+ * 将 HTML 中的本地图片转换为 Base64 内嵌
+ * 用于 PDF 导出时确保图片能正常显示
+ */
+async function embedLocalImages(htmlContent: string, notePath?: string): Promise<string> {
+  if (!notePath) return htmlContent;
+
+  const noteDir = path.dirname(notePath);
+  let result = htmlContent;
+
+  // 匹配所有 img 标签的 src 属性
+  const imgRegex = /<img[^>]+src=(["'])([^"']+)\1[^>]*>/gi;
+  const matches = [...htmlContent.matchAll(imgRegex)];
+
+  for (const match of matches) {
+    const fullMatch = match[0];
+    const quote = match[1];
+    const src = match[2];
+
+    // 只处理相对路径
+    if (!isRelativePath(src)) continue;
+
+    try {
+      const imagePath = path.join(noteDir, src.replace(/^\.\//, ""));
+
+      // 检查文件是否存在
+      try {
+        await fs.access(imagePath);
+      } catch {
+        console.warn(`图片文件不存在: ${imagePath}`);
+        continue;
+      }
+
+      const imageBuffer = await fs.readFile(imagePath);
+      const ext = path.extname(imagePath);
+      const mimeType = getImageMimeType(ext);
+      const base64 = imageBuffer.toString("base64");
+      const dataUri = `data:${mimeType};base64,${base64}`;
+
+      // 替换 src 属性
+      const newImgTag = fullMatch.replace(`src=${quote}${src}${quote}`, `src=${quote}${dataUri}${quote}`);
+      result = result.replace(fullMatch, newImgTag);
+    } catch (error) {
+      console.warn(`无法嵌入图片: ${src}`, error);
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -49,10 +117,18 @@ export function registerExportHandlers(): void {
   });
 
   // 导出为 PDF
-  ipcMain.handle("export:export-as-pdf", async (_, htmlContent: string, filePath: string) => {
+  ipcMain.handle("export:export-as-pdf", async (_, htmlContent: string, filePath: string, notePath?: string) => {
     let pdfWindow: BrowserWindow | null = null;
+    let tempHtmlPath: string | null = null;
 
     try {
+      // 将本地图片转换为 Base64 内嵌，确保 PDF 中图片能正常显示
+      const processedHtml = await embedLocalImages(htmlContent, notePath);
+
+      // 将 HTML 保存为临时文件，避免 data URL 长度限制
+      tempHtmlPath = path.join(tmpdir(), `pdf-export-${Date.now()}.html`);
+      await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
+
       pdfWindow = new BrowserWindow({
         width: 800,
         height: 600,
@@ -63,7 +139,8 @@ export function registerExportHandlers(): void {
         }
       });
 
-      await pdfWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(htmlContent)}`);
+      // 使用 file:// 协议加载临时文件
+      await pdfWindow.loadFile(tempHtmlPath);
 
       // 等待页面渲染完成
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -78,6 +155,14 @@ export function registerExportHandlers(): void {
     } finally {
       if (pdfWindow && !pdfWindow.isDestroyed()) {
         pdfWindow.close();
+      }
+      // 清理临时文件
+      if (tempHtmlPath) {
+        try {
+          await fs.unlink(tempHtmlPath);
+        } catch {
+          // 忽略删除失败
+        }
       }
     }
   });
