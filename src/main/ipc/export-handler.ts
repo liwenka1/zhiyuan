@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app, BrowserWindow, clipboard } from "electron";
+import { ipcMain, dialog, app, BrowserWindow, clipboard, NativeImage } from "electron";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { tmpdir } from "os";
@@ -33,7 +33,6 @@ function getImageMimeType(ext: string): string {
 
 /**
  * 将 HTML 中的本地图片转换为 Base64 内嵌
- * 用于 PDF 导出时确保图片能正常显示
  */
 async function embedLocalImages(htmlContent: string, notePath?: string): Promise<string> {
   if (!notePath) return htmlContent;
@@ -82,6 +81,64 @@ async function embedLocalImages(htmlContent: string, notePath?: string): Promise
 }
 
 /**
+ * 将 HTML 渲染为长图截图
+ * PDF 和图片导出共用此逻辑
+ */
+async function captureHtmlAsImage(htmlContent: string, notePath?: string, width = 800): Promise<NativeImage> {
+  let window: BrowserWindow | null = null;
+  let tempHtmlPath: string | null = null;
+
+  try {
+    // 将本地图片转换为 Base64 内嵌
+    const processedHtml = await embedLocalImages(htmlContent, notePath);
+
+    // 将 HTML 保存为临时文件
+    tempHtmlPath = path.join(tmpdir(), `export-${Date.now()}.html`);
+    await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
+
+    window = new BrowserWindow({
+      width,
+      height: 600,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    await window.loadFile(tempHtmlPath);
+
+    // 等待页面渲染完成
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // 获取页面实际内容高度
+    const contentHeight = await window.webContents.executeJavaScript(
+      "Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+    );
+
+    // 调整窗口大小为内容实际尺寸
+    window.setContentSize(width, contentHeight);
+
+    // 等待窗口调整完成
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    // 截取整个页面
+    return await window.webContents.capturePage();
+  } finally {
+    if (window && !window.isDestroyed()) {
+      window.close();
+    }
+    if (tempHtmlPath) {
+      try {
+        await fs.unlink(tempHtmlPath);
+      } catch {
+        // 忽略删除失败
+      }
+    }
+  }
+}
+
+/**
  * 注册导出相关的 IPC handlers
  */
 export function registerExportHandlers(): void {
@@ -119,150 +176,50 @@ export function registerExportHandlers(): void {
 
   // 导出为 PDF（单页长图方式）
   ipcMain.handle("export:export-as-pdf", async (_, htmlContent: string, filePath: string, notePath?: string) => {
-    let pdfWindow: BrowserWindow | null = null;
-    let tempHtmlPath: string | null = null;
+    // 截取页面为长图
+    const image = await captureHtmlAsImage(htmlContent, notePath);
+    const pngData = image.toPNG();
 
-    try {
-      // 将本地图片转换为 Base64 内嵌
-      const processedHtml = await embedLocalImages(htmlContent, notePath);
+    // 使用 pdf-lib 创建 PDF，将图片嵌入
+    const pdfDoc = await PDFDocument.create();
+    const pngImage = await pdfDoc.embedPng(pngData);
 
-      // 将 HTML 保存为临时文件
-      tempHtmlPath = path.join(tmpdir(), `pdf-export-${Date.now()}.html`);
-      await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
+    // 创建与图片尺寸相同的页面
+    const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
 
-      const width = 800;
+    // 将图片绘制到页面
+    page.drawImage(pngImage, {
+      x: 0,
+      y: 0,
+      width: pngImage.width,
+      height: pngImage.height
+    });
 
-      pdfWindow = new BrowserWindow({
-        width,
-        height: 600,
-        show: false,
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true
-        }
-      });
-
-      await pdfWindow.loadFile(tempHtmlPath);
-
-      // 等待页面渲染完成
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // 获取页面实际内容高度
-      const contentHeight = await pdfWindow.webContents.executeJavaScript(
-        "Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
-      );
-
-      // 调整窗口大小为内容实际尺寸
-      pdfWindow.setContentSize(width, contentHeight);
-
-      // 等待窗口调整完成
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // 截取整个页面为图片
-      const image = await pdfWindow.webContents.capturePage();
-      const pngData = image.toPNG();
-
-      // 使用 pdf-lib 创建 PDF，将图片嵌入
-      const pdfDoc = await PDFDocument.create();
-      const pngImage = await pdfDoc.embedPng(pngData);
-
-      // 创建与图片尺寸相同的页面
-      const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
-
-      // 将图片绘制到页面
-      page.drawImage(pngImage, {
-        x: 0,
-        y: 0,
-        width: pngImage.width,
-        height: pngImage.height
-      });
-
-      // 保存 PDF
-      const pdfBytes = await pdfDoc.save();
-      await fs.writeFile(filePath, pdfBytes);
-    } finally {
-      if (pdfWindow && !pdfWindow.isDestroyed()) {
-        pdfWindow.close();
-      }
-      if (tempHtmlPath) {
-        try {
-          await fs.unlink(tempHtmlPath);
-        } catch {
-          // 忽略删除失败
-        }
-      }
-    }
+    // 保存 PDF
+    const pdfBytes = await pdfDoc.save();
+    await fs.writeFile(filePath, pdfBytes);
   });
 
   // 导出为图片（单张长图）
   ipcMain.handle(
     "export:export-as-image",
     async (_, htmlContent: string, filePath: string, notePath?: string, options?: { width?: number }) => {
-      let imageWindow: BrowserWindow | null = null;
-      let tempHtmlPath: string | null = null;
       const width = options?.width || 800;
 
-      try {
-        // 将本地图片转换为 Base64 内嵌
-        const processedHtml = await embedLocalImages(htmlContent, notePath);
+      // 截取页面为长图
+      const image = await captureHtmlAsImage(htmlContent, notePath, width);
 
-        // 将 HTML 保存为临时文件
-        tempHtmlPath = path.join(tmpdir(), `image-export-${Date.now()}.html`);
-        await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
+      // 根据文件扩展名决定格式
+      const ext = path.extname(filePath).toLowerCase();
+      let imageData: Buffer;
 
-        // 创建隐藏窗口，初始高度设为较小值
-        imageWindow = new BrowserWindow({
-          width,
-          height: 600,
-          show: false,
-          webPreferences: {
-            nodeIntegration: false,
-            contextIsolation: true
-          }
-        });
-
-        await imageWindow.loadFile(tempHtmlPath);
-
-        // 等待页面渲染完成
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        // 获取页面实际内容高度
-        const contentHeight = await imageWindow.webContents.executeJavaScript(
-          "Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
-        );
-
-        // 调整窗口大小为内容实际尺寸
-        imageWindow.setContentSize(width, contentHeight);
-
-        // 等待窗口调整完成
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        // 截取整个页面
-        const image = await imageWindow.webContents.capturePage();
-
-        // 根据文件扩展名决定格式
-        const ext = path.extname(filePath).toLowerCase();
-        let imageData: Buffer;
-
-        if (ext === ".jpg" || ext === ".jpeg") {
-          imageData = image.toJPEG(90);
-        } else {
-          imageData = image.toPNG();
-        }
-
-        await fs.writeFile(filePath, imageData);
-      } finally {
-        if (imageWindow && !imageWindow.isDestroyed()) {
-          imageWindow.close();
-        }
-        if (tempHtmlPath) {
-          try {
-            await fs.unlink(tempHtmlPath);
-          } catch {
-            // 忽略删除失败
-          }
-        }
+      if (ext === ".jpg" || ext === ".jpeg") {
+        imageData = image.toJPEG(90);
+      } else {
+        imageData = image.toPNG();
       }
+
+      await fs.writeFile(filePath, imageData);
     }
   );
 
