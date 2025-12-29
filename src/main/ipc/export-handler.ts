@@ -2,6 +2,7 @@ import { ipcMain, dialog, app, BrowserWindow, clipboard } from "electron";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { tmpdir } from "os";
+import { PDFDocument } from "pdf-lib";
 
 /**
  * 判断是否为相对路径
@@ -116,21 +117,23 @@ export function registerExportHandlers(): void {
     return app.getPath("downloads");
   });
 
-  // 导出为 PDF
+  // 导出为 PDF（单页长图方式）
   ipcMain.handle("export:export-as-pdf", async (_, htmlContent: string, filePath: string, notePath?: string) => {
     let pdfWindow: BrowserWindow | null = null;
     let tempHtmlPath: string | null = null;
 
     try {
-      // 将本地图片转换为 Base64 内嵌，确保 PDF 中图片能正常显示
+      // 将本地图片转换为 Base64 内嵌
       const processedHtml = await embedLocalImages(htmlContent, notePath);
 
-      // 将 HTML 保存为临时文件，避免 data URL 长度限制
+      // 将 HTML 保存为临时文件
       tempHtmlPath = path.join(tmpdir(), `pdf-export-${Date.now()}.html`);
       await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
 
+      const width = 800;
+
       pdfWindow = new BrowserWindow({
-        width: 800,
+        width,
         height: 600,
         show: false,
         webPreferences: {
@@ -139,24 +142,48 @@ export function registerExportHandlers(): void {
         }
       });
 
-      // 使用 file:// 协议加载临时文件
       await pdfWindow.loadFile(tempHtmlPath);
 
       // 等待页面渲染完成
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const pdfData = await pdfWindow.webContents.printToPDF({
-        printBackground: true,
-        pageSize: "A4",
-        margins: { top: 0, bottom: 0, left: 0, right: 0 }
+      // 获取页面实际内容高度
+      const contentHeight = await pdfWindow.webContents.executeJavaScript(
+        "Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+      );
+
+      // 调整窗口大小为内容实际尺寸
+      pdfWindow.setContentSize(width, contentHeight);
+
+      // 等待窗口调整完成
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // 截取整个页面为图片
+      const image = await pdfWindow.webContents.capturePage();
+      const pngData = image.toPNG();
+
+      // 使用 pdf-lib 创建 PDF，将图片嵌入
+      const pdfDoc = await PDFDocument.create();
+      const pngImage = await pdfDoc.embedPng(pngData);
+
+      // 创建与图片尺寸相同的页面
+      const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
+
+      // 将图片绘制到页面
+      page.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width: pngImage.width,
+        height: pngImage.height
       });
 
-      await fs.writeFile(filePath, pdfData);
+      // 保存 PDF
+      const pdfBytes = await pdfDoc.save();
+      await fs.writeFile(filePath, pdfBytes);
     } finally {
       if (pdfWindow && !pdfWindow.isDestroyed()) {
         pdfWindow.close();
       }
-      // 清理临时文件
       if (tempHtmlPath) {
         try {
           await fs.unlink(tempHtmlPath);
