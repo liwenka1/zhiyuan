@@ -52,6 +52,7 @@ interface NoteStore {
   // 导出方法
   exportNoteAsHTML: (noteId: string, isDark: boolean) => Promise<void>;
   exportNoteAsPDF: (noteId: string, isDark: boolean) => Promise<void>;
+  exportNoteAsImage: (noteId: string, isDark: boolean) => Promise<void>;
   copyNoteToWechat: (noteId: string) => Promise<void>;
 }
 
@@ -670,6 +671,53 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       console.log("导出 PDF 成功:", filePath);
     } catch (error) {
       console.error("导出 PDF 失败:", error);
+      throw error;
+    }
+  },
+
+  // 导出笔记为图片（单张长图）
+  exportNoteAsImage: async (noteId, isDark) => {
+    const note = get().notes.find((n) => n.id === noteId);
+    if (!note) {
+      console.error("笔记不存在");
+      throw new Error("笔记不存在");
+    }
+
+    try {
+      // 1. 获取下载目录
+      const downloadsPath = await window.api.export.getDownloadsPath();
+
+      // 2. 显示保存对话框
+      const defaultFileName = `${note.title}.png`;
+      const filePath = await window.api.export.showSaveDialog({
+        title: "导出为图片",
+        defaultPath: `${downloadsPath}/${defaultFileName}`,
+        filters: [
+          { name: "PNG 图片", extensions: ["png"] },
+          { name: "JPEG 图片", extensions: ["jpg", "jpeg"] },
+          { name: "所有文件", extensions: ["*"] }
+        ]
+      });
+
+      // 用户取消了保存
+      if (!filePath) {
+        return;
+      }
+
+      // 3. 将 Markdown 转换为 HTML
+      const { markdownToHTML } = await import("@/lib/markdown-processor");
+      const htmlBody = await markdownToHTML(note.content);
+
+      // 4. 生成完整的 HTML 文档
+      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
+      const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
+
+      // 5. 导出为图片（传入 notePath 以支持本地图片）
+      await window.api.export.exportAsImage(fullHTML, filePath, note.filePath);
+
+      console.log("导出图片成功:", filePath);
+    } catch (error) {
+      console.error("导出图片失败:", error);
       throw error;
     }
   },

@@ -14,6 +14,7 @@
     "export": "Export",
     "exportAsHTML": "Export as HTML",
     "exportAsPDF": "Export as PDF",
+    "exportAsImage": "Export as Image",
     "copyToWechat": "Copy to WeChat Official Account",
     "delete": "Delete Note"
   },

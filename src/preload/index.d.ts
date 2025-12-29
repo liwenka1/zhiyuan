@@ -85,6 +85,12 @@ export interface ExportAPI {
   }) => Promise<string | null>;
   saveHTMLFile: (filePath: string, htmlContent: string) => Promise<{ success: boolean }>;
   exportAsPDF: (htmlContent: string, filePath: string, notePath?: string) => Promise<{ success: boolean }>;
+  exportAsImage: (
+    htmlContent: string,
+    filePath: string,
+    notePath?: string,
+    options?: { width?: number }
+  ) => Promise<{ success: boolean }>;
   getDownloadsPath: () => Promise<string>;
   inlineCSS: (htmlContent: string) => Promise<string>;
   copyHTMLToClipboard: (htmlContent: string) => Promise<{ success: boolean }>;

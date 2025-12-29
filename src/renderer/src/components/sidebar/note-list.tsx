@@ -35,7 +35,7 @@ interface NoteListProps {
   onDeleteNote?: (note: Note) => void;
   onRenameNote?: (note: Note) => void;
   onDuplicateNote?: (note: Note) => void;
-  onExportNote?: (note: Note, format: "html" | "pdf") => void;
+  onExportNote?: (note: Note, format: "html" | "pdf" | "image") => void;
   onCopyToWechat?: (note: Note) => void;
 }
 
@@ -182,6 +182,9 @@ export function NoteList({
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => onExportNote?.(note, "pdf")}>
                           <span>{t("contextMenu.exportAsPDF")}</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => onExportNote?.(note, "image")}>
+                          <span>{t("contextMenu.exportAsImage")}</span>
                         </ContextMenuItem>
                         <ContextMenuItem onClick={() => onCopyToWechat?.(note)}>
                           <span>{t("contextMenu.copyToWechat")}</span>

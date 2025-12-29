@@ -237,6 +237,19 @@ const api = {
       ipcRenderer.invoke("export:export-as-pdf", htmlContent, filePath, notePath),
 
     /**
+     * 导出为图片（单张长图）
+     * @param notePath 可选，笔记的完整文件路径，用于将相对路径的图片转换为 Base64
+     * @param options 可选配置，width 为图片宽度，默认 800
+     */
+    exportAsImage: (
+      htmlContent: string,
+      filePath: string,
+      notePath?: string,
+      options?: { width?: number }
+    ): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke("export:export-as-image", htmlContent, filePath, notePath, options),
+
+    /**
      * 获取用户下载目录
      */
     getDownloadsPath: (): Promise<string> => ipcRenderer.invoke("export:get-downloads-path"),

@@ -167,6 +167,78 @@ export function registerExportHandlers(): void {
     }
   });
 
+  // 导出为图片（单张长图）
+  ipcMain.handle(
+    "export:export-as-image",
+    async (_, htmlContent: string, filePath: string, notePath?: string, options?: { width?: number }) => {
+      let imageWindow: BrowserWindow | null = null;
+      let tempHtmlPath: string | null = null;
+      const width = options?.width || 800;
+
+      try {
+        // 将本地图片转换为 Base64 内嵌
+        const processedHtml = await embedLocalImages(htmlContent, notePath);
+
+        // 将 HTML 保存为临时文件
+        tempHtmlPath = path.join(tmpdir(), `image-export-${Date.now()}.html`);
+        await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
+
+        // 创建隐藏窗口，初始高度设为较小值
+        imageWindow = new BrowserWindow({
+          width,
+          height: 600,
+          show: false,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true
+          }
+        });
+
+        await imageWindow.loadFile(tempHtmlPath);
+
+        // 等待页面渲染完成
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // 获取页面实际内容高度
+        const contentHeight = await imageWindow.webContents.executeJavaScript(
+          "Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+        );
+
+        // 调整窗口大小为内容实际尺寸
+        imageWindow.setContentSize(width, contentHeight);
+
+        // 等待窗口调整完成
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        // 截取整个页面
+        const image = await imageWindow.webContents.capturePage();
+
+        // 根据文件扩展名决定格式
+        const ext = path.extname(filePath).toLowerCase();
+        let imageData: Buffer;
+
+        if (ext === ".jpg" || ext === ".jpeg") {
+          imageData = image.toJPEG(90);
+        } else {
+          imageData = image.toPNG();
+        }
+
+        await fs.writeFile(filePath, imageData);
+      } finally {
+        if (imageWindow && !imageWindow.isDestroyed()) {
+          imageWindow.close();
+        }
+        if (tempHtmlPath) {
+          try {
+            await fs.unlink(tempHtmlPath);
+          } catch {
+            // 忽略删除失败
+          }
+        }
+      }
+    }
+  );
+
   // 复制 HTML 到剪贴板（用于微信公众号）
   ipcMain.handle("export:copy-html-to-clipboard", (_, htmlContent: string) => {
     clipboard.writeHTML(htmlContent);

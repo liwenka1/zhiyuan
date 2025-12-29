@@ -14,6 +14,7 @@
     "export": "导出",
     "exportAsHTML": "导出为 HTML",
     "exportAsPDF": "导出为 PDF",
+    "exportAsImage": "导出为图片",
     "copyToWechat": "复制到微信公众号",
     "delete": "删除笔记"
   },
