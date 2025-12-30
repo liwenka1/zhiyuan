@@ -609,7 +609,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       // 用户取消了保存
       if (!folderPath) {
-        return;
+        throw new Error("USER_CANCELLED");
       }
 
       // 3. 将 Markdown 转换为 HTML
@@ -656,7 +656,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       // 用户取消了保存
       if (!filePath) {
-        return;
+        throw new Error("USER_CANCELLED");
       }
 
       // 3. 将 Markdown 转换为 HTML
@@ -701,7 +701,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       });
 
       if (!filePath) {
-        return;
+        throw new Error("USER_CANCELLED");
       }
 
       // 3. 分割 Markdown
@@ -759,7 +759,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       // 用户取消了保存
       if (!filePath) {
-        return;
+        throw new Error("USER_CANCELLED");
       }
 
       // 3. 将 Markdown 转换为 HTML
@@ -804,7 +804,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       });
 
       if (!folderPath) {
-        return;
+        throw new Error("USER_CANCELLED");
       }
 
       // 3. 分割 Markdown

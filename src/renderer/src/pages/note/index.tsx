@@ -187,21 +187,21 @@ export function NotePage() {
       const isDark = theme === "dark";
       if (format === "html") {
         await exportNoteAsHTML(note.id, isDark);
-        toast.success(t("export.success"));
       } else if (format === "pdf") {
         await exportNoteAsPDF(note.id, isDark);
-        toast.success(t("export.success"));
       } else if (format === "pdf-pages") {
         await exportNoteAsPDFPages(note.id, isDark);
-        toast.success(t("export.success"));
       } else if (format === "image") {
         await exportNoteAsImage(note.id, isDark);
-        toast.success(t("export.success"));
       } else if (format === "image-pages") {
         await exportNoteAsImagePages(note.id, isDark);
-        toast.success(t("export.success"));
       }
+      toast.success(t("export.success"));
     } catch (error) {
+      // 用户取消导出，不显示错误
+      if (error instanceof Error && error.message === "USER_CANCELLED") {
+        return;
+      }
       console.error("导出笔记失败:", error);
       toast.error(t("export.failed"));
     }
