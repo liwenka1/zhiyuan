@@ -60,7 +60,9 @@ export function NotePage() {
   const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);
   const exportNoteAsHTML = useNoteStore((state) => state.exportNoteAsHTML);
   const exportNoteAsPDF = useNoteStore((state) => state.exportNoteAsPDF);
+  const exportNoteAsPDFPages = useNoteStore((state) => state.exportNoteAsPDFPages);
   const exportNoteAsImage = useNoteStore((state) => state.exportNoteAsImage);
+  const exportNoteAsImagePages = useNoteStore((state) => state.exportNoteAsImagePages);
   const copyNoteToWechat = useNoteStore((state) => state.copyNoteToWechat);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
@@ -179,7 +181,7 @@ export function NotePage() {
   // 导出笔记
   const handleExportNote = async (
     note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
-    format: "html" | "pdf" | "image"
+    format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
   ) => {
     try {
       const isDark = theme === "dark";
@@ -189,8 +191,14 @@ export function NotePage() {
       } else if (format === "pdf") {
         await exportNoteAsPDF(note.id, isDark);
         toast.success(t("export.success"));
+      } else if (format === "pdf-pages") {
+        await exportNoteAsPDFPages(note.id, isDark);
+        toast.success(t("export.success"));
       } else if (format === "image") {
         await exportNoteAsImage(note.id, isDark);
+        toast.success(t("export.success"));
+      } else if (format === "image-pages") {
+        await exportNoteAsImagePages(note.id, isDark);
         toast.success(t("export.success"));
       }
     } catch (error) {

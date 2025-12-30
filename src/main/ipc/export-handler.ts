@@ -255,6 +255,69 @@ export function registerExportHandlers(): void {
       };
     }
   );
+
+  // 导出为 PDF（分页）
+  ipcMain.handle(
+    "export:export-as-pdf-pages",
+    async (_, htmlContents: string[], filePath: string, notePath?: string) => {
+      // 创建一个 PDF 文档
+      const pdfDoc = await PDFDocument.create();
+
+      // 为每个分片生成图片并添加到 PDF
+      for (let i = 0; i < htmlContents.length; i++) {
+        const image = await captureHtmlAsImage(htmlContents[i], notePath);
+        const pngData = image.toPNG();
+        const pngImage = await pdfDoc.embedPng(pngData);
+
+        // 添加新页面
+        const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
+        page.drawImage(pngImage, {
+          x: 0,
+          y: 0,
+          width: pngImage.width,
+          height: pngImage.height
+        });
+      }
+
+      // 保存为单个 PDF 文件
+      const pdfBytes = await pdfDoc.save();
+      await fs.writeFile(filePath, pdfBytes);
+
+      return { pagesCount: htmlContents.length };
+    }
+  );
+
+  // 导出为图片（分页）
+  ipcMain.handle(
+    "export:export-as-image-pages",
+    async (
+      _,
+      htmlContents: string[],
+      folderPath: string,
+      baseFileName: string,
+      notePath?: string,
+      options?: { width?: number }
+    ) => {
+      await fs.mkdir(folderPath, { recursive: true });
+
+      const width = options?.width || 800;
+      const filePaths: string[] = [];
+
+      for (let i = 0; i < htmlContents.length; i++) {
+        const fileName = `${baseFileName}-${i + 1}.png`;
+        const filePath = path.join(folderPath, fileName);
+
+        // 截取页面为长图
+        const image = await captureHtmlAsImage(htmlContents[i], notePath, width);
+        const imageData = image.toPNG();
+
+        await fs.writeFile(filePath, imageData);
+        filePaths.push(filePath);
+      }
+
+      return { filesCount: filePaths.length, filePaths };
+    }
+  );
 }
 
 /**

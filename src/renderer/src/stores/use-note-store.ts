@@ -52,7 +52,9 @@ interface NoteStore {
   // 导出方法
   exportNoteAsHTML: (noteId: string, isDark: boolean) => Promise<void>;
   exportNoteAsPDF: (noteId: string, isDark: boolean) => Promise<void>;
+  exportNoteAsPDFPages: (noteId: string, isDark: boolean) => Promise<void>;
   exportNoteAsImage: (noteId: string, isDark: boolean) => Promise<void>;
+  exportNoteAsImagePages: (noteId: string, isDark: boolean) => Promise<void>;
   copyNoteToWechat: (noteId: string) => Promise<void>;
 }
 
@@ -675,6 +677,62 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
   },
 
+  // 导出笔记为 PDF（分页）
+  exportNoteAsPDFPages: async (noteId, isDark) => {
+    const note = get().notes.find((n) => n.id === noteId);
+    if (!note) {
+      console.error("笔记不存在");
+      throw new Error("笔记不存在");
+    }
+
+    try {
+      // 1. 获取下载目录
+      const downloadsPath = await window.api.export.getDownloadsPath();
+
+      // 2. 显示保存对话框
+      const defaultFileName = `${note.title}.pdf`;
+      const filePath = await window.api.export.showSaveDialog({
+        title: "导出为 PDF（分页）",
+        defaultPath: `${downloadsPath}/${defaultFileName}`,
+        filters: [
+          { name: "PDF 文件", extensions: ["pdf"] },
+          { name: "所有文件", extensions: ["*"] }
+        ]
+      });
+
+      if (!filePath) {
+        return;
+      }
+
+      // 3. 分割 Markdown
+      const { splitMarkdownByHr } = await import("@/lib/markdown-splitter");
+      const sections = splitMarkdownByHr(note.content);
+
+      if (sections.length === 0) {
+        throw new Error("没有内容可导出");
+      }
+
+      // 4. 为每个分片生成 HTML
+      const { markdownToHTML } = await import("@/lib/markdown-processor");
+      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
+
+      const htmlContents = await Promise.all(
+        sections.map(async (section) => {
+          const htmlBody = await markdownToHTML(section);
+          return generateHTMLDocument(note.title, htmlBody, isDark);
+        })
+      );
+
+      // 5. 导出为单个 PDF（多页）
+      const result = await window.api.export.exportAsPDFPages(htmlContents, filePath, note.filePath);
+
+      console.log(`导出成功: ${result.pagesCount} 页 PDF`);
+    } catch (error) {
+      console.error("导出 PDF 分页失败:", error);
+      throw error;
+    }
+  },
+
   // 导出笔记为图片（单张长图）
   exportNoteAsImage: async (noteId, isDark) => {
     const note = get().notes.find((n) => n.id === noteId);
@@ -718,6 +776,62 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       console.log("导出图片成功:", filePath);
     } catch (error) {
       console.error("导出图片失败:", error);
+      throw error;
+    }
+  },
+
+  // 导出笔记为图片（分页）
+  exportNoteAsImagePages: async (noteId, isDark) => {
+    const note = get().notes.find((n) => n.id === noteId);
+    if (!note) {
+      console.error("笔记不存在");
+      throw new Error("笔记不存在");
+    }
+
+    try {
+      // 1. 获取下载目录
+      const downloadsPath = await window.api.export.getDownloadsPath();
+
+      // 2. 显示保存对话框 - 选择文件夹
+      const defaultFolderName = `${note.title}-分页`;
+      const folderPath = await window.api.export.showSaveDialog({
+        title: "导出为图片（分页）",
+        defaultPath: `${downloadsPath}/${defaultFolderName}`,
+        filters: [
+          { name: "文件夹", extensions: [] },
+          { name: "所有文件", extensions: ["*"] }
+        ]
+      });
+
+      if (!folderPath) {
+        return;
+      }
+
+      // 3. 分割 Markdown
+      const { splitMarkdownByHr } = await import("@/lib/markdown-splitter");
+      const sections = splitMarkdownByHr(note.content);
+
+      if (sections.length === 0) {
+        throw new Error("没有内容可导出");
+      }
+
+      // 4. 为每个分片生成 HTML
+      const { markdownToHTML } = await import("@/lib/markdown-processor");
+      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
+
+      const htmlContents = await Promise.all(
+        sections.map(async (section) => {
+          const htmlBody = await markdownToHTML(section);
+          return generateHTMLDocument(note.title, htmlBody, isDark);
+        })
+      );
+
+      // 5. 导出为多张图片
+      const result = await window.api.export.exportAsImagePages(htmlContents, folderPath, note.title, note.filePath);
+
+      console.log(`导出成功: ${result.filesCount} 张图片`);
+    } catch (error) {
+      console.error("导出图片分页失败:", error);
       throw error;
     }
   },

@@ -103,6 +103,23 @@ export interface ExportAPI {
     filesCount: number;
     copiedFiles: string[];
   }>;
+  exportAsPDFPages: (
+    htmlContents: string[],
+    filePath: string,
+    notePath?: string
+  ) => Promise<{
+    pagesCount: number;
+  }>;
+  exportAsImagePages: (
+    htmlContents: string[],
+    folderPath: string,
+    baseFileName: string,
+    notePath?: string,
+    options?: { width?: number }
+  ) => Promise<{
+    filesCount: number;
+    filePaths: string[];
+  }>;
 }
 
 // 扩展的 API 接口

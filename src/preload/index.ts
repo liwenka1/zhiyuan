@@ -276,7 +276,32 @@ const api = {
     ): Promise<{
       filesCount: number;
       copiedFiles: string[];
-    }> => ipcRenderer.invoke("export:export-html-package", htmlContent, outputPath, notePath, assetsFolder)
+    }> => ipcRenderer.invoke("export:export-html-package", htmlContent, outputPath, notePath, assetsFolder),
+
+    /**
+     * 导出为 PDF（分页）
+     */
+    exportAsPDFPages: (
+      htmlContents: string[],
+      filePath: string,
+      notePath?: string
+    ): Promise<{
+      pagesCount: number;
+    }> => ipcRenderer.invoke("export:export-as-pdf-pages", htmlContents, filePath, notePath),
+
+    /**
+     * 导出为图片（分页）
+     */
+    exportAsImagePages: (
+      htmlContents: string[],
+      folderPath: string,
+      baseFileName: string,
+      notePath?: string,
+      options?: { width?: number }
+    ): Promise<{
+      filesCount: number;
+      filePaths: string[];
+    }> => ipcRenderer.invoke("export:export-as-image-pages", htmlContents, folderPath, baseFileName, notePath, options)
   }
 };
 
