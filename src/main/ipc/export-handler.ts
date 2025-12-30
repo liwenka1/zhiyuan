@@ -106,7 +106,13 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
       }
     });
 
-    await window.loadFile(tempHtmlPath);
+    // 使用 dom-ready 事件，不等待图片加载完成
+    const domReadyPromise = new Promise<void>((resolve) => {
+      window!.webContents.once("dom-ready", () => resolve());
+    });
+
+    window.loadFile(tempHtmlPath);
+    await domReadyPromise;
 
     // 等待页面渲染完成
     await new Promise((resolve) => setTimeout(resolve, 1000));
