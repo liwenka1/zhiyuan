@@ -66,6 +66,9 @@ export function NotePage() {
   const copyNoteToWechat = useNoteStore((state) => state.copyNoteToWechat);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
+  // 导出状态
+  const [isExporting, setIsExporting] = useState(false);
+
   // 处理新建文件夹 - 打开对话框
   const handleCreateFolder = () => {
     setShowCreateFolderDialog(true);
@@ -183,6 +186,15 @@ export function NotePage() {
     note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
   ) => {
+    // 防止重复导出
+    if (isExporting) {
+      toast.info("正在导出中，请稍候...");
+      return;
+    }
+
+    setIsExporting(true);
+    toast.loading("正在导出...", { id: "exporting" });
+
     try {
       const isDark = theme === "dark";
       if (format === "html") {
@@ -196,14 +208,17 @@ export function NotePage() {
       } else if (format === "image-pages") {
         await exportNoteAsImagePages(note.id, isDark);
       }
-      toast.success(t("export.success"));
+      toast.success(t("export.success"), { id: "exporting" });
     } catch (error) {
       // 用户取消导出，不显示错误
       if (error instanceof Error && error.message === "USER_CANCELLED") {
+        toast.dismiss("exporting");
         return;
       }
       console.error("导出笔记失败:", error);
-      toast.error(t("export.failed"));
+      toast.error(t("export.failed"), { id: "exporting" });
+    } finally {
+      setIsExporting(false);
     }
   };
 
