@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { Folder, Note } from "@/types";
 import { formatMarkdown } from "@/lib/formatter";
+import i18n from "@/lib/i18n";
 
 interface NoteStore {
   // 状态
@@ -194,7 +195,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       // 查找已存在的无标题笔记，确定新的序号
       const allNotes = get().notes;
-      const untitledPattern = /^无标题笔记 (\d+)$/;
+      const defaultTitle = i18n.t("note:defaultTitle");
+      const untitledPattern = new RegExp(`^${defaultTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (\\d+)$`);
       const existingNumbers = allNotes
         .map((n) => {
           const match = n.title.match(untitledPattern);
@@ -204,9 +206,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       // 确定新的笔记序号（从1开始，或者比最大序号大1）
       const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-      const title = `无标题笔记 ${nextNumber}`;
+      const title = `${defaultTitle} ${nextNumber}`;
       const fileName = `${title}.md`;
-      const content = `# ${title}\n\n开始写作...`;
+      const content = `# ${title}\n\n${i18n.t("note:defaultContent")}`;
 
       // 确定文件路径
       let filePath: string;
@@ -352,7 +354,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     try {
       // 查找已存在的副本，确定新的序号
       const allNotes = get().notes;
-      const copyPattern = new RegExp(`^${note.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} Copy (\\d+)$`);
+      const copySuffix = i18n.t("note:copySuffix");
+      const copyPattern = new RegExp(`^${note.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} ${copySuffix} (\\d+)$`);
       const existingCopies = allNotes
         .map((n) => {
           const match = n.title.match(copyPattern);
@@ -362,7 +365,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
       // 确定新的副本序号（从1开始，或者比最大序号大1）
       const nextCopyNumber = existingCopies.length > 0 ? Math.max(...existingCopies) + 1 : 1;
-      const newTitle = `${note.title} Copy ${nextCopyNumber}`;
+      const newTitle = `${note.title} ${copySuffix} ${nextCopyNumber}`;
       const newFileName = `${newTitle}.md`;
 
       // 构建新的文件路径
@@ -599,11 +602,11 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       // 2. 显示保存对话框 - 选择文件夹
       const defaultFolderName = `${note.title}`;
       const folderPath = await window.api.export.showSaveDialog({
-        title: "导出为 HTML 资源包",
+        title: i18n.t("note:dialog.exportHTML.title"),
         defaultPath: `${downloadsPath}/${defaultFolderName}`,
         filters: [
-          { name: "文件夹", extensions: [] },
-          { name: "所有文件", extensions: ["*"] }
+          { name: i18n.t("note:fileTypes.folder"), extensions: [] },
+          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
         ]
       });
 
@@ -646,11 +649,11 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       // 2. 显示保存对话框
       const defaultFileName = `${note.title}.pdf`;
       const filePath = await window.api.export.showSaveDialog({
-        title: "导出为 PDF",
+        title: i18n.t("note:dialog.exportPDF.title"),
         defaultPath: `${downloadsPath}/${defaultFileName}`,
         filters: [
-          { name: "PDF 文件", extensions: ["pdf"] },
-          { name: "所有文件", extensions: ["*"] }
+          { name: i18n.t("note:fileTypes.pdfFile"), extensions: ["pdf"] },
+          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
         ]
       });
 
@@ -692,11 +695,11 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       // 2. 显示保存对话框
       const defaultFileName = `${note.title}.pdf`;
       const filePath = await window.api.export.showSaveDialog({
-        title: "导出为 PDF（分页）",
+        title: i18n.t("note:dialog.exportPDFPages.title"),
         defaultPath: `${downloadsPath}/${defaultFileName}`,
         filters: [
-          { name: "PDF 文件", extensions: ["pdf"] },
-          { name: "所有文件", extensions: ["*"] }
+          { name: i18n.t("note:fileTypes.pdfFile"), extensions: ["pdf"] },
+          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
         ]
       });
 
@@ -748,12 +751,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       // 2. 显示保存对话框
       const defaultFileName = `${note.title}.png`;
       const filePath = await window.api.export.showSaveDialog({
-        title: "导出为图片",
+        title: i18n.t("note:dialog.exportImage.title"),
         defaultPath: `${downloadsPath}/${defaultFileName}`,
         filters: [
-          { name: "PNG 图片", extensions: ["png"] },
-          { name: "JPEG 图片", extensions: ["jpg", "jpeg"] },
-          { name: "所有文件", extensions: ["*"] }
+          { name: i18n.t("note:fileTypes.pngImage"), extensions: ["png"] },
+          { name: i18n.t("note:fileTypes.jpegImage"), extensions: ["jpg", "jpeg"] },
+          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
         ]
       });
 
@@ -793,13 +796,13 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const downloadsPath = await window.api.export.getDownloadsPath();
 
       // 2. 显示保存对话框 - 选择文件夹
-      const defaultFolderName = `${note.title}-分页`;
+      const defaultFolderName = `${note.title}-${i18n.t("note:pagesSuffix")}`;
       const folderPath = await window.api.export.showSaveDialog({
-        title: "导出为图片（分页）",
+        title: i18n.t("note:dialog.exportImagePages.title"),
         defaultPath: `${downloadsPath}/${defaultFolderName}`,
         filters: [
-          { name: "文件夹", extensions: [] },
-          { name: "所有文件", extensions: ["*"] }
+          { name: i18n.t("note:fileTypes.folder"), extensions: [] },
+          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
         ]
       });
 

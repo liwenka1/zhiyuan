@@ -115,7 +115,7 @@ export function NotePage() {
       deleteFolder(folder.id);
     } catch (error) {
       console.error("删除文件夹失败:", error);
-      alert("删除文件夹失败，请重试");
+      alert(t("errors.deleteFolderFailed"));
     }
   };
 
@@ -129,7 +129,7 @@ export function NotePage() {
       deleteNote(note.id);
     } catch (error) {
       console.error("删除笔记失败:", error);
-      alert("删除笔记失败，请重试");
+      alert(t("errors.deleteNoteFailed"));
     }
   };
 
@@ -154,7 +154,7 @@ export function NotePage() {
       setNoteToRename(null);
     } catch (error) {
       console.error("重命名笔记失败:", error);
-      alert("重命名笔记失败，请重试");
+      alert(t("errors.renameNoteFailed"));
     }
   };
 
@@ -167,7 +167,7 @@ export function NotePage() {
       setFolderToRename(null);
     } catch (error) {
       console.error("重命名文件夹失败:", error);
-      alert("重命名文件夹失败，请重试");
+      alert(t("errors.renameFolderFailed"));
     }
   };
 
@@ -177,7 +177,7 @@ export function NotePage() {
       await duplicateNote(note.id);
     } catch (error) {
       console.error("复制笔记失败:", error);
-      alert("复制笔记失败，请重试");
+      alert(t("errors.duplicateNoteFailed"));
     }
   };
 
@@ -188,12 +188,12 @@ export function NotePage() {
   ) => {
     // 防止重复导出
     if (isExporting) {
-      toast.info("正在导出中，请稍候...");
+      toast.info(t("export.exportingWait"));
       return;
     }
 
     setIsExporting(true);
-    toast.loading("正在导出...", { id: "exporting" });
+    toast.loading(t("export.exporting"), { id: "exporting" });
 
     try {
       const isDark = theme === "dark";
@@ -255,12 +255,12 @@ export function NotePage() {
       } catch (error) {
         console.error("初始化工作区失败:", error);
         // 初始化失败，显示错误提示
-        alert("初始化工作区失败，请检查文件系统权限或重启应用");
+        alert(t("errors.initWorkspaceFailed"));
       }
     };
 
     initWorkspace();
-  }, [loadFromFileSystem, setWorkspacePath]);
+  }, [loadFromFileSystem, setWorkspacePath, t]);
 
   // 监听文件系统变化
   useEffect(() => {
@@ -382,9 +382,9 @@ export function NotePage() {
       <InputDialog
         open={showCreateFolderDialog}
         onOpenChange={setShowCreateFolderDialog}
-        title="新建文件夹"
-        description="请输入文件夹名称"
-        placeholder="例如：工作、学习、生活..."
+        title={t("dialog.createFolder.title")}
+        description={t("dialog.createFolder.description")}
+        placeholder={t("dialog.createFolder.placeholder")}
         onConfirm={handleConfirmCreateFolder}
       />
 
@@ -392,9 +392,9 @@ export function NotePage() {
       <InputDialog
         open={showRenameFolderDialog}
         onOpenChange={setShowRenameFolderDialog}
-        title="重命名文件夹"
-        description="请输入新的文件夹名称"
-        placeholder="文件夹名称"
+        title={t("dialog.renameFolder.title")}
+        description={t("dialog.renameFolder.description")}
+        placeholder={t("dialog.renameFolder.placeholder")}
         defaultValue={folderToRename?.name}
         onConfirm={handleConfirmRenameFolder}
       />
@@ -403,9 +403,9 @@ export function NotePage() {
       <InputDialog
         open={showRenameNoteDialog}
         onOpenChange={setShowRenameNoteDialog}
-        title="重命名笔记"
-        description="请输入新的笔记名称"
-        placeholder="笔记名称"
+        title={t("dialog.renameNote.title")}
+        description={t("dialog.renameNote.description")}
+        placeholder={t("dialog.renameNote.placeholder")}
         defaultValue={noteToRename?.title}
         onConfirm={handleConfirmRenameNote}
       />

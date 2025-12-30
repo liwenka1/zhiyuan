@@ -35,7 +35,8 @@ const api = {
     /**
      * 选择工作区文件夹
      */
-    select: (): Promise<string | null> => ipcRenderer.invoke("workspace:select"),
+    select: (options?: { title?: string; buttonLabel?: string }): Promise<string | null> =>
+      ipcRenderer.invoke("workspace:select", options),
 
     /**
      * 获取当前工作区路径

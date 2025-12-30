@@ -30,11 +30,11 @@ export const workspaceManager = {
   /**
    * 选择工作区文件夹
    */
-  async selectWorkspace(): Promise<string | null> {
+  async selectWorkspace(options?: { title?: string; buttonLabel?: string }): Promise<string | null> {
     const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow()!, {
       properties: ["openDirectory"],
-      title: "选择工作区文件夹",
-      buttonLabel: "选择"
+      title: options?.title || "Select Workspace Folder",
+      buttonLabel: options?.buttonLabel || "Select"
     });
 
     if (result.canceled || result.filePaths.length === 0) {

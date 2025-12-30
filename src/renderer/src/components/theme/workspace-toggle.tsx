@@ -13,7 +13,10 @@ export function WorkspaceToggle() {
   const handleSwitchWorkspace = async () => {
     try {
       // 打开文件夹选择对话框
-      const selectedPath = await window.api.workspace.select();
+      const selectedPath = await window.api.workspace.select({
+        title: t("workspace.selectFolder"),
+        buttonLabel: t("workspace.selectButton")
+      });
 
       if (selectedPath) {
         // 更新工作区路径

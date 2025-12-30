@@ -8,8 +8,8 @@ import { fileWatcher } from "../file-watcher";
  */
 export function registerWorkspaceHandlers(): void {
   // 选择工作区
-  ipcMain.handle("workspace:select", async () => {
-    const workspacePath = await workspaceManager.selectWorkspace();
+  ipcMain.handle("workspace:select", async (_, options?: { title?: string; buttonLabel?: string }) => {
+    const workspacePath = await workspaceManager.selectWorkspace(options);
     if (workspacePath) {
       // 启动文件监听
       fileWatcher.startWatching(workspacePath);

@@ -22,7 +22,7 @@ export interface ThemeAPI {
 
 // 工作区 API 接口
 export interface WorkspaceAPI {
-  select: () => Promise<string | null>;
+  select: (options?: { title?: string; buttonLabel?: string }) => Promise<string | null>;
   getCurrent: () => Promise<string | null>;
   scan: (workspacePath: string) => Promise<{
     folders: Array<{ id: string; name: string; path: string; noteCount: number }>;

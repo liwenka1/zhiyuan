@@ -1,6 +1,10 @@
 {
   "search": "Search",
   "newNote": "New Note",
+  "defaultTitle": "Untitled Note",
+  "defaultContent": "Start writing...",
+  "pagesSuffix": "Pages",
+  "copySuffix": "Copy",
   "emptyState": {
     "noResults": "No matching notes found",
     "noNotes": "No notes yet",
@@ -21,10 +25,59 @@
     "delete": "Delete Note"
   },
   "export": {
+    "exporting": "Exporting...",
+    "exportingWait": "Export in progress, please wait...",
     "success": "Export successful",
     "failed": "Export failed",
     "cancelled": "Export cancelled",
     "wechatSuccess": "Copied to clipboard, paste it to WeChat editor",
     "wechatFailed": "Failed to copy to WeChat"
+  },
+  "dialog": {
+    "createFolder": {
+      "title": "New Folder",
+      "description": "Enter folder name",
+      "placeholder": "e.g., Work, Study, Life..."
+    },
+    "renameFolder": {
+      "title": "Rename Folder",
+      "description": "Enter new folder name",
+      "placeholder": "Folder name"
+    },
+    "renameNote": {
+      "title": "Rename Note",
+      "description": "Enter new note name",
+      "placeholder": "Note name"
+    },
+    "exportHTML": {
+      "title": "Export as HTML Package"
+    },
+    "exportPDF": {
+      "title": "Export as PDF"
+    },
+    "exportPDFPages": {
+      "title": "Export as PDF (Pages)"
+    },
+    "exportImage": {
+      "title": "Export as Image"
+    },
+    "exportImagePages": {
+      "title": "Export as Images (Pages)"
+    }
+  },
+  "fileTypes": {
+    "folder": "Folder",
+    "pdfFile": "PDF File",
+    "pngImage": "PNG Image",
+    "jpegImage": "JPEG Image",
+    "allFiles": "All Files"
+  },
+  "errors": {
+    "deleteFolderFailed": "Failed to delete folder, please try again",
+    "deleteNoteFailed": "Failed to delete note, please try again",
+    "renameFolderFailed": "Failed to rename folder, please try again",
+    "renameNoteFailed": "Failed to rename note, please try again",
+    "duplicateNoteFailed": "Failed to duplicate note, please try again",
+    "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app"
   }
 }

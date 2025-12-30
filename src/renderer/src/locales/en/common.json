@@ -8,6 +8,8 @@
     "switch": "Switch to 中文"
   },
   "workspace": {
-    "switch": "Switch Workspace"
+    "switch": "Switch Workspace",
+    "selectFolder": "Select Workspace Folder",
+    "selectButton": "Select"
   }
 }

@@ -8,6 +8,8 @@
     "switch": "切换到 English"
   },
   "workspace": {
-    "switch": "切换工作区"
+    "switch": "切换工作区",
+    "selectFolder": "选择工作区文件夹",
+    "selectButton": "选择"
   }
 }
