@@ -1,9 +1,49 @@
-node_modules
-dist
-out
-.DS_Store
-.eslintcache
-*.log*
+# Dependencies
+node_modules/
+.pnpm-store/
 
-.vscode
-.cursor
+# Build outputs
+dist/
+out/
+.next/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Cache
+.eslintcache
+.turbo/
+
+# Electron
+apps/desktop/out/
+apps/desktop/dist/
+
+# Next.js
+apps/landing/.next/
+apps/landing/out/
+apps/landing/.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Lock files (keep pnpm-lock.yaml only)
+package-lock.json
+yarn.lock

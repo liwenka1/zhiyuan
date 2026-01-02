@@ -8,7 +8,7 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
-        "@shared": resolve("src/shared")
+        "@shared": resolve(__dirname, "src/shared")
       }
     },
     build: {
@@ -23,7 +23,7 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     resolve: {
       alias: {
-        "@shared": resolve("src/shared")
+        "@shared": resolve(__dirname, "src/shared")
       }
     },
     build: {
@@ -38,9 +38,9 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        "@renderer": resolve("src/renderer/src"),
-        "@": resolve("src/renderer/src"),
-        "@shared": resolve("src/shared")
+        "@renderer": resolve(__dirname, "src/renderer/src"),
+        "@": resolve(__dirname, "src/renderer/src"),
+        "@shared": resolve(__dirname, "src/shared")
       }
     },
     plugins: [react(), tailwindcss()]

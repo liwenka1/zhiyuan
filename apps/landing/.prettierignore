@@ -1,19 +1,19 @@
 # Dependencies
 node_modules
-pnpm-lock.yaml
-package-lock.json
 
 # Build outputs
-dist
-out
 .next
+out
 build
 
 # Generated files
 *.log
 .turbo
 .eslintcache
-*.tsbuildinfo
 
-# System files
-.DS_Store
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vercel
+.vercel

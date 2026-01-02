@@ -1,19 +1,18 @@
 # Dependencies
 node_modules
-pnpm-lock.yaml
-package-lock.json
 
 # Build outputs
 dist
 out
-.next
 build
 
 # Generated files
 *.log
 .turbo
 .eslintcache
-*.tsbuildinfo
 
-# System files
-.DS_Store
+# Electron builder
+resources
+
+# TypeScript
+*.tsbuildinfo

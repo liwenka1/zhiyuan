@@ -12,18 +12,10 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@renderer/*": [
-        "src/renderer/src/*"
-      ],
-      "@/*": [
-        "src/renderer/src/*"
-      ],
-      "@shared": [
-        "src/shared/index"
-      ],
-      "@shared/*": [
-        "src/shared/*"
-      ]
+      "@renderer/*": ["src/renderer/src/*"],
+      "@/*": ["src/renderer/src/*"],
+      "@shared": ["src/shared/index"],
+      "@shared/*": ["src/shared/*"]
     }
   }
 }
