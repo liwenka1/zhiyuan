@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function Header() {
   return (
@@ -18,9 +18,7 @@ export function Header() {
             下载
           </a>
         </nav>
-        <Button asChild>
-          <a href="#download">立即下载</a>
-        </Button>
+        <ThemeToggle />
       </div>
     </header>
   );
