@@ -115,7 +115,6 @@ export function NotePage() {
       deleteFolder(folder.id);
     } catch (error) {
       console.error("删除文件夹失败:", error);
-      alert(t("errors.deleteFolderFailed"));
     }
   };
 
@@ -129,7 +128,6 @@ export function NotePage() {
       deleteNote(note.id);
     } catch (error) {
       console.error("删除笔记失败:", error);
-      alert(t("errors.deleteNoteFailed"));
     }
   };
 
@@ -154,7 +152,6 @@ export function NotePage() {
       setNoteToRename(null);
     } catch (error) {
       console.error("重命名笔记失败:", error);
-      alert(t("errors.renameNoteFailed"));
     }
   };
 
@@ -167,7 +164,6 @@ export function NotePage() {
       setFolderToRename(null);
     } catch (error) {
       console.error("重命名文件夹失败:", error);
-      alert(t("errors.renameFolderFailed"));
     }
   };
 
@@ -177,7 +173,6 @@ export function NotePage() {
       await duplicateNote(note.id);
     } catch (error) {
       console.error("复制笔记失败:", error);
-      alert(t("errors.duplicateNoteFailed"));
     }
   };
 
@@ -254,14 +249,11 @@ export function NotePage() {
         }
       } catch (error) {
         console.error("初始化工作区失败:", error);
-        // 初始化失败，显示错误提示
-        alert(t("errors.initWorkspaceFailed"));
       }
     };
 
     initWorkspace();
-  }, [loadFromFileSystem, setWorkspacePath, t]);
-
+  }, [loadFromFileSystem, setWorkspacePath]);
   // 监听文件系统变化
   useEffect(() => {
     // 获取处理方法
