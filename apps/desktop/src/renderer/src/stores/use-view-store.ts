@@ -11,6 +11,11 @@ interface ViewStore {
   setEditorMode: (mode: EditorViewMode) => void;
   toggleEditorMode: (mode: EditorViewMode) => void; // 切换模式（如果已是该模式则返回 edit）
 
+  // 演示模式
+  isPresentationMode: boolean;
+  enterPresentationMode: () => void;
+  exitPresentationMode: () => void;
+
   // 预览配置
   previewConfig: PreviewConfig;
   setPreviewConfig: (config: Partial<PreviewConfig>) => void;
@@ -27,6 +32,7 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   // 初始状态
   viewMode: "note",
   editorMode: "edit",
+  isPresentationMode: false,
 
   previewConfig: {
     showToc: true,
@@ -43,6 +49,10 @@ export const useViewStore = create<ViewStore>((set, get) => ({
     const currentMode = get().editorMode;
     set({ editorMode: currentMode === mode ? "edit" : mode });
   },
+
+  // 演示模式
+  enterPresentationMode: () => set({ isPresentationMode: true }),
+  exitPresentationMode: () => set({ isPresentationMode: false }),
 
   // 预览配置
   setPreviewConfig: (config) =>

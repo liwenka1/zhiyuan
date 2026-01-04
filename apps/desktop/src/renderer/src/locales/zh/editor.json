@@ -5,6 +5,7 @@
   },
   "toolbar": {
     "preview": "预览模式",
+    "presentation": "演示模式",
     "format": "格式化",
     "toc": "目录"
   },

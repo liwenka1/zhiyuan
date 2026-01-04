@@ -5,6 +5,7 @@
   },
   "toolbar": {
     "preview": "Preview Mode",
+    "presentation": "Presentation Mode",
     "format": "Format",
     "toc": "Table of Contents"
   },

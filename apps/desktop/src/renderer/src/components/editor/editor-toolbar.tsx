@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, Wand2, List, Pin, PinOff } from "lucide-react";
+import { Eye, Wand2, List, Pin, PinOff, Presentation } from "lucide-react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -16,6 +16,7 @@ interface EditorToolbarProps {
 export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
+  const enterPresentationMode = useViewStore((state) => state.enterPresentationMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
   const { t } = useTranslation("editor");
   const [tocOpen, setTocOpen] = useState(false);
@@ -54,6 +55,17 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
         >
           <Eye className="h-4 w-4" />
         </Toggle>
+
+        {/* 演示按钮 */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          aria-label={t("toolbar.presentation")}
+          onClick={enterPresentationMode}
+        >
+          <Presentation className="h-4 w-4" />
+        </Button>
 
         {/* 格式化按钮 */}
         <Button

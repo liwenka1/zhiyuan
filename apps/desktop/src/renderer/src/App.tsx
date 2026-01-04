@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { NotePage } from "@/pages/note";
 import { useThemeStore } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
+import { PresentationView } from "@/components/editor/presentation-view";
 
 function App(): React.JSX.Element {
   const initTheme = useThemeStore((state) => state.initTheme);
@@ -14,6 +15,7 @@ function App(): React.JSX.Element {
   return (
     <>
       <NotePage />
+      <PresentationView />
       <Toaster position="bottom-right" />
     </>
   );
