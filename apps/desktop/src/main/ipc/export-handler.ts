@@ -21,9 +21,10 @@ function getFontsDir(): string {
     // 生产环境：字体在 resources/app.asar/out/renderer/fonts
     return path.join(process.resourcesPath, "app.asar", "out", "renderer", "fonts");
   } else {
-    // 开发环境：electron-vite 会把 public 目录复制到 out/renderer
-    // __dirname 在开发环境是 out/main，所以需要回到 out 然后进入 renderer/fonts
-    return path.join(__dirname, "..", "renderer", "fonts");
+    // 开发环境：electron-vite 使用 dev server，不会输出到 out/renderer
+    // 需要直接从源代码目录读取字体文件
+    // __dirname 在开发环境是 out/main，需要回到 apps/desktop 然后进入 src/renderer/public/fonts
+    return path.join(__dirname, "..", "..", "src", "renderer", "public", "fonts");
   }
 }
 
