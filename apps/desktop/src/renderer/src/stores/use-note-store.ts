@@ -619,11 +619,14 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const { markdownToHTML } = await import("@/lib/markdown-processor");
       const htmlBody = await markdownToHTML(note.content);
 
-      // 4. 生成完整的 HTML 文档
+      // 4. 生成完整的 HTML 文档（带字体路径）
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
-      const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
+      const fullHTML = generateHTMLDocument(note.title, htmlBody, {
+        isDark,
+        fonts: { type: "path", path: "./assets" }
+      });
 
-      // 5. 导出为资源包（包含所有图片等资源）
+      // 5. 导出为资源包（包含所有图片和字体等资源）
       const result = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
 
       console.log("导出成功:", result);
@@ -662,15 +665,21 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         throw new Error("USER_CANCELLED");
       }
 
-      // 3. 将 Markdown 转换为 HTML
+      // 3. 获取字体 base64
+      const fonts = await window.api.export.getFontsBase64();
+
+      // 4. 将 Markdown 转换为 HTML
       const { markdownToHTML } = await import("@/lib/markdown-processor");
       const htmlBody = await markdownToHTML(note.content);
 
-      // 4. 生成完整的 HTML 文档
+      // 5. 生成完整的 HTML 文档（内嵌字体）
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
-      const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
+      const fullHTML = generateHTMLDocument(note.title, htmlBody, {
+        isDark,
+        fonts: { type: "embedded", ...fonts }
+      });
 
-      // 5. 导出为 PDF（传入 notePath 以支持本地图片）
+      // 6. 导出为 PDF（传入 notePath 以支持本地图片）
       await window.api.export.exportAsPDF(fullHTML, filePath, note.filePath);
 
       console.log("导出 PDF 成功:", filePath);
@@ -707,7 +716,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         throw new Error("USER_CANCELLED");
       }
 
-      // 3. 分割 Markdown
+      // 3. 获取字体 base64
+      const fonts = await window.api.export.getFontsBase64();
+
+      // 4. 分割 Markdown
       const { splitMarkdownByHr } = await import("@/lib/markdown-splitter");
       const sections = splitMarkdownByHr(note.content);
 
@@ -715,18 +727,21 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         throw new Error("没有内容可导出");
       }
 
-      // 4. 为每个分片生成 HTML
+      // 5. 为每个分片生成 HTML（内嵌字体）
       const { markdownToHTML } = await import("@/lib/markdown-processor");
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
 
       const htmlContents = await Promise.all(
         sections.map(async (section) => {
           const htmlBody = await markdownToHTML(section);
-          return generateHTMLDocument(note.title, htmlBody, isDark);
+          return generateHTMLDocument(note.title, htmlBody, {
+            isDark,
+            fonts: { type: "embedded", ...fonts }
+          });
         })
       );
 
-      // 5. 导出为单个 PDF（多页）
+      // 6. 导出为单个 PDF（多页）
       const result = await window.api.export.exportAsPDFPages(htmlContents, filePath, note.filePath);
 
       console.log(`导出成功: ${result.pagesCount} 页 PDF`);
@@ -765,15 +780,21 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         throw new Error("USER_CANCELLED");
       }
 
-      // 3. 将 Markdown 转换为 HTML
+      // 3. 获取字体 base64
+      const fonts = await window.api.export.getFontsBase64();
+
+      // 4. 将 Markdown 转换为 HTML
       const { markdownToHTML } = await import("@/lib/markdown-processor");
       const htmlBody = await markdownToHTML(note.content);
 
-      // 4. 生成完整的 HTML 文档
+      // 5. 生成完整的 HTML 文档（内嵌字体）
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
-      const fullHTML = generateHTMLDocument(note.title, htmlBody, isDark);
+      const fullHTML = generateHTMLDocument(note.title, htmlBody, {
+        isDark,
+        fonts: { type: "embedded", ...fonts }
+      });
 
-      // 5. 导出为图片（传入 notePath 以支持本地图片）
+      // 6. 导出为图片（传入 notePath 以支持本地图片）
       await window.api.export.exportAsImage(fullHTML, filePath, note.filePath);
 
       console.log("导出图片成功:", filePath);
@@ -810,7 +831,10 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         throw new Error("USER_CANCELLED");
       }
 
-      // 3. 分割 Markdown
+      // 3. 获取字体 base64
+      const fonts = await window.api.export.getFontsBase64();
+
+      // 4. 分割 Markdown
       const { splitMarkdownByHr } = await import("@/lib/markdown-splitter");
       const sections = splitMarkdownByHr(note.content);
 
@@ -818,18 +842,21 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         throw new Error("没有内容可导出");
       }
 
-      // 4. 为每个分片生成 HTML
+      // 5. 为每个分片生成 HTML（内嵌字体）
       const { markdownToHTML } = await import("@/lib/markdown-processor");
       const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
 
       const htmlContents = await Promise.all(
         sections.map(async (section) => {
           const htmlBody = await markdownToHTML(section);
-          return generateHTMLDocument(note.title, htmlBody, isDark);
+          return generateHTMLDocument(note.title, htmlBody, {
+            isDark,
+            fonts: { type: "embedded", ...fonts }
+          });
         })
       );
 
-      // 5. 导出为多张图片
+      // 6. 导出为多张图片
       const result = await window.api.export.exportAsImagePages(htmlContents, folderPath, note.title, note.filePath);
 
       console.log(`导出成功: ${result.filesCount} 张图片`);

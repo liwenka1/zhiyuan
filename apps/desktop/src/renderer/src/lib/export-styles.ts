@@ -4,6 +4,63 @@
  */
 
 /**
+ * 字体文件配置
+ */
+export const FONT_FILES = {
+  lxgwWenKai: "LXGWWenKai-Regular.ttf",
+  jetBrainsMono: "JetBrainsMono-Regular.ttf"
+} as const;
+
+/**
+ * 生成 @font-face 声明
+ * @param fontsPath 字体文件的相对路径前缀（如 "./fonts" 或 "./assets"）
+ */
+export function generateFontFaces(fontsPath: string): string {
+  return `
+    @font-face {
+      font-family: "LXGW WenKai";
+      src: url("${fontsPath}/${FONT_FILES.lxgwWenKai}") format("truetype");
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url("${fontsPath}/${FONT_FILES.jetBrainsMono}") format("truetype");
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+      font-feature-settings: "liga" 1, "calt" 1;
+    }
+  `;
+}
+
+/**
+ * 生成内嵌 base64 字体的 @font-face 声明
+ * @param lxgwBase64 霞鹜文楷字体的 base64 编码
+ * @param jetBrainsBase64 JetBrains Mono 字体的 base64 编码
+ */
+export function generateEmbeddedFontFaces(lxgwBase64: string, jetBrainsBase64: string): string {
+  return `
+    @font-face {
+      font-family: "LXGW WenKai";
+      src: url(data:font/truetype;base64,${lxgwBase64}) format("truetype");
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: "JetBrains Mono";
+      src: url(data:font/truetype;base64,${jetBrainsBase64}) format("truetype");
+      font-weight: normal;
+      font-style: normal;
+      font-feature-settings: "liga" 1, "calt" 1;
+    }
+  `;
+}
+
+/**
  * 主题颜色配置
  */
 interface ThemeColors {

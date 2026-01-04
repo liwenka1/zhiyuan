@@ -4,17 +4,43 @@
  * 样式与预览组件保持一致，基于 Tailwind Typography prose 类
  */
 
-import { getThemeColors, generateProseStyles } from "./export-styles";
+import { getThemeColors, generateProseStyles, generateFontFaces, generateEmbeddedFontFaces } from "./export-styles";
+
+export interface HTMLDocumentOptions {
+  /** 是否为深色主题 */
+  isDark: boolean;
+  /** 字体配置 */
+  fonts?:
+    | { type: "path"; path: string } // HTML 资源包：使用相对路径
+    | { type: "embedded"; lxgwBase64: string; jetBrainsBase64: string }; // PDF/图片：内嵌 base64
+}
 
 /**
  * 生成完整的 HTML 文档
  * @param title 笔记标题
  * @param htmlContent HTML 内容
- * @param isDark 是否为深色主题
+ * @param options 配置选项
  */
-export function generateHTMLDocument(title: string, htmlContent: string, isDark: boolean): string {
-  const colors = getThemeColors(isDark ? "dark" : "light");
-  const styles = generateProseStyles(colors);
+export function generateHTMLDocument(
+  title: string,
+  htmlContent: string,
+  options: HTMLDocumentOptions | boolean
+): string {
+  // 兼容旧的 isDark 参数
+  const opts: HTMLDocumentOptions = typeof options === "boolean" ? { isDark: options } : options;
+
+  const colors = getThemeColors(opts.isDark ? "dark" : "light");
+  const proseStyles = generateProseStyles(colors);
+
+  // 生成字体样式
+  let fontStyles = "";
+  if (opts.fonts) {
+    if (opts.fonts.type === "path") {
+      fontStyles = generateFontFaces(opts.fonts.path);
+    } else if (opts.fonts.type === "embedded") {
+      fontStyles = generateEmbeddedFontFaces(opts.fonts.lxgwBase64, opts.fonts.jetBrainsBase64);
+    }
+  }
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -24,7 +50,8 @@ export function generateHTMLDocument(title: string, htmlContent: string, isDark:
   <meta name="generator" content="xx-note">
   <title>${title}</title>
   <style>
-${styles}
+${fontStyles}
+${proseStyles}
   </style>
 </head>
 <body>
