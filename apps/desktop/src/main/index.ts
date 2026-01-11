@@ -57,7 +57,7 @@ function createWindow(): void {
           titleBarOverlay: getTitleBarOverlay()
         }
       : {}),
-    ...(process.platform === "linux" ? { icon } : {}),
+    icon,
     webPreferences: {
       preload: join(__dirname, "../preload/index.cjs"),
       sandbox: false
@@ -146,6 +146,11 @@ app.whenReady().then(() => {
 
   // Set app user model id for windows
   electronApp.setAppUserModelId("com.electron");
+
+  // macOS: 设置 Dock 图标（开发模式下测试新图标）
+  if (process.platform === "darwin" && app.dock) {
+    app.dock.setIcon(icon);
+  }
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
