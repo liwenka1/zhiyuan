@@ -89,6 +89,31 @@ pnpm format
 
 **本地预览：** http://localhost:3000
 
+## 📥 下载使用
+
+### Desktop 应用下载
+
+前往 [Releases 页面](https://github.com/liwenka1/zhiyuan/releases) 下载最新版本：
+
+- **macOS**: 下载 `.dmg` 文件
+- **Windows**: 下载 `.exe` 文件
+- **Linux**: 下载 `.AppImage` 或 `.deb` 文件
+
+### macOS 用户注意事项
+
+由于应用未经过 Apple 签名认证，首次打开时可能会提示"已损坏"。
+
+**解决方法：**
+
+1. 打开"终端"应用
+2. 运行以下命令：
+   ```bash
+   xattr -cr /Applications/纸鸢.app
+   ```
+3. 再次打开应用即可正常使用
+
+这是 macOS 对未签名应用的安全限制，属于正常现象。
+
 ## 🚢 部署
 
 ### Desktop 应用
