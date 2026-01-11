@@ -121,9 +121,9 @@ function hello() {
 
 您的笔记默认保存在：
 \`\`\`
-Windows: C:\\Users\\[用户名]\\Documents\\xx-note-workspace
-macOS: /Users/[用户名]/Documents/xx-note-workspace
-Linux: /home/[用户名]/Documents/xx-note-workspace
+Windows: C:\\Users\\[用户名]\\Documents\\zhiyuan-workspace
+macOS: /Users/[用户名]/Documents/zhiyuan-workspace
+Linux: /home/[用户名]/Documents/zhiyuan-workspace
 \`\`\`
 
 您也可以选择任意文件夹作为工作区。

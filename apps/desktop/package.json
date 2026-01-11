@@ -6,10 +6,10 @@
   "main": "./out/main/index.js",
   "type": "module",
   "author": "文凯 @liwenka1",
-  "homepage": "https://github.com/liwenka1/xx-note",
+  "homepage": "https://github.com/liwenka1/zhiyuan",
   "repository": {
     "type": "git",
-    "url": "https://github.com/liwenka1/xx-note.git"
+    "url": "https://github.com/liwenka1/zhiyuan.git"
   },
   "scripts": {
     "format": "prettier --write .",

@@ -5,7 +5,7 @@
 ## 📁 项目结构
 
 ```
-xx-note/
+zhiyuan/
 ├── apps/
 │   ├── desktop/          # Electron 桌面应用
 │   └── landing/          # Next.js Landing 页

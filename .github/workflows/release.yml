@@ -32,21 +32,31 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
-      - name: Build/release Electron app
-        uses: samuelmeuli/action-electron-builder@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          release: ${{ startsWith(github.ref, 'refs/tags/v') }}
-          package_root: apps/desktop
-          build_script_name: build
-          skip_install: true
+      - name: Build desktop app
+        run: pnpm --filter desktop build
+        
+      - name: Publish to GitHub Releases (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd apps/desktop
+          npx electron-builder --mac --publish always
         env:
-          # macOS 代码签名证书（可选）
-          # CSC_LINK: ${{ secrets.MAC_CERTS }}
-          # CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTS_PASSWORD }}
-          # Windows 代码签名证书（可选）
-          # WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          # WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Releases (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd apps/desktop
+          npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Releases (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd apps/desktop
+          npx electron-builder --linux --publish always
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -12,7 +12,7 @@ files:
 asarUnpack:
   - resources/**
 win:
-  executableName: xx-note
+  executableName: zhiyuan
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -49,6 +49,6 @@ npmRebuild: false
 publish:
   provider: github
   owner: liwenka1
-  repo: xx-note
+  repo: zhiyuan
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/

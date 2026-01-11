@@ -47,7 +47,7 @@ export function generateHTMLDocument(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="generator" content="xx-note">
+  <meta name="generator" content="zhiyuan">
   <title>${title}</title>
   <style>
 ${fontStyles}
