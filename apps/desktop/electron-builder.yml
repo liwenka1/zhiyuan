@@ -1,5 +1,6 @@
 appId: com.zhiyuan.note
 productName: 纸鸢
+icon: resources/icon.png
 directories:
   buildResources: build
 files:
