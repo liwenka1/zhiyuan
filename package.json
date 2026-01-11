@@ -1,9 +1,8 @@
 {
   "name": "xx-note-monorepo",
-  "version": "1.0.0",
   "private": true,
   "description": "纸鸢 - 优雅的 Markdown 编辑器",
-  "author": "example.com",
+  "author": "文凯 @liwenka1",
   "scripts": {
     "dev:desktop": "pnpm --filter desktop dev",
     "dev:landing": "pnpm --filter landing dev",

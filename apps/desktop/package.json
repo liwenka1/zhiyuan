@@ -1,12 +1,16 @@
 {
   "name": "desktop",
-  "version": "1.0.0",
+  "version": "0.0.1-beta",
   "private": true,
   "description": "纸鸢 - 优雅的 Markdown 编辑器",
   "main": "./out/main/index.js",
   "type": "module",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "文凯 @liwenka1",
+  "homepage": "https://github.com/liwenka1/xx-note",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liwenka1/xx-note.git"
+  },
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
