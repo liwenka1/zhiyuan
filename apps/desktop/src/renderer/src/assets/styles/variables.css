@@ -1,69 +1,75 @@
 @layer base {
   :root {
-    /* 浅色主题 - 春日宣纸 */
-    --background: hsl(40 20% 98%);
-    --foreground: hsl(220 15% 26%);
+    /* 浅色主题 */
+    --background: hsl(0 0% 100%);
+    --foreground: hsl(210 12% 16%);
 
-    --card: hsl(40 18% 99%);
-    --card-foreground: hsl(220 15% 26%);
+    --card: hsl(210 17% 98%);
+    --card-foreground: hsl(210 12% 16%);
 
-    --popover: hsl(40 18% 99%);
-    --popover-foreground: hsl(220 15% 26%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(210 12% 16%);
 
-    --primary: hsl(220 15% 26%);
-    --primary-foreground: hsl(40 20% 98%);
+    --primary: hsl(212 92% 45%);
+    --primary-foreground: hsl(0 0% 100%);
 
-    --secondary: hsl(40 15% 94%);
-    --secondary-foreground: hsl(220 15% 26%);
+    --secondary: hsl(210 14% 93%);
+    --secondary-foreground: hsl(210 12% 16%);
 
-    --muted: hsl(40 15% 94%);
-    --muted-foreground: hsl(0 0% 48%);
+    --muted: hsl(210 14% 96%);
+    --muted-foreground: hsl(215 14% 45%);
 
-    --accent: hsl(210 45% 95%);
-    --accent-foreground: hsl(210 48% 38%);
+    --accent: hsl(210 14% 93%);
+    --accent-foreground: hsl(212 92% 45%);
 
-    --destructive: hsl(355 70% 52%);
-    --destructive-foreground: hsl(40 20% 98%);
+    --destructive: hsl(0 72% 51%);
+    --destructive-foreground: hsl(0 0% 100%);
 
-    --border: hsl(40 10% 88%);
-    --input: hsl(40 10% 88%);
-    --ring: hsl(210 48% 45%);
+    --border: hsl(214 20% 88%);
+    --input: hsl(214 20% 88%);
+    --ring: hsl(212 92% 45%);
+
+    --chart-1: hsl(212 92% 45%);
+    --chart-2: hsl(140 70% 35%);
+    --chart-3: hsl(35 92% 50%);
+    --chart-4: hsl(280 65% 55%);
+    --chart-5: hsl(0 72% 51%);
 
     /* 特有变量 */
-    --selection: hsl(210 60% 92%);
-    --divider: hsl(40 10% 88%);
-    --tertiary-foreground: hsl(0 0% 52%);
-    --link: hsl(220 15% 26%);
-    --highlight: hsl(210 48% 45%);
+    --selection: var(--accent);
+    --divider: var(--border);
+    --tertiary-foreground: var(--muted-foreground);
+    --link: var(--primary);
+    --highlight: var(--ring);
 
     /* 编辑器语法高亮颜色 */
-    --editor-heading: hsl(210 48% 42%);
-    --editor-strong: hsl(220 15% 26%);
-    --editor-emphasis: hsl(220 12% 38%);
-    --editor-link: hsl(195 58% 45%);
-    --editor-url: hsl(0 0% 48%);
-    --editor-code: hsl(280 55% 45%);
-    --editor-code-bg: hsl(150 18% 94%);
-    --editor-quote: hsl(0 0% 48%);
-    --editor-list-marker: hsl(40 70% 48%);
-    --editor-hr: hsl(40 8% 82%);
-    --editor-tag: hsl(155 50% 40%);
-    --editor-attribute: hsl(25 85% 50%);
-    --editor-string: hsl(155 50% 40%);
-    --editor-comment: hsl(0 0% 54%);
-    --editor-meta: hsl(0 0% 54%);
-    --editor-strikethrough: hsl(0 0% 54%);
-    --editor-mark-bg: hsl(45 90% 68%);
+    --editor-heading: var(--primary);
+    --editor-strong: var(--foreground);
+    --editor-emphasis: var(--foreground);
+    --editor-link: var(--chart-2);
+    --editor-url: var(--chart-2);
+    --editor-code: var(--chart-5);
+    --editor-code-bg: var(--accent);
+    --editor-quote: var(--primary);
+    --editor-list-marker: var(--chart-3);
+    --editor-hr: var(--primary);
+    --editor-tag: var(--chart-4);
+    --editor-attribute: var(--chart-3);
+    --editor-string: var(--chart-4);
+    --editor-comment: var(--chart-2);
+    --editor-meta: var(--chart-1);
+    --editor-strikethrough: var(--border);
+    --editor-mark-bg: var(--chart-3);
 
     /* 编辑器专用颜色 */
-    --editor-title: hsl(210 48% 42%);
-    --editor-list: hsl(40 70% 48%);
+    --editor-title: var(--primary);
+    --editor-list: var(--chart-3);
 
     /* 预览专用颜色 */
-    --preview-title: hsl(210 48% 42%);
-    --preview-link: hsl(195 58% 45%);
-    --preview-list: hsl(220 15% 26%);
-    --preview-code-bg: hsl(150 18% 94%);
+    --preview-title: var(--primary);
+    --preview-link: var(--chart-2);
+    --preview-list: var(--foreground);
+    --preview-code-bg: var(--accent);
 
     /* 布局尺寸 */
     --sidebar-width: 8.625rem;
@@ -89,69 +95,39 @@
   }
 
   .dark {
-    /* 深色主题 - 松烟墨池 */
-    --background: hsl(220 16% 13%);
-    --foreground: hsl(40 12% 89%);
+    /* 深色主题 */
+    --background: hsl(220 13% 18%);
+    --foreground: hsl(218 11% 80%);
 
-    --card: hsl(220 15% 16%);
-    --card-foreground: hsl(40 12% 89%);
+    --card: hsl(220 13% 22%);
+    --card-foreground: hsl(218 11% 80%);
 
-    --popover: hsl(220 15% 16%);
-    --popover-foreground: hsl(40 12% 89%);
+    --popover: hsl(220 13% 22%);
+    --popover-foreground: hsl(218 11% 80%);
 
-    --primary: hsl(40 12% 89%);
-    --primary-foreground: hsl(220 16% 13%);
+    --primary: hsl(212 92% 60%);
+    --primary-foreground: hsl(0 0% 100%);
 
-    --secondary: hsl(220 14% 19%);
-    --secondary-foreground: hsl(40 12% 89%);
+    --secondary: hsl(220 13% 26%);
+    --secondary-foreground: hsl(218 11% 80%);
 
-    --muted: hsl(220 14% 19%);
-    --muted-foreground: hsl(0 0% 58%);
+    --muted: hsl(220 13% 26%);
+    --muted-foreground: hsl(218 10% 55%);
 
-    --accent: hsl(220 16% 22%);
-    --accent-foreground: hsl(200 65% 68%);
+    --accent: hsl(220 13% 26%);
+    --accent-foreground: hsl(212 92% 60%);
 
-    --destructive: hsl(355 65% 55%);
-    --destructive-foreground: hsl(40 12% 89%);
+    --destructive: hsl(0 62% 55%);
+    --destructive-foreground: hsl(0 0% 100%);
 
-    --border: hsl(220 12% 24%);
-    --input: hsl(220 12% 24%);
-    --ring: hsl(200 65% 58%);
+    --border: hsl(220 10% 28%);
+    --input: hsl(220 10% 28%);
+    --ring: hsl(212 92% 60%);
 
-    /* 深色特有变量 */
-    --selection: hsl(200 45% 25%);
-    --divider: hsl(220 12% 24%);
-    --tertiary-foreground: hsl(0 0% 55%);
-    --link: hsl(40 12% 89%);
-    --highlight: hsl(200 65% 58%);
-
-    /* 编辑器语法高亮颜色 */
-    --editor-heading: hsl(200 65% 68%);
-    --editor-strong: hsl(40 12% 89%);
-    --editor-emphasis: hsl(40 8% 72%);
-    --editor-link: hsl(170 45% 58%);
-    --editor-url: hsl(0 0% 62%);
-    --editor-code: hsl(280 50% 70%);
-    --editor-code-bg: hsl(220 18% 17%);
-    --editor-quote: hsl(0 0% 62%);
-    --editor-list-marker: hsl(40 50% 65%);
-    --editor-hr: hsl(220 10% 32%);
-    --editor-tag: hsl(155 45% 58%);
-    --editor-attribute: hsl(25 75% 62%);
-    --editor-string: hsl(155 45% 58%);
-    --editor-comment: hsl(0 0% 55%);
-    --editor-meta: hsl(0 0% 58%);
-    --editor-strikethrough: hsl(0 0% 58%);
-    --editor-mark-bg: hsl(45 80% 45%);
-
-    /* 编辑器专用颜色 */
-    --editor-title: hsl(200 65% 68%);
-    --editor-list: hsl(40 50% 65%);
-
-    /* 预览专用颜色 */
-    --preview-title: hsl(200 65% 68%);
-    --preview-link: hsl(170 45% 58%);
-    --preview-list: hsl(40 12% 89%);
-    --preview-code-bg: hsl(220 18% 17%);
+    --chart-1: hsl(212 92% 60%);
+    --chart-2: hsl(140 60% 50%);
+    --chart-3: hsl(35 85% 55%);
+    --chart-4: hsl(280 55% 65%);
+    --chart-5: hsl(0 62% 55%);
   }
 }
