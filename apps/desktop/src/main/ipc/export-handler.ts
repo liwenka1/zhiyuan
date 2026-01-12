@@ -8,7 +8,7 @@ import { PDFDocument } from "pdf-lib";
  * 字体文件名常量（与 export-styles.ts 保持一致）
  */
 const FONT_FILES = {
-  lxgwWenKai: "LXGWWenKai-Regular.ttf",
+  lxgwWenKai: "LXGWWenKaiMono-Medium.ttf",
   jetBrainsMono: "JetBrainsMono-Regular.ttf"
 } as const;
 

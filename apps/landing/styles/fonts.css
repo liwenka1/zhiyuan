@@ -1,7 +1,7 @@
 /* 霞鹜文楷 - 中文正文字体 */
 @font-face {
   font-family: "LXGW WenKai";
-  src: url("/fonts/LXGWWenKai-Regular.ttf") format("truetype");
+  src: url("/fonts/LXGWWenKaiMono-Medium.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
   font-display: swap;

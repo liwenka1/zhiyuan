@@ -7,10 +7,10 @@
  */
 @font-face {
   font-family: "LXGW WenKai";
-  src: url("/fonts/LXGWWenKai-Regular.ttf") format("truetype");
+  src: url("/fonts/LXGWWenKaiMono-Medium.ttf") format("truetype");
   font-weight: normal;
   font-style: normal;
-  font-display: swap; /* 先显示回退字体，加载后切换，避免白屏 */
+  font-display: swap;
 }
 
 /**
@@ -32,7 +32,7 @@
   /* 启用 OpenType 特性 */
   font-feature-settings:
     "liga" 1,
-    "calt" 1; /* 连字符 */
+    "calt" 1;
 }
 
 /**
