@@ -21,7 +21,7 @@ export function PresentationView() {
   const exitPresentationMode = useViewStore((state) => state.exitPresentationMode);
   const editorContent = useNoteStore((state) => state.editorContent);
   const selectedNote = useNoteStore((state) => state.getSelectedNote());
-  const { isWindows } = usePlatform();
+  const { isWindows, isMac } = usePlatform();
 
   // 监听 ESC 键退出
   const handleKeyDown = useCallback(
@@ -44,7 +44,11 @@ export function PresentationView() {
   const urlTransform = createUrlTransformer(selectedNote?.filePath);
 
   // Windows 系统下需要预留 titlebar 的空间并添加顶部边框
-  const containerStyle: CSSProperties = isWindows ? { top: "calc(var(--titlebar-height-windows) + 1px)" } : {};
+  const containerStyle: CSSProperties = isWindows
+    ? { top: "calc(var(--titlebar-height-windows) + 1px)" }
+    : isMac
+      ? { top: "var(--titlebar-height-mac)" } // macOS 也要留空间
+      : {};
 
   return (
     <AnimatePresence>
