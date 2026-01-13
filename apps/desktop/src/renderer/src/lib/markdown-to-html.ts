@@ -6,6 +6,11 @@
 
 import { getThemeColors, generateProseStyles, generateFontFaces, generateEmbeddedFontFaces } from "./export-styles";
 
+// 直接导入库里的 CSS 文件（与预览模式使用相同的样式）
+import highlightLight from "highlight.js/styles/github.css?raw";
+import highlightDark from "highlight.js/styles/github-dark.css?raw";
+import katexStyles from "katex/dist/katex.min.css?raw";
+
 export interface HTMLDocumentOptions {
   /** 是否为深色主题 */
   isDark: boolean;
@@ -31,6 +36,7 @@ export function generateHTMLDocument(
 
   const colors = getThemeColors(opts.isDark ? "dark" : "light");
   const proseStyles = generateProseStyles(colors);
+  const highlightStyles = opts.isDark ? highlightDark : highlightLight;
 
   // 生成字体样式
   let fontStyles = "";
@@ -52,6 +58,8 @@ export function generateHTMLDocument(
   <style>
 ${fontStyles}
 ${proseStyles}
+${highlightStyles}
+${katexStyles}
   </style>
 </head>
 <body>

@@ -85,51 +85,51 @@ interface ThemeColors {
 }
 
 /**
- * 浅色主题颜色 - 春日宣纸
+ * 浅色主题颜色 - 与 variables.css 保持一致
  */
 const lightTheme: ThemeColors = {
-  background: "hsl(40, 20%, 98%)",
-  foreground: "hsl(220, 15%, 26%)",
-  muted: "hsl(40, 15%, 94%)",
-  mutedForeground: "hsl(0, 0%, 48%)",
-  border: "hsl(40, 10%, 88%)",
-  previewTitle: "hsl(210, 48%, 42%)",
-  previewLink: "hsl(195, 58%, 45%)",
-  previewList: "hsl(220, 15%, 26%)",
-  editorStrong: "hsl(220, 15%, 26%)",
-  editorEmphasis: "hsl(220, 12%, 38%)",
-  editorCode: "hsl(280, 55%, 45%)",
-  editorCodeBg: "hsl(150, 18%, 94%)",
-  editorQuote: "hsl(0, 0%, 48%)",
-  editorHr: "hsl(40, 8%, 82%)",
-  editorTag: "hsl(155, 50%, 40%)",
-  editorMeta: "hsl(0, 0%, 54%)",
-  editorMarkBg: "hsl(45, 90%, 68%)",
-  previewCodeBg: "hsl(150, 18%, 94%)"
+  background: "hsl(0, 0%, 100%)",
+  foreground: "hsl(210, 12%, 16%)",
+  muted: "hsl(210, 14%, 96%)",
+  mutedForeground: "hsl(215, 14%, 45%)",
+  border: "hsl(214, 20%, 88%)",
+  previewTitle: "hsl(212, 92%, 45%)", // --primary
+  previewLink: "hsl(140, 70%, 35%)", // --chart-2
+  previewList: "hsl(210, 12%, 16%)", // --foreground
+  editorStrong: "hsl(210, 12%, 16%)", // --foreground
+  editorEmphasis: "hsl(210, 12%, 16%)", // --foreground
+  editorCode: "hsl(0, 72%, 51%)", // --chart-5
+  editorCodeBg: "hsl(210, 14%, 93%)", // --accent
+  editorQuote: "hsl(212, 92%, 45%)", // --primary
+  editorHr: "hsl(212, 92%, 45%)", // --primary
+  editorTag: "hsl(280, 65%, 55%)", // --chart-4
+  editorMeta: "hsl(212, 92%, 45%)", // --chart-1
+  editorMarkBg: "hsl(35, 92%, 50%)", // --chart-3
+  previewCodeBg: "hsl(210, 14%, 93%)" // --accent
 };
 
 /**
- * 深色主题颜色 - 松烟墨池
+ * 深色主题颜色 - 与 variables.css .dark 保持一致
  */
 const darkTheme: ThemeColors = {
-  background: "hsl(220, 16%, 13%)",
-  foreground: "hsl(40, 12%, 89%)",
-  muted: "hsl(220, 14%, 19%)",
-  mutedForeground: "hsl(0, 0%, 58%)",
-  border: "hsl(220, 12%, 24%)",
-  previewTitle: "hsl(200, 65%, 68%)",
-  previewLink: "hsl(170, 45%, 58%)",
-  previewList: "hsl(40, 12%, 89%)",
-  editorStrong: "hsl(40, 12%, 89%)",
-  editorEmphasis: "hsl(40, 8%, 72%)",
-  editorCode: "hsl(280, 50%, 70%)",
-  editorCodeBg: "hsl(220, 18%, 17%)",
-  editorQuote: "hsl(0, 0%, 62%)",
-  editorHr: "hsl(220, 10%, 32%)",
-  editorTag: "hsl(155, 45%, 58%)",
-  editorMeta: "hsl(0, 0%, 58%)",
-  editorMarkBg: "hsl(45, 80%, 45%)",
-  previewCodeBg: "hsl(220, 18%, 17%)"
+  background: "hsl(220, 13%, 18%)",
+  foreground: "hsl(218, 11%, 80%)",
+  muted: "hsl(220, 13%, 26%)",
+  mutedForeground: "hsl(218, 10%, 55%)",
+  border: "hsl(220, 10%, 28%)",
+  previewTitle: "hsl(212, 92%, 60%)", // --primary
+  previewLink: "hsl(140, 60%, 50%)", // --chart-2
+  previewList: "hsl(218, 11%, 80%)", // --foreground
+  editorStrong: "hsl(218, 11%, 80%)", // --foreground
+  editorEmphasis: "hsl(218, 11%, 80%)", // --foreground
+  editorCode: "hsl(0, 62%, 55%)", // --chart-5
+  editorCodeBg: "hsl(220, 13%, 26%)", // --accent
+  editorQuote: "hsl(212, 92%, 60%)", // --primary
+  editorHr: "hsl(212, 92%, 60%)", // --primary
+  editorTag: "hsl(280, 55%, 65%)", // --chart-4
+  editorMeta: "hsl(212, 92%, 60%)", // --chart-1
+  editorMarkBg: "hsl(35, 85%, 55%)", // --chart-3
+  previewCodeBg: "hsl(220, 13%, 26%)" // --accent
 };
 
 /**
@@ -142,7 +142,7 @@ const wechatTheme: ThemeColors = {
   mutedForeground: "#888888",
   border: "#e0e0e0",
   previewTitle: "#2c2c2c",
-  previewLink: "#576b95", // 微信链接蓝色
+  previewLink: "#576b95",
   previewList: "#2c2c2c",
   editorStrong: "#2c2c2c",
   editorEmphasis: "#666666",
@@ -706,6 +706,18 @@ export function generateWechatStyles(colors: ThemeColors): string {
     /* 脚注 */
     sup {
       color: ${colors.previewLink};
+    }
+
+    /* Mermaid 图表 */
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      margin: 1.5em 0;
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
     }
   `;
 }
