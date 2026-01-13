@@ -1,8 +1,14 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
+import rehypeHighlight from "rehype-highlight";
+import rehypeKatex from "rehype-katex";
+import "highlight.js/styles/github.css";
+import "highlight.js/styles/github-dark.css";
+import "katex/dist/katex.min.css";
 import "@/assets/styles/preview.css";
 import { useTranslation } from "react-i18next";
 import { createUrlTransformer } from "@/lib/resource-resolver";
@@ -18,9 +24,9 @@ interface PreviewContentProps {
  * - ✅ 渲染 Markdown 为 HTML
  * - ✅ 支持 GitHub 风格 Markdown (GFM)
  * - ✅ 支持 HTML 标签
- * - TODO: 支持代码高亮
- * - TODO: 支持数学公式
- * - TODO: 支持图表
+ * - ✅ 支持代码高亮
+ * - ✅ 支持数学公式 (KaTeX)
+ * - TODO: 支持图表 (Mermaid)
  */
 export function PreviewContent({ content, notePath }: PreviewContentProps) {
   const { t } = useTranslation("editor");
@@ -33,8 +39,8 @@ export function PreviewContent({ content, notePath }: PreviewContentProps) {
       <div className="prose prose-slate dark:prose-invert max-w-none" style={{ padding: "var(--editor-padding)" }}>
         {content ? (
           <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw, rehypeSlug]}
+            remarkPlugins={[remarkGfm, remarkMath]}
+            rehypePlugins={[rehypeRaw, rehypeSlug, rehypeHighlight, rehypeKatex]}
             urlTransform={urlTransform}
           >
             {content}
