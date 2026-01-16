@@ -152,43 +152,22 @@ function createCustomTheme(isDark: boolean): Extension {
  * 禁用 CodeMirror 的内置搜索和替换快捷键，让用户使用应用自带的搜索功能
  */
 function createDisabledKeymapExtension(): Extension {
+  // 创建一个通用的处理器，返回 true 表示已处理事件，阻止默认行为
+  const disableHandler = () => true;
+
   return keymap.of([
     // 禁用搜索快捷键 (Cmd+F / Ctrl+F)
-    {
-      key: "Mod-f",
-      run: () => true, // 返回 true 表示已处理，阻止默认行为
-      preventDefault: true
-    },
+    { key: "Mod-f", run: disableHandler },
     // 禁用替换快捷键 (Cmd+H / Ctrl+H)
-    {
-      key: "Mod-h",
-      run: () => true,
-      preventDefault: true
-    },
+    { key: "Mod-h", run: disableHandler },
     // 禁用查找下一个 (Cmd+G / Ctrl+G)
-    {
-      key: "Mod-g",
-      run: () => true,
-      preventDefault: true
-    },
+    { key: "Mod-g", run: disableHandler },
     // 禁用查找上一个 (Shift+Cmd+G / Shift+Ctrl+G)
-    {
-      key: "Shift-Mod-g",
-      run: () => true,
-      preventDefault: true
-    },
+    { key: "Shift-Mod-g", run: disableHandler },
     // 禁用选择所有匹配项 (Cmd+Shift+L / Ctrl+Shift+L)
-    {
-      key: "Shift-Mod-l",
-      run: () => true,
-      preventDefault: true
-    },
+    { key: "Shift-Mod-l", run: disableHandler },
     // 禁用 Alt+G (跳转到行)
-    {
-      key: "Alt-g",
-      run: () => true,
-      preventDefault: true
-    }
+    { key: "Alt-g", run: disableHandler }
   ]);
 }
 
