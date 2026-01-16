@@ -1,6 +1,6 @@
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
-import { EditorView } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import type { Extension } from "@codemirror/state";
@@ -147,6 +147,30 @@ function createCustomTheme(isDark: boolean): Extension {
   return [baseTheme, syntaxHighlighting(highlightStyle)];
 }
 
+/**
+ * 创建禁用默认快捷键的 keymap
+ * 禁用 CodeMirror 的内置搜索和替换快捷键，让用户使用应用自带的搜索功能
+ */
+function createDisabledKeymapExtension(): Extension {
+  // 创建一个通用的处理器，返回 true 表示已处理事件，阻止默认行为
+  const disableHandler = () => true;
+
+  return keymap.of([
+    // 禁用搜索快捷键 (Cmd+F / Ctrl+F)
+    { key: "Mod-f", run: disableHandler },
+    // 禁用替换快捷键 (Cmd+H / Ctrl+H)
+    { key: "Mod-h", run: disableHandler },
+    // 禁用查找下一个 (Cmd+G / Ctrl+G)
+    { key: "Mod-g", run: disableHandler },
+    // 禁用查找上一个 (Shift+Cmd+G / Shift+Ctrl+G)
+    { key: "Shift-Mod-g", run: disableHandler },
+    // 禁用选择所有匹配项 (Cmd+Shift+L / Ctrl+Shift+L)
+    { key: "Shift-Mod-l", run: disableHandler },
+    // 禁用 Alt+G (跳转到行)
+    { key: "Alt-g", run: disableHandler }
+  ]);
+}
+
 export function useCodemirrorExtensions(options: UseCodemirrorOptions = {}): {
   extensions: Extension[];
   theme: Extension;
@@ -154,13 +178,15 @@ export function useCodemirrorExtensions(options: UseCodemirrorOptions = {}): {
   const { isDark = false } = options;
 
   const customTheme = createCustomTheme(isDark);
+  const disabledKeymap = createDisabledKeymapExtension();
 
   const extensions: Extension[] = [
     markdown({
       base: markdownLanguage,
       codeLanguages: languages
     }),
-    EditorView.lineWrapping
+    EditorView.lineWrapping,
+    disabledKeymap // 添加禁用的快捷键配置
   ];
 
   return { extensions, theme: customTheme };
