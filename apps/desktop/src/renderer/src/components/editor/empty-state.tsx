@@ -1,7 +1,10 @@
 import { FileText } from "lucide-react";
 import { motion } from "motion/react";
+import { useTranslation } from "react-i18next";
 
 export function EmptyEditor() {
+  const { t } = useTranslation("editor");
+
   return (
     <motion.div
       className="empty-state text-muted-foreground flex h-full flex-col items-center justify-center"
@@ -22,7 +25,7 @@ export function EmptyEditor() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.15 }}
       >
-        纸鸢
+        {t("appName")}
       </motion.h2>
       <motion.p
         className="text-sm"
@@ -30,7 +33,7 @@ export function EmptyEditor() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.2 }}
       >
-        选择或创建一篇笔记开始写作
+        {t("emptyState.title")}
       </motion.p>
     </motion.div>
   );
