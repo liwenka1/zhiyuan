@@ -12,6 +12,8 @@
   "placeholder": "开始编写你的笔记...",
   "previewEmpty": "暂无内容",
   "toc": {
-    "empty": "文档中没有标题"
+    "empty": "文档中没有标题",
+    "pin": "固定目录",
+    "unpin": "取消固定目录"
   }
 }
