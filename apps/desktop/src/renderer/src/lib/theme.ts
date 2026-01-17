@@ -63,9 +63,10 @@ export const ThemeColors = {
 
 /**
  * 预定义的颜色值（用于 Motion 动画等需要颜色字符串的场景）
+ * 注意：使用 rgba(0,0,0,0) 代替 "transparent"，因为 Motion 无法对 "transparent" 进行动画
  */
 export const MotionColors = {
-  transparent: "transparent",
+  transparent: "rgba(0, 0, 0, 0)",
   selection: () => getThemeColor(ThemeColors.selection),
   muted: () => getThemeColor(ThemeColors.muted),
   background: () => getThemeColor(ThemeColors.background),
