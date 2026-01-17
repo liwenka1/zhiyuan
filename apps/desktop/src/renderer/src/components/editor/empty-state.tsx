@@ -1,6 +1,6 @@
-import { FileText } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
+import { Logo } from "@/components/icons";
 
 export function EmptyEditor() {
   const { t } = useTranslation("editor");
@@ -17,16 +17,8 @@ export function EmptyEditor() {
         animate={{ scale: 1 }}
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
       >
-        <FileText className="empty-state-icon mb-4 h-16 w-16" />
+        <Logo className="empty-state-icon mb-4 h-20 w-20" />
       </motion.div>
-      <motion.h2
-        className="text-foreground mb-2 text-3xl font-light tracking-wide"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3, delay: 0.15 }}
-      >
-        {t("appName")}
-      </motion.h2>
       <motion.p
         className="text-sm"
         initial={{ opacity: 0 }}
