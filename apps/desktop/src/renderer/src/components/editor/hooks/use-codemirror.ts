@@ -23,7 +23,7 @@ function createCustomTheme(isDark: boolean): Extension {
       },
       ".cm-content": {
         caretColor: "var(--foreground)",
-        padding: "var(--editor-padding)",
+        padding: "0 var(--editor-padding) var(--editor-padding) var(--editor-padding)",
         fontFamily: "var(--editor-font)",
         fontSize: "var(--editor-font-size)",
         lineHeight: "var(--editor-line-height)",

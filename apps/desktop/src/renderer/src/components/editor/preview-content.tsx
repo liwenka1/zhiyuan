@@ -57,7 +57,7 @@ export function PreviewContent({ content, notePath }: PreviewContentProps) {
 
   return (
     <ScrollArea className="h-full" id="preview-scroll-area">
-      <div className="prose prose-slate dark:prose-invert max-w-none" style={{ padding: "var(--editor-padding)" }}>
+      <div className="prose prose-slate dark:prose-invert max-w-none" style={{ padding: "0 var(--editor-padding) var(--editor-padding) var(--editor-padding)" }}>
         {content ? (
           <ReactMarkdown
             remarkPlugins={[remarkGfm, remarkMath]}
