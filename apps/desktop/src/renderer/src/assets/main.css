@@ -4,7 +4,6 @@
 @import "./styles/variables.css";
 @import "./styles/base.css";
 @import "./styles/themes.css";
-@import "./styles/editor.css";
 
 @theme {
   /* 基础颜色 */
