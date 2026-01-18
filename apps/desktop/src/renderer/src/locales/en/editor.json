@@ -15,5 +15,15 @@
     "empty": "No headings in document",
     "pin": "Pin TOC",
     "unpin": "Unpin TOC"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "replacePlaceholder": "Replace with...",
+    "previous": "Previous",
+    "next": "Next",
+    "replace": "Replace",
+    "replaceAll": "Replace All",
+    "toggleReplace": "Toggle Replace",
+    "close": "Close"
   }
 }

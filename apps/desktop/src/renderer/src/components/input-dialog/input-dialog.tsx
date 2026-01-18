@@ -65,13 +65,14 @@ export function InputDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {description && <DialogDescription>{description}</DialogDescription>}
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <Input
+            className="focus-visible:ring-1"
             placeholder={actualPlaceholder}
             value={value}
             onChange={(e) => setValue(e.target.value)}

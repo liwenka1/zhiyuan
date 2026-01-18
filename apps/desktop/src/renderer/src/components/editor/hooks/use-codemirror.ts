@@ -3,24 +3,30 @@ import { languages } from "@codemirror/language-data";
 import { EditorView, keymap } from "@codemirror/view";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
+import { search } from "@codemirror/search";
 import type { Extension } from "@codemirror/state";
 
 interface UseCodemirrorOptions {
   isDark?: boolean;
+  onOpenSearch?: () => void;
 }
 
 /**
  * 创建使用项目 CSS 变量的自定义编辑器主题
  */
 function createCustomTheme(isDark: boolean): Extension {
-  // 基础主题样式
   const baseTheme = EditorView.theme(
     {
+      // 编辑器容器
       "&": {
         height: "auto",
         backgroundColor: "var(--background)",
         color: "var(--foreground)"
       },
+      "&.cm-focused": {
+        outline: "none"
+      },
+      // 内容区
       ".cm-content": {
         caretColor: "var(--foreground)",
         padding: "0 var(--editor-padding) var(--editor-padding) var(--editor-padding)",
@@ -35,26 +41,53 @@ function createCustomTheme(isDark: boolean): Extension {
       ".cm-line": {
         padding: "0"
       },
-      "&.cm-focused": {
-        outline: "none"
-      },
+
+      // 光标
       ".cm-cursor, .cm-dropCursor": {
         borderLeftColor: "var(--foreground)"
       },
+
+      // 占位符
+      ".cm-placeholder": {
+        color: "var(--muted-foreground)",
+        fontStyle: "normal"
+      },
+
+      // 选中文本
       "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection":
         {
-          backgroundColor: "var(--selection)"
+          backgroundColor: "color-mix(in srgb, var(--primary) 40%, transparent)"
         },
+
+      // 搜索匹配 - 所有匹配项（包括代码块内）
+      ".cm-searchMatch": {
+        backgroundColor: "color-mix(in srgb, var(--warning) 30%, transparent) !important",
+        borderRadius: "2px"
+      },
+      // 搜索匹配 - 当前选中的匹配项
+      ".cm-searchMatch-selected": {
+        backgroundColor: "color-mix(in srgb, var(--warning) 60%, transparent) !important",
+        borderRadius: "2px"
+      },
+
+      // 括号匹配
+      ".cm-matchingBracket": {
+        backgroundColor: "var(--muted)",
+        outline: "1px solid var(--border)",
+        borderRadius: "2px"
+      },
+      ".cm-nonmatchingBracket": {
+        backgroundColor: "color-mix(in srgb, var(--destructive) 10%, transparent)",
+        outline: "1px solid var(--destructive)",
+        borderRadius: "2px"
+      },
+
+      // 活动行
       ".cm-activeLine": {
         backgroundColor: "transparent"
       },
-      ".cm-selectionMatch": {
-        backgroundColor: "color-mix(in srgb, var(--selection) 50%, transparent)"
-      },
-      ".cm-matchingBracket, .cm-nonmatchingBracket": {
-        backgroundColor: "var(--muted)",
-        outline: "1px solid var(--border)"
-      },
+
+      // 行号槽
       ".cm-gutters": {
         backgroundColor: "var(--background)",
         color: "var(--muted-foreground)",
@@ -63,11 +96,15 @@ function createCustomTheme(isDark: boolean): Extension {
       ".cm-activeLineGutter": {
         backgroundColor: "transparent"
       },
+
+      // 折叠
       ".cm-foldPlaceholder": {
         backgroundColor: "var(--muted)",
         border: "none",
         color: "var(--muted-foreground)"
       },
+
+      // 提示框
       ".cm-tooltip": {
         backgroundColor: "var(--popover)",
         border: "1px solid var(--border)"
@@ -77,12 +114,6 @@ function createCustomTheme(isDark: boolean): Extension {
       },
       ".cm-tooltip .cm-tooltip-arrow:after": {
         borderTopColor: "var(--popover)"
-      },
-      // 行内代码
-      ".cm-line .cm-monospace": {
-        backgroundColor: "var(--editor-code-bg)",
-        borderRadius: "3px",
-        padding: "2px 4px"
       }
     },
     { dark: isDark }
@@ -148,16 +179,22 @@ function createCustomTheme(isDark: boolean): Extension {
 }
 
 /**
- * 创建禁用默认快捷键的 keymap
- * 禁用 CodeMirror 的内置搜索和替换快捷键，让用户使用应用自带的搜索功能
+ * 创建自定义快捷键的 keymap
+ * 覆盖 CodeMirror 的内置搜索快捷键，使用应用自定义的搜索功能
  */
-function createDisabledKeymapExtension(): Extension {
+function createCustomKeymapExtension(onOpenSearch?: () => void): Extension {
   // 创建一个通用的处理器，返回 true 表示已处理事件，阻止默认行为
   const disableHandler = () => true;
 
   return keymap.of([
-    // 禁用搜索快捷键 (Cmd+F / Ctrl+F)
-    { key: "Mod-f", run: disableHandler },
+    // 搜索快捷键 (Cmd+F / Ctrl+F) - 触发自定义搜索
+    {
+      key: "Mod-f",
+      run: () => {
+        onOpenSearch?.();
+        return true;
+      }
+    },
     // 禁用替换快捷键 (Cmd+H / Ctrl+H)
     { key: "Mod-h", run: disableHandler },
     // 禁用查找下一个 (Cmd+G / Ctrl+G)
@@ -175,10 +212,10 @@ export function useCodemirrorExtensions(options: UseCodemirrorOptions = {}): {
   extensions: Extension[];
   theme: Extension;
 } {
-  const { isDark = false } = options;
+  const { isDark = false, onOpenSearch } = options;
 
   const customTheme = createCustomTheme(isDark);
-  const disabledKeymap = createDisabledKeymapExtension();
+  const customKeymap = createCustomKeymapExtension(onOpenSearch);
 
   const extensions: Extension[] = [
     markdown({
@@ -186,7 +223,8 @@ export function useCodemirrorExtensions(options: UseCodemirrorOptions = {}): {
       codeLanguages: languages
     }),
     EditorView.lineWrapping,
-    disabledKeymap // 添加禁用的快捷键配置
+    search({ createPanel: () => ({ dom: document.createElement("div") }) }), // 搜索扩展（隐藏默认面板）
+    customKeymap
   ];
 
   return { extensions, theme: customTheme };
