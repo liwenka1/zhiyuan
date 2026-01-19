@@ -59,6 +59,9 @@
 
 .prose pre code {
   background-color: transparent;
+  padding: 1em;
+  display: block;
+  overflow-x: auto;
 }
 
 /* 斜体 */
