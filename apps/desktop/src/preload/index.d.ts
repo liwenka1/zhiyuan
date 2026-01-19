@@ -68,6 +68,7 @@ export interface FolderAPI {
 export interface ShellAPI {
   showItemInFolder: (fullPath: string) => Promise<void>;
   openPath: (fullPath: string) => Promise<string>;
+  openExternal: (url: string) => Promise<void>;
 }
 
 // 导出 API 接口

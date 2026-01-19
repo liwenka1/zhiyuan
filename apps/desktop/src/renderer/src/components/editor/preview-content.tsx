@@ -73,6 +73,20 @@ export function PreviewContent({ content, notePath }: PreviewContentProps) {
                   return <MermaidBlock code={String(children).trim()} />;
                 }
                 return <code className={className}>{children}</code>;
+              },
+              a({ href, children, ...props }) {
+                const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+                  // 如果是外部链接，在系统浏览器中打开
+                  if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
+                    e.preventDefault();
+                    window.api.shell.openExternal(href);
+                  }
+                };
+                return (
+                  <a href={href} onClick={handleClick} {...props}>
+                    {children}
+                  </a>
+                );
               }
             }}
           >

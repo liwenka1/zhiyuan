@@ -103,4 +103,9 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle("shell:openPath", async (_, fullPath: string) => {
     return await shell.openPath(fullPath);
   });
+
+  // 在系统默认浏览器中打开链接
+  ipcMain.handle("shell:openExternal", async (_, url: string) => {
+    await shell.openExternal(url);
+  });
 }
