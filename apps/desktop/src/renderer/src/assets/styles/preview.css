@@ -46,6 +46,12 @@
     "calt" 1; /* 启用连字 */
 }
 
+/* 移除 Tailwind Typography 默认添加的行内代码反引号 */
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::before,
+.prose :where(code):not(:where([class~="not-prose"], [class~="not-prose"] *))::after {
+  content: none;
+}
+
 .prose pre {
   font-family: var(--editor-font-mono);
   background-color: var(--preview-code-bg);
