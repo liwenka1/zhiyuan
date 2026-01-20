@@ -94,17 +94,17 @@ const lightTheme: ThemeColors = {
   mutedForeground: "hsl(215, 14%, 45%)",
   border: "hsl(214, 20%, 88%)",
   previewTitle: "hsl(212, 92%, 45%)", // --primary
-  previewLink: "hsl(140, 70%, 35%)", // --chart-2
+  previewLink: "hsl(140, 70%, 35%)", // --palette-2
   previewList: "hsl(210, 12%, 16%)", // --foreground
   editorStrong: "hsl(210, 12%, 16%)", // --foreground
   editorEmphasis: "hsl(210, 12%, 16%)", // --foreground
-  editorCode: "hsl(0, 72%, 51%)", // --chart-5
+  editorCode: "hsl(0, 72%, 51%)", // --palette-5
   editorCodeBg: "hsl(210, 14%, 93%)", // --accent
   editorQuote: "hsl(212, 92%, 45%)", // --primary
   editorHr: "hsl(212, 92%, 45%)", // --primary
-  editorTag: "hsl(280, 65%, 55%)", // --chart-4
-  editorMeta: "hsl(212, 92%, 45%)", // --chart-1
-  editorMarkBg: "hsl(35, 92%, 50%)", // --chart-3
+  editorTag: "hsl(280, 65%, 55%)", // --palette-4
+  editorMeta: "hsl(212, 92%, 45%)", // --palette-1
+  editorMarkBg: "hsl(35, 92%, 50%)", // --palette-3
   previewCodeBg: "hsl(210, 14%, 93%)" // --accent
 };
 
@@ -118,17 +118,17 @@ const darkTheme: ThemeColors = {
   mutedForeground: "hsl(218, 10%, 55%)",
   border: "hsl(220, 10%, 28%)",
   previewTitle: "hsl(212, 92%, 60%)", // --primary
-  previewLink: "hsl(140, 60%, 50%)", // --chart-2
+  previewLink: "hsl(140, 60%, 50%)", // --palette-2
   previewList: "hsl(218, 11%, 80%)", // --foreground
   editorStrong: "hsl(218, 11%, 80%)", // --foreground
   editorEmphasis: "hsl(218, 11%, 80%)", // --foreground
-  editorCode: "hsl(0, 62%, 55%)", // --chart-5
+  editorCode: "hsl(0, 62%, 55%)", // --palette-5
   editorCodeBg: "hsl(220, 13%, 26%)", // --accent
   editorQuote: "hsl(212, 92%, 60%)", // --primary
   editorHr: "hsl(212, 92%, 60%)", // --primary
-  editorTag: "hsl(280, 55%, 65%)", // --chart-4
-  editorMeta: "hsl(212, 92%, 60%)", // --chart-1
-  editorMarkBg: "hsl(35, 85%, 55%)", // --chart-3
+  editorTag: "hsl(280, 55%, 65%)", // --palette-4
+  editorMeta: "hsl(212, 92%, 60%)", // --palette-1
+  editorMarkBg: "hsl(35, 85%, 55%)", // --palette-3
   previewCodeBg: "hsl(220, 13%, 26%)" // --accent
 };
 

@@ -29,11 +29,11 @@
     --input: hsl(214 20% 88%);
     --ring: hsl(212 92% 45%);
 
-    --chart-1: hsl(212 92% 45%);
-    --chart-2: hsl(140 70% 35%);
-    --chart-3: hsl(35 92% 50%);
-    --chart-4: hsl(280 65% 55%);
-    --chart-5: hsl(0 72% 51%);
+    --palette-1: hsl(212 92% 45%);
+    --palette-2: hsl(140 70% 35%);
+    --palette-3: hsl(35 92% 50%);
+    --palette-4: hsl(280 65% 55%);
+    --palette-5: hsl(0 72% 51%);
 
     /* 特有变量 */
     --selection: var(--accent);
@@ -43,30 +43,28 @@
     --highlight: var(--ring);
 
     /* 编辑器语法高亮颜色 */
-    --editor-strong: var(--foreground);
-    --editor-emphasis: var(--foreground);
-    --editor-link: var(--chart-2);
-    --editor-url: var(--chart-2);
-    --editor-code: var(--chart-5);
-    --editor-code-bg: var(--accent);
-    --editor-quote: var(--primary);
-    --editor-list-marker: var(--chart-3);
+    --editor-strong: var(--palette-4);
+    --editor-emphasis: var(--palette-4);
+    --editor-link: var(--palette-2);
+    --editor-url: var(--palette-2);
+    --editor-code: var(--palette-5);
+    --editor-quote: var(--foreground);
     --editor-hr: var(--primary);
-    --editor-tag: var(--chart-4);
-    --editor-attribute: var(--chart-3);
-    --editor-string: var(--chart-4);
-    --editor-comment: var(--chart-2);
-    --editor-meta: var(--chart-1);
-    --editor-strikethrough: var(--border);
-    --editor-mark-bg: var(--chart-3);
+    --editor-tag: var(--palette-4);
+    --editor-attribute: var(--palette-3);
+    --editor-string: var(--palette-4);
+    --editor-comment: var(--palette-2);
+    --editor-meta: var(--palette-1);
+    --editor-strikethrough: var(--palette-4);
+    --editor-mark-bg: var(--palette-3);
 
     /* 编辑器专用颜色 */
     --editor-title: var(--primary);
-    --editor-list: var(--chart-3);
+    --editor-list: var(--palette-3);
 
     /* 预览专用颜色 */
     --preview-title: var(--primary);
-    --preview-link: var(--chart-2);
+    --preview-link: var(--palette-2);
     --preview-list: var(--foreground);
     --preview-code-bg: var(--accent);
 
@@ -123,10 +121,10 @@
     --input: hsl(220 10% 28%);
     --ring: hsl(212 92% 60%);
 
-    --chart-1: hsl(212 92% 60%);
-    --chart-2: hsl(140 60% 50%);
-    --chart-3: hsl(35 85% 55%);
-    --chart-4: hsl(280 55% 65%);
-    --chart-5: hsl(0 62% 55%);
+    --palette-1: hsl(212 92% 60%);
+    --palette-2: hsl(140 60% 50%);
+    --palette-3: hsl(35 85% 55%);
+    --palette-4: hsl(280 55% 65%);
+    --palette-5: hsl(0 62% 55%);
   }
 }
