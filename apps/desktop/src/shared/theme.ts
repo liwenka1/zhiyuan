@@ -62,20 +62,15 @@ function hslToHex(h: number, s: number, l: number): string {
 /**
  * 主题颜色配置
  * 这些值需要与 variables.css 中的 CSS 变量保持一致
- *
- * 浅色主题: --background: 40 20% 98%  (春日宣纸)
- * 深色主题: --background: 220 16% 13% (松烟墨池)
  */
 export const ThemeColors = {
   light: {
-    // HSL: 40 20% 98%
-    background: hslToHex(40, 20, 98),
-    foreground: hslToHex(220, 15, 26)
+    background: hslToHex(0, 0, 100),
+    foreground: hslToHex(210, 12, 16)
   },
   dark: {
-    // HSL: 220 16% 13%
-    background: hslToHex(220, 16, 13),
-    foreground: hslToHex(40, 12, 89)
+    background: hslToHex(220, 13, 18),
+    foreground: hslToHex(218, 11, 80)
   }
 } as const;
 
