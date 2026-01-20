@@ -7,7 +7,7 @@
  * 字体文件配置
  */
 export const FONT_FILES = {
-  lxgwWenKai: "LXGWWenKai-Regular.ttf",
+  lxgwWenKai: "LXGWWenKaiMono-Medium.ttf",
   jetBrainsMono: "JetBrainsMono-Regular.ttf"
 } as const;
 
@@ -85,52 +85,53 @@ interface ThemeColors {
 }
 
 /**
- * 浅色主题颜色 - 与 variables.css 保持一致
+ * CSS 变量映射配置
+ * 定义了 ThemeColors 中每个字段对应的 CSS 变量名
  */
-const lightTheme: ThemeColors = {
-  background: "hsl(0, 0%, 100%)",
-  foreground: "hsl(210, 12%, 16%)",
-  muted: "hsl(210, 14%, 96%)",
-  mutedForeground: "hsl(215, 14%, 45%)",
-  border: "hsl(214, 20%, 88%)",
-  previewTitle: "hsl(212, 92%, 45%)", // --primary
-  previewLink: "hsl(140, 70%, 35%)", // --palette-2
-  previewList: "hsl(210, 12%, 16%)", // --foreground
-  editorStrong: "hsl(210, 12%, 16%)", // --foreground
-  editorEmphasis: "hsl(210, 12%, 16%)", // --foreground
-  editorCode: "hsl(0, 72%, 51%)", // --palette-5
-  editorCodeBg: "hsl(210, 14%, 93%)", // --accent
-  editorQuote: "hsl(212, 92%, 45%)", // --primary
-  editorHr: "hsl(212, 92%, 45%)", // --primary
-  editorTag: "hsl(280, 65%, 55%)", // --palette-4
-  editorMeta: "hsl(212, 92%, 45%)", // --palette-1
-  editorMarkBg: "hsl(35, 92%, 50%)", // --palette-3
-  previewCodeBg: "hsl(210, 14%, 93%)" // --accent
-};
+const CSS_VAR_MAP = {
+  background: "background",
+  foreground: "foreground",
+  muted: "muted",
+  mutedForeground: "muted-foreground",
+  border: "border",
+  previewTitle: "preview-title",
+  previewLink: "preview-link",
+  previewList: "preview-list",
+  editorStrong: "foreground",
+  editorEmphasis: "foreground",
+  editorCode: "editor-code",
+  editorCodeBg: "accent",
+  editorQuote: "editor-quote",
+  editorHr: "editor-hr",
+  editorTag: "editor-tag",
+  editorMeta: "editor-meta",
+  editorMarkBg: "editor-mark-bg",
+  previewCodeBg: "preview-code-bg"
+} as const;
 
 /**
- * 深色主题颜色 - 与 variables.css .dark 保持一致
+ * 从 DOM 中读取 CSS 变量并生成主题颜色
+ * 用于实时获取当前应用的主题颜色
+ * @param isDark 是否为深色主题
  */
-const darkTheme: ThemeColors = {
-  background: "hsl(220, 13%, 18%)",
-  foreground: "hsl(218, 11%, 80%)",
-  muted: "hsl(220, 13%, 26%)",
-  mutedForeground: "hsl(218, 10%, 55%)",
-  border: "hsl(220, 10%, 28%)",
-  previewTitle: "hsl(212, 92%, 60%)", // --primary
-  previewLink: "hsl(140, 60%, 50%)", // --palette-2
-  previewList: "hsl(218, 11%, 80%)", // --foreground
-  editorStrong: "hsl(218, 11%, 80%)", // --foreground
-  editorEmphasis: "hsl(218, 11%, 80%)", // --foreground
-  editorCode: "hsl(0, 62%, 55%)", // --palette-5
-  editorCodeBg: "hsl(220, 13%, 26%)", // --accent
-  editorQuote: "hsl(212, 92%, 60%)", // --primary
-  editorHr: "hsl(212, 92%, 60%)", // --primary
-  editorTag: "hsl(280, 55%, 65%)", // --palette-4
-  editorMeta: "hsl(212, 92%, 60%)", // --palette-1
-  editorMarkBg: "hsl(35, 85%, 55%)", // --palette-3
-  previewCodeBg: "hsl(220, 13%, 26%)" // --accent
-};
+export function getThemeColorsFromDOM(isDark: boolean = false): ThemeColors {
+  const tempDiv = document.createElement("div");
+  if (isDark) {
+    tempDiv.className = "dark";
+  }
+  tempDiv.style.display = "none";
+  document.body.appendChild(tempDiv);
+
+  const computedStyle = getComputedStyle(tempDiv);
+  const colors = {} as ThemeColors;
+
+  for (const [key, varName] of Object.entries(CSS_VAR_MAP)) {
+    colors[key as keyof ThemeColors] = computedStyle.getPropertyValue(`--${varName}`).trim();
+  }
+
+  document.body.removeChild(tempDiv);
+  return colors;
+}
 
 /**
  * 微信公众号主题颜色（固定浅色）
@@ -158,15 +159,19 @@ const wechatTheme: ThemeColors = {
 
 /**
  * 获取主题颜色
+ * @param theme 主题类型
+ *
+ * 注意：对于 light 和 dark 主题，会自动从 DOM 中读取 CSS 变量
+ * 这样可以确保导出的颜色与当前应用主题完全一致，无需手动维护
  */
 export function getThemeColors(theme: "light" | "dark" | "wechat"): ThemeColors {
   switch (theme) {
     case "dark":
-      return darkTheme;
+      return getThemeColorsFromDOM(true);
     case "wechat":
       return wechatTheme;
     default:
-      return lightTheme;
+      return getThemeColorsFromDOM(false);
   }
 }
 
