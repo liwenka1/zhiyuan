@@ -167,17 +167,32 @@ export function useEditorSearch(view: EditorView | null): UseEditorSearchReturn 
     setState((prev) => ({ ...prev, showReplace: !prev.showReplace }));
   }, []);
 
+  // 滚动选中项到视口中心
+  const scrollSelectionToCenter = useCallback(() => {
+    if (!view) return;
+    const selection = view.state.selection.main;
+    view.dispatch({
+      effects: EditorView.scrollIntoView(selection.from, { y: "center" })
+    });
+  }, [view]);
+
   const handleFindNext = useCallback(() => {
     if (!view || !state.searchText) return;
     findNext(view);
-    requestAnimationFrame(() => updateMatchCount(state.searchText));
-  }, [view, state.searchText, updateMatchCount]);
+    requestAnimationFrame(() => {
+      scrollSelectionToCenter();
+      updateMatchCount(state.searchText);
+    });
+  }, [view, state.searchText, updateMatchCount, scrollSelectionToCenter]);
 
   const handleFindPrevious = useCallback(() => {
     if (!view || !state.searchText) return;
     findPrevious(view);
-    requestAnimationFrame(() => updateMatchCount(state.searchText));
-  }, [view, state.searchText, updateMatchCount]);
+    requestAnimationFrame(() => {
+      scrollSelectionToCenter();
+      updateMatchCount(state.searchText);
+    });
+  }, [view, state.searchText, updateMatchCount, scrollSelectionToCenter]);
 
   const handleReplace = useCallback(() => {
     if (!view || !state.searchText) return;
