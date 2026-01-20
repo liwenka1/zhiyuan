@@ -43,7 +43,6 @@
     --highlight: var(--ring);
 
     /* 编辑器语法高亮颜色 */
-    --editor-heading: var(--primary);
     --editor-strong: var(--foreground);
     --editor-emphasis: var(--foreground);
     --editor-link: var(--chart-2);

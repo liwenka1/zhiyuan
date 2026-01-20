@@ -1,6 +1,11 @@
 /* Markdown 预览样式 */
 
 .prose {
+  /* 
+   * Tailwind Typography 颜色变量
+   * 通过 CSS 变量实现主题切换，深色模式下 .dark 类会自动改变这些变量的值
+   * 因此不需要单独设置 --tw-prose-invert-* 变量
+   */
   --tw-prose-body: var(--foreground);
   --tw-prose-headings: var(--preview-title);
   --tw-prose-lead: var(--foreground);
@@ -17,24 +22,6 @@
   --tw-prose-pre-bg: var(--preview-code-bg);
   --tw-prose-th-borders: var(--border);
   --tw-prose-td-borders: var(--border);
-
-  /* 深色模式 */
-  --tw-prose-invert-body: var(--foreground);
-  --tw-prose-invert-headings: var(--preview-title);
-  --tw-prose-invert-lead: var(--foreground);
-  --tw-prose-invert-links: var(--preview-link);
-  --tw-prose-invert-bold: var(--editor-strong);
-  --tw-prose-invert-counters: var(--preview-list);
-  --tw-prose-invert-bullets: var(--preview-list);
-  --tw-prose-invert-hr: var(--editor-hr);
-  --tw-prose-invert-quotes: var(--editor-quote);
-  --tw-prose-invert-quote-borders: var(--border);
-  --tw-prose-invert-captions: var(--muted-foreground);
-  --tw-prose-invert-code: var(--editor-code);
-  --tw-prose-invert-pre-code: var(--foreground);
-  --tw-prose-invert-pre-bg: var(--preview-code-bg);
-  --tw-prose-invert-th-borders: var(--border);
-  --tw-prose-invert-td-borders: var(--border);
 }
 
 /* 代码块 */
