@@ -4,6 +4,7 @@
     "title": "Select or create a note to start writing"
   },
   "toolbar": {
+    "focus": "Focus Mode",
     "preview": "Preview Mode",
     "presentation": "Presentation Mode",
     "format": "Format",

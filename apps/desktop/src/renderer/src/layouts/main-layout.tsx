@@ -2,6 +2,7 @@ import { ReactNode, CSSProperties } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { TitleBar } from "@/components/titlebar";
 import { usePlatform } from "@/components/titlebar/use-platform";
+import { useViewStore } from "@/stores";
 import { cn } from "@/lib/utils";
 
 interface MainLayoutProps {
@@ -12,6 +13,7 @@ interface MainLayoutProps {
 
 export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayoutProps) {
   const { isMac, isWindows } = usePlatform();
+  const isFocusMode = useViewStore((state) => state.isFocusMode);
 
   // 外层容器样式（Windows 的 padding 在外层）
   const outerStyle: CSSProperties = {
@@ -32,6 +34,18 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
   const handleStyle: CSSProperties | undefined = isMac
     ? { height: "calc(100% + var(--titlebar-height-mac))" }
     : undefined;
+
+  // 专注模式：只显示编辑区
+  if (isFocusMode) {
+    return (
+      <div className="bg-background flex h-screen w-full overflow-hidden" style={outerStyle}>
+        <TitleBar />
+        <div className={cn("h-full w-full", isWindows && "border-border border-t")} style={innerStyle}>
+          <main className="allow-select h-full min-w-0 overflow-hidden">{mainContent}</main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background flex h-screen w-full overflow-hidden" style={outerStyle}>

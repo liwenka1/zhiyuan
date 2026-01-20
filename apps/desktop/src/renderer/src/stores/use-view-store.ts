@@ -16,6 +16,10 @@ interface ViewStore {
   enterPresentationMode: () => void;
   exitPresentationMode: () => void;
 
+  // 专注模式
+  isFocusMode: boolean;
+  toggleFocusMode: () => void;
+
   // 预览配置
   previewConfig: PreviewConfig;
   setPreviewConfig: (config: Partial<PreviewConfig>) => void;
@@ -33,6 +37,7 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   viewMode: "note",
   editorMode: "edit",
   isPresentationMode: false,
+  isFocusMode: false,
 
   previewConfig: {
     showToc: true,
@@ -53,6 +58,9 @@ export const useViewStore = create<ViewStore>((set, get) => ({
   // 演示模式
   enterPresentationMode: () => set({ isPresentationMode: true }),
   exitPresentationMode: () => set({ isPresentationMode: false }),
+
+  // 专注模式
+  toggleFocusMode: () => set((state) => ({ isFocusMode: !state.isFocusMode })),
 
   // 预览配置
   setPreviewConfig: (config) =>
