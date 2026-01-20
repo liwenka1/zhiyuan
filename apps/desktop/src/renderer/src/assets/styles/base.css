@@ -38,3 +38,9 @@
   min-width: 0 !important;
   display: block !important;
 }
+
+/* 覆盖 highlight.js 默认样式，让 Tailwind Typography 控制布局 */
+.prose pre code.hljs {
+  padding: 0 !important;
+  background: transparent !important;
+}

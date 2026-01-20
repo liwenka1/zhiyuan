@@ -48,17 +48,10 @@ export const ThemeColors = {
   link: "--link",
   highlight: "--highlight",
 
-  // 新增：语义化颜色变量
   // 编辑器专用颜色
   editorTitle: "--editor-title",
   editorLink: "--editor-link",
-  editorList: "--editor-list",
-
-  // 预览专用颜色
-  previewTitle: "--preview-title",
-  previewLink: "--preview-link",
-  previewList: "--preview-list",
-  previewCodeBg: "--preview-code-bg"
+  editorList: "--editor-list"
 } as const;
 
 /**

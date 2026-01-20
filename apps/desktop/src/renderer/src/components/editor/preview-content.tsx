@@ -11,7 +11,6 @@ import mermaid from "mermaid";
 import "highlight.js/styles/github.css";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
-import "@/assets/styles/preview.css";
 import { useTranslation } from "react-i18next";
 import { createUrlTransformer } from "@/lib/resource-resolver";
 

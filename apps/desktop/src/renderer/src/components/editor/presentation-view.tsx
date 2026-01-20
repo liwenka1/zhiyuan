@@ -10,7 +10,6 @@ import { useViewStore, useNoteStore } from "@/stores";
 import { createUrlTransformer } from "@/lib/resource-resolver";
 import { usePlatform } from "@/components/titlebar/use-platform";
 import { cn } from "@/lib/utils";
-import "@/assets/styles/preview.css";
 
 /**
  * 演示模式视图
