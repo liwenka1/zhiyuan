@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, Wand2, List, Pin, PinOff, Presentation } from "lucide-react";
-import { motion } from "motion/react";
+import { Eye, Wand2, List, Pin, PinOff, Presentation, Focus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -17,7 +16,10 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
   const enterPresentationMode = useViewStore((state) => state.enterPresentationMode);
+  const isFocusMode = useViewStore((state) => state.isFocusMode);
+  const toggleFocusMode = useViewStore((state) => state.toggleFocusMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
+  const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
   const { t } = useTranslation("editor");
   const [tocOpen, setTocOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
@@ -27,6 +29,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   };
 
   const isPreviewMode = editorMode === "preview";
+  const hasNote = !!selectedNoteId;
 
   // 监听编辑模式变化，切换时关闭目录
   useEffect(() => {
@@ -39,16 +42,23 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   return (
     <div className="flex h-12 shrink-0 items-center justify-end px-3">
       {/* 工具按钮 */}
-      <motion.div
-        className="flex shrink-0 items-center gap-1"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3, delay: 0.1 }}
-      >
+      <div className="flex shrink-0 items-center gap-1">
+        {/* 专注模式按钮 */}
+        <Toggle
+          size="sm"
+          className="hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
+          aria-label={t("toolbar.focus")}
+          pressed={isFocusMode}
+          onPressedChange={toggleFocusMode}
+          disabled={!hasNote}
+        >
+          <Focus className="h-4 w-4" />
+        </Toggle>
+
         {/* 预览按钮 */}
         <Toggle
           size="sm"
-          className="data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
+          className="hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
           aria-label={t("toolbar.preview")}
           pressed={editorMode === "preview"}
           onPressedChange={() => toggleEditorMode("preview")}
@@ -126,7 +136,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
             </div>
           </PopoverContent>
         </Popover>
-      </motion.div>
+      </div>
     </div>
   );
 }

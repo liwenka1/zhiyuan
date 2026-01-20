@@ -4,6 +4,7 @@
     "title": "选择或创建一篇笔记开始写作"
   },
   "toolbar": {
+    "focus": "专注模式",
     "preview": "预览模式",
     "presentation": "演示模式",
     "format": "格式化",
