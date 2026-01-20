@@ -133,8 +133,14 @@ function createCustomTheme(isDark: boolean): Extension {
     { tag: tags.processingInstruction, color: "var(--editor-title)" },
     { tag: tags.heading, color: "var(--editor-title)" },
 
+    // 粗体
+    { tag: tags.strong, color: "var(--editor-strong)" },
+
+    // 斜体
+    { tag: tags.emphasis, color: "var(--editor-emphasis)" },
+
     // 删除线
-    { tag: tags.strikethrough, color: "var(--muted-foreground)" },
+    { tag: tags.strikethrough, color: "var(--editor-strikethrough)" },
 
     // 链接
     { tag: tags.link, color: "var(--editor-link)" },
