@@ -4,17 +4,10 @@
   }
 
   html {
-    font-family:
-      "LXGW WenKai",
-      "PingFang SC",
-      "Microsoft YaHei",
-      -apple-system,
-      BlinkMacSystemFont,
-      system-ui,
-      sans-serif;
-    font-size: 16px;
-    line-height: 1.5;
-    letter-spacing: 0.3px;
+    font-family: var(--editor-font);
+    font-size: var(--editor-font-size);
+    line-height: var(--editor-line-height);
+    letter-spacing: var(--editor-letter-spacing);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

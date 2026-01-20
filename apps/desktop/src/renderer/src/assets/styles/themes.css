@@ -24,15 +24,6 @@
   background: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
 }
 
-/* 标题栏拖拽区域 (macOS) */
-.titlebar-drag-region {
-  -webkit-app-region: drag;
-}
-
-.titlebar-no-drag {
-  -webkit-app-region: no-drag;
-}
-
 /* 分割线悬停效果 */
 [data-panel-group-direction="horizontal"] > [data-resize-handle] {
   transition: background-color 0.15s ease;
@@ -58,13 +49,6 @@
   transition: background-color 0.15s ease;
 }
 
-/* 工具栏按钮过渡 */
-.toolbar-button {
-  transition:
-    opacity 0.2s ease,
-    background-color 0.15s ease;
-}
-
 /* 空状态样式 */
 .empty-state {
   user-select: none;
@@ -72,9 +56,4 @@
 
 .empty-state-icon {
   opacity: 0.2;
-}
-
-/* 编辑器焦点样式 */
-.editor-focused {
-  outline: none;
 }
