@@ -130,7 +130,6 @@ function createCustomTheme(isDark: boolean): Extension {
     { tag: tags.heading6, fontWeight: "600", color: "var(--editor-title)" },
 
     // 标题标记
-    { tag: tags.processingInstruction, color: "var(--editor-title)" },
     { tag: tags.heading, color: "var(--editor-title)" },
 
     // 粗体
@@ -171,7 +170,6 @@ function createCustomTheme(isDark: boolean): Extension {
 
     // 注释和元信息
     { tag: tags.comment, color: "var(--editor-comment)", fontStyle: "italic" },
-    { tag: tags.meta, color: "var(--editor-meta)" },
 
     // 标点符号
     { tag: tags.punctuation, color: "var(--tertiary-foreground)" },
