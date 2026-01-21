@@ -71,6 +71,19 @@ export interface ShellAPI {
   openExternal: (url: string) => Promise<void>;
 }
 
+// 窗口 API 接口
+export interface WindowAPI {
+  /**
+   * 设置窗口全屏状态
+   */
+  setFullScreen: (fullScreen: boolean) => Promise<void>;
+
+  /**
+   * 获取窗口全屏状态
+   */
+  isFullScreen: () => Promise<boolean>;
+}
+
 // 导出 API 接口
 export interface ExportAPI {
   /**
@@ -138,6 +151,7 @@ export interface API {
   folder: FolderAPI;
   shell: ShellAPI;
   export: ExportAPI;
+  window: WindowAPI;
 }
 
 declare global {
