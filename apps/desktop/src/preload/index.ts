@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
 import type { Theme } from "@shared";
 
@@ -328,6 +328,14 @@ const api = {
       lxgwBase64: string;
       jetBrainsBase64: string;
     }> => ipcRenderer.invoke("export:get-fonts-base64")
+  },
+
+  utils: {
+    /**
+     * 获取拖拽文件的本地路径
+     * 用于处理文件拖拽到编辑器的场景
+     */
+    getPathForFile: (file: File): string => webUtils.getPathForFile(file)
   }
 };
 

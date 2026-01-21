@@ -75,10 +75,22 @@ export function PreviewContent({ content, notePath }: PreviewContentProps) {
               },
               a({ href, children, ...props }) {
                 const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-                  // 如果是外部链接，在系统浏览器中打开
-                  if (href && (href.startsWith("http://") || href.startsWith("https://"))) {
+                  if (!href) return;
+
+                  // 外部链接，在系统浏览器中打开
+                  if (href.startsWith("http://") || href.startsWith("https://")) {
                     e.preventDefault();
                     window.api.shell.openExternal(href);
+                    return;
+                  }
+
+                  // 本地文件链接（local-resource:// 协议），用系统默认程序打开
+                  if (href.startsWith("local-resource://")) {
+                    e.preventDefault();
+                    // 从 local-resource:// URL 中提取本地路径，需要解码 URL 编码的字符
+                    const localPath = decodeURIComponent(href.replace("local-resource://", ""));
+                    window.api.shell.openPath(localPath);
+                    return;
                   }
                 };
                 return (
