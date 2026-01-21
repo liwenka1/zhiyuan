@@ -143,6 +143,15 @@ export interface ExportAPI {
   }>;
 }
 
+// 工具 API 接口
+export interface UtilsAPI {
+  /**
+   * 获取拖拽文件的本地路径
+   * 用于处理文件拖拽到编辑器的场景
+   */
+  getPathForFile: (file: File) => string;
+}
+
 // 扩展的 API 接口
 export interface API {
   theme: ThemeAPI;
@@ -152,6 +161,7 @@ export interface API {
   shell: ShellAPI;
   export: ExportAPI;
   window: WindowAPI;
+  utils: UtilsAPI;
 }
 
 declare global {

@@ -12,6 +12,24 @@ function App(): React.JSX.Element {
     initTheme();
   }, [initTheme]);
 
+  // 阻止 Electron 默认的文件拖放导航行为
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+    };
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener("dragover", handleDragOver);
+    document.addEventListener("drop", handleDrop);
+
+    return () => {
+      document.removeEventListener("dragover", handleDragOver);
+      document.removeEventListener("drop", handleDrop);
+    };
+  }, []);
+
   return (
     <>
       <NotePage />

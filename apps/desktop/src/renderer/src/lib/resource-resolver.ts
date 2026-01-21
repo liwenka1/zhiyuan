@@ -12,7 +12,21 @@ export function isRelativePath(src: string): boolean {
   if (!src) return false;
   // 排除协议路径和 data URI（包括自定义协议 local-resource）
   if (/^(https?:|data:|file:|blob:|#|mailto:|local-resource:)/.test(src)) return false;
+  // 排除本地绝对路径（macOS/Linux 以 / 开头，Windows 以盘符开头如 C:\）
+  if (/^(\/|[A-Za-z]:)/.test(src)) return false;
   return true;
+}
+
+/**
+ * 判断是否为本地绝对路径
+ * @param src 资源路径
+ * @returns 是否为本地绝对路径
+ */
+export function isLocalAbsolutePath(src: string): boolean {
+  if (!src) return false;
+  // macOS/Linux: 以 / 开头
+  // Windows: 以盘符开头，如 C:\ 或 C:/
+  return /^(\/|[A-Za-z]:[/\\])/.test(src);
 }
 
 /**
@@ -75,9 +89,17 @@ export function resolveLocalPath(src: string, notePath: string): string {
  */
 export function createUrlTransformer(notePath: string | undefined) {
   return (url: string): string => {
+    // 本地绝对路径转换为 local-resource:// 协议
+    // 例如: /Users/xxx/image.png -> local-resource:///Users/xxx/image.png
+    if (isLocalAbsolutePath(url)) {
+      return `local-resource://${url}`;
+    }
+
+    // 相对路径转换为基于笔记目录的 local-resource:// 协议
     if (notePath && isRelativePath(url)) {
       return resolveResourcePath(url, notePath);
     }
+
     return url;
   };
 }
