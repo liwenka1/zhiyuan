@@ -79,7 +79,7 @@ export function PresentationView() {
           {/* 内容区域 - 移除宽度限制，使用更大的内边距 */}
           <ScrollArea className="h-full flex-1">
             <motion.div
-              className="prose prose-slate prose-lg dark:prose-invert mx-full p-16"
+              className="prose dark:prose-invert mx-full p-16"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.3 }}
