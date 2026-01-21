@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
 import rehypeSlug from "rehype-slug";
@@ -62,7 +63,7 @@ export function PreviewContent({ content, notePath }: PreviewContentProps) {
       >
         {content ? (
           <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
+            remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
             rehypePlugins={[rehypeRaw, rehypeSlug, rehypeHighlight, rehypeKatex]}
             urlTransform={urlTransform}
             components={{
