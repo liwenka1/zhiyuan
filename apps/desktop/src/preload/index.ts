@@ -211,6 +211,18 @@ const api = {
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke("shell:openExternal", url)
   },
 
+  window: {
+    /**
+     * 设置窗口全屏状态
+     */
+    setFullScreen: (fullScreen: boolean): Promise<void> => ipcRenderer.invoke("window:setFullScreen", fullScreen),
+
+    /**
+     * 获取窗口全屏状态
+     */
+    isFullScreen: (): Promise<boolean> => ipcRenderer.invoke("window:isFullScreen")
+  },
+
   export: {
     /**
      * 将 Markdown 转换为 HTML
