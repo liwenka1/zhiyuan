@@ -1,0 +1,40 @@
+/**
+ * Tailwind Typography 主题映射
+ */
+
+.prose {
+  /* 正文 */
+  --tw-prose-body: var(--foreground);
+  /* 标题 */
+  --tw-prose-headings: var(--foreground);
+  /* 引言/lead */
+  --tw-prose-lead: var(--muted-foreground);
+  /* 链接 */
+  --tw-prose-links: var(--foreground);
+  /* 加粗 */
+  --tw-prose-bold: var(--foreground);
+  /* 有序列表序号 */
+  --tw-prose-counters: var(--muted-foreground);
+  /* 无序列表圆点 */
+  --tw-prose-bullets: var(--border);
+  /* 水平分隔线 */
+  --tw-prose-hr: var(--border);
+  /* 引用文字 */
+  --tw-prose-quotes: var(--foreground);
+  /* 引用边框 */
+  --tw-prose-quote-borders: var(--border);
+  /* 图片说明 */
+  --tw-prose-captions: var(--muted-foreground);
+  /* 行内代码 */
+  --tw-prose-code: var(--foreground);
+  /* 表头边框 */
+  --tw-prose-th-borders: var(--border);
+  /* 表格边框 */
+  --tw-prose-td-borders: var(--border);
+}
+
+/* 覆盖 highlight.js 默认样式，让 Tailwind Typography 控制布局 */
+.prose pre code.hljs {
+  padding: 0 !important;
+  background: transparent !important;
+}
