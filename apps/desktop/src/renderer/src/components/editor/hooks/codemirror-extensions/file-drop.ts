@@ -24,6 +24,40 @@ function generateMarkdownFileReference(filePath: string, fileName: string): stri
 }
 
 /**
+ * 获取拖放位置
+ * @param view EditorView 实例
+ * @param event DragEvent 实例
+ * @returns 返回计算出的插入位置
+ */
+function getDropPosition(view: EditorView, event: DragEvent): number {
+  const { clientX, clientY } = event;
+  
+  // 情况 1：优先使用精确坐标计算
+  const pos = view.posAtCoords({ x: clientX, y: clientY });
+  if (pos !== null) {
+    return pos;
+  }
+
+  // posAtCoords 失败，需要兜底
+  try {
+    // 获取内容区域边界
+    const rect = view.contentDOM.getBoundingClientRect();
+    const midY = rect.top + rect.height / 2;
+
+    // 情况 2：拖拽在内容区上半部分 → 插入到开头
+    if (clientY < midY) {
+      return 0;
+    }
+    
+    // 情况 3：拖拽在内容区下半部分 → 插入到末尾
+    return view.state.doc.length;
+  } catch {
+    // 情况 4：极端兜底 → 插入到当前光标位置
+    return view.state.selection.main.head;
+  }
+}
+
+/**
  * 创建文件拖放处理扩展
  * 在 CodeMirror 层面拦截文件拖放，防止默认的文本插入行为
  */
@@ -45,7 +79,7 @@ export function createFileDropExtension(): Extension {
       event.preventDefault();
 
       // 获取拖放位置
-      const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+      const pos = getDropPosition(view, event);
       if (pos === null) {
         return true;
       }
