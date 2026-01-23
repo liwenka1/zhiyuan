@@ -1,20 +1,12 @@
-import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
-import { languages } from "@codemirror/language-data";
-import { EditorView, keymap } from "@codemirror/view";
 import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
-import { search } from "@codemirror/search";
+import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
-
-interface UseCodemirrorOptions {
-  isDark?: boolean;
-  onOpenSearch?: () => void;
-}
 
 /**
  * 创建使用项目 CSS 变量的自定义编辑器主题
  */
-function createCustomTheme(isDark: boolean): Extension {
+export function createCustomTheme(isDark: boolean): Extension {
   const baseTheme = EditorView.theme(
     {
       // 编辑器容器
@@ -180,56 +172,4 @@ function createCustomTheme(isDark: boolean): Extension {
   ]);
 
   return [baseTheme, syntaxHighlighting(highlightStyle)];
-}
-
-/**
- * 创建自定义快捷键的 keymap
- * 覆盖 CodeMirror 的内置搜索快捷键，使用应用自定义的搜索功能
- */
-function createCustomKeymapExtension(onOpenSearch?: () => void): Extension {
-  // 创建一个通用的处理器，返回 true 表示已处理事件，阻止默认行为
-  const disableHandler = () => true;
-
-  return keymap.of([
-    // 搜索快捷键 (Cmd+F / Ctrl+F) - 触发自定义搜索
-    {
-      key: "Mod-f",
-      run: () => {
-        onOpenSearch?.();
-        return true;
-      }
-    },
-    // 禁用替换快捷键 (Cmd+H / Ctrl+H)
-    { key: "Mod-h", run: disableHandler },
-    // 禁用查找下一个 (Cmd+G / Ctrl+G)
-    { key: "Mod-g", run: disableHandler },
-    // 禁用查找上一个 (Shift+Cmd+G / Shift+Ctrl+G)
-    { key: "Shift-Mod-g", run: disableHandler },
-    // 禁用选择所有匹配项 (Cmd+Shift+L / Ctrl+Shift+L)
-    { key: "Shift-Mod-l", run: disableHandler },
-    // 禁用 Alt+G (跳转到行)
-    { key: "Alt-g", run: disableHandler }
-  ]);
-}
-
-export function useCodemirrorExtensions(options: UseCodemirrorOptions = {}): {
-  extensions: Extension[];
-  theme: Extension;
-} {
-  const { isDark = false, onOpenSearch } = options;
-
-  const customTheme = createCustomTheme(isDark);
-  const customKeymap = createCustomKeymapExtension(onOpenSearch);
-
-  const extensions: Extension[] = [
-    markdown({
-      base: markdownLanguage,
-      codeLanguages: languages
-    }),
-    EditorView.lineWrapping,
-    search({ createPanel: () => ({ dom: document.createElement("div") }) }), // 搜索扩展（隐藏默认面板）
-    customKeymap
-  ];
-
-  return { extensions, theme: customTheme };
 }
