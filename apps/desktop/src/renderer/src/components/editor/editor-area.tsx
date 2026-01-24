@@ -1,6 +1,6 @@
 import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
-import { PreviewContent } from "./preview-content";
+import { PreviewContent } from "./components";
 import { EmptyEditor } from "./empty-state";
 import { useViewStore } from "@/stores";
 
