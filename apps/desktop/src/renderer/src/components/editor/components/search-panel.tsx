@@ -3,7 +3,7 @@ import { ChevronUp, ChevronDown, X, Replace } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "react-i18next";
-import type { UseEditorSearchReturn } from "./hooks/use-editor-search";
+import type { UseEditorSearchReturn } from "../hooks/use-editor-search";
 
 interface SearchPanelProps {
   search: UseEditorSearchReturn;

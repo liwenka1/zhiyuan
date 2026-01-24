@@ -31,7 +31,7 @@ function generateMarkdownFileReference(filePath: string, fileName: string): stri
  */
 function getDropPosition(view: EditorView, event: DragEvent): number {
   const { clientX, clientY } = event;
-  
+
   // 情况 1：优先使用精确坐标计算
   const pos = view.posAtCoords({ x: clientX, y: clientY });
   if (pos !== null) {
@@ -48,7 +48,7 @@ function getDropPosition(view: EditorView, event: DragEvent): number {
     if (clientY < midY) {
       return 0;
     }
-    
+
     // 情况 3：拖拽在内容区下半部分 → 插入到末尾
     return view.state.doc.length;
   } catch {
