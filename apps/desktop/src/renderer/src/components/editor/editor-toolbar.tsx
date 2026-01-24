@@ -62,6 +62,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
           aria-label={t("toolbar.preview")}
           pressed={editorMode === "preview"}
           onPressedChange={() => toggleEditorMode("preview")}
+          disabled={!hasNote}
         >
           <Eye className="h-4 w-4" />
         </Toggle>
@@ -73,6 +74,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
           className="h-8 w-8 p-0"
           aria-label={t("toolbar.presentation")}
           onClick={enterPresentationMode}
+          disabled={!hasNote}
         >
           <Presentation className="h-4 w-4" />
         </Button>
@@ -84,7 +86,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
           className="h-8 w-8 p-0"
           aria-label={t("toolbar.format")}
           onClick={handleFormat}
-          disabled={isPreviewMode}
+          disabled={!hasNote || isPreviewMode}
         >
           <Wand2 className="h-4 w-4" />
         </Button>
@@ -97,7 +99,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
               size="sm"
               className="h-8 w-8 p-0"
               aria-label={t("toolbar.toc")}
-              disabled={!isPreviewMode}
+              disabled={!hasNote || !isPreviewMode}
             >
               <List className="h-4 w-4" />
             </Button>
