@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { NotePage } from "@/pages/note";
+import { NoteWorkspace } from "@/components/note-workspace";
 import { useThemeStore } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/components/editor";
@@ -32,7 +32,7 @@ function App(): React.JSX.Element {
 
   return (
     <>
-      <NotePage />
+      <NoteWorkspace />
       <PresentationView />
       <Toaster position="bottom-right" />
     </>
