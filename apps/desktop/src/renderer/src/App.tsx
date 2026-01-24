@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { NoteWorkspace } from "@/components/note-workspace";
+import { NoteWorkspace } from "@/features/note-workspace";
 import { useThemeStore } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
-import { PresentationView } from "@/components/editor";
+import { PresentationView } from "@/features/editor";
 
 function App(): React.JSX.Element {
   const initTheme = useThemeStore((state) => state.initTheme);
