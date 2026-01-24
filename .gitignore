@@ -16,6 +16,8 @@ pnpm-debug.log*
 # Editor
 .vscode/
 .cursor/
+.github/*
+!.github/workflows/
 .shared/
 .idea/
 *.swp
