@@ -1,6 +1,5 @@
 import { MainLayout } from "@/layouts/main-layout";
-import { FolderTree } from "@/components/sidebar/folder-tree";
-import { NoteList } from "@/components/sidebar/note-list";
+import { FolderTree, NoteList } from "@/components/sidebar";
 import { EditorArea } from "@/features/editor/editor-area";
 import { NoteDialogs } from "./note-dialogs";
 import { useNoteStore } from "@/stores";
