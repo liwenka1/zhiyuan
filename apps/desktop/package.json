@@ -1,6 +1,6 @@
 {
   "name": "desktop",
-  "version": "0.0.2-beta",
+  "version": "0.0.3-beta",
   "private": true,
   "description": "纸鸢 - 优雅的 Markdown 编辑器",
   "main": "./out/main/index.js",
