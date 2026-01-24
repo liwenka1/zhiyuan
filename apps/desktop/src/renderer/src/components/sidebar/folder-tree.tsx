@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
-import { ThemeToggle, LanguageToggle, WorkspaceToggle } from "@/components/theme";
+import { ThemeToggle, LanguageToggle, WorkspaceToggle } from "@/features/theme";
 import { useTranslation } from "react-i18next";
 
 // 特殊 ID 表示「全部笔记」

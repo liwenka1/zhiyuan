@@ -5,7 +5,12 @@ import { toast } from "sonner";
 
 export interface NoteHandlers {
   handleCreateNote: () => Promise<void>;
-  handleShowNoteInExplorer: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
+  handleShowNoteInExplorer: (note: {
+    id: string;
+    title: string;
+    updatedAt?: string;
+    isPinned?: boolean;
+  }) => Promise<void>;
   handleDeleteNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
   handleRenameNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   handleDuplicateNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
