@@ -13,6 +13,8 @@
   },
   "contextMenu": {
     "showInExplorer": "Show in File Manager",
+    "pin": "Pin Note",
+    "unpin": "Unpin Note",
     "rename": "Rename",
     "duplicate": "Duplicate",
     "export": "Export",
@@ -23,6 +25,11 @@
     "exportAsImagePages": "Export as Images (Pages)",
     "copyToWechat": "Copy to WeChat Official Account",
     "delete": "Delete Note"
+  },
+  "pin": {
+    "pinSuccess": "Note pinned",
+    "unpinSuccess": "Note unpinned",
+    "failed": "Operation failed, please try again"
   },
   "export": {
     "exporting": "Exporting...",

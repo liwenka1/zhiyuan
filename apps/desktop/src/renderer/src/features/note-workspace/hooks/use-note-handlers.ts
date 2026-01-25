@@ -14,6 +14,7 @@ export interface NoteHandlers {
   handleDeleteNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
   handleRenameNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   handleDuplicateNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
+  handleTogglePinNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
   handleExportNote: (
     note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
@@ -37,6 +38,7 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
   const createNote = useNoteStore((state) => state.createNote);
   const deleteNote = useNoteStore((state) => state.deleteNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
+  const togglePinNote = useNoteStore((state) => state.togglePinNote);
   const exportNoteAsHTML = useNoteStore((state) => state.exportNoteAsHTML);
   const exportNoteAsPDF = useNoteStore((state) => state.exportNoteAsPDF);
   const exportNoteAsPDFPages = useNoteStore((state) => state.exportNoteAsPDFPages);
@@ -90,6 +92,16 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
       await duplicateNote(note.id);
     } catch (error) {
       console.error("复制笔记失败:", error);
+    }
+  };
+
+  // 切换置顶状态
+  const handleTogglePinNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    try {
+      await togglePinNote(note.id);
+    } catch (error) {
+      console.error("切换置顶状态失败:", error);
+      toast.error(t("pin.failed"));
     }
   };
 
@@ -151,6 +163,7 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     handleDeleteNote,
     handleRenameNote,
     handleDuplicateNote,
+    handleTogglePinNote,
     handleExportNote,
     handleCopyToWechat
   };

@@ -3,13 +3,15 @@ import Store from "electron-store";
 interface AppConfig {
   workspacePath: string | null;
   recentWorkspaces: string[];
+  pinnedNotes: Record<string, string[]>;
 }
 
 // 创建配置存储实例
 const store = new Store<AppConfig>({
   defaults: {
     workspacePath: null,
-    recentWorkspaces: []
+    recentWorkspaces: [],
+    pinnedNotes: {}
   }
 });
 
@@ -60,5 +62,22 @@ export const configManager = {
    */
   clear(): void {
     store.clear();
+  },
+
+  /**
+   * 获取工作区的置顶笔记列表
+   */
+  getPinnedNotes(workspacePath: string): string[] {
+    const pinnedNotes = store.get("pinnedNotes");
+    return pinnedNotes[workspacePath] || [];
+  },
+
+  /**
+   * 设置工作区的置顶笔记列表
+   */
+  setPinnedNotes(workspacePath: string, noteIds: string[]): void {
+    const pinnedNotes = store.get("pinnedNotes");
+    pinnedNotes[workspacePath] = noteIds;
+    store.set("pinnedNotes", pinnedNotes);
   }
 };

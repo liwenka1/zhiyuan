@@ -26,14 +26,18 @@ export function useNoteData() {
     return filtered;
   }, [notes, selectedFolderId, searchKeyword]);
 
-  // 格式化笔记列表数据（置顶笔记排在前面）
+  // 格式化笔记列表数据（置顶笔记排在前面，相同状态下按更新时间排序）
   const formattedNotes = useMemo(() => {
     return filteredNotes
       .sort((a, b) => {
-        // 置顶笔记优先
+        // 1. 置顶笔记优先
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
-        return 0;
+
+        // 2. 相同置顶状态下，按更新时间降序（最新的在前）
+        const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        return timeB - timeA;
       })
       .map((note) => ({
         id: note.id,

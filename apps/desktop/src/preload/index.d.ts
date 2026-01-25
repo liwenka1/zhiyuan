@@ -152,6 +152,19 @@ export interface UtilsAPI {
   getPathForFile: (file: File) => string;
 }
 
+// 配置 API 接口
+export interface ConfigAPI {
+  /**
+   * 获取工作区的置顶笔记列表
+   */
+  getPinnedNotes: (workspacePath: string) => Promise<string[]>;
+
+  /**
+   * 设置工作区的置顶笔记列表
+   */
+  setPinnedNotes: (workspacePath: string, noteIds: string[]) => Promise<void>;
+}
+
 // 扩展的 API 接口
 export interface API {
   theme: ThemeAPI;
@@ -162,6 +175,7 @@ export interface API {
   export: ExportAPI;
   window: WindowAPI;
   utils: UtilsAPI;
+  config: ConfigAPI;
 }
 
 declare global {
