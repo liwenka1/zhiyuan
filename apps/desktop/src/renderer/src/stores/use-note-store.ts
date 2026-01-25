@@ -29,6 +29,7 @@ interface NoteStore {
   deleteNote: (noteId: string) => void;
   renameNote: (noteId: string, newTitle: string) => Promise<void>;
   duplicateNote: (noteId: string) => Promise<void>;
+  togglePinNote: (noteId: string) => Promise<void>;
 
   // 搜索相关
   setSearchKeyword: (keyword: string) => void;
@@ -398,6 +399,35 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
   },
 
+  togglePinNote: async (noteId) => {
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const note = get().notes.find((n) => n.id === noteId);
+
+    if (!workspacePath || !note) {
+      console.error("没有工作区路径或笔记不存在，无法切换置顶状态");
+      return;
+    }
+
+    try {
+      // 切换置顶状态
+      const newPinnedState = !note.isPinned;
+
+      // 更新内存中的状态
+      set((state) => ({
+        notes: state.notes.map((n) => (n.id === noteId ? { ...n, isPinned: newPinnedState } : n))
+      }));
+
+      // 持久化到配置
+      const allPinnedNotes = get()
+        .notes.filter((n) => n.isPinned)
+        .map((n) => n.id);
+      await window.api.config.setPinnedNotes(workspacePath, allPinnedNotes);
+    } catch (error) {
+      console.error("切换置顶状态失败:", error);
+      throw error;
+    }
+  },
+
   // 工具方法
   getSelectedNote: () => {
     const { notes, selectedNoteId } = get();
@@ -410,10 +440,28 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   // 从文件系统加载数据
-  loadFromFileSystem: (data) => {
+  loadFromFileSystem: async (data) => {
+    // 从配置中加载置顶笔记列表
+    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    let pinnedNoteIds: string[] = [];
+
+    if (workspacePath) {
+      try {
+        pinnedNoteIds = await window.api.config.getPinnedNotes(workspacePath);
+      } catch (error) {
+        console.error("加载置顶笔记列表失败:", error);
+      }
+    }
+
+    // 将置顶状态应用到笔记数据
+    const notesWithPinState = data.notes.map((note) => ({
+      ...note,
+      isPinned: pinnedNoteIds.includes(note.id)
+    }));
+
     set({
       folders: data.folders,
-      notes: data.notes,
+      notes: notesWithPinState,
       selectedFolderId: null,
       selectedNoteId: null,
       editorContent: "",

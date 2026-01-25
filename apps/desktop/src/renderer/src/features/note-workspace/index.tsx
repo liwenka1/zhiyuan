@@ -70,6 +70,7 @@ export function NoteWorkspace() {
             onDeleteNote={noteHandlers.handleDeleteNote}
             onRenameNote={noteHandlers.handleRenameNote}
             onDuplicateNote={noteHandlers.handleDuplicateNote}
+            onTogglePinNote={noteHandlers.handleTogglePinNote}
             onExportNote={noteHandlers.handleExportNote}
             onCopyToWechat={noteHandlers.handleCopyToWechat}
           />

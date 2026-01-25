@@ -13,6 +13,8 @@
   },
   "contextMenu": {
     "showInExplorer": "在文件管理器中查看",
+    "pin": "置顶笔记",
+    "unpin": "取消置顶",
     "rename": "重命名",
     "duplicate": "创建副本",
     "export": "导出",
@@ -23,6 +25,11 @@
     "exportAsImagePages": "导出为图片（分页）",
     "copyToWechat": "复制到微信公众号",
     "delete": "删除笔记"
+  },
+  "pin": {
+    "pinSuccess": "已置顶笔记",
+    "unpinSuccess": "已取消置顶",
+    "failed": "操作失败，请重试"
   },
   "export": {
     "exporting": "正在导出...",

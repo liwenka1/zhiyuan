@@ -1,4 +1,4 @@
-import { FileText, Inbox, SquarePen, Pin, Search, Eye, Trash2, Copy, Pencil, Download } from "lucide-react";
+import { FileText, Inbox, SquarePen, Pin, PinOff, Search, Eye, Trash2, Copy, Pencil, Download } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ interface NoteListProps {
   onDeleteNote?: (note: Note) => void;
   onRenameNote?: (note: Note) => void;
   onDuplicateNote?: (note: Note) => void;
+  onTogglePinNote?: (note: Note) => void;
   onExportNote?: (note: Note, format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages") => void;
   onCopyToWechat?: (note: Note) => void;
 }
@@ -50,6 +51,7 @@ export function NoteList({
   onDeleteNote,
   onRenameNote,
   onDuplicateNote,
+  onTogglePinNote,
   onExportNote,
   onCopyToWechat
 }: NoteListProps) {
@@ -160,6 +162,20 @@ export function NoteList({
                     <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
                       <Eye className="h-4 w-4" />
                       <span>{t("contextMenu.showInExplorer")}</span>
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => onTogglePinNote?.(note)}>
+                      {note.isPinned ? (
+                        <>
+                          <PinOff className="h-4 w-4" />
+                          <span>{t("contextMenu.unpin")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Pin className="h-4 w-4" />
+                          <span>{t("contextMenu.pin")}</span>
+                        </>
+                      )}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem onClick={() => onRenameNote?.(note)}>

@@ -2,6 +2,7 @@ import { ipcMain, shell } from "electron";
 import { workspaceManager } from "../workspace";
 import { fileSystem } from "../file-system";
 import { fileWatcher } from "../file-watcher";
+import { configManager } from "../config";
 
 /**
  * 注册工作区和文件系统相关的 IPC 处理器
@@ -107,5 +108,15 @@ export function registerWorkspaceHandlers(): void {
   // 在系统默认浏览器中打开链接
   ipcMain.handle("shell:openExternal", async (_, url: string) => {
     await shell.openExternal(url);
+  });
+
+  // 获取工作区的置顶笔记
+  ipcMain.handle("config:getPinnedNotes", (_, workspacePath: string) => {
+    return configManager.getPinnedNotes(workspacePath);
+  });
+
+  // 设置工作区的置顶笔记
+  ipcMain.handle("config:setPinnedNotes", (_, workspacePath: string, noteIds: string[]) => {
+    configManager.setPinnedNotes(workspacePath, noteIds);
   });
 }
