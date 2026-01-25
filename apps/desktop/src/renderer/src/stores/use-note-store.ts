@@ -2,6 +2,13 @@ import { create } from "zustand";
 import { Folder, Note } from "@/types";
 import { formatMarkdown } from "@/lib/formatter";
 import i18n from "@/lib/i18n";
+import { toast } from "sonner";
+import { useWorkspaceStore } from "./use-workspace-store";
+import { markdownToHTML } from "@/lib/markdown-processor";
+import { generateHTMLDocument } from "@/lib/markdown-to-html";
+import { splitMarkdownByHr } from "@/lib/markdown-splitter";
+import { generateWechatHTMLDocument } from "@/lib/wechat-html";
+import { inlineCSS } from "@/lib/css-inliner";
 
 interface NoteStore {
   // 状态
@@ -81,7 +88,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   createFolder: async (name) => {
     // 从工作区 store 获取当前工作区路径
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
 
     if (!workspacePath) {
       console.error("没有工作区路径，无法创建文件夹");
@@ -120,7 +127,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   renameFolder: async (folderId, newName) => {
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
     const folder = get().folders.find((f) => f.id === folderId);
 
     if (!workspacePath || !folder?.path) {
@@ -184,7 +191,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
   createNote: async (folderId) => {
     // 从工作区 store 获取当前工作区路径
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
 
     if (!workspacePath) {
       console.error("没有工作区路径，无法创建笔记");
@@ -301,7 +308,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   renameNote: async (noteId, newTitle) => {
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
     const note = get().notes.find((n) => n.id === noteId);
 
     if (!workspacePath || !note?.filePath) {
@@ -344,7 +351,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   duplicateNote: async (noteId) => {
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
     const note = get().notes.find((n) => n.id === noteId);
 
     if (!workspacePath || !note?.filePath || !note.fileName) {
@@ -400,7 +407,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   togglePinNote: async (noteId) => {
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
     const note = get().notes.find((n) => n.id === noteId);
 
     if (!workspacePath || !note) {
@@ -442,7 +449,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   // 从文件系统加载数据
   loadFromFileSystem: async (data) => {
     // 从配置中加载置顶笔记列表
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
     let pinnedNoteIds: string[] = [];
 
     if (workspacePath) {
@@ -478,13 +485,14 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     try {
       await window.api.file.write(note.filePath, content);
     } catch (error) {
-      console.error("保存笔记失败:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${i18n.t("note:errors.saveNoteFailed")}: ${errorMessage}`);
     }
   },
 
   // 处理外部添加的文件
   handleFileAdded: async (filePath, fullPath) => {
-    const workspacePath = (await import("./use-workspace-store")).useWorkspaceStore.getState().workspacePath;
+    const workspacePath = useWorkspaceStore.getState().workspacePath;
     if (!workspacePath) return;
 
     // 检查是否已存在（避免重复添加）
@@ -664,11 +672,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       }
 
       // 3. 将 Markdown 转换为 HTML
-      const { markdownToHTML } = await import("@/lib/markdown-processor");
       const htmlBody = await markdownToHTML(note.content);
 
       // 4. 生成完整的 HTML 文档（带字体路径）
-      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
       const fullHTML = generateHTMLDocument(note.title, htmlBody, {
         isDark,
         fonts: { type: "path", path: "./assets" }
@@ -717,11 +723,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const fonts = await window.api.export.getFontsBase64();
 
       // 4. 将 Markdown 转换为 HTML
-      const { markdownToHTML } = await import("@/lib/markdown-processor");
       const htmlBody = await markdownToHTML(note.content);
 
       // 5. 生成完整的 HTML 文档（内嵌字体）
-      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
       const fullHTML = generateHTMLDocument(note.title, htmlBody, {
         isDark,
         fonts: { type: "embedded", ...fonts }
@@ -768,7 +772,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const fonts = await window.api.export.getFontsBase64();
 
       // 4. 分割 Markdown
-      const { splitMarkdownByHr } = await import("@/lib/markdown-splitter");
       const sections = splitMarkdownByHr(note.content);
 
       if (sections.length === 0) {
@@ -776,9 +779,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       }
 
       // 5. 为每个分片生成 HTML（内嵌字体）
-      const { markdownToHTML } = await import("@/lib/markdown-processor");
-      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
-
       const htmlContents = await Promise.all(
         sections.map(async (section) => {
           const htmlBody = await markdownToHTML(section);
@@ -832,11 +832,9 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const fonts = await window.api.export.getFontsBase64();
 
       // 4. 将 Markdown 转换为 HTML
-      const { markdownToHTML } = await import("@/lib/markdown-processor");
       const htmlBody = await markdownToHTML(note.content);
 
       // 5. 生成完整的 HTML 文档（内嵌字体）
-      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
       const fullHTML = generateHTMLDocument(note.title, htmlBody, {
         isDark,
         fonts: { type: "embedded", ...fonts }
@@ -883,7 +881,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       const fonts = await window.api.export.getFontsBase64();
 
       // 4. 分割 Markdown
-      const { splitMarkdownByHr } = await import("@/lib/markdown-splitter");
       const sections = splitMarkdownByHr(note.content);
 
       if (sections.length === 0) {
@@ -891,9 +888,6 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       }
 
       // 5. 为每个分片生成 HTML（内嵌字体）
-      const { markdownToHTML } = await import("@/lib/markdown-processor");
-      const { generateHTMLDocument } = await import("@/lib/markdown-to-html");
-
       const htmlContents = await Promise.all(
         sections.map(async (section) => {
           const htmlBody = await markdownToHTML(section);
@@ -924,15 +918,12 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
     try {
       // 1. 将 Markdown 转换为 HTML
-      const { markdownToHTML } = await import("@/lib/markdown-processor");
       const htmlBody = await markdownToHTML(note.content);
 
       // 2. 生成适配微信公众号的 HTML 文档
-      const { generateWechatHTMLDocument } = await import("@/lib/wechat-html");
       const wechatHTML = generateWechatHTMLDocument(note.title, htmlBody);
 
       // 3. 将 CSS 内联化（在渲染进程处理）
-      const { inlineCSS } = await import("@/lib/css-inliner");
       const inlinedHTML = inlineCSS(wechatHTML);
 
       // 4. 复制到剪贴板
