@@ -85,6 +85,7 @@
     "renameFolderFailed": "Failed to rename folder, please try again",
     "renameNoteFailed": "Failed to rename note, please try again",
     "duplicateNoteFailed": "Failed to duplicate note, please try again",
+    "saveNoteFailed": "Failed to save note, please check disk space and permissions",
     "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app"
   }
 }

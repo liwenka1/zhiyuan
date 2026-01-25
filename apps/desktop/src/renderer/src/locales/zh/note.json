@@ -85,6 +85,7 @@
     "renameFolderFailed": "重命名文件夹失败，请重试",
     "renameNoteFailed": "重命名笔记失败，请重试",
     "duplicateNoteFailed": "复制笔记失败，请重试",
+    "saveNoteFailed": "保存笔记失败，请检查磁盘空间和权限",
     "initWorkspaceFailed": "初始化工作区失败，请检查文件系统权限或重启应用"
   }
 }
