@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import CodeMirror from "@uiw/react-codemirror";
-import { useCodemirrorExtensions, useEditorSearch } from "./hooks";
-import { SearchPanel } from "./components";
+import { useCodemirrorExtensions, useEditorSearch } from "../hooks";
+import { SearchPanel } from "./search-panel";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useThemeStore } from "@/stores";
 import { useTranslation } from "react-i18next";
