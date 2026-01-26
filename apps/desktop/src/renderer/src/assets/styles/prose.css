@@ -31,6 +31,12 @@
   --tw-prose-th-borders: var(--border);
   /* 表格边框 */
   --tw-prose-td-borders: var(--border);
+
+  /* 统一编辑器和预览模式的文字样式 */
+  font-family: var(--editor-font);
+  font-size: var(--editor-font-size);
+  line-height: var(--editor-line-height);
+  letter-spacing: var(--editor-letter-spacing);
 }
 
 /* 覆盖 highlight.js 默认样式，让 Tailwind Typography 控制布局 */
