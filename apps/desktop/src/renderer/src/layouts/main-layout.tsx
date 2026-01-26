@@ -1,7 +1,7 @@
 import { ReactNode, CSSProperties } from "react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { TitleBar } from "@/features/titlebar";
-import { usePlatform } from "@/features/titlebar/use-platform";
+import { TitleBar } from "@/components/app";
+import { usePlatform } from "@/hooks";
 import { useViewStore } from "@/stores";
 import { cn } from "@/lib/utils";
 

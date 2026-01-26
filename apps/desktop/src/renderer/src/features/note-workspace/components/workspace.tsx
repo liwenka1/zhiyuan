@@ -1,9 +1,10 @@
 import { MainLayout } from "@/layouts/main-layout";
-import { FolderTree, NoteList } from "@/components/sidebar";
-import { EditorArea } from "@/features/editor/editor-area";
+import { FolderTree } from "./folder-tree";
+import { NoteList } from "./note-list";
 import { NoteDialogs } from "./note-dialogs";
+import { EditorArea } from "@/features/editor";
 import { useNoteStore } from "@/stores";
-import { useWorkspaceInit, useNoteHandlers, useFolderHandlers, useNoteData, useDialogState } from "./hooks";
+import { useWorkspaceInit, useNoteHandlers, useFolderHandlers, useNoteData, useDialogState } from "../hooks";
 
 /**
  * 笔记工作区
