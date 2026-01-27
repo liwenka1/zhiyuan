@@ -4,7 +4,12 @@
  * 样式与预览组件保持一致，基于 Tailwind Typography prose 类
  */
 
-import { getThemeColors, generateProseStyles, generateFontFaces, generateEmbeddedFontFaces } from "./export-styles";
+import {
+  getThemeColors,
+  generateProseStyles,
+  generateFontFaces,
+  generateEmbeddedFontFaces
+} from "@/features/export/lib/styles";
 
 // 直接导入库里的 CSS 文件（与预览模式使用相同的样式）
 import highlightLight from "highlight.js/styles/github.css?raw";

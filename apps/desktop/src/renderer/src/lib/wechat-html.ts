@@ -4,7 +4,7 @@
  * 样式基于统一的导出样式系统
  */
 
-import { getThemeColors, generateWechatStyles } from "./export-styles";
+import { getThemeColors, generateWechatStyles } from "@/features/export/lib/styles";
 
 /**
  * 生成适配微信公众号的 HTML 文档
