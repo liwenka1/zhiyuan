@@ -1,15 +1,11 @@
 import { create } from "zustand";
-import { ViewMode, EditorViewMode, PreviewConfig } from "@/types";
+import { EditorViewMode, PreviewConfig } from "@/types";
 
 interface ViewStore {
-  // 页面级模式（note）
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-
   // 编辑区模式（edit / preview）
   editorMode: EditorViewMode;
   setEditorMode: (mode: EditorViewMode) => void;
-  toggleEditorMode: (mode: EditorViewMode) => void; // 切换模式（如果已是该模式则返回 edit）
+  toggleEditorMode: (mode: EditorViewMode) => void;
 
   // 演示模式
   isPresentationMode: boolean;
@@ -27,14 +23,12 @@ interface ViewStore {
   toggleSyncScroll: () => void;
 
   // 工具方法
-  isNoteMode: () => boolean;
   isEditMode: () => boolean;
   isPreviewMode: () => boolean;
 }
 
 export const useViewStore = create<ViewStore>((set, get) => ({
   // 初始状态
-  viewMode: "note",
   editorMode: "edit",
   isPresentationMode: false,
   isFocusMode: false,
@@ -43,9 +37,6 @@ export const useViewStore = create<ViewStore>((set, get) => ({
     showToc: true,
     syncScroll: true
   },
-
-  // 页面级模式切换
-  setViewMode: (mode) => set({ viewMode: mode }),
 
   // 编辑区模式切换
   setEditorMode: (mode) => set({ editorMode: mode }),
@@ -85,7 +76,6 @@ export const useViewStore = create<ViewStore>((set, get) => ({
     })),
 
   // 工具方法
-  isNoteMode: () => get().viewMode === "note",
   isEditMode: () => get().editorMode === "edit",
   isPreviewMode: () => get().editorMode === "preview"
 }));

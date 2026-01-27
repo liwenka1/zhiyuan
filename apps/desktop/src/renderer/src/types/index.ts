@@ -26,20 +26,6 @@ export interface Note {
 }
 
 /**
- * 笔记编辑器类型
- */
-export interface EditorState {
-  content: string;
-  hasUnsavedChanges: boolean;
-}
-
-/**
- * 页面级视图模式
- * note: 笔记页面（三栏布局）
- */
-export type ViewMode = "note";
-
-/**
  * 编辑区视图模式
  * edit: 编辑模式
  * preview: 预览模式
