@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { InputDialog } from "@renderer/components/input-dialog";
-import { useNoteStore } from "@/stores";
+import { useNoteStore, useFolderStore } from "@/stores";
 
 interface NoteDialogsProps {
   // 创建文件夹
@@ -33,9 +33,9 @@ export function NoteDialogs({
   onCloseRenameFolderDialog
 }: NoteDialogsProps) {
   const { t } = useTranslation("note");
-  const createFolder = useNoteStore((state) => state.createFolder);
+  const createFolder = useFolderStore((state) => state.createFolder);
   const renameNote = useNoteStore((state) => state.renameNote);
-  const renameFolder = useNoteStore((state) => state.renameFolder);
+  const renameFolder = useFolderStore((state) => state.renameFolder);
 
   // 确认创建文件夹
   const handleConfirmCreateFolder = async (folderName: string) => {

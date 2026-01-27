@@ -1,4 +1,4 @@
-import { useNoteStore, useWorkspaceStore } from "@/stores";
+import { useFolderStore, useWorkspaceStore } from "@/stores";
 
 export interface FolderHandlers {
   handleCreateFolder: () => void;
@@ -17,7 +17,7 @@ interface UseFolderHandlersProps {
  * 处理所有文件夹相关的操作
  */
 export function useFolderHandlers({ onOpenCreateDialog, onOpenRenameDialog }: UseFolderHandlersProps): FolderHandlers {
-  const deleteFolder = useNoteStore((state) => state.deleteFolder);
+  const deleteFolder = useFolderStore((state) => state.deleteFolder);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
