@@ -1,31 +1,19 @@
 import { create } from "zustand";
-import { Folder, Note } from "@/types";
+import { Note } from "@/types";
 import { formatMarkdown } from "@/lib/formatter";
 import i18n from "@/lib/i18n";
 import { toast } from "sonner";
 import { useWorkspaceStore } from "./use-workspace-store";
-import { markdownToHTML } from "@/lib/markdown-processor";
-import { generateHTMLDocument } from "@/lib/markdown-to-html";
-import { splitMarkdownByHr } from "@/lib/markdown-splitter";
-import { generateWechatHTMLDocument } from "@/lib/wechat-html";
-import { inlineCSS } from "@/lib/css-inliner";
+import { useFolderStore } from "./use-folder-store";
+import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 
 interface NoteStore {
   // 状态
-  folders: Folder[];
   notes: Note[];
-  selectedFolderId: string | null;
   selectedNoteId: string | null;
   editorContent: string;
   isLoadingFromFileSystem: boolean; // 是否从文件系统加载
   searchKeyword: string; // 搜索关键词
-
-  // 操作方法 - 文件夹
-  setFolders: (folders: Folder[]) => void;
-  selectFolder: (folderId: string | null) => void;
-  createFolder: (name: string) => Promise<void>;
-  deleteFolder: (folderId: string) => void;
-  renameFolder: (folderId: string, newName: string) => Promise<void>;
 
   // 操作方法 - 笔记
   setNotes: (notes: Note[]) => void;
@@ -42,136 +30,26 @@ interface NoteStore {
   setSearchKeyword: (keyword: string) => void;
 
   // 文件系统相关
-  loadFromFileSystem: (data: { folders: Folder[]; notes: Note[] }) => void;
+  loadFromFileSystem: (data: { notes: Note[] }) => void;
   saveNoteToFileSystem: (noteId: string, content: string) => Promise<void>;
 
   // 文件监听处理
-  handleFileAdded: (filePath: string, fullPath: string) => Promise<void>;
-  handleFileDeleted: (filePath: string) => void;
-  handleFileChanged: (filePath: string, fullPath: string) => Promise<void>;
-
-  // 文件夹监听处理
-  handleFolderAdded: (folderPath: string, fullPath: string) => void;
-  handleFolderDeleted: (folderPath: string) => void;
+  handleFileAddedEvent: (filePath: string, fullPath: string) => Promise<void>;
+  handleFileDeletedEvent: (filePath: string) => void;
+  handleFileChangedEvent: (filePath: string, fullPath: string) => Promise<void>;
 
   // 工具方法
   getSelectedNote: () => Note | undefined;
   getNotesByFolder: (folderId: string) => Note[];
-
-  // 导出方法
-  exportNoteAsHTML: (noteId: string, isDark: boolean) => Promise<void>;
-  exportNoteAsPDF: (noteId: string, isDark: boolean) => Promise<void>;
-  exportNoteAsPDFPages: (noteId: string, isDark: boolean) => Promise<void>;
-  exportNoteAsImage: (noteId: string, isDark: boolean) => Promise<void>;
-  exportNoteAsImagePages: (noteId: string, isDark: boolean) => Promise<void>;
-  copyNoteToWechat: (noteId: string) => Promise<void>;
 }
 
 export const useNoteStore = create<NoteStore>((set, get) => ({
   // 初始状态
-  folders: [],
   notes: [],
-  selectedFolderId: null,
   selectedNoteId: null,
   editorContent: "",
   isLoadingFromFileSystem: false,
   searchKeyword: "",
-
-  // 文件夹操作
-  setFolders: (folders) => set({ folders }),
-
-  selectFolder: (folderId) => {
-    set({
-      selectedFolderId: folderId
-    });
-  },
-
-  createFolder: async (name) => {
-    // 从工作区 store 获取当前工作区路径
-    const workspacePath = useWorkspaceStore.getState().workspacePath;
-
-    if (!workspacePath) {
-      console.error("没有工作区路径，无法创建文件夹");
-      return;
-    }
-
-    try {
-      const folderPath = `${workspacePath}/${name}`;
-
-      // 在文件系统中创建文件夹
-      await window.api.folder.create(folderPath);
-
-      const newFolder: Folder = {
-        id: name, // 使用文件夹名作为 ID
-        name,
-        path: folderPath,
-        noteCount: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      set((state) => ({
-        folders: [...state.folders, newFolder]
-      }));
-    } catch (error) {
-      console.error("创建文件夹失败:", error);
-    }
-  },
-
-  deleteFolder: (folderId) => {
-    set((state) => ({
-      folders: state.folders.filter((f) => f.id !== folderId),
-      // 如果删除的是当前选中的文件夹，清空选中状态
-      selectedFolderId: state.selectedFolderId === folderId ? null : state.selectedFolderId
-    }));
-  },
-
-  renameFolder: async (folderId, newName) => {
-    const workspacePath = useWorkspaceStore.getState().workspacePath;
-    const folder = get().folders.find((f) => f.id === folderId);
-
-    if (!workspacePath || !folder?.path) {
-      console.error("没有工作区路径或文件夹路径，无法重命名");
-      return;
-    }
-
-    try {
-      // 构建新的文件夹路径
-      const newFolderPath = `${workspacePath}/${newName}`;
-
-      // 在文件系统中重命名文件夹
-      await window.api.folder.rename(folder.path, newFolderPath);
-
-      // 更新 store 中的文件夹信息
-      set((state) => ({
-        folders: state.folders.map((f) =>
-          f.id === folderId
-            ? {
-                ...f,
-                id: newName, // 使用新名称作为 ID
-                name: newName,
-                path: newFolderPath,
-                updatedAt: new Date().toISOString()
-              }
-            : f
-        ),
-        // 如果重命名的是当前选中的文件夹，更新选中状态
-        selectedFolderId: state.selectedFolderId === folderId ? newName : state.selectedFolderId,
-        // 更新该文件夹下所有笔记的 folderId
-        notes: state.notes.map((n) =>
-          n.folderId === folderId
-            ? {
-                ...n,
-                folderId: newName
-              }
-            : n
-        )
-      }));
-    } catch (error) {
-      console.error("重命名文件夹失败:", error);
-      throw error;
-    }
-  },
 
   // 笔记操作
   setNotes: (notes) => set({ notes }),
@@ -199,7 +77,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }
 
     try {
-      const targetFolderId = folderId || get().selectedFolderId || null;
+      const targetFolderId = folderId || useFolderStore.getState().selectedFolderId || null;
 
       // 查找已存在的无标题笔记，确定新的序号
       const allNotes = get().notes;
@@ -222,7 +100,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       let filePath: string;
       if (targetFolderId) {
         // 在指定文件夹中创建
-        const folder = get().folders.find((f) => f.id === targetFolderId);
+        const folder = useFolderStore.getState().folders.find((f) => f.id === targetFolderId);
         if (folder?.path) {
           filePath = `${folder.path}/${fileName}`;
         } else {
@@ -467,9 +345,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     }));
 
     set({
-      folders: data.folders,
       notes: notesWithPinState,
-      selectedFolderId: null,
       selectedNoteId: null,
       editorContent: "",
       isLoadingFromFileSystem: true,
@@ -491,63 +367,31 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   },
 
   // 处理外部添加的文件
-  handleFileAdded: async (filePath, fullPath) => {
+  handleFileAddedEvent: async (filePath, fullPath) => {
     const workspacePath = useWorkspaceStore.getState().workspacePath;
     if (!workspacePath) return;
 
-    // 检查是否已存在（避免重复添加）
-    const existingNote = get().notes.find((n) => n.id === filePath);
-    if (existingNote) return;
+    const newNote = await handleFileAdded(filePath, fullPath, workspacePath, get().notes);
+    if (!newNote) return;
 
-    try {
-      // 读取文件内容
-      const { content } = await window.api.file.read(fullPath);
+    // 添加到笔记列表
+    set((state) => ({
+      notes: [...state.notes, newNote]
+    }));
 
-      // 解析文件路径，确定所属文件夹
-      const pathParts = filePath.split("/");
-      let folderId: string | null = null;
-
-      if (pathParts.length > 1) {
-        // 文件在子文件夹中
-        folderId = pathParts[0];
-      }
-
-      // 提取文件名
-      const fileName = pathParts[pathParts.length - 1];
-
-      // 创建新笔记对象
-      const newNote: Note = {
-        id: filePath,
-        title: fileName.replace(".md", ""),
-        content,
-        fileName,
-        filePath: fullPath,
-        folderId: folderId || undefined,
-        isPinned: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      // 添加到笔记列表
-      set((state) => ({
-        notes: [...state.notes, newNote]
-      }));
-
-      // 更新文件夹的笔记数量
-      if (folderId) {
-        set((state) => ({
-          folders: state.folders.map((folder) =>
-            folder.id === folderId ? { ...folder, noteCount: (folder.noteCount || 0) + 1 } : folder
-          )
-        }));
-      }
-    } catch (error) {
-      console.error("处理添加的文件失败:", error);
+    // 更新文件夹的笔记数量
+    if (newNote.folderId) {
+      const folderStore = useFolderStore.getState();
+      folderStore.setFolders(
+        folderStore.folders.map((folder) =>
+          folder.id === newNote.folderId ? { ...folder, noteCount: (folder.noteCount || 0) + 1 } : folder
+        )
+      );
     }
   },
 
   // 处理外部删除的文件
-  handleFileDeleted: (filePath) => {
+  handleFileDeletedEvent: (filePath) => {
     const note = get().notes.find((n) => n.id === filePath);
     if (!note) return;
 
@@ -563,376 +407,39 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
 
     // 更新文件夹的笔记数量
     if (folderId) {
-      set((state) => ({
-        folders: state.folders.map((folder) =>
+      const folderStore = useFolderStore.getState();
+      folderStore.setFolders(
+        folderStore.folders.map((folder) =>
           folder.id === folderId ? { ...folder, noteCount: Math.max(0, (folder.noteCount || 0) - 1) } : folder
         )
-      }));
+      );
     }
   },
 
   // 处理外部修改的文件
-  handleFileChanged: async (filePath, fullPath) => {
+  handleFileChangedEvent: async (filePath, fullPath) => {
     const note = get().notes.find((n) => n.id === filePath);
     if (!note) return;
 
-    try {
-      // 读取更新后的内容
-      const { content } = await window.api.file.read(fullPath);
+    const content = await handleFileChanged(filePath, fullPath);
+    if (!content) return;
 
-      const { selectedNoteId } = get();
-      const isCurrentlyEditing = selectedNoteId === filePath;
+    const { selectedNoteId } = get();
+    const isCurrentlyEditing = selectedNoteId === filePath;
 
-      // 更新笔记内容
-      set((state) => ({
-        notes: state.notes.map((n) =>
-          n.id === filePath
-            ? {
-                ...n,
-                content,
-                updatedAt: new Date().toISOString()
-              }
-            : n
-        ),
-        // 如果是当前正在编辑的笔记，同时更新编辑器内容
-        editorContent: isCurrentlyEditing ? content : state.editorContent
-      }));
-    } catch (error) {
-      console.error("处理修改的文件失败:", error);
-    }
-  },
-
-  // 处理外部添加的文件夹
-  handleFolderAdded: (folderPath, fullPath) => {
-    // 检查是否已存在（避免重复添加）
-    const existingFolder = get().folders.find((f) => f.id === folderPath);
-    if (existingFolder) return;
-
-    // 创建新文件夹对象
-    const newFolder: Folder = {
-      id: folderPath,
-      name: folderPath,
-      path: fullPath,
-      noteCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    // 添加到文件夹列表
+    // 更新笔记内容
     set((state) => ({
-      folders: [...state.folders, newFolder]
+      notes: state.notes.map((n) =>
+        n.id === filePath
+          ? {
+              ...n,
+              content,
+              updatedAt: new Date().toISOString()
+            }
+          : n
+      ),
+      // 如果是当前正在编辑的笔记，同时更新编辑器内容
+      editorContent: isCurrentlyEditing ? content : state.editorContent
     }));
-  },
-
-  // 处理外部删除的文件夹
-  handleFolderDeleted: (folderPath) => {
-    const folder = get().folders.find((f) => f.id === folderPath);
-    if (!folder) return;
-
-    const { selectedNoteId, notes } = get();
-    const currentNote = notes.find((n) => n.id === selectedNoteId);
-    const shouldClearSelection = currentNote?.folderId === folderPath;
-
-    // 从文件夹列表中移除
-    set((state) => ({
-      folders: state.folders.filter((f) => f.id !== folderPath),
-      notes: state.notes.filter((n) => n.folderId !== folderPath),
-      selectedFolderId: state.selectedFolderId === folderPath ? null : state.selectedFolderId,
-      selectedNoteId: shouldClearSelection ? null : state.selectedNoteId,
-      editorContent: shouldClearSelection ? "" : state.editorContent
-    }));
-  },
-
-  // 导出笔记为 HTML
-  exportNoteAsHTML: async (noteId, isDark) => {
-    const note = get().notes.find((n) => n.id === noteId);
-    if (!note) {
-      console.error("笔记不存在");
-      throw new Error("笔记不存在");
-    }
-
-    try {
-      // 1. 获取下载目录
-      const downloadsPath = await window.api.export.getDownloadsPath();
-
-      // 2. 显示保存对话框 - 选择文件夹
-      const defaultFolderName = `${note.title}`;
-      const folderPath = await window.api.export.showSaveDialog({
-        title: i18n.t("note:dialog.exportHTML.title"),
-        defaultPath: `${downloadsPath}/${defaultFolderName}`,
-        filters: [
-          { name: i18n.t("note:fileTypes.folder"), extensions: [] },
-          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
-        ]
-      });
-
-      // 用户取消了保存
-      if (!folderPath) {
-        throw new Error("USER_CANCELLED");
-      }
-
-      // 3. 将 Markdown 转换为 HTML
-      const htmlBody = await markdownToHTML(note.content);
-
-      // 4. 生成完整的 HTML 文档（带字体路径）
-      const fullHTML = generateHTMLDocument(note.title, htmlBody, {
-        isDark,
-        fonts: { type: "path", path: "./assets" }
-      });
-
-      // 5. 导出为资源包（包含所有图片和字体等资源）
-      const result = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
-
-      console.log("导出成功:", result);
-      console.log(`已导出 ${result.filesCount} 个文件`);
-    } catch (error) {
-      console.error("导出 HTML 失败:", error);
-      throw error;
-    }
-  },
-
-  // 导出笔记为 PDF
-  exportNoteAsPDF: async (noteId, isDark) => {
-    const note = get().notes.find((n) => n.id === noteId);
-    if (!note) {
-      console.error("笔记不存在");
-      throw new Error("笔记不存在");
-    }
-
-    try {
-      // 1. 获取下载目录
-      const downloadsPath = await window.api.export.getDownloadsPath();
-
-      // 2. 显示保存对话框
-      const defaultFileName = `${note.title}.pdf`;
-      const filePath = await window.api.export.showSaveDialog({
-        title: i18n.t("note:dialog.exportPDF.title"),
-        defaultPath: `${downloadsPath}/${defaultFileName}`,
-        filters: [
-          { name: i18n.t("note:fileTypes.pdfFile"), extensions: ["pdf"] },
-          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
-        ]
-      });
-
-      // 用户取消了保存
-      if (!filePath) {
-        throw new Error("USER_CANCELLED");
-      }
-
-      // 3. 获取字体 base64
-      const fonts = await window.api.export.getFontsBase64();
-
-      // 4. 将 Markdown 转换为 HTML
-      const htmlBody = await markdownToHTML(note.content);
-
-      // 5. 生成完整的 HTML 文档（内嵌字体）
-      const fullHTML = generateHTMLDocument(note.title, htmlBody, {
-        isDark,
-        fonts: { type: "embedded", ...fonts }
-      });
-
-      // 6. 导出为 PDF（传入 notePath 以支持本地图片）
-      await window.api.export.exportAsPDF(fullHTML, filePath, note.filePath);
-
-      console.log("导出 PDF 成功:", filePath);
-    } catch (error) {
-      console.error("导出 PDF 失败:", error);
-      throw error;
-    }
-  },
-
-  // 导出笔记为 PDF（分页）
-  exportNoteAsPDFPages: async (noteId, isDark) => {
-    const note = get().notes.find((n) => n.id === noteId);
-    if (!note) {
-      console.error("笔记不存在");
-      throw new Error("笔记不存在");
-    }
-
-    try {
-      // 1. 获取下载目录
-      const downloadsPath = await window.api.export.getDownloadsPath();
-
-      // 2. 显示保存对话框
-      const defaultFileName = `${note.title}.pdf`;
-      const filePath = await window.api.export.showSaveDialog({
-        title: i18n.t("note:dialog.exportPDFPages.title"),
-        defaultPath: `${downloadsPath}/${defaultFileName}`,
-        filters: [
-          { name: i18n.t("note:fileTypes.pdfFile"), extensions: ["pdf"] },
-          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
-        ]
-      });
-
-      if (!filePath) {
-        throw new Error("USER_CANCELLED");
-      }
-
-      // 3. 获取字体 base64
-      const fonts = await window.api.export.getFontsBase64();
-
-      // 4. 分割 Markdown
-      const sections = splitMarkdownByHr(note.content);
-
-      if (sections.length === 0) {
-        throw new Error("没有内容可导出");
-      }
-
-      // 5. 为每个分片生成 HTML（内嵌字体）
-      const htmlContents = await Promise.all(
-        sections.map(async (section) => {
-          const htmlBody = await markdownToHTML(section);
-          return generateHTMLDocument(note.title, htmlBody, {
-            isDark,
-            fonts: { type: "embedded", ...fonts }
-          });
-        })
-      );
-
-      // 6. 导出为单个 PDF（多页）
-      const result = await window.api.export.exportAsPDFPages(htmlContents, filePath, note.filePath);
-
-      console.log(`导出成功: ${result.pagesCount} 页 PDF`);
-    } catch (error) {
-      console.error("导出 PDF 分页失败:", error);
-      throw error;
-    }
-  },
-
-  // 导出笔记为图片（单张长图）
-  exportNoteAsImage: async (noteId, isDark) => {
-    const note = get().notes.find((n) => n.id === noteId);
-    if (!note) {
-      console.error("笔记不存在");
-      throw new Error("笔记不存在");
-    }
-
-    try {
-      // 1. 获取下载目录
-      const downloadsPath = await window.api.export.getDownloadsPath();
-
-      // 2. 显示保存对话框
-      const defaultFileName = `${note.title}.png`;
-      const filePath = await window.api.export.showSaveDialog({
-        title: i18n.t("note:dialog.exportImage.title"),
-        defaultPath: `${downloadsPath}/${defaultFileName}`,
-        filters: [
-          { name: i18n.t("note:fileTypes.pngImage"), extensions: ["png"] },
-          { name: i18n.t("note:fileTypes.jpegImage"), extensions: ["jpg", "jpeg"] },
-          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
-        ]
-      });
-
-      // 用户取消了保存
-      if (!filePath) {
-        throw new Error("USER_CANCELLED");
-      }
-
-      // 3. 获取字体 base64
-      const fonts = await window.api.export.getFontsBase64();
-
-      // 4. 将 Markdown 转换为 HTML
-      const htmlBody = await markdownToHTML(note.content);
-
-      // 5. 生成完整的 HTML 文档（内嵌字体）
-      const fullHTML = generateHTMLDocument(note.title, htmlBody, {
-        isDark,
-        fonts: { type: "embedded", ...fonts }
-      });
-
-      // 6. 导出为图片（传入 notePath 以支持本地图片）
-      await window.api.export.exportAsImage(fullHTML, filePath, note.filePath);
-
-      console.log("导出图片成功:", filePath);
-    } catch (error) {
-      console.error("导出图片失败:", error);
-      throw error;
-    }
-  },
-
-  // 导出笔记为图片（分页）
-  exportNoteAsImagePages: async (noteId, isDark) => {
-    const note = get().notes.find((n) => n.id === noteId);
-    if (!note) {
-      console.error("笔记不存在");
-      throw new Error("笔记不存在");
-    }
-
-    try {
-      // 1. 获取下载目录
-      const downloadsPath = await window.api.export.getDownloadsPath();
-
-      // 2. 显示保存对话框 - 选择文件夹
-      const defaultFolderName = `${note.title}-${i18n.t("note:pagesSuffix")}`;
-      const folderPath = await window.api.export.showSaveDialog({
-        title: i18n.t("note:dialog.exportImagePages.title"),
-        defaultPath: `${downloadsPath}/${defaultFolderName}`,
-        filters: [
-          { name: i18n.t("note:fileTypes.folder"), extensions: [] },
-          { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
-        ]
-      });
-
-      if (!folderPath) {
-        throw new Error("USER_CANCELLED");
-      }
-
-      // 3. 获取字体 base64
-      const fonts = await window.api.export.getFontsBase64();
-
-      // 4. 分割 Markdown
-      const sections = splitMarkdownByHr(note.content);
-
-      if (sections.length === 0) {
-        throw new Error("没有内容可导出");
-      }
-
-      // 5. 为每个分片生成 HTML（内嵌字体）
-      const htmlContents = await Promise.all(
-        sections.map(async (section) => {
-          const htmlBody = await markdownToHTML(section);
-          return generateHTMLDocument(note.title, htmlBody, {
-            isDark,
-            fonts: { type: "embedded", ...fonts }
-          });
-        })
-      );
-
-      // 6. 导出为多张图片
-      const result = await window.api.export.exportAsImagePages(htmlContents, folderPath, note.title, note.filePath);
-
-      console.log(`导出成功: ${result.filesCount} 张图片`);
-    } catch (error) {
-      console.error("导出图片分页失败:", error);
-      throw error;
-    }
-  },
-
-  // 复制笔记到微信公众号
-  copyNoteToWechat: async (noteId) => {
-    const note = get().notes.find((n) => n.id === noteId);
-    if (!note) {
-      console.error("笔记不存在");
-      throw new Error("笔记不存在");
-    }
-
-    try {
-      // 1. 将 Markdown 转换为 HTML
-      const htmlBody = await markdownToHTML(note.content);
-
-      // 2. 生成适配微信公众号的 HTML 文档
-      const wechatHTML = generateWechatHTMLDocument(note.title, htmlBody);
-
-      // 3. 将 CSS 内联化（在渲染进程处理）
-      const inlinedHTML = inlineCSS(wechatHTML);
-
-      // 4. 复制到剪贴板
-      await window.api.export.copyHTMLToClipboard(inlinedHTML);
-
-      console.log("已复制到剪贴板，可直接粘贴到微信公众号编辑器");
-    } catch (error) {
-      console.error("复制到微信公众号失败:", error);
-      throw error;
-    }
   }
 }));

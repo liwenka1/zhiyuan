@@ -3,7 +3,7 @@ import { FolderTree } from "./folder-tree";
 import { NoteList } from "./note-list";
 import { NoteDialogs } from "./note-dialogs";
 import { EditorArea } from "@/features/editor";
-import { useNoteStore } from "@/stores";
+import { useNoteStore, useFolderStore } from "@/stores";
 import { useWorkspaceInit, useNoteHandlers, useFolderHandlers, useNoteData, useDialogState } from "../hooks";
 
 /**
@@ -20,12 +20,12 @@ export function NoteWorkspace() {
   const dialogState = useDialogState();
 
   // Store 状态
-  const selectedFolderId = useNoteStore((state) => state.selectedFolderId);
+  const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
   const editorContent = useNoteStore((state) => state.editorContent);
   const searchKeyword = useNoteStore((state) => state.searchKeyword);
   const notes = useNoteStore((state) => state.notes);
-  const selectFolder = useNoteStore((state) => state.selectFolder);
+  const selectFolder = useFolderStore((state) => state.selectFolder);
   const selectNote = useNoteStore((state) => state.selectNote);
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
   const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);

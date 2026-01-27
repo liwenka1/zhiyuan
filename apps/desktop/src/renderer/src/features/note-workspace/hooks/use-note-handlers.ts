@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNoteStore, useThemeStore } from "@/stores";
+import { useNoteStore, useFolderStore } from "@/stores";
+import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
@@ -32,22 +32,15 @@ interface UseNoteHandlersProps {
  */
 export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): NoteHandlers {
   const { t } = useTranslation("note");
-  const theme = useThemeStore((state) => state.theme);
   const notes = useNoteStore((state) => state.notes);
-  const selectedFolderId = useNoteStore((state) => state.selectedFolderId);
+  const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const createNote = useNoteStore((state) => state.createNote);
   const deleteNote = useNoteStore((state) => state.deleteNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const togglePinNote = useNoteStore((state) => state.togglePinNote);
-  const exportNoteAsHTML = useNoteStore((state) => state.exportNoteAsHTML);
-  const exportNoteAsPDF = useNoteStore((state) => state.exportNoteAsPDF);
-  const exportNoteAsPDFPages = useNoteStore((state) => state.exportNoteAsPDFPages);
-  const exportNoteAsImage = useNoteStore((state) => state.exportNoteAsImage);
-  const exportNoteAsImagePages = useNoteStore((state) => state.exportNoteAsImagePages);
-  const copyNoteToWechat = useNoteStore((state) => state.copyNoteToWechat);
 
-  // 导出状态
-  const [isExporting, setIsExporting] = useState(false);
+  // 使用导出 hook
+  const { exportNote, copyToWechat } = useNoteExport();
 
   // 处理新建笔记
   const handleCreateNote = async () => {
@@ -110,51 +103,20 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
   ) => {
-    // 防止重复导出
-    if (isExporting) {
-      toast.info(t("export.exportingWait"));
-      return;
-    }
+    // 从 store 中获取完整的笔记信息
+    const fullNote = notes.find((n) => n.id === note.id);
+    if (!fullNote) return;
 
-    setIsExporting(true);
-    toast.loading(t("export.exporting"), { id: "exporting" });
-
-    try {
-      const isDark = theme === "dark";
-      if (format === "html") {
-        await exportNoteAsHTML(note.id, isDark);
-      } else if (format === "pdf") {
-        await exportNoteAsPDF(note.id, isDark);
-      } else if (format === "pdf-pages") {
-        await exportNoteAsPDFPages(note.id, isDark);
-      } else if (format === "image") {
-        await exportNoteAsImage(note.id, isDark);
-      } else if (format === "image-pages") {
-        await exportNoteAsImagePages(note.id, isDark);
-      }
-      toast.success(t("export.success"), { id: "exporting" });
-    } catch (error) {
-      // 用户取消导出，不显示错误
-      if (error instanceof Error && error.message === "USER_CANCELLED") {
-        toast.dismiss("exporting");
-        return;
-      }
-      console.error("导出笔记失败:", error);
-      toast.error(t("export.failed"), { id: "exporting" });
-    } finally {
-      setIsExporting(false);
-    }
+    await exportNote(fullNote, format);
   };
 
   // 复制笔记到微信公众号
   const handleCopyToWechat = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
-    try {
-      await copyNoteToWechat(note.id);
-      toast.success(t("export.wechatSuccess"));
-    } catch (error) {
-      console.error("复制到微信公众号失败:", error);
-      toast.error(t("export.wechatFailed"));
-    }
+    // 从 store 中获取完整的笔记信息
+    const fullNote = notes.find((n) => n.id === note.id);
+    if (!fullNote) return;
+
+    await copyToWechat(fullNote);
   };
 
   return {

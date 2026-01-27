@@ -1,14 +1,14 @@
 import { useMemo } from "react";
-import { useNoteStore } from "@/stores";
+import { useNoteStore, useFolderStore } from "@/stores";
 
 /**
  * 笔记数据派生 Hook
  * 负责过滤、排序等数据处理逻辑
  */
 export function useNoteData() {
-  const folders = useNoteStore((state) => state.folders);
+  const folders = useFolderStore((state) => state.folders);
   const notes = useNoteStore((state) => state.notes);
-  const selectedFolderId = useNoteStore((state) => state.selectedFolderId);
+  const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const searchKeyword = useNoteStore((state) => state.searchKeyword);
 
   // 根据选中的文件夹过滤笔记，如果没有选中文件夹则显示所有笔记
