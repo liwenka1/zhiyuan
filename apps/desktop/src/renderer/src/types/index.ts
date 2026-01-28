@@ -29,8 +29,9 @@ export interface Note {
  * 编辑区视图模式
  * edit: 编辑模式
  * preview: 预览模式
+ * split: 分栏模式（编辑器 + 预览）
  */
-export type EditorViewMode = "edit" | "preview";
+export type EditorViewMode = "edit" | "preview" | "split";
 
 /**
  * 预览配置

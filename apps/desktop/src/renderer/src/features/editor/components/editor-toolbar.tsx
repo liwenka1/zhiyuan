@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, Wand2, List, Pin, PinOff, Presentation, Focus } from "lucide-react";
+import { Eye, Wand2, List, Pin, PinOff, Presentation, Focus, Columns2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -29,15 +29,17 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   };
 
   const isPreviewMode = editorMode === "preview";
+  const isSplitMode = editorMode === "split";
   const hasNote = !!selectedNoteId;
+  const showPreview = isPreviewMode || isSplitMode; // 预览或分栏模式下都显示预览内容
 
-  // 监听编辑模式变化，切换时关闭目录
+  // 监听编辑模式变化，切换到编辑模式时关闭目录
   useEffect(() => {
-    if (!isPreviewMode) {
+    if (editorMode === "edit") {
       setTocOpen(false);
       setIsPinned(false); // 切换模式时取消固定
     }
-  }, [isPreviewMode]);
+  }, [editorMode]);
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-end px-3">
@@ -62,9 +64,21 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
           aria-label={t("toolbar.preview")}
           pressed={editorMode === "preview"}
           onPressedChange={() => toggleEditorMode("preview")}
-          disabled={!hasNote}
+          disabled={!hasNote || isSplitMode}
         >
           <Eye className="h-4 w-4" />
+        </Toggle>
+
+        {/* 分栏按钮 */}
+        <Toggle
+          size="sm"
+          className="hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
+          aria-label={t("toolbar.split")}
+          pressed={editorMode === "split"}
+          onPressedChange={() => toggleEditorMode("split")}
+          disabled={!hasNote || isPreviewMode}
+        >
+          <Columns2 className="h-4 w-4" />
         </Toggle>
 
         {/* 演示按钮 */}
@@ -86,7 +100,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
           className="h-8 w-8 p-0"
           aria-label={t("toolbar.format")}
           onClick={handleFormat}
-          disabled={!hasNote || isPreviewMode}
+          disabled={!hasNote || editorMode === "preview"}
         >
           <Wand2 className="h-4 w-4" />
         </Button>
@@ -99,7 +113,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
               size="sm"
               className="h-8 w-8 p-0"
               aria-label={t("toolbar.toc")}
-              disabled={!hasNote || !isPreviewMode}
+              disabled={!hasNote || !showPreview}
             >
               <List className="h-4 w-4" />
             </Button>
