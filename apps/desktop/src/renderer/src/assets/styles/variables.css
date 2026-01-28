@@ -86,6 +86,7 @@
     --editor-line-height: 1.5;
     --editor-letter-spacing: 0.03125rem;
     --editor-padding: 1rem;
+    --editor-bottom-space: 50vh;
 
     /* 圆角 */
     --radius: 0.5rem;
