@@ -21,7 +21,7 @@ export function createCustomTheme(isDark: boolean): Extension {
       // 内容区
       ".cm-content": {
         caretColor: "var(--foreground)",
-        padding: "0 var(--editor-padding) var(--editor-padding) var(--editor-padding)",
+        padding: "0 var(--editor-padding) var(--editor-bottom-space) var(--editor-padding)",
         fontFamily: "var(--editor-font)",
         fontSize: "var(--editor-font-size)",
         lineHeight: "var(--editor-line-height)",
