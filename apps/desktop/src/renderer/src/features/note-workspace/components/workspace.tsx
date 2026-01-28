@@ -78,6 +78,7 @@ export function NoteWorkspace() {
         }
         mainContent={
           <EditorArea
+            key={selectedNoteId ?? "empty"}
             content={editorContent}
             onChange={updateNoteContent}
             hasNote={!!selectedNoteId}

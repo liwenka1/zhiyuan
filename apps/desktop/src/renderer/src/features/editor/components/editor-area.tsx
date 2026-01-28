@@ -36,8 +36,12 @@ export function EditorArea({ content = "", onChange, hasNote = false, noteId, no
     <div className="flex h-full flex-col">
       <EditorToolbar content={content} />
       <div className="flex-1 overflow-hidden">
-        {editorMode === "edit" && <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />}
-        {editorMode === "preview" && <PreviewContent content={content} notePath={notePath} />}
+        <div className={editorMode === "edit" ? "h-full" : "hidden"}>
+          <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
+        </div>
+        <div className={editorMode === "preview" ? "h-full" : "hidden"}>
+          <PreviewContent content={content} notePath={notePath} />
+        </div>
       </div>
     </div>
   );
