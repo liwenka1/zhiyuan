@@ -1,42 +1,9 @@
-import { useEffect, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import remarkBreaks from "remark-breaks";
-import remarkMath from "remark-math";
-import rehypeRaw from "rehype-raw";
-import rehypeSlug from "rehype-slug";
-import rehypeHighlight from "rehype-highlight";
-import rehypeKatex from "rehype-katex";
-import mermaid from "mermaid";
-import "highlight.js/styles/github.css";
-import "highlight.js/styles/github-dark.css";
-import "katex/dist/katex.min.css";
-import { useTranslation } from "react-i18next";
-import { createUrlTransformer } from "@/lib/resource-resolver";
-
-// 初始化 mermaid
-mermaid.initialize({ startOnLoad: false, theme: "default" });
+import { MarkdownRenderer } from "./markdown-renderer";
 
 interface PreviewContentProps {
   content: string;
   notePath?: string; // 笔记的完整文件路径，用于解析相对资源路径
-}
-
-// Mermaid 代码块组件
-function MermaidBlock({ code }: { code: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (ref.current) {
-      const id = `mermaid-${Math.random().toString(36).slice(2)}`;
-      mermaid.render(id, code).then(({ svg }) => {
-        if (ref.current) ref.current.innerHTML = svg;
-      });
-    }
-  }, [code]);
-
-  return <div ref={ref} className="mermaid flex justify-center" />;
 }
 
 /**
@@ -50,63 +17,14 @@ function MermaidBlock({ code }: { code: string }) {
  * - ✅ 支持图表 (Mermaid)
  */
 export function PreviewContent({ content, notePath }: PreviewContentProps) {
-  const { t } = useTranslation("editor");
-
-  // 创建 URL 转换函数，将相对路径转换为绝对路径
-  const urlTransform = createUrlTransformer(notePath);
-
   return (
     <ScrollArea className="h-full" id="preview-scroll-area">
-      <div
-        className="prose dark:prose-invert max-w-none"
-        style={{ padding: "0 var(--editor-padding) var(--editor-padding) var(--editor-padding)" }}
-      >
-        {content ? (
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-            rehypePlugins={[rehypeRaw, rehypeSlug, rehypeHighlight, rehypeKatex]}
-            urlTransform={urlTransform}
-            components={{
-              code({ className, children }) {
-                const match = /language-mermaid/.exec(className || "");
-                if (match) {
-                  return <MermaidBlock code={String(children).trim()} />;
-                }
-                return <code className={className}>{children}</code>;
-              },
-              a({ href, children, ...props }) {
-                const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-                  if (!href) return;
-
-                  // 外部链接，在系统浏览器中打开
-                  if (href.startsWith("http://") || href.startsWith("https://")) {
-                    e.preventDefault();
-                    window.api.shell.openExternal(href);
-                    return;
-                  }
-
-                  // 本地文件链接（local-resource:// 协议），用系统默认程序打开
-                  if (href.startsWith("local-resource://")) {
-                    e.preventDefault();
-                    // 从 local-resource:// URL 中提取本地路径，需要解码 URL 编码的字符
-                    const localPath = decodeURIComponent(href.replace("local-resource://", ""));
-                    window.api.shell.openPath(localPath);
-                    return;
-                  }
-                };
-                return (
-                  <a href={href} onClick={handleClick} {...props}>
-                    {children}
-                  </a>
-                );
-              }
-            }}
-          >
-            {content}
-          </ReactMarkdown>
-        ) : (
-          <div className="text-muted-foreground mt-8 text-center">{t("previewEmpty")}</div>
-        )}
+      <div style={{ padding: "0 var(--editor-padding) var(--editor-padding) var(--editor-padding)" }}>
+        <MarkdownRenderer 
+          content={content} 
+          notePath={notePath}
+          className="max-w-none"
+        />
       </div>
     </ScrollArea>
   );
