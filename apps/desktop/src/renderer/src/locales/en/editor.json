@@ -6,6 +6,7 @@
   "toolbar": {
     "focus": "Focus Mode",
     "preview": "Preview Mode",
+    "split": "Split Mode",
     "presentation": "Presentation Mode",
     "format": "Format",
     "toc": "Table of Contents"
