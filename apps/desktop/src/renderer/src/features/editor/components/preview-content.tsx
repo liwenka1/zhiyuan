@@ -20,11 +20,7 @@ export function PreviewContent({ content, notePath }: PreviewContentProps) {
   return (
     <ScrollArea className="h-full" id="preview-scroll-area">
       <div style={{ padding: "0 var(--editor-padding) var(--editor-padding) var(--editor-padding)" }}>
-        <MarkdownRenderer 
-          content={content} 
-          notePath={notePath}
-          className="max-w-none"
-        />
+        <MarkdownRenderer content={content} notePath={notePath} className="max-w-none" />
       </div>
     </ScrollArea>
   );
