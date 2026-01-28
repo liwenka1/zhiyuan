@@ -44,7 +44,7 @@ function MermaidBlock({ code }: { code: string }) {
 
 /**
  * Markdown 渲染器组件
- * 
+ *
  * 功能：
  * - ✅ 渲染 Markdown 为 HTML
  * - ✅ 支持 GitHub 风格 Markdown (GFM)
@@ -58,15 +58,15 @@ function MermaidBlock({ code }: { code: string }) {
  * - ✅ 支持本地文件链接在系统默认程序中打开
  * - ✅ 支持空状态显示
  */
-export function MarkdownRenderer({ 
-  content, 
-  notePath, 
+export function MarkdownRenderer({
+  content,
+  notePath,
   className,
   showEmptyState = true,
   emptyStateMessage
 }: MarkdownRendererProps) {
   const { t } = useTranslation("editor");
-  
+
   // 创建 URL 转换函数，将相对路径转换为绝对路径
   const urlTransform = createUrlTransformer(notePath);
 
@@ -74,9 +74,7 @@ export function MarkdownRenderer({
   if (!content && showEmptyState) {
     return (
       <div className={cn("prose dark:prose-invert", className)}>
-        <div className="text-muted-foreground mt-8 text-center">
-          {emptyStateMessage || t("previewEmpty")}
-        </div>
+        <div className="text-muted-foreground mt-8 text-center">{emptyStateMessage || t("previewEmpty")}</div>
       </div>
     );
   }

@@ -77,11 +77,7 @@ export function PresentationView() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <MarkdownRenderer 
-                content={editorContent} 
-                notePath={selectedNote?.filePath}
-                className="max-w-none"
-              />
+              <MarkdownRenderer content={editorContent} notePath={selectedNote?.filePath} className="max-w-none" />
             </motion.div>
           </ScrollArea>
         </motion.div>
