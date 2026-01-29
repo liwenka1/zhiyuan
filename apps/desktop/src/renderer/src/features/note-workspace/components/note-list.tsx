@@ -1,5 +1,6 @@
-import { FileText, Inbox, SquarePen, Pin, PinOff, Search, Eye, Trash2, Copy, Pencil, Download } from "lucide-react";
-import { motion } from "motion/react";
+import { FileText, Inbox, SquarePen, Pin, PinOff, Search, Eye, Trash2, Copy, Pencil, Download, X } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useState, useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -56,30 +57,130 @@ export function NoteList({
   onCopyToWechat
 }: NoteListProps) {
   const { t } = useTranslation("note");
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleSearchToggle = () => {
+    if (isSearchExpanded) {
+      // 收起时清空搜索
+      onSearchChange?.("");
+      setIsSearchExpanded(false);
+    } else {
+      // 展开
+      setIsSearchExpanded(true);
+    }
+  };
+
+  const handleSearchAnimationComplete = () => {
+    // 动画完成后自动聚焦
+    if (isSearchExpanded && inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
 
   return (
     <div className="flex h-full flex-col">
       {/* 顶部搜索栏 */}
-      <div className="flex h-12 shrink-0 items-center gap-2 px-3">
-        <div className="relative flex-1">
-          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
-          <Input
-            type="search"
-            placeholder={t("search")}
-            value={searchKeyword}
-            onChange={(e) => onSearchChange?.(e.target.value)}
-            className="bg-muted/50 h-8 border-none pl-8 text-sm focus-visible:ring-1"
-          />
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 shrink-0 p-0"
-          aria-label={t("newNote")}
-          onClick={onCreateNote}
-        >
-          <SquarePen className="h-4 w-4" />
-        </Button>
+      <div className="flex h-12 shrink-0 items-center gap-2 overflow-hidden px-3">
+        <AnimatePresence mode="wait" initial={false}>
+          {isSearchExpanded ? (
+            // 展开的搜索框
+            <motion.div
+              key="search-input"
+              className="relative flex-1"
+              initial={{ opacity: 0, width: 0 }}
+              animate={{
+                opacity: 1,
+                width: "100%",
+                transition: {
+                  duration: 0.2,
+                  ease: [0.32, 0.72, 0, 1]
+                }
+              }}
+              exit={{
+                opacity: 0,
+                width: 0,
+                transition: {
+                  duration: 0.15,
+                  ease: [0.32, 0.72, 0, 1]
+                }
+              }}
+              onAnimationComplete={handleSearchAnimationComplete}
+            >
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{
+                  opacity: 1,
+                  transition: { delay: 0.08, duration: 0.15 }
+                }}
+                exit={{
+                  opacity: 0,
+                  transition: { duration: 0.08 }
+                }}
+              >
+                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                <Input
+                  ref={inputRef}
+                  type="text"
+                  placeholder={t("search")}
+                  value={searchKeyword}
+                  onChange={(e) => onSearchChange?.(e.target.value)}
+                  className="bg-muted/50 h-8 border-none pr-8 pl-8 text-sm focus-visible:ring-1 [&::-webkit-search-cancel-button]:hidden"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 cursor-pointer p-0"
+                  onClick={handleSearchToggle}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </motion.div>
+            </motion.div>
+          ) : (
+            // 收起状态：按钮组
+            <motion.div
+              key="buttons"
+              className="flex w-full items-center justify-end gap-2"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{
+                opacity: 1,
+                x: 0,
+                transition: {
+                  duration: 0.18,
+                  ease: [0.32, 0.72, 0, 1]
+                }
+              }}
+              exit={{
+                opacity: 0,
+                x: 10,
+                transition: {
+                  duration: 0.15,
+                  ease: [0.32, 0.72, 0, 1]
+                }
+              }}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 shrink-0 cursor-pointer p-0"
+                aria-label={t("newNote")}
+                onClick={onCreateNote}
+              >
+                <SquarePen className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 shrink-0 cursor-pointer p-0"
+                aria-label={t("search")}
+                onClick={handleSearchToggle}
+              >
+                <Search className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* 笔记列表 */}
