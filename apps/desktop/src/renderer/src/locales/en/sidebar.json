@@ -1,6 +1,7 @@
 {
   "allNotes": "All Notes",
   "newFolder": "New Folder",
+  "toggleFolderSidebar": "Toggle Folder List",
   "contextMenu": {
     "showInExplorer": "Show in File Manager",
     "rename": "Rename",

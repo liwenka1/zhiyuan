@@ -141,7 +141,7 @@ export function NoteList({
             // 收起状态：按钮组
             <motion.div
               key="buttons"
-              className="flex w-full items-center justify-end gap-2"
+              className="flex w-full items-center justify-between gap-2"
               initial={{ opacity: 0, x: 10 }}
               animate={{
                 opacity: 1,
@@ -160,24 +160,27 @@ export function NoteList({
                 }
               }}
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 shrink-0 cursor-pointer p-0"
-                aria-label={t("newNote")}
-                onClick={onCreateNote}
-              >
-                <SquarePen className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 shrink-0 cursor-pointer p-0"
-                aria-label={t("search")}
-                onClick={handleSearchToggle}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
+              {/* 新建笔记 + 搜索按钮 */}
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 shrink-0 cursor-pointer p-0"
+                  aria-label={t("newNote")}
+                  onClick={onCreateNote}
+                >
+                  <SquarePen className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 shrink-0 cursor-pointer p-0"
+                  aria-label={t("search")}
+                  onClick={handleSearchToggle}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

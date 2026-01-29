@@ -1,6 +1,7 @@
 {
   "allNotes": "全部笔记",
   "newFolder": "新建文件夹",
+  "toggleFolderSidebar": "切换文件夹列表",
   "contextMenu": {
     "showInExplorer": "在文件管理器中查看",
     "rename": "重命名",

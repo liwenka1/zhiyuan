@@ -1,6 +1,7 @@
 {
   "search": "搜索",
   "newNote": "新建笔记",
+  "toggleFolderSidebar": "切换文件夹列表",
   "defaultTitle": "无标题笔记",
   "defaultContent": "开始写作...",
   "pagesSuffix": "分页",

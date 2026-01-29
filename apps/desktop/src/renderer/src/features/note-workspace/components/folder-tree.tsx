@@ -1,5 +1,4 @@
 import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil } from "lucide-react";
-import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +9,9 @@ import {
   ContextMenuTrigger
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
-import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { ThemeToggle, LanguageToggle, WorkspaceToggle } from "@/components/app";
 import { useTranslation } from "react-i18next";
+import { useViewStore } from "@/stores";
 
 // 特殊 ID 表示「全部笔记」
 export const ALL_NOTES_FOLDER_ID = "__all__";
@@ -45,13 +44,19 @@ export function FolderTree({
   onRenameFolder
 }: FolderTreeProps) {
   const { t } = useTranslation("sidebar");
+  const showFolderSidebar = useViewStore((state) => state.showFolderSidebar);
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
 
   return (
-    <div className="flex h-full flex-col">
-      {/* 顶部新建文件夹按钮 */}
-      <div className="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
+    <div 
+      className={cn(
+        "flex h-full flex-col transition-opacity duration-200",
+        showFolderSidebar ? "opacity-100" : "opacity-0 pointer-events-none"
+      )}
+    >
+      {/* 顶部区域：新建文件夹按钮（给切换按钮留出空间） */}
+      <div className="flex h-12 shrink-0 items-center justify-end gap-2 px-3 pl-11">
         <Button
           variant="ghost"
           size="sm"
@@ -67,48 +72,32 @@ export function FolderTree({
       <ScrollArea className="flex-1 overflow-hidden">
         <div className="space-y-0.5 px-2">
           {/* 全部笔记 - 始终显示在最上方 */}
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{
-              opacity: 1,
-              x: 0,
-              backgroundColor: getSelectionBgColor(isAllSelected)
-            }}
-            whileHover={{
-              backgroundColor: getHoverBgColor(isAllSelected)
-            }}
-            transition={{ duration: 0.2 }}
+          <div
             className={cn(
-              "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
-              isAllSelected ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+              "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2 transition-colors duration-150",
+              isAllSelected 
+                ? "bg-selection text-foreground font-medium" 
+                : "text-muted-foreground hover:bg-highlight hover:text-foreground"
             )}
             onClick={() => onSelectFolder?.(null)}
           >
             <FileStack className="h-4 w-4 shrink-0" />
             <div className="min-w-0 flex-1 truncate text-sm">{t("allNotes")}</div>
             <span className="text-tertiary-foreground shrink-0 text-xs tabular-nums">{totalNoteCount}</span>
-          </motion.div>
+          </div>
 
           {/* 文件夹列表 */}
-          {folders.map((folder, index) => {
+          {folders.map((folder) => {
             const isSelected = selectedFolderId === folder.id;
             return (
               <ContextMenu key={folder.id}>
                 <ContextMenuTrigger asChild>
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{
-                      opacity: 1,
-                      x: 0,
-                      backgroundColor: getSelectionBgColor(isSelected)
-                    }}
-                    whileHover={{
-                      backgroundColor: getHoverBgColor(isSelected)
-                    }}
-                    transition={{ duration: 0.2, delay: (index + 1) * 0.03 }}
+                  <div
                     className={cn(
-                      "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
-                      isSelected ? "text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
+                      "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2 transition-colors duration-150",
+                      isSelected 
+                        ? "bg-selection text-foreground font-medium" 
+                        : "text-muted-foreground hover:bg-highlight hover:text-foreground"
                     )}
                     onClick={() => onSelectFolder?.(folder.id)}
                   >
@@ -117,7 +106,7 @@ export function FolderTree({
                     {folder.noteCount !== undefined && (
                       <span className="text-tertiary-foreground shrink-0 text-xs tabular-nums">{folder.noteCount}</span>
                     )}
-                  </motion.div>
+                  </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
                   <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
@@ -141,7 +130,7 @@ export function FolderTree({
         </div>
       </ScrollArea>
 
-      {/* 底部全局设置按钮：切换工作区 + 主题切换 + 语言切换 */}
+      {/* 底部全局设置按钮 */}
       <div className="border-divider flex h-12 shrink-0 items-center justify-center gap-2 border-t px-3">
         <WorkspaceToggle />
         <ThemeToggle />

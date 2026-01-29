@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Eye, Wand2, List, Pin, PinOff, Presentation, Focus, Columns2 } from "lucide-react";
+import { Eye, Wand2, List, Pin, PinOff, Presentation, Columns2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -16,8 +16,6 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
   const enterPresentationMode = useViewStore((state) => state.enterPresentationMode);
-  const isFocusMode = useViewStore((state) => state.isFocusMode);
-  const toggleFocusMode = useViewStore((state) => state.toggleFocusMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
   const { t } = useTranslation("editor");
@@ -45,18 +43,6 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
     <div className="flex h-12 shrink-0 items-center justify-end px-3">
       {/* 工具按钮 */}
       <div className="flex shrink-0 items-center gap-1">
-        {/* 专注模式按钮 */}
-        <Toggle
-          size="sm"
-          className="hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
-          aria-label={t("toolbar.focus")}
-          pressed={isFocusMode}
-          onPressedChange={toggleFocusMode}
-          disabled={!hasNote}
-        >
-          <Focus className="h-4 w-4" />
-        </Toggle>
-
         {/* 预览按钮 */}
         <Toggle
           size="sm"

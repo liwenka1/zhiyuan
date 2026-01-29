@@ -13,9 +13,9 @@ interface ViewStore {
   enterPresentationMode: () => void;
   exitPresentationMode: () => void;
 
-  // 专注模式
-  isFocusMode: boolean;
-  toggleFocusMode: () => void;
+  // 侧边栏显示控制（替代原来的 isFocusMode）
+  showFolderSidebar: boolean;
+  toggleFolderSidebar: () => void;
 
   // 分栏布局比例
   splitLayout: [number, number];
@@ -40,7 +40,7 @@ export const useViewStore = create<ViewStore>()(
       // 初始状态
       editorMode: "edit",
       isPresentationMode: false,
-      isFocusMode: false,
+      showFolderSidebar: true, // 默认显示文件夹侧边栏
       splitLayout: [50, 50],
 
       previewConfig: {
@@ -60,8 +60,8 @@ export const useViewStore = create<ViewStore>()(
       enterPresentationMode: () => set({ isPresentationMode: true }),
       exitPresentationMode: () => set({ isPresentationMode: false }),
 
-      // 专注模式
-      toggleFocusMode: () => set((state) => ({ isFocusMode: !state.isFocusMode })),
+      // 侧边栏控制
+      toggleFolderSidebar: () => set((state) => ({ showFolderSidebar: !state.showFolderSidebar })),
 
       // 分栏布局
       setSplitLayout: (layout) => set({ splitLayout: layout }),
@@ -97,7 +97,8 @@ export const useViewStore = create<ViewStore>()(
     {
       name: "view-storage",
       partialize: (state) => ({
-        splitLayout: state.splitLayout // 只持久化 splitLayout
+        splitLayout: state.splitLayout,
+        showFolderSidebar: state.showFolderSidebar // 持久化侧边栏状态
       })
     }
   )
