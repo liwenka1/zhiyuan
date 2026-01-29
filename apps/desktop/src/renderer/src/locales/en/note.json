@@ -1,6 +1,7 @@
 {
   "search": "Search",
   "newNote": "New Note",
+  "toggleFolderSidebar": "Toggle Folder List",
   "defaultTitle": "Untitled Note",
   "defaultContent": "Start writing...",
   "pagesSuffix": "Pages",
