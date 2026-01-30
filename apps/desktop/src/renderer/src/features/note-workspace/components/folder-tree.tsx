@@ -1,4 +1,4 @@
-import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil } from "lucide-react";
+import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ interface FolderTreeProps {
   totalNoteCount?: number;
   onSelectFolder?: (folderId: string | null) => void;
   onCreateFolder?: () => void;
+  onImportRss?: () => void;
   onShowFolderInExplorer?: (folder: FolderItem) => void;
   onDeleteFolder?: (folder: FolderItem) => void;
   onRenameFolder?: (folder: FolderItem) => void;
@@ -41,6 +42,7 @@ export function FolderTree({
   totalNoteCount = 0,
   onSelectFolder,
   onCreateFolder,
+  onImportRss,
   onShowFolderInExplorer,
   onDeleteFolder,
   onRenameFolder
@@ -59,6 +61,15 @@ export function FolderTree({
     >
       {/* 顶部区域：新建文件夹按钮（给切换按钮留出空间） */}
       <div className="flex h-12 shrink-0 items-center justify-end gap-2 px-3 pl-11">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 shrink-0 p-0"
+          aria-label={t("importRss")}
+          onClick={onImportRss}
+        >
+          <Rss className="h-4 w-4" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"

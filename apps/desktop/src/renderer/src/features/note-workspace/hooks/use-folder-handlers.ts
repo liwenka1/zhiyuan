@@ -2,6 +2,7 @@ import { useFolderStore, useWorkspaceStore } from "@/stores";
 
 export interface FolderHandlers {
   handleCreateFolder: () => void;
+  handleImportRss: () => void;
   handleShowFolderInExplorer: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleDeleteFolder: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleRenameFolder: (folder: { id: string; name: string; noteCount?: number }) => void;
@@ -9,6 +10,7 @@ export interface FolderHandlers {
 
 interface UseFolderHandlersProps {
   onOpenCreateDialog: () => void;
+  onOpenRssImportDialog: () => void;
   onOpenRenameDialog: (folder: { id: string; name: string; noteCount?: number }) => void;
 }
 
@@ -16,13 +18,21 @@ interface UseFolderHandlersProps {
  * 文件夹操作 Hook
  * 处理所有文件夹相关的操作
  */
-export function useFolderHandlers({ onOpenCreateDialog, onOpenRenameDialog }: UseFolderHandlersProps): FolderHandlers {
+export function useFolderHandlers({
+  onOpenCreateDialog,
+  onOpenRssImportDialog,
+  onOpenRenameDialog
+}: UseFolderHandlersProps): FolderHandlers {
   const deleteFolder = useFolderStore((state) => state.deleteFolder);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
   const handleCreateFolder = () => {
     onOpenCreateDialog();
+  };
+
+  const handleImportRss = () => {
+    onOpenRssImportDialog();
   };
 
   // 在文件管理器中显示文件夹
@@ -52,6 +62,7 @@ export function useFolderHandlers({ onOpenCreateDialog, onOpenRenameDialog }: Us
 
   return {
     handleCreateFolder,
+    handleImportRss,
     handleShowFolderInExplorer,
     handleDeleteFolder,
     handleRenameFolder

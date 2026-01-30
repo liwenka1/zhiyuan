@@ -71,6 +71,11 @@
     },
     "exportImagePages": {
       "title": "导出为图片（分页）"
+    },
+    "importRss": {
+      "title": "导入 RSS",
+      "description": "请输入 RSS 订阅地址",
+      "placeholder": "https://example.com/feed.xml"
     }
   },
   "fileTypes": {
@@ -88,5 +93,11 @@
     "duplicateNoteFailed": "复制笔记失败，请重试",
     "saveNoteFailed": "保存笔记失败，请检查磁盘空间和权限",
     "initWorkspaceFailed": "初始化工作区失败，请检查文件系统权限或重启应用"
+  },
+  "rss": {
+    "importing": "正在导入 RSS...",
+    "success": "RSS 导入成功",
+    "failed": "RSS 导入失败",
+    "noWorkspace": "未选择工作区，无法导入 RSS"
   }
 }

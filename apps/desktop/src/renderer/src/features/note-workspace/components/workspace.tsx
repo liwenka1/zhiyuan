@@ -38,6 +38,7 @@ export function NoteWorkspace() {
   // 文件夹操作 handlers
   const folderHandlers = useFolderHandlers({
     onOpenCreateDialog: dialogState.openCreateFolderDialog,
+    onOpenRssImportDialog: dialogState.openRssImportDialog,
     onOpenRenameDialog: dialogState.openRenameFolderDialog
   });
 
@@ -54,6 +55,7 @@ export function NoteWorkspace() {
             totalNoteCount={notes.length}
             onSelectFolder={selectFolder}
             onCreateFolder={folderHandlers.handleCreateFolder}
+            onImportRss={folderHandlers.handleImportRss}
             onShowFolderInExplorer={folderHandlers.handleShowFolderInExplorer}
             onDeleteFolder={folderHandlers.handleDeleteFolder}
             onRenameFolder={folderHandlers.handleRenameFolder}
@@ -91,6 +93,8 @@ export function NoteWorkspace() {
       <NoteDialogs
         showCreateFolderDialog={dialogState.showCreateFolderDialog}
         onCloseCreateFolderDialog={dialogState.closeCreateFolderDialog}
+        showRssImportDialog={dialogState.showRssImportDialog}
+        onCloseRssImportDialog={dialogState.closeRssImportDialog}
         showRenameNoteDialog={dialogState.showRenameNoteDialog}
         noteToRename={dialogState.noteToRename}
         onCloseRenameNoteDialog={dialogState.closeRenameNoteDialog}

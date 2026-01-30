@@ -1,6 +1,7 @@
 {
   "allNotes": "All Notes",
   "newFolder": "New Folder",
+  "importRss": "Import RSS",
   "toggleFolderSidebar": "Toggle Folder List",
   "contextMenu": {
     "showInExplorer": "Show in File Manager",

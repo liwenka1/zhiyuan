@@ -165,6 +165,18 @@ export interface ConfigAPI {
   setPinnedNotes: (workspacePath: string, noteIds: string[]) => Promise<void>;
 }
 
+// RSS API 接口
+export interface RssAPI {
+  import: (
+    url: string,
+    workspacePath: string
+  ) => Promise<{
+    folderName: string;
+    folderPath: string;
+    itemCount: number;
+  }>;
+}
+
 // 扩展的 API 接口
 export interface API {
   theme: ThemeAPI;
@@ -176,6 +188,7 @@ export interface API {
   window: WindowAPI;
   utils: UtilsAPI;
   config: ConfigAPI;
+  rss: RssAPI;
 }
 
 declare global {

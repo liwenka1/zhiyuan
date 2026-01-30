@@ -71,6 +71,11 @@
     },
     "exportImagePages": {
       "title": "Export as Images (Pages)"
+    },
+    "importRss": {
+      "title": "Import RSS",
+      "description": "Enter RSS feed URL",
+      "placeholder": "https://example.com/feed.xml"
     }
   },
   "fileTypes": {
@@ -88,5 +93,11 @@
     "duplicateNoteFailed": "Failed to duplicate note, please try again",
     "saveNoteFailed": "Failed to save note, please check disk space and permissions",
     "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app"
+  },
+  "rss": {
+    "importing": "Importing RSS...",
+    "success": "RSS import succeeded",
+    "failed": "RSS import failed",
+    "noWorkspace": "No workspace selected, cannot import RSS"
   }
 }
