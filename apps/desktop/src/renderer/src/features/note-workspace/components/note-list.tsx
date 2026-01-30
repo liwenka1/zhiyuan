@@ -1,6 +1,6 @@
 import { FileText, Inbox, SquarePen, Pin, PinOff, Search, Eye, Trash2, Copy, Pencil, Download, X } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
 import { cn, formatDateTime } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { useTranslation } from "react-i18next";
+import { useViewStore } from "@/stores";
 
 interface Note {
   id: string;
@@ -57,8 +58,9 @@ export function NoteList({
   onCopyToWechat
 }: NoteListProps) {
   const { t } = useTranslation("note");
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
+  const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
 
   const handleSearchToggle = () => {
     if (isSearchExpanded) {
@@ -161,7 +163,7 @@ export function NoteList({
               }}
             >
               {/* 新建笔记 + 搜索按钮 */}
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="ml-auto flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"

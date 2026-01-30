@@ -16,21 +16,26 @@ interface MainLayoutProps {
 
 // 动画过渡样式
 const panelTransitionStyle = {
-  transition: "flex-basis 0.25s cubic-bezier(0.32, 0.72, 0, 1), flex-grow 0.25s cubic-bezier(0.32, 0.72, 0, 1), flex-shrink 0.25s cubic-bezier(0.32, 0.72, 0, 1)"
+  transition:
+    "flex-basis 0.25s cubic-bezier(0.32, 0.72, 0, 1), flex-grow 0.25s cubic-bezier(0.32, 0.72, 0, 1), flex-shrink 0.25s cubic-bezier(0.32, 0.72, 0, 1)"
 };
 
 export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayoutProps) {
   const { isMac, isWindows } = usePlatform();
   const showFolderSidebar = useViewStore((state) => state.showFolderSidebar);
   const toggleFolderSidebar = useViewStore((state) => state.toggleFolderSidebar);
+  const isNoteSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const folderPanelRef = useRef<ImperativePanelHandle>(null);
   const notePanelRef = useRef<ImperativePanelHandle>(null);
-  
+
   // 保存笔记列表的宽度
   const [noteListSize, setNoteListSize] = useState(25);
-  
+
   // 是否正在拖拽 - 拖拽时禁用动画
   const [isDragging, setIsDragging] = useState(false);
+
+  // 按钮是否应该显示：文件夹展开时显示，或者文件夹收起但搜索未展开时显示
+  const shouldShowToggleButton = showFolderSidebar || !isNoteSearchExpanded;
 
   // 使用 collapse/expand API 控制面板
   useEffect(() => {
@@ -75,57 +80,53 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
     <div className="bg-background flex h-screen w-full overflow-hidden" style={outerStyle}>
       {/* 自定义标题栏（Windows 拖拽区域） */}
       <TitleBar />
-      
-      {/* 固定的文件夹切换按钮 - 浮在左侧面板上方 */}
-      <Button
-        variant="ghost"
-        size="sm"
-        className="absolute h-7 w-7 shrink-0 p-0 z-10"
-        style={{
-          top: isMac ? "calc(var(--titlebar-height-mac) + 12px)" : (isWindows ? "calc(var(--titlebar-height-windows) + 13px)" : "12px"),
-          left: "12px"
-        }}
-        onClick={toggleFolderSidebar}
-      >
-        {showFolderSidebar ? (
-          <PanelLeftClose className="h-4 w-4" />
-        ) : (
-          <PanelLeftOpen className="h-4 w-4" />
-        )}
-      </Button>
-      
+
+      {/* 固定的文件夹切换按钮 - 文件夹收起且搜索展开时隐藏 */}
+      {shouldShowToggleButton && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute z-10 h-7 w-7 shrink-0 p-0 transition-opacity duration-200"
+          style={{
+            top: isMac
+              ? "calc(var(--titlebar-height-mac) + 12px)"
+              : isWindows
+                ? "calc(var(--titlebar-height-windows) + 13px)"
+                : "12px",
+            left: "12px"
+          }}
+          onClick={toggleFolderSidebar}
+        >
+          {showFolderSidebar ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+        </Button>
+      )}
+
       <ResizablePanelGroup
         direction="horizontal"
         className={cn("h-full", isWindows && "border-border border-t")}
         style={innerStyle}
       >
-        {/* 左侧文件夹树（收起时完全消失，按钮固定在左上角） */}
-        <ResizablePanel 
+        {/* 左侧文件夹树（收起时完全消失） */}
+        <ResizablePanel
           ref={folderPanelRef}
-          defaultSize={15} 
+          defaultSize={15}
           minSize={15}
-          maxSize={20} 
+          maxSize={20}
           collapsible={true}
           className="bg-background overflow-hidden"
           style={isDragging ? undefined : panelTransitionStyle}
         >
-          <aside className="no-select h-full">
-            {leftSidebar}
-          </aside>
+          <aside className="no-select h-full">{leftSidebar}</aside>
         </ResizablePanel>
 
         {/* 分割线 */}
-        <ResizableHandle 
-          className={handleClassName} 
-          style={handleStyle}
-          onDragging={setIsDragging}
-        />
+        <ResizableHandle className={handleClassName} style={handleStyle} onDragging={setIsDragging} />
 
         {/* 中间笔记列表 - 保存并恢复宽度 */}
-        <ResizablePanel 
+        <ResizablePanel
           ref={notePanelRef}
-          defaultSize={25} 
-          minSize={20} 
+          defaultSize={25}
+          minSize={20}
           maxSize={35}
           onResize={(size) => {
             // 保存笔记列表的宽度
@@ -138,17 +139,10 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
         </ResizablePanel>
 
         {/* 分割线 */}
-        <ResizableHandle 
-          className={handleClassName} 
-          style={handleStyle}
-          onDragging={setIsDragging}
-        />
+        <ResizableHandle className={handleClassName} style={handleStyle} onDragging={setIsDragging} />
 
         {/* 右侧编辑区 - 自动填充剩余空间 */}
-        <ResizablePanel 
-          className="bg-background"
-          style={isDragging ? undefined : panelTransitionStyle}
-        >
+        <ResizablePanel className="bg-background" style={isDragging ? undefined : panelTransitionStyle}>
           <main className="allow-select h-full min-w-0 overflow-hidden">{mainContent}</main>
         </ResizablePanel>
       </ResizablePanelGroup>

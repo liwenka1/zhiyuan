@@ -49,10 +49,10 @@ export function FolderTree({
   const isAllSelected = selectedFolderId === null;
 
   return (
-    <div 
+    <div
       className={cn(
         "flex h-full flex-col transition-opacity duration-200",
-        showFolderSidebar ? "opacity-100" : "opacity-0 pointer-events-none"
+        showFolderSidebar ? "opacity-100" : "pointer-events-none opacity-0"
       )}
     >
       {/* 顶部区域：新建文件夹按钮（给切换按钮留出空间） */}
@@ -75,8 +75,8 @@ export function FolderTree({
           <div
             className={cn(
               "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2 transition-colors duration-150",
-              isAllSelected 
-                ? "bg-selection text-foreground font-medium" 
+              isAllSelected
+                ? "bg-selection text-foreground font-medium"
                 : "text-muted-foreground hover:bg-highlight hover:text-foreground"
             )}
             onClick={() => onSelectFolder?.(null)}
@@ -95,8 +95,8 @@ export function FolderTree({
                   <div
                     className={cn(
                       "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2 transition-colors duration-150",
-                      isSelected 
-                        ? "bg-selection text-foreground font-medium" 
+                      isSelected
+                        ? "bg-selection text-foreground font-medium"
                         : "text-muted-foreground hover:bg-highlight hover:text-foreground"
                     )}
                     onClick={() => onSelectFolder?.(folder.id)}
