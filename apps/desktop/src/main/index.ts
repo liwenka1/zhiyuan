@@ -7,6 +7,7 @@ import { registerThemeHandlers } from "./ipc/theme-handler";
 import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
 import { registerExportHandlers } from "./ipc/export-handler";
 import { registerWindowHandlers } from "./ipc/window-handler";
+import { registerRssHandlers } from "./ipc/rss-handler";
 import { pathToFileURL } from "url";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
 
@@ -174,6 +175,9 @@ app.whenReady().then(() => {
 
   // 注册窗口相关的 IPC 处理器
   registerWindowHandlers();
+
+  // 注册 RSS 相关的 IPC 处理器
+  registerRssHandlers();
 
   createWindow();
 

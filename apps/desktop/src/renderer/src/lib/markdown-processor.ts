@@ -14,6 +14,7 @@ import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import rehypeStringify from "rehype-stringify";
 import mermaid from "mermaid";
+import { stripHiddenFrontmatter } from "./frontmatter";
 
 // 初始化 mermaid
 mermaid.initialize({ startOnLoad: false, theme: "default" });
@@ -48,6 +49,7 @@ async function renderMermaidBlocks(html: string): Promise<string> {
  * @returns HTML 字符串
  */
 export async function markdownToHTML(markdown: string): Promise<string> {
+  const normalized = stripHiddenFrontmatter(markdown);
   const file = await unified()
     .use(remarkParse) // 解析 Markdown
     .use(remarkGfm) // 支持 GitHub Flavored Markdown
@@ -58,7 +60,7 @@ export async function markdownToHTML(markdown: string): Promise<string> {
     .use(rehypeHighlight, { detect: true }) // 代码语法高亮
     .use(rehypeKatex) // 渲染数学公式
     .use(rehypeStringify) // 转换为 HTML 字符串
-    .process(markdown);
+    .process(normalized);
 
   // 处理 Mermaid 图表
   const html = await renderMermaidBlocks(String(file));

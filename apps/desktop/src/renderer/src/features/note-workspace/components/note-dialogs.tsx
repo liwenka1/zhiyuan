@@ -1,11 +1,16 @@
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { InputDialog } from "@renderer/components/input-dialog";
-import { useNoteStore, useFolderStore } from "@/stores";
+import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 
 interface NoteDialogsProps {
   // 创建文件夹
   showCreateFolderDialog: boolean;
   onCloseCreateFolderDialog: () => void;
+
+  // RSS 导入
+  showRssImportDialog: boolean;
+  onCloseRssImportDialog: () => void;
 
   // 重命名笔记
   showRenameNoteDialog: boolean;
@@ -25,6 +30,8 @@ interface NoteDialogsProps {
 export function NoteDialogs({
   showCreateFolderDialog,
   onCloseCreateFolderDialog,
+  showRssImportDialog,
+  onCloseRssImportDialog,
   showRenameNoteDialog,
   noteToRename,
   onCloseRenameNoteDialog,
@@ -36,10 +43,29 @@ export function NoteDialogs({
   const createFolder = useFolderStore((state) => state.createFolder);
   const renameNote = useNoteStore((state) => state.renameNote);
   const renameFolder = useFolderStore((state) => state.renameFolder);
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 确认创建文件夹
   const handleConfirmCreateFolder = async (folderName: string) => {
     await createFolder(folderName);
+  };
+
+  const handleConfirmRssImport = async (url: string) => {
+    if (!workspacePath) {
+      toast.error(t("rss.noWorkspace"));
+      return;
+    }
+
+    const toastId = "rss-import";
+    toast.loading(t("rss.importing"), { id: toastId });
+
+    try {
+      await window.api.rss.import(url, workspacePath);
+      toast.success(t("rss.success"), { id: toastId });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t("rss.failed")}: ${errorMessage}`, { id: toastId });
+    }
   };
 
   // 确认重命名笔记
@@ -76,6 +102,16 @@ export function NoteDialogs({
         description={t("dialog.createFolder.description")}
         placeholder={t("dialog.createFolder.placeholder")}
         onConfirm={handleConfirmCreateFolder}
+      />
+
+      {/* RSS 导入对话框 */}
+      <InputDialog
+        open={showRssImportDialog}
+        onOpenChange={onCloseRssImportDialog}
+        title={t("dialog.importRss.title")}
+        description={t("dialog.importRss.description")}
+        placeholder={t("dialog.importRss.placeholder")}
+        onConfirm={handleConfirmRssImport}
       />
 
       {/* 重命名文件夹对话框 */}

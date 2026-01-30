@@ -350,6 +350,17 @@ const api = {
      */
     setPinnedNotes: (workspacePath: string, noteIds: string[]): Promise<void> =>
       ipcRenderer.invoke("config:setPinnedNotes", workspacePath, noteIds)
+  },
+
+  rss: {
+    import: (
+      url: string,
+      workspacePath: string
+    ): Promise<{
+      folderName: string;
+      folderPath: string;
+      itemCount: number;
+    }> => ipcRenderer.invoke("rss:import", url, workspacePath)
   }
 };
 
