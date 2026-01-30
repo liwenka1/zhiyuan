@@ -215,12 +215,17 @@ export function NoteList({
                       animate={{
                         opacity: 1,
                         x: 0,
-                        backgroundColor: getSelectionBgColor(isSelected)
+                        backgroundColor: getSelectionBgColor(isSelected),
+                        transition: {
+                          opacity: { duration: 0.2, delay: index * 0.03 },
+                          x: { duration: 0.2, delay: index * 0.03 },
+                          backgroundColor: { duration: 0.1 }
+                        }
                       }}
                       whileHover={{
-                        backgroundColor: getHoverBgColor(isSelected)
+                        backgroundColor: getHoverBgColor(isSelected),
+                        transition: { duration: 0.1 }
                       }}
-                      transition={{ duration: 0.2, delay: index * 0.03 }}
                       className="note-item cursor-pointer overflow-hidden rounded-md px-3 py-2"
                       onClick={() => onSelectNote?.(note.id)}
                     >
