@@ -10,7 +10,8 @@ import {
   Pencil,
   Download,
   X,
-  FolderOpen
+  FolderOpen,
+  Volume2
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRef } from "react";
@@ -30,7 +31,7 @@ import {
 import { cn, formatDateTime } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { useTranslation } from "react-i18next";
-import { useViewStore } from "@/stores";
+import { useViewStore, useNoteStore } from "@/stores";
 
 interface Note {
   id: string;
@@ -71,6 +72,7 @@ export function NoteList({
   onCopyToWechat
 }: NoteListProps) {
   const { t } = useTranslation("note");
+  const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
   const inputRef = useRef<HTMLInputElement>(null);
   const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
@@ -244,13 +246,8 @@ export function NoteList({
                     >
                       {/* 标题行 */}
                       <div className="flex min-w-0 items-start gap-2">
-                        {note.isPinned ? (
-                          <Pin
-                            className={cn(
-                              "mt-0.5 h-3.5 w-3.5 shrink-0",
-                              isSelected ? "text-highlight" : "text-highlight/70"
-                            )}
-                          />
+                        {playingNoteIds.includes(note.id) ? (
+                          <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
                         ) : (
                           <FileText
                             className={cn(
@@ -271,14 +268,17 @@ export function NoteList({
 
                       {/* 日期行 */}
                       {note.updatedAt && (
-                        <p
+                        <div
                           className={cn(
-                            "mt-1.5 text-xs",
+                            "mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
                             isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
                           )}
                         >
-                          {formatDateTime(note.updatedAt)}
-                        </p>
+                          {note.isPinned ? (
+                            <Pin className={cn("h-3 w-3", isSelected ? "text-highlight" : "text-highlight/70")} />
+                          ) : null}
+                          <span>{formatDateTime(note.updatedAt)}</span>
+                        </div>
                       )}
                     </motion.div>
                   </ContextMenuTrigger>

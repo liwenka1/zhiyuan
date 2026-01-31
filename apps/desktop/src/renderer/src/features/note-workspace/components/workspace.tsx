@@ -23,6 +23,7 @@ export function NoteWorkspace() {
   const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
   const editorContent = useNoteStore((state) => state.editorContent);
+  const openNoteIds = useNoteStore((state) => state.openNoteIds);
   const searchKeyword = useNoteStore((state) => state.searchKeyword);
   const notes = useNoteStore((state) => state.notes);
   const selectFolder = useFolderStore((state) => state.selectFolder);
@@ -82,12 +83,12 @@ export function NoteWorkspace() {
         }
         mainContent={
           <EditorArea
-            key={selectedNoteId ?? "empty"}
             content={editorContent}
             onChange={updateNoteContent}
             hasNote={!!selectedNoteId}
             noteId={selectedNoteId ?? undefined}
-            notePath={notes.find((n) => n.id === selectedNoteId)?.filePath}
+            openNoteIds={openNoteIds}
+            notes={notes}
             onShowNoteInExplorer={noteHandlers.handleShowNoteInExplorer}
             onRenameNote={noteHandlers.handleRenameNote}
             onDuplicateNote={noteHandlers.handleDuplicateNote}

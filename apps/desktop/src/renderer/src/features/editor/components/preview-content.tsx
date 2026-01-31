@@ -4,6 +4,7 @@ import { MarkdownRenderer } from "./markdown-renderer";
 interface PreviewContentProps {
   content: string;
   notePath?: string; // 笔记的完整文件路径，用于解析相对资源路径
+  noteId?: string;
 }
 
 /**
@@ -16,11 +17,11 @@ interface PreviewContentProps {
  * - ✅ 支持数学公式 (KaTeX)
  * - ✅ 支持图表 (Mermaid)
  */
-export function PreviewContent({ content, notePath }: PreviewContentProps) {
+export function PreviewContent({ content, notePath, noteId }: PreviewContentProps) {
   return (
-    <ScrollArea className="h-full" id="preview-scroll-area">
+    <ScrollArea className="h-full" id={noteId ? `preview-scroll-area-${noteId}` : "preview-scroll-area"}>
       <div style={{ padding: "0 var(--editor-padding) var(--editor-bottom-space) var(--editor-padding)" }}>
-        <MarkdownRenderer content={content} notePath={notePath} className="max-w-none" />
+        <MarkdownRenderer content={content} notePath={notePath} noteId={noteId} className="max-w-none" />
       </div>
     </ScrollArea>
   );

@@ -15,6 +15,7 @@ import { createUrlTransformer } from "@/lib/resource-resolver";
 import { stripHiddenFrontmatter } from "@/lib/frontmatter";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
+import { useNoteStore } from "@/stores";
 
 // 初始化 mermaid
 mermaid.initialize({ startOnLoad: false, theme: "default" });
@@ -22,6 +23,7 @@ mermaid.initialize({ startOnLoad: false, theme: "default" });
 interface MarkdownRendererProps {
   content: string;
   notePath?: string; // 笔记的完整文件路径，用于解析相对资源路径
+  noteId?: string;
   className?: string; // 自定义 prose 容器样式
   showEmptyState?: boolean; // 是否显示空状态，默认 true
   emptyStateMessage?: string; // 自定义空状态文案
@@ -62,6 +64,7 @@ function MermaidBlock({ code }: { code: string }) {
 export function MarkdownRenderer({
   content,
   notePath,
+  noteId,
   className,
   showEmptyState = true,
   emptyStateMessage
@@ -80,6 +83,36 @@ export function MarkdownRenderer({
       </div>
     );
   }
+
+  useEffect(() => {
+    if (!noteId) return;
+    const root = document.getElementById(`preview-scroll-area-${noteId}`);
+    if (!root) return;
+
+    const mediaElements = Array.from(root.querySelectorAll("audio, video"));
+    if (mediaElements.length === 0) return;
+
+    const handlePlay = () => {
+      useNoteStore.getState().setNotePlaying(noteId, true);
+    };
+    const handleStop = () => {
+      useNoteStore.getState().setNotePlaying(noteId, false);
+    };
+
+    mediaElements.forEach((el) => {
+      el.addEventListener("play", handlePlay);
+      el.addEventListener("pause", handleStop);
+      el.addEventListener("ended", handleStop);
+    });
+
+    return () => {
+      mediaElements.forEach((el) => {
+        el.removeEventListener("play", handlePlay);
+        el.removeEventListener("pause", handleStop);
+        el.removeEventListener("ended", handleStop);
+      });
+    };
+  }, [noteId, normalizedContent]);
 
   return (
     <div className={cn("prose dark:prose-invert", className)}>

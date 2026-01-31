@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo, memo } from "react";
 import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
@@ -6,13 +6,15 @@ import { EmptyEditor } from "./empty-state";
 import { useViewStore } from "@/stores";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ImperativePanelHandle } from "react-resizable-panels";
+import type { Note } from "@/types";
 
 interface EditorAreaProps {
   content?: string;
   onChange?: (content: string) => void;
   hasNote?: boolean;
   noteId?: string;
-  notePath?: string; // 笔记的完整文件路径，用于解析相对资源路径
+  openNoteIds?: string[];
+  notes?: Note[];
   onShowNoteInExplorer?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onRenameNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onDuplicateNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
@@ -28,7 +30,8 @@ export function EditorArea({
   onChange,
   hasNote = false,
   noteId,
-  notePath,
+  openNoteIds = [],
+  notes = [],
   onShowNoteInExplorer,
   onRenameNote,
   onDuplicateNote,
@@ -40,47 +43,13 @@ export function EditorArea({
   const setSplitLayout = useViewStore((state) => state.setSplitLayout);
   const resetSplitLayout = useViewStore((state) => state.resetSplitLayout);
 
-  const editorPanelRef = useRef<ImperativePanelHandle>(null);
-  const previewPanelRef = useRef<ImperativePanelHandle>(null);
-
-  const handleContentChange = (value: string) => {
-    onChange?.(value);
-  };
-
-  // 统一调整面板大小
-  const resizePanels = (editorSize: number, previewSize: number) => {
-    editorPanelRef.current?.resize(editorSize);
-    previewPanelRef.current?.resize(previewSize);
-  };
-
-  // 双击分割线重置到 50/50
-  const handleResetPanels = () => {
-    resizePanels(50, 50);
-    resetSplitLayout();
-  };
-
-  // 监听分栏模式下的布局变化（用户拖动）
-  const handleLayoutChange = (sizes: number[]) => {
-    // 只在分栏模式下保存
-    if (editorMode === "split" && sizes.length === 2) {
-      setSplitLayout([sizes[0], sizes[1]]);
-    }
-  };
-
-  // 模式切换时自动调整面板大小
-  useEffect(() => {
-    if (editorMode === "edit") {
-      resizePanels(100, 0);
-    } else if (editorMode === "preview") {
-      resizePanels(0, 100);
-    } else if (editorMode === "split") {
-      // 恢复分栏模式保存的比例
-      resizePanels(splitLayout[0], splitLayout[1]);
-    }
-  }, [editorMode, splitLayout]);
+  const openNotes = useMemo(
+    () => openNoteIds.map((id) => notes.find((note) => note.id === id)).filter(Boolean) as Note[],
+    [notes, openNoteIds]
+  );
 
   // 如果没有选中笔记，显示空状态
-  if (!hasNote && !content) {
+  if (!hasNote && !content && openNotes.length === 0) {
     return (
       <div className="flex h-full flex-col">
         <EditorToolbar />
@@ -91,13 +60,6 @@ export function EditorArea({
     );
   }
 
-  const isSplit = editorMode === "split";
-
-  // 使用统一的 ResizablePanelGroup 布局
-  // 两个面板始终存在，通过 useEffect 动态调整大小
-  // 编辑模式：编辑器 100%, 预览 0
-  // 预览模式：编辑器 0, 预览 100%
-  // 分栏模式：编辑器 50%, 预览 50%（可拖动）
   return (
     <div className="flex h-full flex-col">
       <EditorToolbar
@@ -109,13 +71,88 @@ export function EditorArea({
         onDeleteNote={onDeleteNote}
       />
       <div className="flex-1 overflow-hidden">
+        {openNotes.map((note) => (
+          <OpenNotePanels
+            key={note.id}
+            noteId={note.id}
+            content={note.content}
+            notePath={note.filePath}
+            isActive={note.id === noteId}
+            editorMode={editorMode}
+            splitLayout={splitLayout}
+            setSplitLayout={(sizes) => setSplitLayout([sizes[0] ?? 50, sizes[1] ?? 50])}
+            resetSplitLayout={resetSplitLayout}
+            onChange={onChange}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const OpenNotePanels = memo(
+  function OpenNotePanels({
+    noteId,
+    content,
+    notePath,
+    isActive,
+    editorMode,
+    splitLayout,
+    setSplitLayout,
+    resetSplitLayout,
+    onChange
+  }: {
+    noteId: string;
+    content: string;
+    notePath?: string;
+    isActive: boolean;
+    editorMode: "edit" | "preview" | "split";
+    splitLayout: number[];
+    setSplitLayout: (sizes: number[]) => void;
+    resetSplitLayout: () => void;
+    onChange?: (content: string) => void;
+  }) {
+    const editorPanelRef = useRef<ImperativePanelHandle>(null);
+    const previewPanelRef = useRef<ImperativePanelHandle>(null);
+    const isSplit = editorMode === "split";
+
+    const handleContentChange = (value: string) => {
+      onChange?.(value);
+    };
+
+    const resizePanels = (editorSize: number, previewSize: number) => {
+      editorPanelRef.current?.resize(editorSize);
+      previewPanelRef.current?.resize(previewSize);
+    };
+
+    const handleResetPanels = () => {
+      resizePanels(50, 50);
+      resetSplitLayout();
+    };
+
+    const handleLayoutChange = (sizes: number[]) => {
+      if (editorMode === "split" && sizes.length === 2) {
+        setSplitLayout([sizes[0], sizes[1]]);
+      }
+    };
+
+    useEffect(() => {
+      if (editorMode === "edit") {
+        resizePanels(100, 0);
+      } else if (editorMode === "preview") {
+        resizePanels(0, 100);
+      } else if (editorMode === "split") {
+        resizePanels(splitLayout[0], splitLayout[1]);
+      }
+    }, [editorMode, splitLayout]);
+
+    return (
+      <div className={isActive ? "h-full" : "hidden"}>
         <ResizablePanelGroup direction="horizontal" onLayout={handleLayoutChange} className="h-full">
-          {/* 编辑器面板（始终存在，保持滚动位置）*/}
           <ResizablePanel ref={editorPanelRef} defaultSize={50} minSize={isSplit ? 30 : 0} collapsible={!isSplit}>
             <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
           </ResizablePanel>
 
-          {/* 分割线（仅在分栏模式显示）*/}
           {isSplit && (
             <ResizableHandle
               className="bg-border hover:bg-primary w-px transition-colors"
@@ -123,12 +160,19 @@ export function EditorArea({
             />
           )}
 
-          {/* 预览面板（始终存在，保持滚动位置）*/}
           <ResizablePanel ref={previewPanelRef} defaultSize={50} minSize={isSplit ? 30 : 0} collapsible={!isSplit}>
-            <PreviewContent content={content} notePath={notePath} />
+            <PreviewContent content={content} notePath={notePath} noteId={noteId} />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
-    </div>
-  );
-}
+    );
+  },
+  (prev, next) =>
+    prev.noteId === next.noteId &&
+    prev.content === next.content &&
+    prev.notePath === next.notePath &&
+    prev.isActive === next.isActive &&
+    prev.editorMode === next.editorMode &&
+    prev.splitLayout[0] === next.splitLayout[0] &&
+    prev.splitLayout[1] === next.splitLayout[1]
+);
