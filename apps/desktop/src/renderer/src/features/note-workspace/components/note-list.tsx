@@ -1,4 +1,17 @@
-import { FileText, Inbox, SquarePen, Pin, PinOff, Search, Eye, Trash2, Copy, Pencil, Download, X } from "lucide-react";
+import {
+  FileText,
+  Inbox,
+  SquarePen,
+  Pin,
+  PinOff,
+  Search,
+  Trash2,
+  Copy,
+  Pencil,
+  Download,
+  X,
+  FolderOpen
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRef } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -271,7 +284,7 @@ export function NoteList({
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
-                      <Eye className="h-4 w-4" />
+                      <FolderOpen className="h-4 w-4" />
                       <span>{t("contextMenu.showInExplorer")}</span>
                     </ContextMenuItem>
                     <ContextMenuSeparator />

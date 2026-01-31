@@ -1,4 +1,4 @@
-import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss } from "lucide-react";
+import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss, RefreshCw, Unlink } from "lucide-react";
 import { motion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -137,23 +137,23 @@ export function FolderTree({
                   </motion.div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
-                  {folder.isRss && (
-                    <>
-                      <ContextMenuItem onClick={() => onUpdateRss?.(folder)}>
-                        <Rss className="h-4 w-4" />
-                        <span>{t("contextMenu.updateRss")}</span>
-                      </ContextMenuItem>
-                      <ContextMenuItem onClick={() => onUnsubscribeRss?.(folder)}>
-                        <Trash2 className="h-4 w-4" />
-                        <span>{t("contextMenu.unsubscribeRss")}</span>
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                    </>
-                  )}
                   <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
                     <FolderOpen className="h-4 w-4" />
                     <span>{t("contextMenu.showInExplorer")}</span>
                   </ContextMenuItem>
+                  {folder.isRss && (
+                    <>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onUpdateRss?.(folder)}>
+                        <RefreshCw className="h-4 w-4" />
+                        <span>{t("contextMenu.updateRss")}</span>
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => onUnsubscribeRss?.(folder)}>
+                        <Unlink className="h-4 w-4" />
+                        <span>{t("contextMenu.unsubscribeRss")}</span>
+                      </ContextMenuItem>
+                    </>
+                  )}
                   <ContextMenuSeparator />
                   <ContextMenuItem onClick={() => onRenameFolder?.(folder)}>
                     <Pencil className="h-4 w-4" />
