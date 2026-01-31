@@ -6,6 +6,7 @@ export interface FolderHandlers {
   handleCreateFolder: () => void;
   handleImportRss: () => void;
   handleUpdateRss: (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => Promise<void>;
+  handleUnsubscribeRss: (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => Promise<void>;
   handleShowFolderInExplorer: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleDeleteFolder: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleRenameFolder: (folder: { id: string; name: string; noteCount?: number }) => void;
@@ -28,6 +29,8 @@ export function useFolderHandlers({
 }: UseFolderHandlersProps): FolderHandlers {
   const { t } = useTranslation("sidebar");
   const deleteFolder = useFolderStore((state) => state.deleteFolder);
+  const folders = useFolderStore((state) => state.folders);
+  const setFolders = useFolderStore((state) => state.setFolders);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
@@ -56,6 +59,33 @@ export function useFolderHandlers({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.updateFailed")}: ${errorMessage}`, { id: toastId });
+    }
+  };
+
+  const handleUnsubscribeRss = async (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => {
+    if (!workspacePath || !folder.isRss) return;
+
+    const folderPath = `${workspacePath}/${folder.name}`;
+    const toastId = `rss-unsubscribe-${folder.id}`;
+    toast.loading(t("rss.unsubscribing"), { id: toastId });
+
+    try {
+      await window.api.rss.unsubscribe(folderPath);
+      setFolders(
+        folders.map((item) =>
+          item.id === folder.id
+            ? {
+                ...item,
+                isRss: false,
+                updatedAt: new Date().toISOString()
+              }
+            : item
+        )
+      );
+      toast.success(t("rss.unsubscribed"), { id: toastId });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t("rss.unsubscribeFailed")}: ${errorMessage}`, { id: toastId });
     }
   };
 
@@ -88,6 +118,7 @@ export function useFolderHandlers({
     handleCreateFolder,
     handleImportRss,
     handleUpdateRss,
+    handleUnsubscribeRss,
     handleShowFolderInExplorer,
     handleDeleteFolder,
     handleRenameFolder

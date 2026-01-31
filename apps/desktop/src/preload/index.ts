@@ -361,7 +361,9 @@ const api = {
       folderPath: string;
       itemCount: number;
     }> => ipcRenderer.invoke("rss:import", url, workspacePath),
-    update: (folderPath: string): Promise<{ addedCount: number }> => ipcRenderer.invoke("rss:update", folderPath)
+    update: (folderPath: string): Promise<{ addedCount: number }> => ipcRenderer.invoke("rss:update", folderPath),
+    unsubscribe: (folderPath: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke("rss:unsubscribe", folderPath)
   }
 };
 
