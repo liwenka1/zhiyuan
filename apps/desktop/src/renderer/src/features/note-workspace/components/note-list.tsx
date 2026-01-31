@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRef } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,14 @@ export function NoteList({
       inputRef.current.focus();
     }
   };
+
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: notes.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 56,
+    overscan: 6
+  });
 
   return (
     <div className="flex h-full flex-col">
@@ -204,7 +213,7 @@ export function NoteList({
       </div>
 
       {/* 笔记列表 */}
-      <ScrollArea className="flex-1 overflow-hidden">
+      <ScrollArea className="flex-1 overflow-hidden" viewportRef={parentRef}>
         {notes.length === 0 ? (
           <motion.div
             className="empty-state text-muted-foreground flex flex-col items-center justify-center p-6 text-center"
@@ -219,68 +228,72 @@ export function NoteList({
             </p>
           </motion.div>
         ) : (
-          <div className="space-y-0.5 px-2">
-            {notes.map((note, index) => {
+          <div className="px-0" style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const note = notes[virtualRow.index];
+              if (!note) return null;
               const isSelected = selectedNoteId === note.id;
               return (
                 <ContextMenu key={note.id}>
                   <ContextMenuTrigger asChild>
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{
-                        opacity: 1,
-                        x: 0,
-                        backgroundColor: getSelectionBgColor(isSelected),
-                        transition: {
-                          opacity: { duration: 0.2, delay: index * 0.03 },
-                          x: { duration: 0.2, delay: index * 0.03 },
-                          backgroundColor: { duration: 0.1 }
-                        }
-                      }}
-                      whileHover={{
-                        backgroundColor: getHoverBgColor(isSelected),
-                        transition: { duration: 0.1 }
-                      }}
-                      className="note-item cursor-pointer overflow-hidden rounded-md px-3 py-2"
-                      onClick={() => onSelectNote?.(note.id)}
+                    <div
+                      ref={rowVirtualizer.measureElement}
+                      data-index={virtualRow.index}
+                      className="absolute right-0 left-0 px-2"
+                      style={{ transform: `translateY(${virtualRow.start}px)` }}
                     >
-                      {/* 标题行 */}
-                      <div className="flex min-w-0 items-start gap-2">
-                        {playingNoteIds.includes(note.id) ? (
-                          <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
-                        ) : (
-                          <FileText
+                      <motion.div
+                        animate={{
+                          backgroundColor: getSelectionBgColor(isSelected),
+                          transition: {
+                            backgroundColor: { duration: 0.1 }
+                          }
+                        }}
+                        whileHover={{
+                          backgroundColor: getHoverBgColor(isSelected),
+                          transition: { duration: 0.1 }
+                        }}
+                        className="note-item cursor-pointer overflow-hidden rounded-md px-3 py-2"
+                        onClick={() => onSelectNote?.(note.id)}
+                      >
+                        {/* 标题行 */}
+                        <div className="flex min-w-0 items-start gap-2">
+                          {playingNoteIds.includes(note.id) ? (
+                            <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
+                          ) : (
+                            <FileText
+                              className={cn(
+                                "mt-0.5 h-3.5 w-3.5 shrink-0",
+                                isSelected ? "text-foreground" : "text-muted-foreground"
+                              )}
+                            />
+                          )}
+                          <div
                             className={cn(
-                              "mt-0.5 h-3.5 w-3.5 shrink-0",
-                              isSelected ? "text-foreground" : "text-muted-foreground"
+                              "min-w-0 flex-1 truncate text-sm leading-tight font-medium",
+                              isSelected ? "text-foreground" : "text-foreground/90"
                             )}
-                          />
-                        )}
-                        <div
-                          className={cn(
-                            "min-w-0 flex-1 truncate text-sm leading-tight font-medium",
-                            isSelected ? "text-foreground" : "text-foreground/90"
-                          )}
-                        >
-                          {note.title}
+                          >
+                            {note.title}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* 日期行 */}
-                      {note.updatedAt && (
-                        <div
-                          className={cn(
-                            "mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
-                            isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
-                          )}
-                        >
-                          {note.isPinned ? (
-                            <Pin className={cn("h-3 w-3", isSelected ? "text-highlight" : "text-highlight/70")} />
-                          ) : null}
-                          <span>{formatDateTime(note.updatedAt)}</span>
-                        </div>
-                      )}
-                    </motion.div>
+                        {/* 日期行 */}
+                        {note.updatedAt && (
+                          <div
+                            className={cn(
+                              "mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
+                              isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
+                            )}
+                          >
+                            {note.isPinned ? (
+                              <Pin className={cn("h-3 w-3", isSelected ? "text-highlight" : "text-highlight/70")} />
+                            ) : null}
+                            <span>{formatDateTime(note.updatedAt)}</span>
+                          </div>
+                        )}
+                      </motion.div>
+                    </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
