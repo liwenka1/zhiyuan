@@ -55,6 +55,11 @@ export interface FileAPI {
   onDeleted: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
 }
 
+export interface WatcherAPI {
+  pause: () => Promise<void>;
+  resume: () => Promise<void>;
+}
+
 // 文件夹 API 接口
 export interface FolderAPI {
   create: (folderPath: string) => Promise<void>;
@@ -184,6 +189,7 @@ export interface API {
   theme: ThemeAPI;
   workspace: WorkspaceAPI;
   file: FileAPI;
+  watcher: WatcherAPI;
   folder: FolderAPI;
   shell: ShellAPI;
   export: ExportAPI;

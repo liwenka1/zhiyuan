@@ -41,11 +41,11 @@ export function NoteDialogs({
 }: NoteDialogsProps) {
   const { t } = useTranslation("note");
   const createFolder = useFolderStore((state) => state.createFolder);
-  const folders = useFolderStore((state) => state.folders);
   const setFolders = useFolderStore((state) => state.setFolders);
   const renameNote = useNoteStore((state) => state.renameNote);
   const renameFolder = useFolderStore((state) => state.renameFolder);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
 
   // 确认创建文件夹
   const handleConfirmCreateFolder = async (folderName: string) => {
@@ -62,39 +62,17 @@ export function NoteDialogs({
     toast.loading(t("rss.importing"), { id: toastId });
 
     try {
-      const result = await window.api.rss.import(url, workspacePath);
-      const existingFolder = folders.find((folder) => folder.id === result.folderName);
-      if (existingFolder) {
-        setFolders(
-          folders.map((folder) =>
-            folder.id === result.folderName
-              ? {
-                  ...folder,
-                  isRss: true,
-                  path: result.folderPath,
-                  updatedAt: new Date().toISOString()
-                }
-              : folder
-          )
-        );
-      } else {
-        setFolders([
-          ...folders,
-          {
-            id: result.folderName,
-            name: result.folderName,
-            path: result.folderPath,
-            noteCount: 0,
-            isRss: true,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ]);
-      }
+      await window.api.watcher.pause();
+      await window.api.rss.import(url, workspacePath);
+      const data = await window.api.workspace.scan(workspacePath);
+      setFolders(data.folders);
+      await loadFromFileSystem(data);
       toast.success(t("rss.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.failed")}: ${errorMessage}`, { id: toastId });
+    } finally {
+      await window.api.watcher.resume();
     }
   };
 
