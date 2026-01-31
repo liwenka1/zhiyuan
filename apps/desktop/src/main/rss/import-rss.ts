@@ -27,6 +27,8 @@ type RssItem = Parser.Item & {
   "content:encoded"?: string;
   description?: string;
   enclosure?: { url?: string; type?: string };
+  image?: { url?: string };
+  [key: string]: unknown;
 };
 
 const INVALID_NAME_CHARS = /[\\/:*?"<>|]/g;
@@ -119,25 +121,98 @@ function pickItemContent(item: RssItem): string {
   return typeof content === "string" ? content.trim() : "";
 }
 
-function getEnclosure(item: RssItem): { url: string; type?: string } | null {
-  const url = item.enclosure?.url?.trim();
-  if (!url) return null;
-  return { url, type: item.enclosure?.type };
+type MediaEntry = { url: string; type?: string };
+
+function addMedia(entries: MediaEntry[], seen: Set<string>, url?: string, type?: string) {
+  if (!url) return;
+  const trimmed = url.trim();
+  if (!trimmed || seen.has(trimmed)) return;
+  entries.push({ url: trimmed, type });
+  seen.add(trimmed);
 }
 
-function buildMediaBlock(enclosure: { url: string; type?: string } | null): string {
-  if (enclosure) {
-    if (enclosure.type?.startsWith("audio/")) {
-      return `<audio controls src="${enclosure.url}"></audio>\n\n`;
+function addImageEntries(
+  entries: MediaEntry[],
+  seen: Set<string>,
+  source:
+    | { url?: string }
+    | { href?: string }
+    | { $?: { href?: string } }
+    | string
+    | Array<{ url?: string } | { href?: string } | { $?: { href?: string } } | string>
+    | undefined
+) {
+  if (!source) return;
+  const list = Array.isArray(source) ? source : [source];
+  for (const entry of list) {
+    if (!entry) continue;
+    if (typeof entry === "string") {
+      addMedia(entries, seen, entry, "image/");
+      continue;
     }
-    if (enclosure.type?.startsWith("video/")) {
-      return `<video controls src="${enclosure.url}"></video>\n\n`;
+    if ("url" in entry && typeof entry.url === "string") {
+      addMedia(entries, seen, entry.url, "image/");
+      continue;
     }
-    if (enclosure.type?.startsWith("image/")) {
-      return `![media](${enclosure.url})\n\n`;
+    if ("href" in entry && typeof entry.href === "string") {
+      addMedia(entries, seen, entry.href, "image/");
+      continue;
+    }
+    if ("$" in entry && typeof entry.$?.href === "string") {
+      addMedia(entries, seen, entry.$.href, "image/");
     }
   }
-  return "";
+}
+
+function addMediaEntries(
+  entries: MediaEntry[],
+  seen: Set<string>,
+  source: { url?: string; type?: string } | string | Array<{ url?: string; type?: string } | string> | undefined,
+  fallbackType?: string
+) {
+  if (!source) return;
+  const list = Array.isArray(source) ? source : [source];
+  for (const entry of list) {
+    if (!entry) continue;
+    if (typeof entry === "string") {
+      addMedia(entries, seen, entry, fallbackType);
+      continue;
+    }
+    const url = typeof entry.url === "string" ? entry.url : undefined;
+    const type = typeof entry.type === "string" ? entry.type : fallbackType;
+    addMedia(entries, seen, url, type);
+  }
+}
+
+function getMediaEntries(item: RssItem): MediaEntry[] {
+  const entries: MediaEntry[] = [];
+  const seen = new Set<string>();
+
+  addMediaEntries(entries, seen, item.enclosure, undefined);
+  addMediaEntries(entries, seen, item["media:content"] as { url?: string; type?: string } | undefined, undefined);
+  addMediaEntries(entries, seen, item["media:thumbnail"] as { url?: string; type?: string } | undefined, "image/");
+  addImageEntries(entries, seen, item["itunes:image"] as { href?: string } | undefined);
+  addImageEntries(entries, seen, item.image as { url?: string } | undefined);
+
+  return entries;
+}
+
+function buildMediaBlock(entries: MediaEntry[]): string {
+  const blocks: string[] = [];
+  for (const entry of entries) {
+    if (entry.type?.startsWith("audio/")) {
+      blocks.push(`<audio controls src="${entry.url}"></audio>`);
+      continue;
+    }
+    if (entry.type?.startsWith("video/")) {
+      blocks.push(`<video controls src="${entry.url}"></video>`);
+      continue;
+    }
+    if (entry.type?.startsWith("image/")) {
+      blocks.push(`![media](${entry.url})`);
+    }
+  }
+  return blocks.length > 0 ? `${blocks.join("\n\n")}\n\n` : "";
 }
 
 function getFeedTitle(feed: Parser.Output<RssItem>, url: string): string {
@@ -150,7 +225,11 @@ function getFeedTitle(feed: Parser.Output<RssItem>, url: string): string {
 }
 
 export async function importRss(url: string, workspacePath: string): Promise<RssImportResult> {
-  const parser: Parser<RssItem> = new Parser();
+  const parser: Parser<RssItem> = new Parser({
+    customFields: {
+      item: ["itunes:image", "media:thumbnail", "media:content", "image"]
+    }
+  });
   const feed = await parser.parseURL(url);
   const feedTitle = getFeedTitle(feed, url);
 
@@ -178,7 +257,7 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
       published,
       source: feedTitle
     });
-    const mediaBlock = buildMediaBlock(getEnclosure(item));
+    const mediaBlock = buildMediaBlock(getMediaEntries(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
     const markdown = `${frontmatter}${heading}${mediaBlock}${content}`;
@@ -214,7 +293,11 @@ export async function updateRss(folderPath: string): Promise<{
   addedCount: number;
 }> {
   const metadata = await loadRssMetadata(folderPath);
-  const parser: Parser<RssItem> = new Parser();
+  const parser: Parser<RssItem> = new Parser({
+    customFields: {
+      item: ["itunes:image", "media:thumbnail", "media:content", "image"]
+    }
+  });
   const feed = await parser.parseURL(metadata.url);
   const feedTitle = getFeedTitle(feed, metadata.url);
 
@@ -249,7 +332,7 @@ export async function updateRss(folderPath: string): Promise<{
       published,
       source: feedTitle
     });
-    const mediaBlock = buildMediaBlock(getEnclosure(item));
+    const mediaBlock = buildMediaBlock(getMediaEntries(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
     const markdown = `${frontmatter}${heading}${mediaBlock}${content}`;
