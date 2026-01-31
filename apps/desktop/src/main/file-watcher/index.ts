@@ -8,6 +8,7 @@ import path from "path";
 class FileWatcher {
   private watcher: FSWatcher | null = null;
   private workspacePath: string | null = null;
+  private isPaused = false;
 
   /**
    * 开始监听工作区
@@ -32,26 +33,31 @@ class FileWatcher {
 
     // 文件修改事件
     this.watcher.on("change", (filePath: string) => {
+      if (this.isPaused) return;
       this.handleFileChange(filePath);
     });
 
     // 文件添加事件
     this.watcher.on("add", (filePath: string) => {
+      if (this.isPaused) return;
       this.handleFileAdd(filePath);
     });
 
     // 文件删除事件
     this.watcher.on("unlink", (filePath: string) => {
+      if (this.isPaused) return;
       this.handleFileDelete(filePath);
     });
 
     // 文件夹添加事件
     this.watcher.on("addDir", (dirPath: string) => {
+      if (this.isPaused) return;
       this.handleFolderAdd(dirPath);
     });
 
     // 文件夹删除事件
     this.watcher.on("unlinkDir", (dirPath: string) => {
+      if (this.isPaused) return;
       this.handleFolderDelete(dirPath);
     });
 
@@ -69,7 +75,16 @@ class FileWatcher {
       this.watcher.close();
       this.watcher = null;
       this.workspacePath = null;
+      this.isPaused = false;
     }
+  }
+
+  pauseWatching(): void {
+    this.isPaused = true;
+  }
+
+  resumeWatching(): void {
+    this.isPaused = false;
   }
 
   /**

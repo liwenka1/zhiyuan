@@ -151,6 +151,11 @@ const api = {
     }
   },
 
+  watcher: {
+    pause: (): Promise<void> => ipcRenderer.invoke("watcher:pause"),
+    resume: (): Promise<void> => ipcRenderer.invoke("watcher:resume")
+  },
+
   folder: {
     /**
      * 创建文件夹

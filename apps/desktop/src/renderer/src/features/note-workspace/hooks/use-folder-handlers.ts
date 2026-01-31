@@ -1,4 +1,4 @@
-import { useFolderStore, useWorkspaceStore } from "@/stores";
+import { useFolderStore, useWorkspaceStore, useNoteStore } from "@/stores";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
@@ -31,6 +31,7 @@ export function useFolderHandlers({
   const deleteFolder = useFolderStore((state) => state.deleteFolder);
   const folders = useFolderStore((state) => state.folders);
   const setFolders = useFolderStore((state) => state.setFolders);
+  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
   // 处理新建文件夹 - 打开对话框
@@ -50,7 +51,11 @@ export function useFolderHandlers({
     toast.loading(t("rss.updating"), { id: toastId });
 
     try {
+      await window.api.watcher.pause();
       const result = await window.api.rss.update(folderPath);
+      const data = await window.api.workspace.scan(workspacePath);
+      setFolders(data.folders);
+      await loadFromFileSystem(data);
       if (result.addedCount > 0) {
         toast.success(t("rss.updated", { count: result.addedCount }), { id: toastId });
       } else {
@@ -59,6 +64,8 @@ export function useFolderHandlers({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.updateFailed")}: ${errorMessage}`, { id: toastId });
+    } finally {
+      await window.api.watcher.resume();
     }
   };
 

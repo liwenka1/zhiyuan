@@ -30,6 +30,16 @@ export function registerWorkspaceHandlers(): void {
     return await workspaceManager.scanWorkspace(workspacePath);
   });
 
+  // 暂停文件监听
+  ipcMain.handle("watcher:pause", () => {
+    fileWatcher.pauseWatching();
+  });
+
+  // 恢复文件监听
+  ipcMain.handle("watcher:resume", () => {
+    fileWatcher.resumeWatching();
+  });
+
   // 获取最近打开的工作区
   ipcMain.handle("workspace:getRecent", () => {
     return workspaceManager.getRecentWorkspaces();
