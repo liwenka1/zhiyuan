@@ -119,14 +119,25 @@ function pickItemContent(item: RssItem): string {
   return typeof content === "string" ? content.trim() : "";
 }
 
-function getEnclosureUrl(item: RssItem): string | null {
+function getEnclosure(item: RssItem): { url: string; type?: string } | null {
   const url = item.enclosure?.url?.trim();
-  return url || null;
+  if (!url) return null;
+  return { url, type: item.enclosure?.type };
 }
 
-function buildAudioBlock(audioUrl: string | null): string {
-  if (!audioUrl) return "";
-  return `<audio controls src="${audioUrl}"></audio>\n\n`;
+function buildMediaBlock(enclosure: { url: string; type?: string } | null): string {
+  if (enclosure) {
+    if (enclosure.type?.startsWith("audio/")) {
+      return `<audio controls src="${enclosure.url}"></audio>\n\n`;
+    }
+    if (enclosure.type?.startsWith("video/")) {
+      return `<video controls src="${enclosure.url}"></video>\n\n`;
+    }
+    if (enclosure.type?.startsWith("image/")) {
+      return `![media](${enclosure.url})\n\n`;
+    }
+  }
+  return "";
 }
 
 function getFeedTitle(feed: Parser.Output<RssItem>, url: string): string {
@@ -167,10 +178,10 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
       published,
       source: feedTitle
     });
-    const audioBlock = buildAudioBlock(getEnclosureUrl(item));
+    const mediaBlock = buildMediaBlock(getEnclosure(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
-    const markdown = `${frontmatter}${heading}${audioBlock}${content}`;
+    const markdown = `${frontmatter}${heading}${mediaBlock}${content}`;
 
     await fileSystem.createFile(filePath, markdown);
 
@@ -238,10 +249,10 @@ export async function updateRss(folderPath: string): Promise<{
       published,
       source: feedTitle
     });
-    const audioBlock = buildAudioBlock(getEnclosureUrl(item));
+    const mediaBlock = buildMediaBlock(getEnclosure(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
-    const markdown = `${frontmatter}${heading}${audioBlock}${content}`;
+    const markdown = `${frontmatter}${heading}${mediaBlock}${content}`;
 
     await fileSystem.createFile(filePath, markdown);
 
