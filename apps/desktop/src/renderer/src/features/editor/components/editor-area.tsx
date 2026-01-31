@@ -13,9 +13,28 @@ interface EditorAreaProps {
   hasNote?: boolean;
   noteId?: string;
   notePath?: string; // 笔记的完整文件路径，用于解析相对资源路径
+  onShowNoteInExplorer?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onRenameNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onDuplicateNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onExportNote?: (
+    note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
+    format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
+  ) => void;
+  onDeleteNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
 }
 
-export function EditorArea({ content = "", onChange, hasNote = false, noteId, notePath }: EditorAreaProps) {
+export function EditorArea({
+  content = "",
+  onChange,
+  hasNote = false,
+  noteId,
+  notePath,
+  onShowNoteInExplorer,
+  onRenameNote,
+  onDuplicateNote,
+  onExportNote,
+  onDeleteNote
+}: EditorAreaProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const splitLayout = useViewStore((state) => state.splitLayout);
   const setSplitLayout = useViewStore((state) => state.setSplitLayout);
@@ -81,7 +100,14 @@ export function EditorArea({ content = "", onChange, hasNote = false, noteId, no
   // 分栏模式：编辑器 50%, 预览 50%（可拖动）
   return (
     <div className="flex h-full flex-col">
-      <EditorToolbar content={content} />
+      <EditorToolbar
+        content={content}
+        onShowNoteInExplorer={onShowNoteInExplorer}
+        onRenameNote={onRenameNote}
+        onDuplicateNote={onDuplicateNote}
+        onExportNote={onExportNote}
+        onDeleteNote={onDeleteNote}
+      />
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" onLayout={handleLayoutChange} className="h-full">
           {/* 编辑器面板（始终存在，保持滚动位置）*/}
