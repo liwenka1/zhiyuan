@@ -6,6 +6,7 @@ export interface Folder {
   name: string;
   path?: string; // 文件夹路径
   noteCount?: number;
+  isRss?: boolean;
   createdAt?: string;
   updatedAt?: string;
 }

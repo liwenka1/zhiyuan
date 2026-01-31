@@ -53,6 +53,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         name,
         path: folderPath,
         noteCount: 0,
+        isRss: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -123,6 +124,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       name: folderPath,
       path: fullPath,
       noteCount: 0,
+      isRss: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

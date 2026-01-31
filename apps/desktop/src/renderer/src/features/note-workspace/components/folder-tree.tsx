@@ -22,6 +22,7 @@ interface FolderItem {
   id: string;
   name: string;
   noteCount?: number;
+  isRss?: boolean;
 }
 
 interface FolderTreeProps {
@@ -124,7 +125,7 @@ export function FolderTree({
                     )}
                     onClick={() => onSelectFolder?.(folder.id)}
                   >
-                    <Folder className="h-4 w-4 shrink-0" />
+                    {folder.isRss ? <Rss className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />}
                     <div className="min-w-0 flex-1 truncate text-sm">{folder.name}</div>
                     {folder.noteCount !== undefined && (
                       <span className="text-tertiary-foreground shrink-0 text-xs tabular-nums">{folder.noteCount}</span>
