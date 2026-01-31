@@ -28,7 +28,6 @@ export function useFolderHandlers({
   onOpenRenameDialog
 }: UseFolderHandlersProps): FolderHandlers {
   const { t } = useTranslation("sidebar");
-  const deleteFolder = useFolderStore((state) => state.deleteFolder);
   const folders = useFolderStore((state) => state.folders);
   const setFolders = useFolderStore((state) => state.setFolders);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
@@ -109,10 +108,15 @@ export function useFolderHandlers({
     const folderPath = `${workspacePath}/${folder.name}`;
 
     try {
+      await window.api.watcher.pause();
       await window.api.folder.delete(folderPath);
-      deleteFolder(folder.id);
+      const data = await window.api.workspace.scan(workspacePath);
+      setFolders(data.folders);
+      await loadFromFileSystem(data);
     } catch (error) {
       console.error("删除文件夹失败:", error);
+    } finally {
+      await window.api.watcher.resume();
     }
   };
 

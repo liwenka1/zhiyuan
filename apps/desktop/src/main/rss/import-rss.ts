@@ -23,7 +23,11 @@ interface RssMetadata {
   items: RssMetadataItem[];
 }
 
-type RssItem = Parser.Item & { "content:encoded"?: string; description?: string };
+type RssItem = Parser.Item & {
+  "content:encoded"?: string;
+  description?: string;
+  enclosure?: { url?: string; type?: string };
+};
 
 const INVALID_NAME_CHARS = /[\\/:*?"<>|]/g;
 
@@ -115,6 +119,16 @@ function pickItemContent(item: RssItem): string {
   return typeof content === "string" ? content.trim() : "";
 }
 
+function getEnclosureUrl(item: RssItem): string | null {
+  const url = item.enclosure?.url?.trim();
+  return url || null;
+}
+
+function buildAudioBlock(audioUrl: string | null): string {
+  if (!audioUrl) return "";
+  return `<audio controls src="${audioUrl}"></audio>\n\n`;
+}
+
 function getFeedTitle(feed: Parser.Output<RssItem>, url: string): string {
   if (feed.title) return feed.title.trim();
   try {
@@ -153,9 +167,10 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
       published,
       source: feedTitle
     });
+    const audioBlock = buildAudioBlock(getEnclosureUrl(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
-    const markdown = `${frontmatter}${heading}${content}`;
+    const markdown = `${frontmatter}${heading}${audioBlock}${content}`;
 
     await fileSystem.createFile(filePath, markdown);
 
@@ -223,9 +238,10 @@ export async function updateRss(folderPath: string): Promise<{
       published,
       source: feedTitle
     });
+    const audioBlock = buildAudioBlock(getEnclosureUrl(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
-    const markdown = `${frontmatter}${heading}${content}`;
+    const markdown = `${frontmatter}${heading}${audioBlock}${content}`;
 
     await fileSystem.createFile(filePath, markdown);
 
