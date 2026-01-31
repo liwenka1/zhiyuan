@@ -250,3 +250,10 @@ export async function updateRss(folderPath: string): Promise<{
 
   return { addedCount };
 }
+
+export async function unsubscribeRss(folderPath: string): Promise<void> {
+  const metadataPath = path.join(folderPath, ".rss.json");
+  const exists = await fileSystem.exists(metadataPath);
+  if (!exists) return;
+  await fileSystem.deleteFile(metadataPath);
+}

@@ -33,6 +33,7 @@ interface FolderTreeProps {
   onCreateFolder?: () => void;
   onImportRss?: () => void;
   onUpdateRss?: (folder: FolderItem) => void;
+  onUnsubscribeRss?: (folder: FolderItem) => void;
   onShowFolderInExplorer?: (folder: FolderItem) => void;
   onDeleteFolder?: (folder: FolderItem) => void;
   onRenameFolder?: (folder: FolderItem) => void;
@@ -46,6 +47,7 @@ export function FolderTree({
   onCreateFolder,
   onImportRss,
   onUpdateRss,
+  onUnsubscribeRss,
   onShowFolderInExplorer,
   onDeleteFolder,
   onRenameFolder
@@ -140,6 +142,10 @@ export function FolderTree({
                       <ContextMenuItem onClick={() => onUpdateRss?.(folder)}>
                         <Rss className="h-4 w-4" />
                         <span>{t("contextMenu.updateRss")}</span>
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => onUnsubscribeRss?.(folder)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span>{t("contextMenu.unsubscribeRss")}</span>
                       </ContextMenuItem>
                       <ContextMenuSeparator />
                     </>

@@ -5,6 +5,7 @@
   "toggleFolderSidebar": "Toggle Folder List",
   "contextMenu": {
     "updateRss": "Update RSS",
+    "unsubscribeRss": "Unsubscribe",
     "showInExplorer": "Show in File Manager",
     "rename": "Rename",
     "deleteFolder": "Delete Folder"
@@ -13,6 +14,9 @@
     "updating": "Updating RSS...",
     "updated": "Added {{count}} new items",
     "noUpdates": "No new items",
-    "updateFailed": "Failed to update RSS"
+    "updateFailed": "Failed to update RSS",
+    "unsubscribing": "Unsubscribing...",
+    "unsubscribed": "Unsubscribed",
+    "unsubscribeFailed": "Failed to unsubscribe"
   }
 }
