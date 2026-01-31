@@ -201,11 +201,11 @@ function buildMediaBlock(entries: MediaEntry[]): string {
   const blocks: string[] = [];
   for (const entry of entries) {
     if (entry.type?.startsWith("audio/")) {
-      blocks.push(`<audio controls src="${entry.url}"></audio>`);
+      blocks.push(`<audio controls style="width: 100%;" src="${entry.url}"></audio>`);
       continue;
     }
     if (entry.type?.startsWith("video/")) {
-      blocks.push(`<video controls src="${entry.url}"></video>`);
+      blocks.push(`<video controls style="width:100%; aspect-ratio:16/9;" src="${entry.url}"></video>`);
       continue;
     }
     if (entry.type?.startsWith("image/")) {
