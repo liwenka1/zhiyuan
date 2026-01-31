@@ -61,10 +61,26 @@ export function extractHeadings(markdown: string): TocItem[] {
     if (match) {
       const level = match[1].length;
       const text = match[2].trim();
-      // 使用 github-slugger 生成 ID，与 rehype-slug 完全一致
       const id = slugger.slug(text);
 
-      // 只添加有效的标题（有 ID）
+      if (id) {
+        headings.push({ id, text, level });
+      }
+      continue;
+    }
+
+    // 匹配 HTML 标题标签（用于 HTML 内容）
+    const htmlHeadingRegex = /<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi;
+    let htmlMatch: RegExpExecArray | null;
+    while ((htmlMatch = htmlHeadingRegex.exec(line))) {
+      const level = Number(htmlMatch[1]);
+      const rawText = htmlMatch[2];
+      const text = rawText
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!text) continue;
+      const id = slugger.slug(text);
       if (id) {
         headings.push({ id, text, level });
       }
