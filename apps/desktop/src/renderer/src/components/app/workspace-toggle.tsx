@@ -1,12 +1,12 @@
 import { FolderSync } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useWorkspaceStore } from "@/stores";
-import { useNoteStore } from "@/stores";
+import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 
 export function WorkspaceToggle() {
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
+  const setFolders = useFolderStore((state) => state.setFolders);
   const { t } = useTranslation("common");
 
   // 处理切换工作区
@@ -24,6 +24,7 @@ export function WorkspaceToggle() {
 
         // 扫描并加载工作区内容
         const data = await window.api.workspace.scan(selectedPath);
+        setFolders(data.folders);
         loadFromFileSystem(data);
       }
     } catch (error) {

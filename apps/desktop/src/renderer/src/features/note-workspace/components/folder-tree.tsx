@@ -1,5 +1,6 @@
 import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss, RefreshCw, Unlink } from "lucide-react";
 import { motion } from "motion/react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { ThemeToggle, LanguageToggle, WorkspaceToggle } from "@/components/app";
 import { useTranslation } from "react-i18next";
+import { useRef } from "react";
 import { useViewStore } from "@/stores";
 
 // 特殊 ID 表示「全部笔记」
@@ -56,6 +58,13 @@ export function FolderTree({
   const showFolderSidebar = useViewStore((state) => state.showFolderSidebar);
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: folders.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 36,
+    overscan: 6
+  });
 
   return (
     <div
@@ -87,7 +96,7 @@ export function FolderTree({
       </div>
 
       {/* 文件夹列表 */}
-      <ScrollArea className="flex-1 overflow-hidden">
+      <ScrollArea className="flex-1 overflow-hidden" viewportRef={parentRef}>
         <div className="space-y-0.5 px-2">
           {/* 全部笔记 - 始终显示在最上方 */}
           <motion.div
@@ -110,64 +119,72 @@ export function FolderTree({
           </motion.div>
 
           {/* 文件夹列表 */}
-          {folders.map((folder) => {
-            const isSelected = selectedFolderId === folder.id;
-            return (
-              <ContextMenu key={folder.id}>
-                <ContextMenuTrigger asChild>
-                  <motion.div
-                    animate={{
-                      backgroundColor: getSelectionBgColor(isSelected)
-                    }}
-                    whileHover={{
-                      backgroundColor: getHoverBgColor(isSelected)
-                    }}
-                    transition={{ duration: 0.1 }}
-                    className={cn(
-                      "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
-                      isSelected ? "text-foreground font-medium" : "text-muted-foreground"
+          <div style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const folder = folders[virtualRow.index];
+              if (!folder) return null;
+              const isSelected = selectedFolderId === folder.id;
+              return (
+                <ContextMenu key={folder.id}>
+                  <ContextMenuTrigger asChild>
+                    <motion.div
+                      animate={{
+                        backgroundColor: getSelectionBgColor(isSelected)
+                      }}
+                      whileHover={{
+                        backgroundColor: getHoverBgColor(isSelected)
+                      }}
+                      transition={{ duration: 0.1 }}
+                      className={cn(
+                        "sidebar-item absolute right-0 left-0 flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
+                        isSelected ? "text-foreground font-medium" : "text-muted-foreground"
+                      )}
+                      ref={rowVirtualizer.measureElement}
+                      style={{ transform: `translateY(${virtualRow.start}px)` }}
+                      onClick={() => onSelectFolder?.(folder.id)}
+                    >
+                      {folder.isRss ? <Rss className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />}
+                      <div className="min-w-0 flex-1 truncate text-sm">{folder.name}</div>
+                      {folder.noteCount !== undefined && (
+                        <span className="text-tertiary-foreground shrink-0 text-xs tabular-nums">
+                          {folder.noteCount}
+                        </span>
+                      )}
+                    </motion.div>
+                  </ContextMenuTrigger>
+                  <ContextMenuContent>
+                    <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
+                      <FolderOpen className="h-4 w-4" />
+                      <span>{t("contextMenu.showInExplorer")}</span>
+                    </ContextMenuItem>
+                    {folder.isRss && (
+                      <>
+                        <ContextMenuSeparator />
+                        <ContextMenuItem onClick={() => onUpdateRss?.(folder)}>
+                          <RefreshCw className="h-4 w-4" />
+                          <span>{t("contextMenu.updateRss")}</span>
+                        </ContextMenuItem>
+                        <ContextMenuItem onClick={() => onUnsubscribeRss?.(folder)}>
+                          <Unlink className="h-4 w-4" />
+                          <span>{t("contextMenu.unsubscribeRss")}</span>
+                        </ContextMenuItem>
+                      </>
                     )}
-                    onClick={() => onSelectFolder?.(folder.id)}
-                  >
-                    {folder.isRss ? <Rss className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />}
-                    <div className="min-w-0 flex-1 truncate text-sm">{folder.name}</div>
-                    {folder.noteCount !== undefined && (
-                      <span className="text-tertiary-foreground shrink-0 text-xs tabular-nums">{folder.noteCount}</span>
-                    )}
-                  </motion.div>
-                </ContextMenuTrigger>
-                <ContextMenuContent>
-                  <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
-                    <FolderOpen className="h-4 w-4" />
-                    <span>{t("contextMenu.showInExplorer")}</span>
-                  </ContextMenuItem>
-                  {folder.isRss && (
-                    <>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => onUpdateRss?.(folder)}>
-                        <RefreshCw className="h-4 w-4" />
-                        <span>{t("contextMenu.updateRss")}</span>
-                      </ContextMenuItem>
-                      <ContextMenuItem onClick={() => onUnsubscribeRss?.(folder)}>
-                        <Unlink className="h-4 w-4" />
-                        <span>{t("contextMenu.unsubscribeRss")}</span>
-                      </ContextMenuItem>
-                    </>
-                  )}
-                  <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => onRenameFolder?.(folder)}>
-                    <Pencil className="h-4 w-4" />
-                    <span>{t("contextMenu.rename")}</span>
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem onClick={() => onDeleteFolder?.(folder)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span>{t("contextMenu.deleteFolder")}</span>
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
-            );
-          })}
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => onRenameFolder?.(folder)}>
+                      <Pencil className="h-4 w-4" />
+                      <span>{t("contextMenu.rename")}</span>
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => onDeleteFolder?.(folder)}>
+                      <Trash2 className="h-4 w-4" />
+                      <span>{t("contextMenu.deleteFolder")}</span>
+                    </ContextMenuItem>
+                  </ContextMenuContent>
+                </ContextMenu>
+              );
+            })}
+          </div>
         </div>
       </ScrollArea>
 
