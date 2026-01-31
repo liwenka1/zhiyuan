@@ -175,6 +175,7 @@ export interface RssAPI {
     folderPath: string;
     itemCount: number;
   }>;
+  update: (folderPath: string) => Promise<{ addedCount: number }>;
 }
 
 // 扩展的 API 接口

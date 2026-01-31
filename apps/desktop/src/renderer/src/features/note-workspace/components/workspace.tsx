@@ -56,6 +56,7 @@ export function NoteWorkspace() {
             onSelectFolder={selectFolder}
             onCreateFolder={folderHandlers.handleCreateFolder}
             onImportRss={folderHandlers.handleImportRss}
+            onUpdateRss={folderHandlers.handleUpdateRss}
             onShowFolderInExplorer={folderHandlers.handleShowFolderInExplorer}
             onDeleteFolder={folderHandlers.handleDeleteFolder}
             onRenameFolder={folderHandlers.handleRenameFolder}

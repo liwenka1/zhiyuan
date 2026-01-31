@@ -4,8 +4,15 @@
   "importRss": "Import RSS",
   "toggleFolderSidebar": "Toggle Folder List",
   "contextMenu": {
+    "updateRss": "Update RSS",
     "showInExplorer": "Show in File Manager",
     "rename": "Rename",
     "deleteFolder": "Delete Folder"
+  },
+  "rss": {
+    "updating": "Updating RSS...",
+    "updated": "Added {{count}} new items",
+    "noUpdates": "No new items",
+    "updateFailed": "Failed to update RSS"
   }
 }

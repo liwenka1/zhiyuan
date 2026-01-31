@@ -4,8 +4,15 @@
   "importRss": "导入 RSS",
   "toggleFolderSidebar": "切换文件夹列表",
   "contextMenu": {
+    "updateRss": "更新订阅",
     "showInExplorer": "在文件管理器中查看",
     "rename": "重命名",
     "deleteFolder": "删除文件夹"
+  },
+  "rss": {
+    "updating": "正在更新订阅...",
+    "updated": "已更新 {{count}} 条内容",
+    "noUpdates": "没有新内容",
+    "updateFailed": "更新订阅失败"
   }
 }
