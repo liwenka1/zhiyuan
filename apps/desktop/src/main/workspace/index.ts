@@ -2,6 +2,7 @@ import { dialog, BrowserWindow } from "electron";
 import fs from "fs";
 import path from "path";
 import { configManager } from "../config";
+import { fileSystem } from "../file-system";
 import { DEFAULT_WORKSPACE_CONFIG } from "../constants/default-config";
 import { USER_GUIDE_CONTENT } from "../constants/guide-template";
 
@@ -10,6 +11,7 @@ export interface FolderInfo {
   name: string;
   path: string;
   noteCount: number;
+  isRss?: boolean;
 }
 
 export interface NoteInfo {
@@ -71,11 +73,14 @@ export const workspaceManager = {
       for (const entry of entries) {
         if (entry.isDirectory()) {
           const folderPath = path.join(workspacePath, entry.name);
+          const rssConfigPath = path.join(folderPath, ".rss.json");
+          const isRss = await fileSystem.exists(rssConfigPath);
           folders.push({
             id: entry.name,
             name: entry.name,
             path: folderPath,
-            noteCount: 0 // 稍后计算
+            noteCount: 0,
+            isRss
           });
         }
       }

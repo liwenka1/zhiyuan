@@ -25,7 +25,7 @@ export interface WorkspaceAPI {
   select: (options?: { title?: string; buttonLabel?: string }) => Promise<string | null>;
   getCurrent: () => Promise<string | null>;
   scan: (workspacePath: string) => Promise<{
-    folders: Array<{ id: string; name: string; path: string; noteCount: number }>;
+    folders: Array<{ id: string; name: string; path: string; noteCount: number; isRss?: boolean }>;
     notes: Array<{
       id: string;
       title: string;
