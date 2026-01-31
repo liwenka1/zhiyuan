@@ -1,1 +1,1 @@
-export { importRss } from "./import-rss";
+export { importRss, updateRss } from "./import-rss";

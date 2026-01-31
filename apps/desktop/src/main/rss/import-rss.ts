@@ -15,6 +15,14 @@ interface RssMetadataItem {
   title?: string;
 }
 
+interface RssMetadata {
+  type: "rss";
+  url: string;
+  title: string;
+  lastFetched: string;
+  items: RssMetadataItem[];
+}
+
 type RssItem = Parser.Item & { "content:encoded"?: string; description?: string };
 
 const INVALID_NAME_CHARS = /[\\/:*?"<>|]/g;
@@ -84,6 +92,23 @@ async function getAvailableFileName(folderPath: string, baseName: string): Promi
   return candidate;
 }
 
+function buildItemKey(item: { guid?: string; link?: string }): string | null {
+  if (item.guid) return `guid:${item.guid}`;
+  if (item.link) return `link:${item.link}`;
+  return null;
+}
+
+async function loadRssMetadata(folderPath: string): Promise<RssMetadata> {
+  const metadataPath = path.join(folderPath, ".rss.json");
+  const { content } = await fileSystem.readFile(metadataPath);
+  return JSON.parse(content) as RssMetadata;
+}
+
+async function saveRssMetadata(folderPath: string, metadata: RssMetadata): Promise<void> {
+  const metadataPath = path.join(folderPath, ".rss.json");
+  await fileSystem.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+}
+
 function pickItemContent(item: RssItem): string {
   const content =
     item["content:encoded"] || item.content || item.summary || item.contentSnippet || item.description || "";
@@ -142,7 +167,7 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
     });
   }
 
-  const metadata = {
+  const metadata: RssMetadata = {
     type: "rss",
     url,
     title: feedTitle,
@@ -157,4 +182,71 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
     folderPath,
     itemCount: metadataItems.length
   };
+}
+
+export async function updateRss(folderPath: string): Promise<{
+  addedCount: number;
+}> {
+  const metadata = await loadRssMetadata(folderPath);
+  const parser: Parser<RssItem> = new Parser();
+  const feed = await parser.parseURL(metadata.url);
+  const feedTitle = getFeedTitle(feed, metadata.url);
+
+  const existingKeys = new Set(
+    metadata.items.map((item) => buildItemKey(item)).filter((key): key is string => Boolean(key))
+  );
+
+  const newItems: RssMetadataItem[] = [];
+  let addedCount = 0;
+
+  for (const item of feed.items || []) {
+    const title = item.title?.trim() || "Untitled";
+    const published = formatDate(item.isoDate || item.pubDate) || undefined;
+    const link = item.link?.trim();
+    const guid = item.guid?.trim() || item.id?.trim();
+    const key = buildItemKey({ guid, link });
+
+    if (key && existingKeys.has(key)) {
+      continue;
+    }
+
+    const datePrefix = published || "undated";
+    const fileBaseName = `${datePrefix}-${title}`;
+    const fileName = await getAvailableFileName(folderPath, fileBaseName);
+    const filePath = path.join(folderPath, fileName);
+
+    const frontmatter = buildFrontmatter({
+      hidden: true,
+      title,
+      link,
+      guid,
+      published,
+      source: feedTitle
+    });
+    const content = pickItemContent(item);
+    const heading = `# ${title}\n\n`;
+    const markdown = `${frontmatter}${heading}${content}`;
+
+    await fileSystem.createFile(filePath, markdown);
+
+    newItems.push({
+      guid,
+      link,
+      published: published ? new Date(published).toISOString() : undefined,
+      title
+    });
+
+    if (key) {
+      existingKeys.add(key);
+    }
+    addedCount += 1;
+  }
+
+  metadata.title = feedTitle;
+  metadata.lastFetched = new Date().toISOString();
+  metadata.items = [...metadata.items, ...newItems];
+
+  await saveRssMetadata(folderPath, metadata);
+
+  return { addedCount };
 }

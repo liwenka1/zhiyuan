@@ -32,6 +32,7 @@ interface FolderTreeProps {
   onSelectFolder?: (folderId: string | null) => void;
   onCreateFolder?: () => void;
   onImportRss?: () => void;
+  onUpdateRss?: (folder: FolderItem) => void;
   onShowFolderInExplorer?: (folder: FolderItem) => void;
   onDeleteFolder?: (folder: FolderItem) => void;
   onRenameFolder?: (folder: FolderItem) => void;
@@ -44,6 +45,7 @@ export function FolderTree({
   onSelectFolder,
   onCreateFolder,
   onImportRss,
+  onUpdateRss,
   onShowFolderInExplorer,
   onDeleteFolder,
   onRenameFolder
@@ -133,6 +135,15 @@ export function FolderTree({
                   </motion.div>
                 </ContextMenuTrigger>
                 <ContextMenuContent>
+                  {folder.isRss && (
+                    <>
+                      <ContextMenuItem onClick={() => onUpdateRss?.(folder)}>
+                        <Rss className="h-4 w-4" />
+                        <span>{t("contextMenu.updateRss")}</span>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                    </>
+                  )}
                   <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
                     <FolderOpen className="h-4 w-4" />
                     <span>{t("contextMenu.showInExplorer")}</span>

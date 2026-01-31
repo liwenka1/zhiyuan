@@ -1,8 +1,11 @@
 import { useFolderStore, useWorkspaceStore } from "@/stores";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 export interface FolderHandlers {
   handleCreateFolder: () => void;
   handleImportRss: () => void;
+  handleUpdateRss: (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => Promise<void>;
   handleShowFolderInExplorer: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleDeleteFolder: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleRenameFolder: (folder: { id: string; name: string; noteCount?: number }) => void;
@@ -23,6 +26,7 @@ export function useFolderHandlers({
   onOpenRssImportDialog,
   onOpenRenameDialog
 }: UseFolderHandlersProps): FolderHandlers {
+  const { t } = useTranslation("sidebar");
   const deleteFolder = useFolderStore((state) => state.deleteFolder);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
@@ -33,6 +37,26 @@ export function useFolderHandlers({
 
   const handleImportRss = () => {
     onOpenRssImportDialog();
+  };
+
+  const handleUpdateRss = async (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => {
+    if (!workspacePath || !folder.isRss) return;
+
+    const folderPath = `${workspacePath}/${folder.name}`;
+    const toastId = `rss-update-${folder.id}`;
+    toast.loading(t("rss.updating"), { id: toastId });
+
+    try {
+      const result = await window.api.rss.update(folderPath);
+      if (result.addedCount > 0) {
+        toast.success(t("rss.updated", { count: result.addedCount }), { id: toastId });
+      } else {
+        toast.success(t("rss.noUpdates"), { id: toastId });
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t("rss.updateFailed")}: ${errorMessage}`, { id: toastId });
+    }
   };
 
   // 在文件管理器中显示文件夹
@@ -63,6 +87,7 @@ export function useFolderHandlers({
   return {
     handleCreateFolder,
     handleImportRss,
+    handleUpdateRss,
     handleShowFolderInExplorer,
     handleDeleteFolder,
     handleRenameFolder

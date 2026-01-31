@@ -360,7 +360,8 @@ const api = {
       folderName: string;
       folderPath: string;
       itemCount: number;
-    }> => ipcRenderer.invoke("rss:import", url, workspacePath)
+    }> => ipcRenderer.invoke("rss:import", url, workspacePath),
+    update: (folderPath: string): Promise<{ addedCount: number }> => ipcRenderer.invoke("rss:update", folderPath)
   }
 };
 
