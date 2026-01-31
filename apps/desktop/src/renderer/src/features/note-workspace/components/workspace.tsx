@@ -88,6 +88,11 @@ export function NoteWorkspace() {
             hasNote={!!selectedNoteId}
             noteId={selectedNoteId ?? undefined}
             notePath={notes.find((n) => n.id === selectedNoteId)?.filePath}
+            onShowNoteInExplorer={noteHandlers.handleShowNoteInExplorer}
+            onRenameNote={noteHandlers.handleRenameNote}
+            onDuplicateNote={noteHandlers.handleDuplicateNote}
+            onExportNote={noteHandlers.handleExportNote}
+            onDeleteNote={noteHandlers.handleDeleteNote}
           />
         }
       />

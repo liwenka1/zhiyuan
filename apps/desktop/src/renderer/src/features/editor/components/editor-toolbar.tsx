@@ -1,5 +1,20 @@
 import { useState, useEffect } from "react";
-import { Eye, Wand2, List, Pin, PinOff, Presentation, Columns2 } from "lucide-react";
+import {
+  Eye,
+  Wand2,
+  TableOfContents as TocIcon,
+  Pin,
+  PinOff,
+  Presentation,
+  Columns2,
+  EllipsisVertical,
+  FolderOpen,
+  Pencil,
+  Copy,
+  Download,
+  Trash2,
+  ChevronRight
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -10,17 +25,35 @@ import { useTranslation } from "react-i18next";
 
 interface EditorToolbarProps {
   content?: string;
+  onShowNoteInExplorer?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onRenameNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onDuplicateNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onExportNote?: (
+    note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
+    format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
+  ) => void;
+  onDeleteNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
 }
 
-export function EditorToolbar({ content = "" }: EditorToolbarProps) {
+export function EditorToolbar({
+  content = "",
+  onShowNoteInExplorer,
+  onRenameNote,
+  onDuplicateNote,
+  onExportNote,
+  onDeleteNote
+}: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
   const enterPresentationMode = useViewStore((state) => state.enterPresentationMode);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
+  const selectedNote = useNoteStore((state) => state.getSelectedNote());
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
   const { t } = useTranslation("editor");
   const [tocOpen, setTocOpen] = useState(false);
   const [isPinned, setIsPinned] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const handleFormat = () => {
     formatCurrentNote();
@@ -30,6 +63,14 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
   const isSplitMode = editorMode === "split";
   const hasNote = !!selectedNoteId;
   const showPreview = isPreviewMode || isSplitMode; // 预览或分栏模式下都显示预览内容
+  const noteSummary = selectedNote
+    ? {
+        id: selectedNote.id,
+        title: selectedNote.title,
+        updatedAt: selectedNote.updatedAt,
+        isPinned: selectedNote.isPinned
+      }
+    : null;
 
   // 监听编辑模式变化，切换到编辑模式时关闭目录
   useEffect(() => {
@@ -38,6 +79,30 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
       setIsPinned(false); // 切换模式时取消固定
     }
   }, [editorMode]);
+
+  const handleShowInExplorer = () => {
+    if (noteSummary) {
+      onShowNoteInExplorer?.(noteSummary);
+    }
+  };
+
+  const handleRenameNote = () => {
+    if (noteSummary) {
+      onRenameNote?.(noteSummary);
+    }
+  };
+
+  const handleDuplicateNote = () => {
+    if (noteSummary) {
+      onDuplicateNote?.(noteSummary);
+    }
+  };
+
+  const handleDeleteNote = () => {
+    if (noteSummary) {
+      onDeleteNote?.(noteSummary);
+    }
+  };
 
   return (
     <div className="flex h-12 shrink-0 items-center justify-end px-3">
@@ -101,7 +166,7 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
               aria-label={t("toolbar.toc")}
               disabled={!hasNote || !showPreview}
             >
-              <List className="h-4 w-4" />
+              <TocIcon className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
@@ -135,6 +200,114 @@ export function EditorToolbar({ content = "" }: EditorToolbarProps) {
                 </Button>
               </div>
               <TableOfContents content={content} />
+            </div>
+          </PopoverContent>
+        </Popover>
+
+        {/* 更多操作 */}
+        <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label={t("toolbar.more")}
+              disabled={!hasNote}
+            >
+              <EllipsisVertical className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-56 p-1">
+            <div className="flex flex-col">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full justify-start gap-2"
+                onClick={handleShowInExplorer}
+              >
+                <FolderOpen className="h-4 w-4" />
+                <span>{t("toolbar.showInExplorer")}</span>
+              </Button>
+              <div className="bg-border my-1 h-px" />
+              <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2" onClick={handleRenameNote}>
+                <Pencil className="h-4 w-4" />
+                <span>{t("toolbar.rename")}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full justify-start gap-2"
+                onClick={handleDuplicateNote}
+              >
+                <Copy className="h-4 w-4" />
+                <span>{t("toolbar.duplicate")}</span>
+              </Button>
+              <div className="bg-border my-1 h-px" />
+              <div onMouseEnter={() => setExportOpen(true)} onMouseLeave={() => setExportOpen(false)}>
+                <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2">
+                      <Download className="h-4 w-4" />
+                      <span>{t("toolbar.export")}</span>
+                      <ChevronRight className="text-muted-foreground ml-auto h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" side="right" className="w-48 p-1">
+                    <div className="flex flex-col">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-full justify-start gap-2"
+                        onClick={() => noteSummary && onExportNote?.(noteSummary, "html")}
+                      >
+                        <span>{t("toolbar.exportAsHTML")}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-full justify-start gap-2"
+                        onClick={() => noteSummary && onExportNote?.(noteSummary, "pdf")}
+                      >
+                        <span>{t("toolbar.exportAsPDF")}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-full justify-start gap-2"
+                        onClick={() => noteSummary && onExportNote?.(noteSummary, "pdf-pages")}
+                      >
+                        <span>{t("toolbar.exportAsPDFPages")}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-full justify-start gap-2"
+                        onClick={() => noteSummary && onExportNote?.(noteSummary, "image")}
+                      >
+                        <span>{t("toolbar.exportAsImage")}</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-full justify-start gap-2"
+                        onClick={() => noteSummary && onExportNote?.(noteSummary, "image-pages")}
+                      >
+                        <span>{t("toolbar.exportAsImagePages")}</span>
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="bg-border my-1 h-px" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive h-8 w-full justify-start gap-2"
+                onClick={handleDeleteNote}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>{t("toolbar.delete")}</span>
+              </Button>
             </div>
           </PopoverContent>
         </Popover>
