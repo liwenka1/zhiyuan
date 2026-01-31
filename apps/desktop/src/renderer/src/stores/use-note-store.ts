@@ -7,11 +7,15 @@ import { useWorkspaceStore } from "./use-workspace-store";
 import { useFolderStore } from "./use-folder-store";
 import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 
+const MAX_OPEN_NOTES = 50;
+
 interface NoteStore {
   // 状态
   notes: Note[];
   selectedNoteId: string | null;
   editorContent: string;
+  openNoteIds: string[];
+  playingNoteIds: string[];
   isLoadingFromFileSystem: boolean; // 是否从文件系统加载
   searchKeyword: string; // 搜索关键词
 
@@ -33,6 +37,9 @@ interface NoteStore {
   loadFromFileSystem: (data: { notes: Note[] }) => void;
   saveNoteToFileSystem: (noteId: string, content: string) => Promise<void>;
 
+  // 媒体播放相关
+  setNotePlaying: (noteId: string, isPlaying: boolean) => void;
+
   // 文件监听处理
   handleFileAddedEvent: (filePath: string, fullPath: string) => Promise<void>;
   handleFileDeletedEvent: (filePath: string) => void;
@@ -48,20 +55,34 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   notes: [],
   selectedNoteId: null,
   editorContent: "",
+  openNoteIds: [],
+  playingNoteIds: [],
   isLoadingFromFileSystem: false,
   searchKeyword: "",
 
   // 笔记操作
-  setNotes: (notes) => set({ notes }),
+  setNotes: (notes) =>
+    set((state) => ({
+      notes,
+      openNoteIds: state.openNoteIds.filter((id) => notes.some((note) => note.id === id))
+    })),
 
   selectNote: (noteId) => {
     const note = get().notes.find((n) => n.id === noteId);
-    if (note) {
-      set({
+    if (!note) return;
+
+    set((state) => {
+      const existing = state.openNoteIds.filter((id) => id !== noteId);
+      const updated = [...existing, noteId];
+      if (updated.length > MAX_OPEN_NOTES) {
+        updated.shift();
+      }
+      return {
         selectedNoteId: noteId,
-        editorContent: note.content
-      });
-    }
+        editorContent: note.content,
+        openNoteIds: updated
+      };
+    });
   },
 
   // 搜索相关
@@ -126,11 +147,19 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
         updatedAt: new Date().toISOString()
       };
 
-      set((state) => ({
-        notes: [...state.notes, newNote],
-        selectedNoteId: newNote.id,
-        editorContent: newNote.content
-      }));
+      set((state) => {
+        const existing = state.openNoteIds.filter((id) => id !== newNote.id);
+        const updated = [...existing, newNote.id];
+        if (updated.length > MAX_OPEN_NOTES) {
+          updated.shift();
+        }
+        return {
+          notes: [...state.notes, newNote],
+          selectedNoteId: newNote.id,
+          editorContent: newNote.content,
+          openNoteIds: updated
+        };
+      });
     } catch (error) {
       console.error("创建笔记失败:", error);
     }
@@ -179,6 +208,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   deleteNote: (noteId) => {
     set((state) => ({
       notes: state.notes.filter((n) => n.id !== noteId),
+      openNoteIds: state.openNoteIds.filter((id) => id !== noteId),
+      playingNoteIds: state.playingNoteIds.filter((id) => id !== noteId),
       // 如果删除的是当前选中的笔记，清空选中状态
       selectedNoteId: state.selectedNoteId === noteId ? null : state.selectedNoteId,
       editorContent: state.selectedNoteId === noteId ? "" : state.editorContent
@@ -220,6 +251,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
               }
             : n
         ),
+        openNoteIds: state.openNoteIds.map((id) => (id === noteId ? newNoteId : id)),
         selectedNoteId: state.selectedNoteId === noteId ? newNoteId : state.selectedNoteId
       }));
     } catch (error) {
@@ -348,6 +380,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       notes: notesWithPinState,
       selectedNoteId: null,
       editorContent: "",
+      openNoteIds: [],
+      playingNoteIds: [],
       isLoadingFromFileSystem: true,
       searchKeyword: "" // 重新加载时清空搜索
     });
@@ -400,6 +434,8 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     // 从笔记列表中移除
     set((state) => ({
       notes: state.notes.filter((n) => n.id !== filePath),
+      openNoteIds: state.openNoteIds.filter((id) => id !== filePath),
+      playingNoteIds: state.playingNoteIds.filter((id) => id !== filePath),
       // 如果删除的是当前选中的笔记，清空选中状态
       selectedNoteId: state.selectedNoteId === filePath ? null : state.selectedNoteId,
       editorContent: state.selectedNoteId === filePath ? "" : state.editorContent
@@ -441,5 +477,17 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       // 如果是当前正在编辑的笔记，同时更新编辑器内容
       editorContent: isCurrentlyEditing ? content : state.editorContent
     }));
+  },
+
+  setNotePlaying: (noteId, isPlaying) => {
+    set((state) => {
+      if (isPlaying && !state.playingNoteIds.includes(noteId)) {
+        return { playingNoteIds: [...state.playingNoteIds, noteId] };
+      }
+      if (!isPlaying && state.playingNoteIds.includes(noteId)) {
+        return { playingNoteIds: state.playingNoteIds.filter((id) => id !== noteId) };
+      }
+      return state;
+    });
   }
 }));
