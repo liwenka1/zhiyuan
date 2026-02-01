@@ -184,6 +184,19 @@ export interface RssAPI {
   unsubscribe: (folderPath: string) => Promise<{ success: boolean }>;
 }
 
+// URL API 接口
+export interface UrlAPI {
+  createNote: (
+    url: string,
+    workspacePath: string,
+    folderId?: string
+  ) => Promise<{
+    noteId: string;
+    filePath: string;
+    title: string;
+  }>;
+}
+
 // 扩展的 API 接口
 export interface API {
   theme: ThemeAPI;
@@ -197,6 +210,7 @@ export interface API {
   utils: UtilsAPI;
   config: ConfigAPI;
   rss: RssAPI;
+  url: UrlAPI;
 }
 
 declare global {

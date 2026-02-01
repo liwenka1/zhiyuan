@@ -1,6 +1,7 @@
 {
   "search": "搜索",
   "newNote": "新建笔记",
+  "createFromUrl": "从 URL 新建",
   "toggleFolderSidebar": "切换文件夹列表",
   "defaultTitle": "无标题笔记",
   "defaultContent": "开始写作...",
@@ -76,6 +77,11 @@
       "title": "导入 RSS",
       "description": "请输入 RSS 订阅地址",
       "placeholder": "https://example.com/feed.xml"
+    },
+    "createFromUrl": {
+      "title": "从 URL 新建笔记",
+      "description": "输入网页链接，自动提取内容",
+      "placeholder": "https://example.com/article"
     }
   },
   "fileTypes": {
@@ -99,5 +105,11 @@
     "success": "RSS 导入成功",
     "failed": "RSS 导入失败",
     "noWorkspace": "未选择工作区，无法导入 RSS"
+  },
+  "url": {
+    "creating": "正在抓取网页内容...",
+    "success": "笔记创建成功",
+    "failed": "抓取失败",
+    "noWorkspace": "未选择工作区"
   }
 }
