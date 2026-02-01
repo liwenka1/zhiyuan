@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { produce } from "immer";
 import { EditorViewMode, PreviewConfig } from "@/types";
 
 interface ViewStore {
@@ -77,25 +78,25 @@ export const useViewStore = create<ViewStore>()(
 
       // 预览配置
       setPreviewConfig: (config) =>
-        set((state) => ({
-          previewConfig: { ...state.previewConfig, ...config }
-        })),
+        set(
+          produce((draft) => {
+            Object.assign(draft.previewConfig, config);
+          })
+        ),
 
       toggleToc: () =>
-        set((state) => ({
-          previewConfig: {
-            ...state.previewConfig,
-            showToc: !state.previewConfig.showToc
-          }
-        })),
+        set(
+          produce((draft) => {
+            draft.previewConfig.showToc = !draft.previewConfig.showToc;
+          })
+        ),
 
       toggleSyncScroll: () =>
-        set((state) => ({
-          previewConfig: {
-            ...state.previewConfig,
-            syncScroll: !state.previewConfig.syncScroll
-          }
-        })),
+        set(
+          produce((draft) => {
+            draft.previewConfig.syncScroll = !draft.previewConfig.syncScroll;
+          })
+        ),
 
       // 工具方法
       isEditMode: () => get().editorMode === "edit",
