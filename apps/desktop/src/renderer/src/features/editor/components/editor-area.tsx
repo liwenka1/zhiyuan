@@ -3,7 +3,7 @@ import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
-import { useViewStore } from "@/stores";
+import { useViewStore, useNoteStore } from "@/stores";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { ImperativePanelHandle } from "react-resizable-panels";
 import type { Note } from "@/types";
@@ -42,14 +42,23 @@ export function EditorArea({
   const splitLayout = useViewStore((state) => state.splitLayout);
   const setSplitLayout = useViewStore((state) => state.setSplitLayout);
   const resetSplitLayout = useViewStore((state) => state.resetSplitLayout);
+  const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
 
   const openNotes = useMemo(
     () => openNoteIds.map((id) => notes.find((note) => note.id === id)).filter(Boolean) as Note[],
     [notes, openNoteIds]
   );
 
+  // 智能过滤：只渲染必要的笔记实例
+  // 1. 当前活跃的笔记（正在编辑）
+  // 2. 正在播放媒体的笔记（后台播放）
+  const notesToRender = useMemo(
+    () => openNotes.filter((note) => note.id === noteId || playingNoteIds.includes(note.id)),
+    [openNotes, noteId, playingNoteIds]
+  );
+
   // 如果没有选中笔记，显示空状态
-  if (!hasNote && !content && openNotes.length === 0) {
+  if (!hasNote && !content && notesToRender.length === 0) {
     return (
       <div className="flex h-full flex-col">
         <EditorToolbar />
@@ -71,7 +80,7 @@ export function EditorArea({
         onDeleteNote={onDeleteNote}
       />
       <div className="flex-1 overflow-hidden">
-        {openNotes.map((note) => (
+        {notesToRender.map((note) => (
           <OpenNotePanels
             key={note.id}
             noteId={note.id}
