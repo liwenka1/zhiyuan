@@ -1,11 +1,13 @@
 import { useEffect } from "react";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
+import { clearAllDebouncedSaves } from "@/stores/use-note-store";
 
 /**
  * 工作区初始化 Hook
  * 负责：
  * - 初始化工作区（加载或创建）
  * - 监听文件系统变化
+ * - 窗口关闭时保存
  */
 export function useWorkspaceInit() {
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
@@ -79,6 +81,30 @@ export function useWorkspaceInit() {
       unsubscribeChanged();
       unsubscribeFolderAdded();
       unsubscribeFolderDeleted();
+    };
+  }, []);
+
+  // 窗口关闭时保存当前笔记
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const { selectedNoteId, editorContent } = useNoteStore.getState();
+
+      if (selectedNoteId && editorContent) {
+        // 清除所有防抖定时器
+        clearAllDebouncedSaves();
+
+        // 立即保存当前笔记
+        const note = useNoteStore.getState().notes.find((n) => n.id === selectedNoteId);
+        if (note?.filePath) {
+          useNoteStore.getState().saveNoteToFileSystem(selectedNoteId, editorContent);
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 }

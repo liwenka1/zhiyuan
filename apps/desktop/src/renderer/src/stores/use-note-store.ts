@@ -9,6 +9,24 @@ import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 
 const MAX_OPEN_NOTES = 10;
 
+// 防抖保存：存储每个笔记的防抖定时器
+const debouncedSaves = new Map<string, ReturnType<typeof setTimeout>>();
+
+// 清除指定笔记的防抖定时器
+function clearDebouncedSave(noteId: string) {
+  const timer = debouncedSaves.get(noteId);
+  if (timer) {
+    clearTimeout(timer);
+    debouncedSaves.delete(noteId);
+  }
+}
+
+// 清除所有防抖定时器
+export function clearAllDebouncedSaves() {
+  debouncedSaves.forEach((timer) => clearTimeout(timer));
+  debouncedSaves.clear();
+}
+
 interface NoteStore {
   // 状态
   notes: Note[];
@@ -16,6 +34,7 @@ interface NoteStore {
   editorContent: string;
   openNoteIds: string[];
   playingNoteIds: string[];
+  savingNoteIds: Set<string>; // 正在保存的笔记 ID
   isLoadingFromFileSystem: boolean; // 是否从文件系统加载
   searchKeyword: string; // 搜索关键词
 
@@ -57,6 +76,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
   editorContent: "",
   openNoteIds: [],
   playingNoteIds: [],
+  savingNoteIds: new Set(),
   isLoadingFromFileSystem: false,
   searchKeyword: "",
 
@@ -68,6 +88,20 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     })),
 
   selectNote: (noteId) => {
+    const { selectedNoteId, editorContent } = get();
+
+    // 切换前，立即保存当前笔记（跳过防抖）
+    if (selectedNoteId && editorContent) {
+      const currentNote = get().notes.find((n) => n.id === selectedNoteId);
+      if (currentNote?.filePath) {
+        // 清除防抖定时器
+        clearDebouncedSave(selectedNoteId);
+        // 立即保存
+        get().saveNoteToFileSystem(selectedNoteId, editorContent);
+      }
+    }
+
+    // 切换到新笔记
     const note = get().notes.find((n) => n.id === noteId);
     if (!note) return;
 
@@ -169,7 +203,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const { selectedNoteId } = get();
     if (!selectedNoteId) return;
 
-    // 更新内存中的内容
+    // 1. 立即更新内存（用户体验流畅）
     set((state) => ({
       editorContent: content,
       notes: state.notes.map((note) =>
@@ -183,11 +217,20 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
       )
     }));
 
-    // 如果笔记有文件路径，立即保存到文件系统
+    // 2. 防抖保存到磁盘（减少 I/O，解决卡顿）
     const note = get().notes.find((n) => n.id === selectedNoteId);
-    if (note?.filePath) {
+    if (!note?.filePath) return;
+
+    // 清除之前的定时器
+    clearDebouncedSave(selectedNoteId);
+
+    // 设置新的定时器：500ms 后保存
+    const timer = setTimeout(() => {
       get().saveNoteToFileSystem(selectedNoteId, content);
-    }
+      debouncedSaves.delete(selectedNoteId);
+    }, 500);
+
+    debouncedSaves.set(selectedNoteId, timer);
   },
 
   formatCurrentNote: async () => {
@@ -393,8 +436,30 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     if (!note?.filePath) return;
 
     try {
+      // 标记为正在保存
+      set((state) => ({
+        savingNoteIds: new Set([...state.savingNoteIds, noteId])
+      }));
+
       await window.api.file.write(note.filePath, content);
+
+      // 延迟移除标记，确保文件监听器的防抖也生效
+      // chokidar 的 stabilityThreshold 是 100ms，这里设置为 200ms 更安全
+      setTimeout(() => {
+        set((state) => {
+          const newSet = new Set(state.savingNoteIds);
+          newSet.delete(noteId);
+          return { savingNoteIds: newSet };
+        });
+      }, 200);
     } catch (error) {
+      // 出错也要移除标记
+      set((state) => {
+        const newSet = new Set(state.savingNoteIds);
+        newSet.delete(noteId);
+        return { savingNoteIds: newSet };
+      });
+
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${i18n.t("note:errors.saveNoteFailed")}: ${errorMessage}`);
     }
@@ -457,13 +522,27 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
     const note = get().notes.find((n) => n.id === filePath);
     if (!note) return;
 
+    const { selectedNoteId, savingNoteIds } = get();
+
+    // ⭐ 核心修复：跳过正在编辑的笔记（防止回退 bug）
+    if (selectedNoteId === filePath) {
+      console.log('[文件监听] 跳过正在编辑的笔记:', filePath);
+      return;
+    }
+
+    // ⭐ 额外保护：跳过正在保存的笔记（防止循环）
+    if (savingNoteIds.has(filePath)) {
+      console.log('[文件监听] 跳过正在保存的笔记:', filePath);
+      return;
+    }
+
+    // 只处理外部修改（比如其他程序修改的文件）
     const content = await handleFileChanged(filePath, fullPath);
     if (!content) return;
 
-    const { selectedNoteId } = get();
-    const isCurrentlyEditing = selectedNoteId === filePath;
+    console.log('[文件监听] 处理外部修改:', filePath);
 
-    // 更新笔记内容
+    // 更新笔记内容（不更新编辑器内容，因为不是当前编辑的笔记）
     set((state) => ({
       notes: state.notes.map((n) =>
         n.id === filePath
@@ -473,9 +552,7 @@ export const useNoteStore = create<NoteStore>((set, get) => ({
               updatedAt: new Date().toISOString()
             }
           : n
-      ),
-      // 如果是当前正在编辑的笔记，同时更新编辑器内容
-      editorContent: isCurrentlyEditing ? content : state.editorContent
+      )
     }));
   },
 
