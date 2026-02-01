@@ -28,7 +28,7 @@ export function useNoteData() {
 
   // 格式化笔记列表数据（置顶笔记排在前面，相同状态下按更新时间排序）
   const formattedNotes = useMemo(() => {
-    return filteredNotes
+    return [...filteredNotes]
       .sort((a, b) => {
         // 1. 置顶笔记优先
         if (a.isPinned && !b.isPinned) return -1;

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { produce } from "immer";
 import { Folder } from "@/types";
 import { useWorkspaceStore } from "./use-workspace-store";
 
@@ -58,20 +59,26 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         updatedAt: new Date().toISOString()
       };
 
-      set((state) => ({
-        folders: [...state.folders, newFolder]
-      }));
+      set(
+        produce((draft) => {
+          draft.folders.push(newFolder);
+        })
+      );
     } catch (error) {
       console.error("创建文件夹失败:", error);
     }
   },
 
   deleteFolder: (folderId) => {
-    set((state) => ({
-      folders: state.folders.filter((f) => f.id !== folderId),
-      // 如果删除的是当前选中的文件夹，清空选中状态
-      selectedFolderId: state.selectedFolderId === folderId ? null : state.selectedFolderId
-    }));
+    set(
+      produce((draft) => {
+        draft.folders = draft.folders.filter((f) => f.id !== folderId);
+        // 如果删除的是当前选中的文件夹，清空选中状态
+        if (draft.selectedFolderId === folderId) {
+          draft.selectedFolderId = null;
+        }
+      })
+    );
   },
 
   renameFolder: async (folderId, newName) => {
@@ -91,21 +98,22 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       await window.api.folder.rename(folder.path, newFolderPath);
 
       // 更新 store 中的文件夹信息
-      set((state) => ({
-        folders: state.folders.map((f) =>
-          f.id === folderId
-            ? {
-                ...f,
-                id: newName, // 使用新名称作为 ID
-                name: newName,
-                path: newFolderPath,
-                updatedAt: new Date().toISOString()
-              }
-            : f
-        ),
-        // 如果重命名的是当前选中的文件夹，更新选中状态
-        selectedFolderId: state.selectedFolderId === folderId ? newName : state.selectedFolderId
-      }));
+      set(
+        produce((draft) => {
+          const targetFolder = draft.folders.find((f) => f.id === folderId);
+          if (targetFolder) {
+            targetFolder.id = newName; // 使用新名称作为 ID
+            targetFolder.name = newName;
+            targetFolder.path = newFolderPath;
+            targetFolder.updatedAt = new Date().toISOString();
+          }
+
+          // 如果重命名的是当前选中的文件夹，更新选中状态
+          if (draft.selectedFolderId === folderId) {
+            draft.selectedFolderId = newName;
+          }
+        })
+      );
     } catch (error) {
       console.error("重命名文件夹失败:", error);
       throw error;
@@ -130,9 +138,11 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     };
 
     // 添加到文件夹列表
-    set((state) => ({
-      folders: [...state.folders, newFolder]
-    }));
+    set(
+      produce((draft) => {
+        draft.folders.push(newFolder);
+      })
+    );
   },
 
   // 处理外部删除的文件夹
@@ -141,9 +151,13 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     if (!folder) return;
 
     // 从文件夹列表中移除
-    set((state) => ({
-      folders: state.folders.filter((f) => f.id !== folderPath),
-      selectedFolderId: state.selectedFolderId === folderPath ? null : state.selectedFolderId
-    }));
+    set(
+      produce((draft) => {
+        draft.folders = draft.folders.filter((f) => f.id !== folderPath);
+        if (draft.selectedFolderId === folderPath) {
+          draft.selectedFolderId = null;
+        }
+      })
+    );
   }
 }));
