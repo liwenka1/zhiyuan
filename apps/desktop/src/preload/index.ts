@@ -369,6 +369,21 @@ const api = {
     update: (folderPath: string): Promise<{ addedCount: number }> => ipcRenderer.invoke("rss:update", folderPath),
     unsubscribe: (folderPath: string): Promise<{ success: boolean }> =>
       ipcRenderer.invoke("rss:unsubscribe", folderPath)
+  },
+
+  url: {
+    /**
+     * 从 URL 创建笔记
+     */
+    createNote: (
+      url: string,
+      workspacePath: string,
+      folderId?: string
+    ): Promise<{
+      noteId: string;
+      filePath: string;
+      title: string;
+    }> => ipcRenderer.invoke("url:createNote", url, workspacePath, folderId)
   }
 };
 

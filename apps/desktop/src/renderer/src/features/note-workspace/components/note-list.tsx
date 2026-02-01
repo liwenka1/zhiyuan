@@ -11,7 +11,8 @@ import {
   Download,
   X,
   FolderOpen,
-  Volume2
+  Volume2,
+  Link
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRef } from "react";
@@ -47,6 +48,7 @@ interface NoteListProps {
   searchKeyword?: string;
   onSelectNote?: (noteId: string) => void;
   onCreateNote?: () => void;
+  onCreateFromUrl?: () => void;
   onSearchChange?: (keyword: string) => void;
   onShowNoteInExplorer?: (note: Note) => void;
   onDeleteNote?: (note: Note) => void;
@@ -63,6 +65,7 @@ export function NoteList({
   searchKeyword = "",
   onSelectNote,
   onCreateNote,
+  onCreateFromUrl,
   onSearchChange,
   onShowNoteInExplorer,
   onDeleteNote,
@@ -186,8 +189,17 @@ export function NoteList({
                 }
               }}
             >
-              {/* 新建笔记 + 搜索按钮 */}
+              {/* 从 URL 新建 + 新建笔记 + 搜索按钮 */}
               <div className="ml-auto flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 shrink-0 cursor-pointer p-0"
+                  aria-label={t("createFromUrl")}
+                  onClick={onCreateFromUrl}
+                >
+                  <Link className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"

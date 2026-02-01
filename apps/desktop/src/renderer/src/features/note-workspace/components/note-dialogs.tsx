@@ -12,6 +12,10 @@ interface NoteDialogsProps {
   showRssImportDialog: boolean;
   onCloseRssImportDialog: () => void;
 
+  // URL 创建笔记
+  showUrlCreateDialog: boolean;
+  onCloseUrlCreateDialog: () => void;
+
   // 重命名笔记
   showRenameNoteDialog: boolean;
   noteToRename: { id: string; title: string; updatedAt?: string; isPinned?: boolean } | null;
@@ -32,6 +36,8 @@ export function NoteDialogs({
   onCloseCreateFolderDialog,
   showRssImportDialog,
   onCloseRssImportDialog,
+  showUrlCreateDialog,
+  onCloseUrlCreateDialog,
   showRenameNoteDialog,
   noteToRename,
   onCloseRenameNoteDialog,
@@ -71,6 +77,31 @@ export function NoteDialogs({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.failed")}: ${errorMessage}`, { id: toastId });
+    } finally {
+      await window.api.watcher.resume();
+    }
+  };
+
+  // 确认从 URL 创建笔记
+  const handleConfirmUrlCreate = async (url: string) => {
+    if (!workspacePath) {
+      toast.error(t("url.noWorkspace"));
+      return;
+    }
+
+    const toastId = "url-create";
+    toast.loading(t("url.creating"), { id: toastId });
+
+    try {
+      await window.api.watcher.pause();
+      const selectedFolderId = useFolderStore.getState().selectedFolderId;
+      await window.api.url.createNote(url, workspacePath, selectedFolderId || undefined);
+      const data = await window.api.workspace.scan(workspacePath);
+      await loadFromFileSystem(data);
+      toast.success(t("url.success"), { id: toastId });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast.error(`${t("url.failed")}: ${errorMessage}`, { id: toastId });
     } finally {
       await window.api.watcher.resume();
     }
@@ -120,6 +151,16 @@ export function NoteDialogs({
         description={t("dialog.importRss.description")}
         placeholder={t("dialog.importRss.placeholder")}
         onConfirm={handleConfirmRssImport}
+      />
+
+      {/* URL 创建笔记对话框 */}
+      <InputDialog
+        open={showUrlCreateDialog}
+        onOpenChange={onCloseUrlCreateDialog}
+        title={t("dialog.createFromUrl.title")}
+        description={t("dialog.createFromUrl.description")}
+        placeholder={t("dialog.createFromUrl.placeholder")}
+        onConfirm={handleConfirmUrlCreate}
       />
 
       {/* 重命名文件夹对话框 */}

@@ -6,6 +6,7 @@ const PLACEHOLDER_PREFIX = "<!--PROTECTED";
 const PLACEHOLDER_SUFFIX = "-->";
 
 interface ProtectedContent {
+  frontmatter: string | null;
   codeBlocks: Map<string, string>;
   setextHeadings: Map<string, string>;
 }
@@ -17,6 +18,7 @@ interface ProtectedContent {
  */
 function extractProtectedContent(content: string): { processed: string; protected: ProtectedContent } {
   const protectedContent: ProtectedContent = {
+    frontmatter: null,
     codeBlocks: new Map(),
     setextHeadings: new Map()
   };
@@ -24,7 +26,17 @@ function extractProtectedContent(content: string): { processed: string; protecte
   let processed = content;
   let index = 0;
 
-  // 1. 先保护代码块（```...```）
+  // 1. 保护 frontmatter（最高优先级）
+  // 匹配开头的 ---...--- 区域
+  const frontmatterRegex = /^---\n[\s\S]*?\n---\n/;
+  const frontmatterMatch = processed.match(frontmatterRegex);
+  if (frontmatterMatch) {
+    protectedContent.frontmatter = frontmatterMatch[0];
+    const placeholder = `${PLACEHOLDER_PREFIX}FM${PLACEHOLDER_SUFFIX}`;
+    processed = processed.replace(frontmatterRegex, placeholder + "\n");
+  }
+
+  // 2. 保护代码块（```...```）
   const codeBlockRegex = /```[\s\S]*?```/g;
   processed = processed.replace(codeBlockRegex, (match) => {
     const placeholder = `${PLACEHOLDER_PREFIX}CB${index}${PLACEHOLDER_SUFFIX}`;
@@ -33,7 +45,7 @@ function extractProtectedContent(content: string): { processed: string; protecte
     return placeholder;
   });
 
-  // 2. 保护 Setext 风格的标题（文本后紧跟 === 或 ---）
+  // 3. 保护 Setext 风格的标题（文本后紧跟 === 或 ---）
   // 匹配：非空行 + 换行 + 仅由 = 或 - 组成的行（至少3个字符）
   const setextHeadingRegex = /^(.+)\n(={3,}|-{3,})$/gm;
   processed = processed.replace(setextHeadingRegex, (match) => {
@@ -54,6 +66,12 @@ function extractProtectedContent(content: string): { processed: string; protecte
  */
 function restoreProtectedContent(content: string, protectedContent: ProtectedContent): string {
   let result = content;
+
+  // 恢复 frontmatter（最先恢复）
+  if (protectedContent.frontmatter) {
+    const placeholder = `${PLACEHOLDER_PREFIX}FM${PLACEHOLDER_SUFFIX}`;
+    result = result.replace(placeholder, protectedContent.frontmatter.trimEnd());
+  }
 
   // 恢复 Setext 标题
   for (const [placeholder, heading] of protectedContent.setextHeadings) {
@@ -95,7 +113,12 @@ export async function formatMarkdown(content: string): Promise<string> {
     });
 
     // 3. 恢复保护的内容
-    const result = restoreProtectedContent(formatted, protectedContent);
+    let result = restoreProtectedContent(formatted, protectedContent);
+
+    // 4. 后处理：智能清理 HTML 标签前的缩进
+    // 只清理 1-3 个空格的缩进（可能是意外的）
+    // 保留 4+ 个空格的缩进（用户想要代码块）
+    result = result.replace(/^[ \t]{1,3}(<[a-zA-Z])/gm, "$1");
 
     return result;
   } catch (error) {

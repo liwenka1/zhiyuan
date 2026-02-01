@@ -71,6 +71,7 @@ export function NoteWorkspace() {
             searchKeyword={searchKeyword}
             onSelectNote={selectNote}
             onCreateNote={noteHandlers.handleCreateNote}
+            onCreateFromUrl={dialogState.openUrlCreateDialog}
             onSearchChange={setSearchKeyword}
             onShowNoteInExplorer={noteHandlers.handleShowNoteInExplorer}
             onDeleteNote={noteHandlers.handleDeleteNote}
@@ -103,6 +104,8 @@ export function NoteWorkspace() {
         onCloseCreateFolderDialog={dialogState.closeCreateFolderDialog}
         showRssImportDialog={dialogState.showRssImportDialog}
         onCloseRssImportDialog={dialogState.closeRssImportDialog}
+        showUrlCreateDialog={dialogState.showUrlCreateDialog}
+        onCloseUrlCreateDialog={dialogState.closeUrlCreateDialog}
         showRenameNoteDialog={dialogState.showRenameNoteDialog}
         noteToRename={dialogState.noteToRename}
         onCloseRenameNoteDialog={dialogState.closeRenameNoteDialog}
