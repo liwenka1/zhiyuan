@@ -75,15 +75,6 @@ export function MarkdownRenderer({
   // 创建 URL 转换函数，将相对路径转换为绝对路径
   const urlTransform = createUrlTransformer(notePath);
 
-  // 空内容处理
-  if (!normalizedContent && showEmptyState) {
-    return (
-      <div className={cn("prose dark:prose-invert", className)}>
-        <div className="text-muted-foreground mt-8 text-center">{emptyStateMessage || t("previewEmpty")}</div>
-      </div>
-    );
-  }
-
   useEffect(() => {
     if (!noteId) return;
     const root = document.getElementById(`preview-scroll-area-${noteId}`);
@@ -114,6 +105,15 @@ export function MarkdownRenderer({
     };
   }, [noteId, normalizedContent]);
 
+  // 空内容处理
+  if (!normalizedContent && showEmptyState) {
+    return (
+      <div className={cn("prose dark:prose-invert", className)}>
+        <div className="text-muted-foreground mt-8 text-center">{emptyStateMessage || t("previewEmpty")}</div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("prose dark:prose-invert", className)}>
       <ReactMarkdown
@@ -127,6 +127,10 @@ export function MarkdownRenderer({
               return <MermaidBlock code={String(children).trim()} />;
             }
             return <code className={className}>{children}</code>;
+          },
+          img({ src, alt, ...props }) {
+            // 图片懒加载：只在滚动到可见区域时才加载
+            return <img src={src} alt={alt} loading="lazy" {...props} />;
           },
           a({ href, children, ...props }) {
             const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {

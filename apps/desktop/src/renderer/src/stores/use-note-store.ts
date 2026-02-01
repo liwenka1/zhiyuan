@@ -7,7 +7,7 @@ import { useWorkspaceStore } from "./use-workspace-store";
 import { useFolderStore } from "./use-folder-store";
 import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 
-const MAX_OPEN_NOTES = 50;
+const MAX_OPEN_NOTES = 10;
 
 interface NoteStore {
   // 状态
