@@ -78,6 +78,7 @@ function getImageMimeType(ext: string): string {
 
 /**
  * 将 HTML 中的本地图片转换为 Base64 内嵌
+ * 支持相对路径和 local-resource:// 协议
  */
 async function embedLocalImages(htmlContent: string, notePath?: string): Promise<string> {
   if (!notePath) return htmlContent;
@@ -94,12 +95,24 @@ async function embedLocalImages(htmlContent: string, notePath?: string): Promise
     const quote = match[1];
     const src = match[2];
 
-    // 只处理相对路径
-    if (!isRelativePath(src)) continue;
+    // 处理 local-resource:// 协议（normalizeMarkdownPaths 转换后的路径）
+    let imagePath: string;
+    if (src.startsWith("local-resource://")) {
+      // 从 local-resource:// URL 中提取本地路径
+      // local-resource://localhost/Users/... -> /Users/...
+      // local-resource:///Users/... -> /Users/...
+      const urlPath = src.replace(/^local-resource:\/\//, "");
+      // 移除可能的 localhost 前缀
+      imagePath = decodeURIComponent(urlPath.replace(/^localhost/, ""));
+    } else if (isRelativePath(src)) {
+      // 处理相对路径
+      imagePath = path.join(noteDir, src.replace(/^\.\//, ""));
+    } else {
+      // 跳过其他协议（http、https、data 等）
+      continue;
+    }
 
     try {
-      const imagePath = path.join(noteDir, src.replace(/^\.\//, ""));
-
       // 检查文件是否存在
       try {
         await fs.access(imagePath);
@@ -123,6 +136,62 @@ async function embedLocalImages(htmlContent: string, notePath?: string): Promise
   }
 
   return result;
+}
+
+/**
+ * 等待页面资源加载完成
+ * 使用 JavaScript 检查所有图片和媒体是否加载完成
+ */
+async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10000): Promise<void> {
+  const startTime = Date.now();
+
+  const checkLoadComplete = async (): Promise<boolean> => {
+    try {
+      // 检查页面加载状态和所有资源
+      const isComplete = await webContents.executeJavaScript(`
+        (function() {
+          // 检查 document.readyState
+          if (document.readyState !== 'complete') {
+            return false;
+          }
+
+          // 检查所有图片是否加载完成
+          const images = Array.from(document.images);
+          const allImagesLoaded = images.every(img => img.complete && img.naturalHeight !== 0);
+          if (!allImagesLoaded) {
+            return false;
+          }
+
+          // 检查所有视频是否准备好
+          const videos = Array.from(document.querySelectorAll('video'));
+          const allVideosReady = videos.every(video => video.readyState >= 2); // HAVE_CURRENT_DATA
+          if (!allVideosReady) {
+            return false;
+          }
+
+          return true;
+        })();
+      `);
+
+      return isComplete;
+    } catch {
+      return false;
+    }
+  };
+
+  // 轮询检查，直到加载完成或超时
+  while (Date.now() - startTime < timeoutMs) {
+    if (await checkLoadComplete()) {
+      // 加载完成后再等待一小段时间，确保渲染稳定
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      return;
+    }
+    // 每 100ms 检查一次
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+
+  // 超时警告（但不抛出错误，继续导出）
+  console.warn(`页面加载超时 (${timeoutMs}ms)，继续导出...`);
 }
 
 /**
@@ -151,7 +220,7 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
       }
     });
 
-    // 使用 dom-ready 事件，不等待图片加载完成
+    // 等待 DOM 结构准备好
     const domReadyPromise = new Promise<void>((resolve) => {
       window!.webContents.once("dom-ready", () => resolve());
     });
@@ -159,8 +228,8 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
     window.loadFile(tempHtmlPath);
     await domReadyPromise;
 
-    // 等待页面渲染完成
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    // 等待页面所有资源加载完成（图片、视频等）
+    await waitForPageLoad(window.webContents);
 
     // 获取页面实际内容高度
     const contentHeight = await window.webContents.executeJavaScript(
@@ -170,8 +239,15 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
     // 调整窗口大小为内容实际尺寸
     window.setContentSize(width, contentHeight);
 
-    // 等待窗口调整完成
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // 等待窗口尺寸调整完成（使用 resize 事件）
+    await new Promise<void>((resolve) => {
+      const timeout = setTimeout(resolve, 1000); // 最多等待 1 秒
+      window!.once("resize", () => {
+        clearTimeout(timeout);
+        // resize 后再等待一小段时间确保渲染完成
+        setTimeout(resolve, 50);
+      });
+    });
 
     // 截取整个页面
     return await window.webContents.capturePage();
@@ -225,18 +301,29 @@ async function collectAndCopyAssets(
   const promises = Array.from(matches).map(async (match) => {
     const src = match[4];
 
-    // 只处理相对路径和 file:// 协议的本地资源
-    if (!isRelativePath(src) && !src.startsWith("file://")) {
+    // 跳过网络资源（http、https、data 等）
+    if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) {
       return;
     }
 
     try {
       // 解析源文件路径
       let sourcePath: string;
-      if (src.startsWith("file://")) {
+      if (src.startsWith("local-resource://")) {
+        // 处理 local-resource:// 协议（normalizeMarkdownPaths 转换后的路径）
+        // local-resource://localhost/Users/... -> /Users/...
+        // local-resource:///Users/... -> /Users/...
+        const urlPath = src.replace(/^local-resource:\/\//, "");
+        sourcePath = decodeURIComponent(urlPath.replace(/^localhost/, ""));
+      } else if (src.startsWith("file://")) {
+        // 处理 file:// 协议
         sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
-      } else {
+      } else if (isRelativePath(src)) {
+        // 处理相对路径
         sourcePath = path.join(noteDir, src.replace(/^\.\//, ""));
+      } else {
+        // 跳过其他协议
+        return;
       }
 
       // 检查文件是否存在

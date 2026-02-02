@@ -13,6 +13,10 @@ const MAX_OPEN_NOTES = 10;
 // 防抖保存：存储每个笔记的防抖定时器
 const debouncedSaves = new Map<string, ReturnType<typeof setTimeout>>();
 
+// 最近保存的笔记记录（用于防止文件监听器误触发）
+// 记录格式：{ noteId: 保存时间戳 }
+const recentSaves = new Map<string, number>();
+
 // 清除指定笔记的防抖定时器
 function clearDebouncedSave(noteId: string) {
   const timer = debouncedSaves.get(noteId);
@@ -26,6 +30,22 @@ function clearDebouncedSave(noteId: string) {
 export function clearAllDebouncedSaves() {
   debouncedSaves.forEach((timer) => clearTimeout(timer));
   debouncedSaves.clear();
+}
+
+// 记录笔记保存时间
+function recordSaveTime(noteId: string) {
+  recentSaves.set(noteId, Date.now());
+  // 500ms 后自动清除记录
+  setTimeout(() => {
+    recentSaves.delete(noteId);
+  }, 500);
+}
+
+// 检查笔记是否最近被保存过
+function wasRecentlySaved(noteId: string, withinMs = 500): boolean {
+  const saveTime = recentSaves.get(noteId);
+  if (!saveTime) return false;
+  return Date.now() - saveTime < withinMs;
 }
 
 interface NoteStore {
@@ -455,15 +475,16 @@ export const useNoteStore = create<NoteStore>()(
           state.savingNoteIds.add(noteId);
         });
 
+        // 记录保存时间（用于文件监听器判断）
+        recordSaveTime(noteId);
+
         await window.api.file.write(note.filePath, content);
 
-        // 延迟移除标记，确保文件监听器的防抖也生效
-        // chokidar 的 stabilityThreshold 是 100ms，这里设置为 200ms 更安全
-        setTimeout(() => {
-          set((state) => {
-            state.savingNoteIds.delete(noteId);
-          });
-        }, 200);
+        // 写入完成后立即移除标记
+        // 文件监听器会通过 wasRecentlySaved() 检查来避免误触发
+        set((state) => {
+          state.savingNoteIds.delete(noteId);
+        });
       } catch (error) {
         // 出错也要移除标记
         set((state) => {
@@ -537,15 +558,22 @@ export const useNoteStore = create<NoteStore>()(
 
       const { selectedNoteId, savingNoteIds } = get();
 
-      // ⭐ 核心修复：跳过正在编辑的笔记（防止回退 bug）
+      // ⭐ 保护1：跳过正在编辑的笔记（防止回退 bug）
       if (selectedNoteId === filePath) {
         console.log("[文件监听] 跳过正在编辑的笔记:", filePath);
         return;
       }
 
-      // ⭐ 额外保护：跳过正在保存的笔记（防止循环）
+      // ⭐ 保护2：跳过正在保存的笔记（防止循环）
       if (savingNoteIds.has(filePath)) {
         console.log("[文件监听] 跳过正在保存的笔记:", filePath);
+        return;
+      }
+
+      // ⭐ 保护3：跳过最近被我们保存的笔记（防止误触发）
+      // 文件监听器可能在写入完成后的几百毫秒内才触发
+      if (wasRecentlySaved(filePath)) {
+        console.log("[文件监听] 跳过最近保存的笔记:", filePath);
         return;
       }
 
