@@ -6,15 +6,18 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import remarkMath from "remark-math";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import rehypeSlug from "rehype-slug";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
 import rehypeStringify from "rehype-stringify";
 import mermaid from "mermaid";
 import { stripHiddenFrontmatter } from "./frontmatter";
+import { markdownSanitizeSchema } from "./markdown-sanitize-config";
 
 // 初始化 mermaid
 mermaid.initialize({ startOnLoad: false, theme: "default" });
@@ -53,9 +56,11 @@ export async function markdownToHTML(markdown: string): Promise<string> {
   const file = await unified()
     .use(remarkParse) // 解析 Markdown
     .use(remarkGfm) // 支持 GitHub Flavored Markdown
+    .use(remarkBreaks) // 支持换行
     .use(remarkMath) // 支持数学公式语法
     .use(remarkRehype, { allowDangerousHtml: true }) // 转换为 HTML AST
     .use(rehypeRaw) // 支持原始 HTML
+    .use(rehypeSanitize, markdownSanitizeSchema) // 安全过滤：移除恶意脚本，保留安全的 HTML
     .use(rehypeSlug) // 为标题添加 id
     .use(rehypeHighlight, { detect: true }) // 代码语法高亮
     .use(rehypeKatex) // 渲染数学公式

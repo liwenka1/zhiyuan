@@ -3,6 +3,7 @@ import { workspaceManager } from "../workspace";
 import { fileSystem } from "../file-system";
 import { fileWatcher } from "../file-watcher";
 import { configManager } from "../config";
+import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
 
 /**
  * 注册工作区和文件系统相关的 IPC 处理器
@@ -117,6 +118,12 @@ export function registerWorkspaceHandlers(): void {
 
   // 在系统默认浏览器中打开链接
   ipcMain.handle("shell:openExternal", async (_, url: string) => {
+    // 安全检查：只允许安全的协议打开外部链接
+    if (!isSafeUrl(url)) {
+      const protocol = getRejectedProtocol(url);
+      console.warn(`[Security] Blocked unsafe URL protocol: ${protocol} - ${url}`);
+      throw new Error(`Unsafe URL protocol: ${protocol}`);
+    }
     await shell.openExternal(url);
   });
 
