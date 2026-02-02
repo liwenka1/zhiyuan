@@ -18,6 +18,7 @@ import rehypeStringify from "rehype-stringify";
 import mermaid from "mermaid";
 import { stripHiddenFrontmatter } from "./frontmatter";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
+import { normalizeMarkdownPaths } from "./resource-resolver";
 
 // 初始化 mermaid
 mermaid.initialize({ startOnLoad: false, theme: "default" });
@@ -52,7 +53,10 @@ async function renderMermaidBlocks(html: string): Promise<string> {
  * @returns HTML 字符串
  */
 export async function markdownToHTML(markdown: string): Promise<string> {
-  const normalized = stripHiddenFrontmatter(markdown);
+  // 预处理：移除隐藏的 frontmatter + 规范化本地路径
+  // normalizeMarkdownPaths 会将本地绝对路径（/Users/...）转换为 local-resource:// 协议
+  // 这样导出和预览的行为才能保持一致
+  const normalized = normalizeMarkdownPaths(stripHiddenFrontmatter(markdown));
   const file = await unified()
     .use(remarkParse) // 解析 Markdown
     .use(remarkGfm) // 支持 GitHub Flavored Markdown
