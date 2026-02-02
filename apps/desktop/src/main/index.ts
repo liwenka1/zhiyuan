@@ -111,7 +111,6 @@ protocol.registerSchemesAsPrivileged([
   {
     scheme: "local-resource",
     privileges: {
-      bypassCSP: true,
       supportFetchAPI: true,
       stream: true,
       standard: true,
