@@ -11,6 +11,7 @@ import { registerRssHandlers } from "./ipc/rss-handler";
 import { registerUrlHandlers } from "./ipc/url-handler";
 import { pathToFileURL } from "url";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
+import { isSafeUrl, getRejectedProtocol } from "./security/url-validator";
 
 function createWindow(): void {
   // 获取当前主题对应的背景色
@@ -63,7 +64,9 @@ function createWindow(): void {
     icon,
     webPreferences: {
       preload: join(__dirname, "../preload/index.cjs"),
-      sandbox: false
+      sandbox: true, // 启用沙盒，提升安全性
+      contextIsolation: true, // 启用上下文隔离（默认值，显式声明）
+      nodeIntegration: false // 禁用 Node.js 集成（默认值，显式声明）
     }
   });
 
@@ -72,7 +75,13 @@ function createWindow(): void {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
+    // 安全检查：只允许安全的协议打开外部链接
+    if (isSafeUrl(details.url)) {
+      shell.openExternal(details.url);
+    } else {
+      const protocol = getRejectedProtocol(details.url);
+      console.warn(`[Security] Blocked unsafe URL protocol: ${protocol} - ${details.url}`);
+    }
     return { action: "deny" };
   });
 

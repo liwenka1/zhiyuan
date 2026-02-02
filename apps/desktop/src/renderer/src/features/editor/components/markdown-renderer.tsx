@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import remarkMath from "remark-math";
 import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
 import rehypeSlug from "rehype-slug";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
@@ -13,6 +14,7 @@ import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 import { createUrlTransformer, normalizeMarkdownPaths } from "@/lib/resource-resolver";
 import { stripHiddenFrontmatter } from "@/lib/frontmatter";
+import { markdownSanitizeSchema } from "@/lib/markdown-sanitize-config";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useNoteStore } from "@/stores";
@@ -118,7 +120,13 @@ export function MarkdownRenderer({
     <div className={cn("prose dark:prose-invert", className)}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
-        rehypePlugins={[rehypeRaw, rehypeSlug, rehypeHighlight, rehypeKatex]}
+        rehypePlugins={[
+          rehypeRaw,
+          [rehypeSanitize, markdownSanitizeSchema], // 安全过滤：移除恶意脚本，保留安全的 HTML
+          rehypeSlug,
+          rehypeHighlight,
+          rehypeKatex
+        ]}
         urlTransform={urlTransform}
         components={{
           code({ className, children }) {
