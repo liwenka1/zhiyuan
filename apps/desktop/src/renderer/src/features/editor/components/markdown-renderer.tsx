@@ -11,7 +11,7 @@ import mermaid from "mermaid";
 import "highlight.js/styles/github.css";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
-import { createUrlTransformer } from "@/lib/resource-resolver";
+import { createUrlTransformer, normalizeMarkdownPaths } from "@/lib/resource-resolver";
 import { stripHiddenFrontmatter } from "@/lib/frontmatter";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -70,7 +70,7 @@ export function MarkdownRenderer({
   emptyStateMessage
 }: MarkdownRendererProps) {
   const { t } = useTranslation("editor");
-  const normalizedContent = stripHiddenFrontmatter(content);
+  const normalizedContent = normalizeMarkdownPaths(stripHiddenFrontmatter(content));
 
   // 创建 URL 转换函数，将相对路径转换为绝对路径
   const urlTransform = createUrlTransformer(notePath);
