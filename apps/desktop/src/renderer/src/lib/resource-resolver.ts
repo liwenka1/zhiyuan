@@ -64,7 +64,7 @@ export function resolveResourcePath(src: string, notePath: string): string {
   const fullPath = `${noteDir}/${cleanSrc}`;
 
   // 使用自定义协议加载本地资源，支持中文路径和特殊字符
-  return `local-resource://${fullPath}`;
+  return `local-resource://${encodeURI(fullPath)}`;
 }
 
 /**
@@ -92,7 +92,7 @@ export function createUrlTransformer(notePath: string | undefined) {
     // 本地绝对路径转换为 local-resource:// 协议
     // 例如: /Users/xxx/image.png -> local-resource:///Users/xxx/image.png
     if (isLocalAbsolutePath(url)) {
-      return `local-resource://${url}`;
+      return `local-resource://${encodeURI(url)}`;
     }
 
     // 相对路径转换为基于笔记目录的 local-resource:// 协议
@@ -102,4 +102,18 @@ export function createUrlTransformer(notePath: string | undefined) {
 
     return url;
   };
+}
+
+export function normalizeMarkdownPaths(markdown: string): string {
+  const linkRegex = /(!?\[[^\]]*\]\()([^\s)]+|[^\s)]+[^)]*?)(\))/g;
+  return markdown.replace(linkRegex, (match, prefix, rawUrl, suffix) => {
+    const trimmed = rawUrl.trim();
+    if (!/\s/.test(trimmed) && !isLocalAbsolutePath(trimmed)) return match;
+    if (!(isRelativePath(trimmed) || isLocalAbsolutePath(trimmed))) return match;
+    const encoded = encodeURI(trimmed);
+    if (isLocalAbsolutePath(trimmed)) {
+      return `${prefix}local-resource://${encoded}${suffix}`;
+    }
+    return `${prefix}${encoded}${suffix}`;
+  });
 }
