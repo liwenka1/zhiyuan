@@ -2,6 +2,7 @@ import { Note } from "@/types";
 import { markdownToHTML } from "@/lib/markdown-processor";
 import { generateWechatHTMLDocument } from "@/lib/wechat-html";
 import { inlineCSS } from "@/lib/css-inliner";
+import { exportIpc } from "@/ipc";
 
 /**
  * 复制笔记到微信公众号
@@ -18,10 +19,7 @@ export async function copyNoteToWechat(note: Note): Promise<void> {
     const inlinedHTML = inlineCSS(wechatHTML);
 
     // 4. 复制到剪贴板
-    const result = await window.api.export.copyHTMLToClipboard(inlinedHTML);
-    if (!result.ok) {
-      throw new Error(result.error.message);
-    }
+    await exportIpc.copyHTMLToClipboard(inlinedHTML);
 
     console.log("已复制到剪贴板，可直接粘贴到微信公众号编辑器");
   } catch (error) {

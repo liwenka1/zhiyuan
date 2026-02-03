@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Theme } from "@shared";
-import { unwrapIpcResult } from "@/lib/ipc-utils";
+import { themeIpc } from "@/ipc";
 
 interface ThemeState {
   // 当前主题（light/dark）
@@ -59,10 +59,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
     // 2. 同步到主进程（持久化 + 通知其他窗口）
     try {
-      const result = await window.api.theme.set(theme);
-      if (!result.ok) {
-        console.error("Failed to sync theme to main process:", result.error.message);
-      }
+      await themeIpc.set(theme);
     } catch (error) {
       console.error("Failed to sync theme to main process:", error);
     }
@@ -82,8 +79,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       // 主进程会自动处理：
       // - 用户手动设置的主题（从 electron-store 读取）
       // - 或系统主题（如果用户没有设置）
-      const result = await window.api.theme.get();
-      const theme = unwrapIpcResult(result);
+      const theme = await themeIpc.get();
 
       // 更新状态并应用到 document
       set({ theme });
@@ -93,7 +89,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       // 触发场景：
       // - 系统主题变化（且用户没有手动设置固定主题）
       // - 其他窗口修改了主题
-      unsubscribeThemeChange = window.api.theme.onChanged((newTheme) => {
+      unsubscribeThemeChange = themeIpc.onChanged((newTheme) => {
         set({ theme: newTheme });
         applyThemeToDocument(newTheme);
       });

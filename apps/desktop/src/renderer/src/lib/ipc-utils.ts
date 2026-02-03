@@ -59,19 +59,3 @@ export function safeUnwrapIpcResult<T>(dto: IpcResultDTO<T>): T | undefined {
   console.error(`IPC Error [${dto.error.code}]:`, dto.error.message);
   return undefined;
 }
-
-/**
- * 将 IPC Result DTO 转换为 Promise（用于 React Query）
- * @param dtoPromise IPC Result DTO Promise
- * @returns 普通 Promise
- *
- * @example
- * const { data } = useQuery({
- *   queryKey: ['theme'],
- *   queryFn: () => resultToPromise(window.api.theme.get())
- * });
- */
-export async function resultToPromise<T>(dtoPromise: Promise<IpcResultDTO<T>>): Promise<T> {
-  const dto = await dtoPromise;
-  return unwrapIpcResult(dto);
-}

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { produce } from "immer";
 import { Folder } from "@/types";
 import { useWorkspaceStore } from "./use-workspace-store";
+import { folderIpc } from "@/ipc";
 
 interface FolderStore {
   // 状态
@@ -47,11 +48,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       const folderPath = `${workspacePath}/${name}`;
 
       // 在文件系统中创建文件夹
-      const createResult = await window.api.folder.create(folderPath);
-      if (!createResult.ok) {
-        console.error("创建文件夹失败:", createResult.error.message);
-        return;
-      }
+      await folderIpc.create(folderPath);
 
       const newFolder: Folder = {
         id: name, // 使用文件夹名作为 ID
@@ -99,10 +96,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       const newFolderPath = `${workspacePath}/${newName}`;
 
       // 在文件系统中重命名文件夹
-      const renameResult = await window.api.folder.rename(folder.path, newFolderPath);
-      if (!renameResult.ok) {
-        throw new Error(renameResult.error.message);
-      }
+      await folderIpc.rename(folder.path, newFolderPath);
 
       // 更新 store 中的文件夹信息
       set(

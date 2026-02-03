@@ -1,6 +1,7 @@
 import { useFolderStore, useWorkspaceStore, useNoteStore } from "@/stores";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
+import { workspaceIpc, watcherIpc, folderIpc, shellIpc, rssIpc } from "@/ipc";
 
 export interface FolderHandlers {
   handleCreateFolder: () => void;
@@ -50,24 +51,13 @@ export function useFolderHandlers({
     toast.loading(t("rss.updating"), { id: toastId });
 
     try {
-      const pauseResult = await window.api.watcher.pause();
-      if (!pauseResult.ok) {
-        console.error("暂停文件监听失败:", pauseResult.error.message);
-      }
-      const result = await window.api.rss.update(folderPath);
-      if (!result.ok) {
-        toast.error(`${t("rss.updateFailed")}: ${result.error.message}`, { id: toastId });
-        return;
-      }
-      const scanResult = await window.api.workspace.scan(workspacePath);
-      if (!scanResult.ok) {
-        toast.error(`${t("rss.updateFailed")}: ${scanResult.error.message}`, { id: toastId });
-        return;
-      }
-      setFolders(scanResult.value.folders);
-      await loadFromFileSystem(scanResult.value);
-      if (result.value.addedCount > 0) {
-        toast.success(t("rss.updated", { count: result.value.addedCount }), { id: toastId });
+      await watcherIpc.pause();
+      const result = await rssIpc.update(folderPath);
+      const data = await workspaceIpc.scan(workspacePath);
+      setFolders(data.folders);
+      await loadFromFileSystem(data);
+      if (result.addedCount > 0) {
+        toast.success(t("rss.updated", { count: result.addedCount }), { id: toastId });
       } else {
         toast.success(t("rss.noUpdates"), { id: toastId });
       }
@@ -75,10 +65,7 @@ export function useFolderHandlers({
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.updateFailed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      const resumeResult = await window.api.watcher.resume();
-      if (!resumeResult.ok) {
-        console.error("恢复文件监听失败:", resumeResult.error.message);
-      }
+      await watcherIpc.resume();
     }
   };
 
@@ -90,11 +77,7 @@ export function useFolderHandlers({
     toast.loading(t("rss.unsubscribing"), { id: toastId });
 
     try {
-      const result = await window.api.rss.unsubscribe(folderPath);
-      if (!result.ok) {
-        toast.error(`${t("rss.unsubscribeFailed")}: ${result.error.message}`, { id: toastId });
-        return;
-      }
+      await rssIpc.unsubscribe(folderPath);
       setFolders(
         folders.map((item) =>
           item.id === folder.id
@@ -117,9 +100,10 @@ export function useFolderHandlers({
   const handleShowFolderInExplorer = async (folder: { id: string; name: string; noteCount?: number }) => {
     if (!workspacePath) return;
     const folderPath = `${workspacePath}/${folder.name}`;
-    const result = await window.api.shell.openPath(folderPath);
-    if (!result.ok) {
-      console.error("打开文件夹失败:", result.error.message);
+    try {
+      await shellIpc.openPath(folderPath);
+    } catch (error) {
+      console.error("打开文件夹失败:", error);
     }
   };
 
@@ -129,29 +113,15 @@ export function useFolderHandlers({
     const folderPath = `${workspacePath}/${folder.name}`;
 
     try {
-      const pauseResult = await window.api.watcher.pause();
-      if (!pauseResult.ok) {
-        console.error("暂停文件监听失败:", pauseResult.error.message);
-      }
-      const deleteResult = await window.api.folder.delete(folderPath);
-      if (!deleteResult.ok) {
-        console.error("删除文件夹失败:", deleteResult.error.message);
-        return;
-      }
-      const scanResult = await window.api.workspace.scan(workspacePath);
-      if (!scanResult.ok) {
-        console.error("扫描工作区失败:", scanResult.error.message);
-        return;
-      }
-      setFolders(scanResult.value.folders);
-      await loadFromFileSystem(scanResult.value);
+      await watcherIpc.pause();
+      await folderIpc.delete(folderPath);
+      const data = await workspaceIpc.scan(workspacePath);
+      setFolders(data.folders);
+      await loadFromFileSystem(data);
     } catch (error) {
       console.error("删除文件夹失败:", error);
     } finally {
-      const resumeResult = await window.api.watcher.resume();
-      if (!resumeResult.ok) {
-        console.error("恢复文件监听失败:", resumeResult.error.message);
-      }
+      await watcherIpc.resume();
     }
   };
 

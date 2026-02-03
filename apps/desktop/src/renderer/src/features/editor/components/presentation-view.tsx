@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useViewStore, useNoteStore } from "@/stores";
 import { MarkdownRenderer } from "./markdown-renderer";
+import { windowIpc } from "@/ipc";
 
 /**
  * 演示模式视图
@@ -36,14 +37,9 @@ export function PresentationView() {
 
   // 进入/退出演示模式时控制 Electron 全屏
   useEffect(() => {
-    const setFullScreen = async (fullScreen: boolean) => {
-      const result = await window.api.window.setFullScreen(fullScreen);
-      if (!result.ok) {
-        console.error("设置全屏失败:", result.error.message);
-      }
-    };
-
-    setFullScreen(isPresentationMode);
+    windowIpc.setFullScreen(isPresentationMode).catch((error) => {
+      console.error("设置全屏失败:", error);
+    });
   }, [isPresentationMode]);
 
   return (

@@ -2,6 +2,7 @@ import { useNoteStore, useFolderStore } from "@/stores";
 import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { shellIpc, fileIpc } from "@/ipc";
 
 export interface NoteHandlers {
   handleCreateNote: () => Promise<void>;
@@ -57,9 +58,10 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     // 从 store 中获取完整的笔记信息（包含 filePath）
     const fullNote = notes.find((n) => n.id === note.id);
     if (fullNote?.filePath) {
-      const result = await window.api.shell.showItemInFolder(fullNote.filePath);
-      if (!result.ok) {
-        console.error("在文件管理器中显示失败:", result.error.message);
+      try {
+        await shellIpc.showItemInFolder(fullNote.filePath);
+      } catch (error) {
+        console.error("在文件管理器中显示失败:", error);
       }
     }
   };
@@ -70,11 +72,7 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     if (!fullNote?.filePath) return;
 
     try {
-      const result = await window.api.file.delete(fullNote.filePath);
-      if (!result.ok) {
-        console.error("删除笔记失败:", result.error.message);
-        return;
-      }
+      await fileIpc.delete(fullNote.filePath);
       deleteNote(note.id);
     } catch (error) {
       console.error("删除笔记失败:", error);

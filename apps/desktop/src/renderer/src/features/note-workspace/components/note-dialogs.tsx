@@ -2,6 +2,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { InputDialog } from "@renderer/components/input-dialog";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
+import { workspaceIpc, watcherIpc, rssIpc, urlIpc } from "@/ipc";
 
 interface NoteDialogsProps {
   // 创建文件夹
@@ -68,31 +69,17 @@ export function NoteDialogs({
     toast.loading(t("rss.importing"), { id: toastId });
 
     try {
-      const pauseResult = await window.api.watcher.pause();
-      if (!pauseResult.ok) {
-        console.error("暂停文件监听失败:", pauseResult.error.message);
-      }
-      const result = await window.api.rss.import(url, workspacePath);
-      if (!result.ok) {
-        toast.error(`${t("rss.failed")}: ${result.error.message}`, { id: toastId });
-        return;
-      }
-      const scanResult = await window.api.workspace.scan(workspacePath);
-      if (!scanResult.ok) {
-        toast.error(`${t("rss.failed")}: ${scanResult.error.message}`, { id: toastId });
-        return;
-      }
-      setFolders(scanResult.value.folders);
-      await loadFromFileSystem(scanResult.value);
+      await watcherIpc.pause();
+      await rssIpc.import(url, workspacePath);
+      const data = await workspaceIpc.scan(workspacePath);
+      setFolders(data.folders);
+      await loadFromFileSystem(data);
       toast.success(t("rss.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.failed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      const resumeResult = await window.api.watcher.resume();
-      if (!resumeResult.ok) {
-        console.error("恢复文件监听失败:", resumeResult.error.message);
-      }
+      await watcherIpc.resume();
     }
   };
 
@@ -107,31 +94,17 @@ export function NoteDialogs({
     toast.loading(t("url.creating"), { id: toastId });
 
     try {
-      const pauseResult = await window.api.watcher.pause();
-      if (!pauseResult.ok) {
-        console.error("暂停文件监听失败:", pauseResult.error.message);
-      }
+      await watcherIpc.pause();
       const selectedFolderId = useFolderStore.getState().selectedFolderId;
-      const result = await window.api.url.createNote(url, workspacePath, selectedFolderId || undefined);
-      if (!result.ok) {
-        toast.error(`${t("url.failed")}: ${result.error.message}`, { id: toastId });
-        return;
-      }
-      const scanResult = await window.api.workspace.scan(workspacePath);
-      if (!scanResult.ok) {
-        toast.error(`${t("url.failed")}: ${scanResult.error.message}`, { id: toastId });
-        return;
-      }
-      await loadFromFileSystem(scanResult.value);
+      await urlIpc.createNote(url, workspacePath, selectedFolderId || undefined);
+      const data = await workspaceIpc.scan(workspacePath);
+      await loadFromFileSystem(data);
       toast.success(t("url.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("url.failed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      const resumeResult = await window.api.watcher.resume();
-      if (!resumeResult.ok) {
-        console.error("恢复文件监听失败:", resumeResult.error.message);
-      }
+      await watcherIpc.resume();
     }
   };
 

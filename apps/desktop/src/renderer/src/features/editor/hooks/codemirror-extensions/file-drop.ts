@@ -1,5 +1,6 @@
 import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
+import { utilsIpc } from "@/ipc";
 
 // 支持的图片扩展名
 const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"];
@@ -90,7 +91,7 @@ export function createFileDropExtension(): Extension {
       for (const file of Array.from(files)) {
         try {
           // 使用 Electron 的 webUtils.getPathForFile 获取文件路径
-          const filePath = window.api.utils.getPathForFile(file);
+          const filePath = utilsIpc.getPathForFile(file);
           if (!filePath) continue;
 
           const markdown = generateMarkdownFileReference(filePath, file.name);

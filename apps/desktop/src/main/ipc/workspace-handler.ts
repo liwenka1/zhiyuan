@@ -90,14 +90,12 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 检查默认工作区是否存在
-  ipcMain.handle("workspace:checkDefaultExists", (): IpcResultDTO<boolean> => {
-    try {
-      return ipcOk(workspaceManager.checkDefaultWorkspaceExists());
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return ipcErr(message, "WORKSPACE_CHECK_DEFAULT_FAILED");
-    }
-  });
+  ipcMain.handle(
+    "workspace:checkDefaultExists",
+    wrapIpcHandler(async () => {
+      return await workspaceManager.checkDefaultWorkspaceExists();
+    }, "WORKSPACE_CHECK_DEFAULT_FAILED")
+  );
 
   // 读取文件
   ipcMain.handle(

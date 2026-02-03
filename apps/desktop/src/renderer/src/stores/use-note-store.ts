@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useWorkspaceStore } from "./use-workspace-store";
 import { useFolderStore } from "./use-folder-store";
 import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
+import { fileIpc, configIpc } from "@/ipc";
 
 const MAX_OPEN_NOTES = 10;
 
@@ -190,11 +191,7 @@ export const useNoteStore = create<NoteStore>()(
         }
 
         // 在文件系统中创建文件
-        const createResult = await window.api.file.create(filePath, content);
-        if (!createResult.ok) {
-          console.error("创建文件失败:", createResult.error.message);
-          return;
-        }
+        await fileIpc.create(filePath, content);
 
         const newNote: Note = {
           id: filePath.replace(workspacePath + "/", ""), // 使用相对路径作为 ID
@@ -307,10 +304,7 @@ export const useNoteStore = create<NoteStore>()(
         const newFilePath = pathParts.join("/");
 
         // 在文件系统中重命名
-        const renameResult = await window.api.file.rename(note.filePath, newFilePath);
-        if (!renameResult.ok) {
-          throw new Error(renameResult.error.message);
-        }
+        await fileIpc.rename(note.filePath, newFilePath);
 
         // 更新 store 中的笔记信息
         const newNoteId = note.id.replace(oldFileName, newFileName);
@@ -373,10 +367,7 @@ export const useNoteStore = create<NoteStore>()(
         const newFilePath = pathParts.join("/");
 
         // 在文件系统中复制文件
-        const copyResult = await window.api.file.copy(note.filePath, newFilePath);
-        if (!copyResult.ok) {
-          throw new Error(copyResult.error.message);
-        }
+        await fileIpc.copy(note.filePath, newFilePath);
 
         // 创建新笔记对象
         const newNoteId = note.id.replace(note.fileName, newFileName);
@@ -425,10 +416,7 @@ export const useNoteStore = create<NoteStore>()(
         const allPinnedNotes = get()
           .notes.filter((n) => n.isPinned)
           .map((n) => n.id);
-        const result = await window.api.config.setPinnedNotes(workspacePath, allPinnedNotes);
-        if (!result.ok) {
-          throw new Error(result.error.message);
-        }
+        await configIpc.setPinnedNotes(workspacePath, allPinnedNotes);
       } catch (error) {
         console.error("切换置顶状态失败:", error);
         throw error;
@@ -454,12 +442,7 @@ export const useNoteStore = create<NoteStore>()(
 
       if (workspacePath) {
         try {
-          const result = await window.api.config.getPinnedNotes(workspacePath);
-          if (result.ok) {
-            pinnedNoteIds = result.value;
-          } else {
-            console.error("加载置顶笔记列表失败:", result.error.message);
-          }
+          pinnedNoteIds = await configIpc.getPinnedNotes(workspacePath);
         } catch (error) {
           console.error("加载置顶笔记列表失败:", error);
         }
@@ -496,17 +479,13 @@ export const useNoteStore = create<NoteStore>()(
         // 记录保存时间（用于文件监听器判断）
         recordSaveTime(noteId);
 
-        const writeResult = await window.api.file.write(note.filePath, content);
+        await fileIpc.write(note.filePath, content);
 
         // 写入完成后立即移除标记
         // 文件监听器会通过 wasRecentlySaved() 检查来避免误触发
         set((state) => {
           state.savingNoteIds.delete(noteId);
         });
-
-        if (!writeResult.ok) {
-          toast.error(`${i18n.t("note:errors.saveNoteFailed")}: ${writeResult.error.message}`);
-        }
       } catch (error) {
         // 出错也要移除标记
         set((state) => {
