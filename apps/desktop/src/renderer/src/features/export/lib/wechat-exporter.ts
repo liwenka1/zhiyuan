@@ -18,7 +18,10 @@ export async function copyNoteToWechat(note: Note): Promise<void> {
     const inlinedHTML = inlineCSS(wechatHTML);
 
     // 4. 复制到剪贴板
-    await window.api.export.copyHTMLToClipboard(inlinedHTML);
+    const result = await window.api.export.copyHTMLToClipboard(inlinedHTML);
+    if (!result.ok) {
+      throw new Error(result.error.message);
+    }
 
     console.log("已复制到剪贴板，可直接粘贴到微信公众号编辑器");
   } catch (error) {

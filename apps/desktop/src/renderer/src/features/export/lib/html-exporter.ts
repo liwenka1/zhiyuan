@@ -9,23 +9,32 @@ import i18n from "@/lib/i18n";
 export async function exportNoteAsHTML(note: Note, isDark: boolean): Promise<void> {
   try {
     // 1. 获取下载目录
-    const downloadsPath = await window.api.export.getDownloadsPath();
+    const downloadsResult = await window.api.export.getDownloadsPath();
+    if (!downloadsResult.ok) {
+      throw new Error(downloadsResult.error.message);
+    }
 
     // 2. 显示保存对话框 - 选择文件夹
     const defaultFolderName = `${note.title}`;
-    const folderPath = await window.api.export.showSaveDialog({
+    const dialogResult = await window.api.export.showSaveDialog({
       title: i18n.t("note:dialog.exportHTML.title"),
-      defaultPath: `${downloadsPath}/${defaultFolderName}`,
+      defaultPath: `${downloadsResult.value}/${defaultFolderName}`,
       filters: [
         { name: i18n.t("note:fileTypes.folder"), extensions: [] },
         { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
       ]
     });
 
+    if (!dialogResult.ok) {
+      throw new Error(dialogResult.error.message);
+    }
+
     // 用户取消了保存
-    if (!folderPath) {
+    if (!dialogResult.value) {
       throw new Error("USER_CANCELLED");
     }
+
+    const folderPath = dialogResult.value;
 
     // 3. 将 Markdown 转换为 HTML
     const htmlBody = await markdownToHTML(note.content);
@@ -37,10 +46,13 @@ export async function exportNoteAsHTML(note: Note, isDark: boolean): Promise<voi
     });
 
     // 5. 导出为资源包（包含所有图片和字体等资源）
-    const result = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
+    const exportResult = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
+    if (!exportResult.ok) {
+      throw new Error(exportResult.error.message);
+    }
 
-    console.log("导出成功:", result);
-    console.log(`已导出 ${result.filesCount} 个文件`);
+    console.log("导出成功:", exportResult.value);
+    console.log(`已导出 ${exportResult.value.filesCount} 个文件`);
   } catch (error) {
     console.error("导出 HTML 失败:", error);
     throw error;

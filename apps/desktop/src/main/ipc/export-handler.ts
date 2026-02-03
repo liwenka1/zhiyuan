@@ -3,6 +3,8 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { tmpdir } from "os";
 import { PDFDocument } from "pdf-lib";
+import { wrapIpcHandler, ipcOk, ipcErr } from "./ipc-result";
+import type { IpcResultDTO } from "@shared";
 
 /**
  * 字体文件名常量（与 export-styles.ts 保持一致）
@@ -407,70 +409,84 @@ export function registerExportHandlers(): void {
   // 显示保存对话框
   ipcMain.handle(
     "export:show-save-dialog",
-    async (
-      _,
-      options: {
+    wrapIpcHandler(
+      async (options: {
         title: string;
         defaultPath: string;
         filters: Array<{ name: string; extensions: string[] }>;
-      }
-    ) => {
-      const result = await dialog.showSaveDialog({
-        title: options.title,
-        defaultPath: options.defaultPath,
-        filters: options.filters,
-        properties: ["createDirectory", "showOverwriteConfirmation"]
-      });
+      }) => {
+        const result = await dialog.showSaveDialog({
+          title: options.title,
+          defaultPath: options.defaultPath,
+          filters: options.filters,
+          properties: ["createDirectory", "showOverwriteConfirmation"]
+        });
 
-      return result.canceled ? null : result.filePath;
-    }
+        return result.canceled ? null : result.filePath;
+      },
+      "EXPORT_SHOW_SAVE_DIALOG_FAILED"
+    )
   );
 
   // 保存 HTML 文件
-  ipcMain.handle("export:save-html-file", async (_, filePath: string, htmlContent: string) => {
-    await fs.writeFile(filePath, htmlContent, "utf-8");
-  });
+  ipcMain.handle(
+    "export:save-html-file",
+    wrapIpcHandler(async (filePath: string, htmlContent: string) => {
+      await fs.writeFile(filePath, htmlContent, "utf-8");
+    }, "EXPORT_SAVE_HTML_FAILED")
+  );
 
   // 获取用户下载目录
-  ipcMain.handle("export:get-downloads-path", () => {
-    return app.getPath("downloads");
+  ipcMain.handle("export:get-downloads-path", (): IpcResultDTO<string> => {
+    try {
+      return ipcOk(app.getPath("downloads"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "EXPORT_GET_DOWNLOADS_PATH_FAILED");
+    }
   });
 
   // 获取字体 base64（用于 PDF/图片导出）
-  ipcMain.handle("export:get-fonts-base64", async () => {
-    return await loadAllFontsAsBase64();
-  });
+  ipcMain.handle(
+    "export:get-fonts-base64",
+    wrapIpcHandler(async () => {
+      return await loadAllFontsAsBase64();
+    }, "EXPORT_GET_FONTS_FAILED")
+  );
 
   // 导出为 PDF（单页长图方式）
-  ipcMain.handle("export:export-as-pdf", async (_, htmlContent: string, filePath: string, notePath?: string) => {
-    // 截取页面为长图
-    const image = await captureHtmlAsImage(htmlContent, notePath);
-    const pngData = image.toPNG();
+  ipcMain.handle(
+    "export:export-as-pdf",
+    wrapIpcHandler(async (htmlContent: string, filePath: string, notePath?: string) => {
+      // 截取页面为长图
+      const image = await captureHtmlAsImage(htmlContent, notePath);
+      const pngData = image.toPNG();
 
-    // 使用 pdf-lib 创建 PDF，将图片嵌入
-    const pdfDoc = await PDFDocument.create();
-    const pngImage = await pdfDoc.embedPng(pngData);
+      // 使用 pdf-lib 创建 PDF，将图片嵌入
+      const pdfDoc = await PDFDocument.create();
+      const pngImage = await pdfDoc.embedPng(pngData);
 
-    // 创建与图片尺寸相同的页面
-    const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
+      // 创建与图片尺寸相同的页面
+      const page = pdfDoc.addPage([pngImage.width, pngImage.height]);
 
-    // 将图片绘制到页面
-    page.drawImage(pngImage, {
-      x: 0,
-      y: 0,
-      width: pngImage.width,
-      height: pngImage.height
-    });
+      // 将图片绘制到页面
+      page.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width: pngImage.width,
+        height: pngImage.height
+      });
 
-    // 保存 PDF
-    const pdfBytes = await pdfDoc.save();
-    await fs.writeFile(filePath, pdfBytes);
-  });
+      // 保存 PDF
+      const pdfBytes = await pdfDoc.save();
+      await fs.writeFile(filePath, pdfBytes);
+    }, "EXPORT_PDF_FAILED")
+  );
 
   // 导出为图片（单张长图）
   ipcMain.handle(
     "export:export-as-image",
-    async (_, htmlContent: string, filePath: string, notePath?: string, options?: { width?: number }) => {
+    wrapIpcHandler(async (htmlContent: string, filePath: string, notePath?: string, options?: { width?: number }) => {
       const width = options?.width || 800;
 
       // 截取页面为长图
@@ -487,58 +503,72 @@ export function registerExportHandlers(): void {
       }
 
       await fs.writeFile(filePath, imageData);
-    }
+    }, "EXPORT_IMAGE_FAILED")
   );
 
   // 复制 HTML 到剪贴板（用于微信公众号）
-  ipcMain.handle("export:copy-html-to-clipboard", (_, htmlContent: string) => {
-    clipboard.writeHTML(htmlContent);
+  ipcMain.handle("export:copy-html-to-clipboard", (_, htmlContent: string): IpcResultDTO<void> => {
+    try {
+      clipboard.writeHTML(htmlContent);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "EXPORT_COPY_CLIPBOARD_FAILED");
+    }
   });
 
   // 导出 HTML 资源包（包含所有图片等资源和字体）
   ipcMain.handle(
     "export:export-html-package",
-    async (_, htmlContent: string, outputPath: string, notePath: string | undefined, assetsFolder = "assets") => {
-      // 创建输出目录和资源目录
-      await fs.mkdir(outputPath, { recursive: true });
-      const assetsDir = path.join(outputPath, assetsFolder);
-      await fs.mkdir(assetsDir, { recursive: true });
+    wrapIpcHandler(
+      async (htmlContent: string, outputPath: string, notePath: string | undefined, assetsFolder = "assets") => {
+        // 创建输出目录和资源目录
+        await fs.mkdir(outputPath, { recursive: true });
+        const assetsDir = path.join(outputPath, assetsFolder);
+        await fs.mkdir(assetsDir, { recursive: true });
 
-      // 如果没有笔记路径，只复制字体文件
-      if (!notePath) {
-        const fontsDir = getFontsDir();
-        const copiedFiles: string[] = [];
-        for (const fontFile of Object.values(FONT_FILES)) {
-          try {
-            const sourcePath = path.join(fontsDir, fontFile);
-            const destPath = path.join(assetsDir, fontFile);
-            await fs.copyFile(sourcePath, destPath);
-            copiedFiles.push(destPath);
-          } catch (error) {
-            console.warn(`复制字体文件失败: ${fontFile}`, error);
+        // 如果没有笔记路径，只复制字体文件
+        if (!notePath) {
+          const fontsDir = getFontsDir();
+          const copiedFiles: string[] = [];
+          for (const fontFile of Object.values(FONT_FILES)) {
+            try {
+              const sourcePath = path.join(fontsDir, fontFile);
+              const destPath = path.join(assetsDir, fontFile);
+              await fs.copyFile(sourcePath, destPath);
+              copiedFiles.push(destPath);
+            } catch (error) {
+              console.warn(`复制字体文件失败: ${fontFile}`, error);
+            }
           }
+          await fs.writeFile(path.join(outputPath, "index.html"), htmlContent, "utf-8");
+          return { filesCount: copiedFiles.length + 1, copiedFiles };
         }
-        await fs.writeFile(path.join(outputPath, "index.html"), htmlContent, "utf-8");
-        return { filesCount: copiedFiles.length + 1, copiedFiles };
-      }
 
-      // 收集并复制资源文件（包含字体）
-      const { processedHtml, copiedFiles } = await collectAndCopyAssets(htmlContent, notePath, assetsDir, assetsFolder);
+        // 收集并复制资源文件（包含字体）
+        const { processedHtml, copiedFiles } = await collectAndCopyAssets(
+          htmlContent,
+          notePath,
+          assetsDir,
+          assetsFolder
+        );
 
-      // 保存处理后的 HTML
-      await fs.writeFile(path.join(outputPath, "index.html"), processedHtml, "utf-8");
+        // 保存处理后的 HTML
+        await fs.writeFile(path.join(outputPath, "index.html"), processedHtml, "utf-8");
 
-      return {
-        filesCount: copiedFiles.length + 1,
-        copiedFiles
-      };
-    }
+        return {
+          filesCount: copiedFiles.length + 1,
+          copiedFiles
+        };
+      },
+      "EXPORT_HTML_PACKAGE_FAILED"
+    )
   );
 
   // 导出为 PDF（分页）
   ipcMain.handle(
     "export:export-as-pdf-pages",
-    async (_, htmlContents: string[], filePath: string, notePath?: string) => {
+    wrapIpcHandler(async (htmlContents: string[], filePath: string, notePath?: string) => {
       // 创建一个 PDF 文档
       const pdfDoc = await PDFDocument.create();
 
@@ -563,38 +593,40 @@ export function registerExportHandlers(): void {
       await fs.writeFile(filePath, pdfBytes);
 
       return { pagesCount: htmlContents.length };
-    }
+    }, "EXPORT_PDF_PAGES_FAILED")
   );
 
   // 导出为图片（分页）
   ipcMain.handle(
     "export:export-as-image-pages",
-    async (
-      _,
-      htmlContents: string[],
-      folderPath: string,
-      baseFileName: string,
-      notePath?: string,
-      options?: { width?: number }
-    ) => {
-      await fs.mkdir(folderPath, { recursive: true });
+    wrapIpcHandler(
+      async (
+        htmlContents: string[],
+        folderPath: string,
+        baseFileName: string,
+        notePath?: string,
+        options?: { width?: number }
+      ) => {
+        await fs.mkdir(folderPath, { recursive: true });
 
-      const width = options?.width || 800;
-      const filePaths: string[] = [];
+        const width = options?.width || 800;
+        const filePaths: string[] = [];
 
-      for (let i = 0; i < htmlContents.length; i++) {
-        const fileName = `${baseFileName}-${i + 1}.png`;
-        const filePath = path.join(folderPath, fileName);
+        for (let i = 0; i < htmlContents.length; i++) {
+          const fileName = `${baseFileName}-${i + 1}.png`;
+          const filePath = path.join(folderPath, fileName);
 
-        // 截取页面为长图
-        const image = await captureHtmlAsImage(htmlContents[i], notePath, width);
-        const imageData = image.toPNG();
+          // 截取页面为长图
+          const image = await captureHtmlAsImage(htmlContents[i], notePath, width);
+          const imageData = image.toPNG();
 
-        await fs.writeFile(filePath, imageData);
-        filePaths.push(filePath);
-      }
+          await fs.writeFile(filePath, imageData);
+          filePaths.push(filePath);
+        }
 
-      return { filesCount: filePaths.length, filePaths };
-    }
+        return { filesCount: filePaths.length, filePaths };
+      },
+      "EXPORT_IMAGE_PAGES_FAILED"
+    )
   );
 }
