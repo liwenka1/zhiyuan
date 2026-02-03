@@ -3,29 +3,7 @@
  * 用于 renderer 侧处理 IPC Result DTO
  */
 
-import { ok, err, type Result } from "neverthrow";
-import type { IpcError, IpcResultDTO } from "@shared";
-
-/**
- * IPC Result 类型（neverthrow 的 Result 类型）
- */
-export type IpcResult<T> = Result<T, IpcError>;
-
-/**
- * 从 DTO 重建 neverthrow Result 对象
- *
- * 注意：IPC 传输的是纯 JSON 的 DTO，需要在 renderer 层重建为 Result 对象，
- * 这样才能使用 isOk()、isErr()、map() 等方法。
- *
- * @param dto IPC 传输的 DTO
- * @returns neverthrow Result 对象
- */
-export function fromIpcResultDTO<T>(dto: IpcResultDTO<T>): IpcResult<T> {
-  if (dto.ok) {
-    return ok(dto.value);
-  }
-  return err(dto.error);
-}
+import type { IpcResultDTO } from "@shared";
 
 /**
  * 解包 IPC Result DTO，自动处理错误
