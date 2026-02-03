@@ -69,7 +69,11 @@ export function NoteDialogs({
 
     try {
       await window.api.watcher.pause();
-      await window.api.rss.import(url, workspacePath);
+      const result = await window.api.rss.import(url, workspacePath);
+      if (!result.ok) {
+        toast.error(`${t("rss.failed")}: ${result.error.message}`, { id: toastId });
+        return;
+      }
       const data = await window.api.workspace.scan(workspacePath);
       setFolders(data.folders);
       await loadFromFileSystem(data);
@@ -95,7 +99,11 @@ export function NoteDialogs({
     try {
       await window.api.watcher.pause();
       const selectedFolderId = useFolderStore.getState().selectedFolderId;
-      await window.api.url.createNote(url, workspacePath, selectedFolderId || undefined);
+      const result = await window.api.url.createNote(url, workspacePath, selectedFolderId || undefined);
+      if (!result.ok) {
+        toast.error(`${t("url.failed")}: ${result.error.message}`, { id: toastId });
+        return;
+      }
       const data = await window.api.workspace.scan(workspacePath);
       await loadFromFileSystem(data);
       toast.success(t("url.success"), { id: toastId });

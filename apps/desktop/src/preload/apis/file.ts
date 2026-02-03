@@ -30,8 +30,7 @@ export const fileApi = {
   /**
    * 复制文件
    */
-  copy: (sourcePath: string, destPath: string): Promise<void> =>
-    ipcRenderer.invoke("file:copy", sourcePath, destPath),
+  copy: (sourcePath: string, destPath: string): Promise<void> => ipcRenderer.invoke("file:copy", sourcePath, destPath),
 
   /**
    * 监听文件变化

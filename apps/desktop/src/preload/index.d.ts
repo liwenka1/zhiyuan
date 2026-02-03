@@ -171,13 +171,15 @@ export interface RssAPI {
   import: (
     url: string,
     workspacePath: string
-  ) => Promise<{
-    folderName: string;
-    folderPath: string;
-    itemCount: number;
-  }>;
-  update: (folderPath: string) => Promise<{ addedCount: number }>;
-  unsubscribe: (folderPath: string) => Promise<{ success: boolean }>;
+  ) => Promise<
+    IpcResultDTO<{
+      folderName: string;
+      folderPath: string;
+      itemCount: number;
+    }>
+  >;
+  update: (folderPath: string) => Promise<IpcResultDTO<{ addedCount: number }>>;
+  unsubscribe: (folderPath: string) => Promise<IpcResultDTO<void>>;
 }
 
 // URL API 接口
@@ -186,11 +188,13 @@ export interface UrlAPI {
     url: string,
     workspacePath: string,
     folderId?: string
-  ) => Promise<{
-    noteId: string;
-    filePath: string;
-    title: string;
-  }>;
+  ) => Promise<
+    IpcResultDTO<{
+      noteId: string;
+      filePath: string;
+      title: string;
+    }>
+  >;
 }
 
 // API 集合接口

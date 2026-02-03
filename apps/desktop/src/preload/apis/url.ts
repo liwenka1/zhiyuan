@@ -1,4 +1,5 @@
 import { ipcRenderer } from "electron";
+import type { IpcResultDTO } from "@shared";
 
 export const urlApi = {
   /**
@@ -8,9 +9,11 @@ export const urlApi = {
     url: string,
     workspacePath: string,
     folderId?: string
-  ): Promise<{
-    noteId: string;
-    filePath: string;
-    title: string;
-  }> => ipcRenderer.invoke("url:createNote", url, workspacePath, folderId)
+  ): Promise<
+    IpcResultDTO<{
+      noteId: string;
+      filePath: string;
+      title: string;
+    }>
+  > => ipcRenderer.invoke("url:createNote", url, workspacePath, folderId)
 };

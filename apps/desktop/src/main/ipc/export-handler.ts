@@ -278,11 +278,7 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
     });
 
     // 截取整个页面（带超时）
-    return await withTimeout(
-      window.webContents.capturePage(),
-      CAPTURE_TIMEOUT,
-      `页面截图超时 (${CAPTURE_TIMEOUT}ms)`
-    );
+    return await withTimeout(window.webContents.capturePage(), CAPTURE_TIMEOUT, `页面截图超时 (${CAPTURE_TIMEOUT}ms)`);
   } finally {
     if (window && !window.isDestroyed()) {
       window.close();

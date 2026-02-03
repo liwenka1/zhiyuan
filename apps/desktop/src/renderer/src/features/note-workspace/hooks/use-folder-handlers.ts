@@ -52,11 +52,15 @@ export function useFolderHandlers({
     try {
       await window.api.watcher.pause();
       const result = await window.api.rss.update(folderPath);
+      if (!result.ok) {
+        toast.error(`${t("rss.updateFailed")}: ${result.error.message}`, { id: toastId });
+        return;
+      }
       const data = await window.api.workspace.scan(workspacePath);
       setFolders(data.folders);
       await loadFromFileSystem(data);
-      if (result.addedCount > 0) {
-        toast.success(t("rss.updated", { count: result.addedCount }), { id: toastId });
+      if (result.value.addedCount > 0) {
+        toast.success(t("rss.updated", { count: result.value.addedCount }), { id: toastId });
       } else {
         toast.success(t("rss.noUpdates"), { id: toastId });
       }
@@ -76,7 +80,11 @@ export function useFolderHandlers({
     toast.loading(t("rss.unsubscribing"), { id: toastId });
 
     try {
-      await window.api.rss.unsubscribe(folderPath);
+      const result = await window.api.rss.unsubscribe(folderPath);
+      if (!result.ok) {
+        toast.error(`${t("rss.unsubscribeFailed")}: ${result.error.message}`, { id: toastId });
+        return;
+      }
       setFolders(
         folders.map((item) =>
           item.id === folder.id
