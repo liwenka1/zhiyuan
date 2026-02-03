@@ -15,7 +15,13 @@ export async function handleFileAdded(
 
   try {
     // 读取文件内容
-    const { content } = await window.api.file.read(fullPath);
+    const readResult = await window.api.file.read(fullPath);
+    if (!readResult.ok) {
+      console.error("读取文件失败:", readResult.error.message);
+      return null;
+    }
+
+    const { content } = readResult.value;
 
     // 解析文件路径，确定所属文件夹
     const pathParts = filePath.split("/");
@@ -55,8 +61,12 @@ export async function handleFileAdded(
 export async function handleFileChanged(_filePath: string, fullPath: string): Promise<string | null> {
   try {
     // 读取更新后的内容
-    const { content } = await window.api.file.read(fullPath);
-    return content;
+    const readResult = await window.api.file.read(fullPath);
+    if (!readResult.ok) {
+      console.error("读取文件失败:", readResult.error.message);
+      return null;
+    }
+    return readResult.value.content;
   } catch (error) {
     console.error("处理修改的文件失败:", error);
     return null;

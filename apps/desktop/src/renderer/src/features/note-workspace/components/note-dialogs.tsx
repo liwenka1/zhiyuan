@@ -68,21 +68,31 @@ export function NoteDialogs({
     toast.loading(t("rss.importing"), { id: toastId });
 
     try {
-      await window.api.watcher.pause();
+      const pauseResult = await window.api.watcher.pause();
+      if (!pauseResult.ok) {
+        console.error("暂停文件监听失败:", pauseResult.error.message);
+      }
       const result = await window.api.rss.import(url, workspacePath);
       if (!result.ok) {
         toast.error(`${t("rss.failed")}: ${result.error.message}`, { id: toastId });
         return;
       }
-      const data = await window.api.workspace.scan(workspacePath);
-      setFolders(data.folders);
-      await loadFromFileSystem(data);
+      const scanResult = await window.api.workspace.scan(workspacePath);
+      if (!scanResult.ok) {
+        toast.error(`${t("rss.failed")}: ${scanResult.error.message}`, { id: toastId });
+        return;
+      }
+      setFolders(scanResult.value.folders);
+      await loadFromFileSystem(scanResult.value);
       toast.success(t("rss.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.failed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      await window.api.watcher.resume();
+      const resumeResult = await window.api.watcher.resume();
+      if (!resumeResult.ok) {
+        console.error("恢复文件监听失败:", resumeResult.error.message);
+      }
     }
   };
 
@@ -97,21 +107,31 @@ export function NoteDialogs({
     toast.loading(t("url.creating"), { id: toastId });
 
     try {
-      await window.api.watcher.pause();
+      const pauseResult = await window.api.watcher.pause();
+      if (!pauseResult.ok) {
+        console.error("暂停文件监听失败:", pauseResult.error.message);
+      }
       const selectedFolderId = useFolderStore.getState().selectedFolderId;
       const result = await window.api.url.createNote(url, workspacePath, selectedFolderId || undefined);
       if (!result.ok) {
         toast.error(`${t("url.failed")}: ${result.error.message}`, { id: toastId });
         return;
       }
-      const data = await window.api.workspace.scan(workspacePath);
-      await loadFromFileSystem(data);
+      const scanResult = await window.api.workspace.scan(workspacePath);
+      if (!scanResult.ok) {
+        toast.error(`${t("url.failed")}: ${scanResult.error.message}`, { id: toastId });
+        return;
+      }
+      await loadFromFileSystem(scanResult.value);
       toast.success(t("url.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("url.failed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      await window.api.watcher.resume();
+      const resumeResult = await window.api.watcher.resume();
+      if (!resumeResult.ok) {
+        console.error("恢复文件监听失败:", resumeResult.error.message);
+      }
     }
   };
 

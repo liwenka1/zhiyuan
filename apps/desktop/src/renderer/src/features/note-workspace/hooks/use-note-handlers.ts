@@ -70,7 +70,11 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     if (!fullNote?.filePath) return;
 
     try {
-      await window.api.file.delete(fullNote.filePath);
+      const result = await window.api.file.delete(fullNote.filePath);
+      if (!result.ok) {
+        console.error("删除笔记失败:", result.error.message);
+        return;
+      }
       deleteNote(note.id);
     } catch (error) {
       console.error("删除笔记失败:", error);

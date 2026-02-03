@@ -1,36 +1,41 @@
 import { ipcRenderer } from "electron";
+import type { IpcResultDTO } from "@shared";
 
 export const fileApi = {
   /**
    * 读取文件
    */
-  read: (filePath: string): Promise<{ content: string; mtime: number }> => ipcRenderer.invoke("file:read", filePath),
+  read: (filePath: string): Promise<IpcResultDTO<{ content: string; mtime: number }>> =>
+    ipcRenderer.invoke("file:read", filePath),
 
   /**
    * 写入文件
    */
-  write: (filePath: string, content: string): Promise<{ mtime: number }> =>
+  write: (filePath: string, content: string): Promise<IpcResultDTO<{ mtime: number }>> =>
     ipcRenderer.invoke("file:write", filePath, content),
 
   /**
    * 创建文件
    */
-  create: (filePath: string, content: string): Promise<void> => ipcRenderer.invoke("file:create", filePath, content),
+  create: (filePath: string, content: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("file:create", filePath, content),
 
   /**
    * 删除文件
    */
-  delete: (filePath: string): Promise<void> => ipcRenderer.invoke("file:delete", filePath),
+  delete: (filePath: string): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("file:delete", filePath),
 
   /**
    * 重命名文件
    */
-  rename: (oldPath: string, newPath: string): Promise<void> => ipcRenderer.invoke("file:rename", oldPath, newPath),
+  rename: (oldPath: string, newPath: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("file:rename", oldPath, newPath),
 
   /**
    * 复制文件
    */
-  copy: (sourcePath: string, destPath: string): Promise<void> => ipcRenderer.invoke("file:copy", sourcePath, destPath),
+  copy: (sourcePath: string, destPath: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("file:copy", sourcePath, destPath),
 
   /**
    * 监听文件变化

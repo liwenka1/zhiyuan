@@ -24,49 +24,51 @@ export interface ThemeAPI {
 
 // 工作区 API 接口
 export interface WorkspaceAPI {
-  select: (options?: { title?: string; buttonLabel?: string }) => Promise<string | null>;
-  getCurrent: () => Promise<string | null>;
-  scan: (workspacePath: string) => Promise<{
-    folders: Array<{ id: string; name: string; path: string; noteCount: number; isRss?: boolean }>;
-    notes: Array<{
-      id: string;
-      title: string;
-      content: string;
-      fileName: string;
-      filePath: string;
-      folderId: string | null;
-      createdAt: string;
-      updatedAt: string;
-    }>;
-  }>;
-  getRecent: () => Promise<string[]>;
-  createDefault: () => Promise<string>;
-  checkDefaultExists: () => Promise<boolean>;
+  select: (options?: { title?: string; buttonLabel?: string }) => Promise<IpcResultDTO<string | null>>;
+  getCurrent: () => Promise<IpcResultDTO<string | null>>;
+  scan: (workspacePath: string) => Promise<
+    IpcResultDTO<{
+      folders: Array<{ id: string; name: string; path: string; noteCount: number; isRss?: boolean }>;
+      notes: Array<{
+        id: string;
+        title: string;
+        content: string;
+        fileName: string;
+        filePath: string;
+        folderId: string | null;
+        createdAt: string;
+        updatedAt: string;
+      }>;
+    }>
+  >;
+  getRecent: () => Promise<IpcResultDTO<string[]>>;
+  createDefault: () => Promise<IpcResultDTO<string | null>>;
+  checkDefaultExists: () => Promise<IpcResultDTO<boolean>>;
 }
 
 // 文件 API 接口
 export interface FileAPI {
-  read: (filePath: string) => Promise<{ content: string; mtime: number }>;
-  write: (filePath: string, content: string) => Promise<{ mtime: number }>;
-  create: (filePath: string, content: string) => Promise<void>;
-  delete: (filePath: string) => Promise<void>;
-  rename: (oldPath: string, newPath: string) => Promise<void>;
-  copy: (sourcePath: string, destPath: string) => Promise<void>;
+  read: (filePath: string) => Promise<IpcResultDTO<{ content: string; mtime: number }>>;
+  write: (filePath: string, content: string) => Promise<IpcResultDTO<{ mtime: number }>>;
+  create: (filePath: string, content: string) => Promise<IpcResultDTO<void>>;
+  delete: (filePath: string) => Promise<IpcResultDTO<void>>;
+  rename: (oldPath: string, newPath: string) => Promise<IpcResultDTO<void>>;
+  copy: (sourcePath: string, destPath: string) => Promise<IpcResultDTO<void>>;
   onChanged: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
   onAdded: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
   onDeleted: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
 }
 
 export interface WatcherAPI {
-  pause: () => Promise<void>;
-  resume: () => Promise<void>;
+  pause: () => Promise<IpcResultDTO<void>>;
+  resume: () => Promise<IpcResultDTO<void>>;
 }
 
 // 文件夹 API 接口
 export interface FolderAPI {
-  create: (folderPath: string) => Promise<void>;
-  delete: (folderPath: string) => Promise<void>;
-  rename: (oldPath: string, newPath: string) => Promise<void>;
+  create: (folderPath: string) => Promise<IpcResultDTO<void>>;
+  delete: (folderPath: string) => Promise<IpcResultDTO<void>>;
+  rename: (oldPath: string, newPath: string) => Promise<IpcResultDTO<void>>;
   onAdded: (callback: (data: { folderPath: string; fullPath: string }) => void) => () => void;
   onDeleted: (callback: (data: { folderPath: string; fullPath: string }) => void) => () => void;
 }
