@@ -124,7 +124,7 @@ export function MarkdownRenderer({
           rehypeRaw,
           [rehypeSanitize, markdownSanitizeSchema], // 安全过滤：移除恶意脚本，保留安全的 HTML
           rehypeSlug,
-          rehypeHighlight,
+          [rehypeHighlight, { detect: true }], // 代码语法高亮，与导出保持一致
           rehypeKatex
         ]}
         urlTransform={urlTransform}

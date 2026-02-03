@@ -195,12 +195,35 @@ async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10
 }
 
 /**
+ * 带超时的 Promise 包装器
+ * @param promise 原始 Promise
+ * @param timeoutMs 超时时间（毫秒）
+ * @param errorMessage 超时错误信息
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+/**
  * 将 HTML 渲染为长图截图
  * PDF 和图片导出共用此逻辑
  */
 async function captureHtmlAsImage(htmlContent: string, notePath?: string, width = 800): Promise<NativeImage> {
   let window: BrowserWindow | null = null;
   let tempHtmlPath: string | null = null;
+
+  // 超时配置
+  const DOM_READY_TIMEOUT = 30000; // 30 秒
+  const EXECUTE_JS_TIMEOUT = 10000; // 10 秒
+  const CAPTURE_TIMEOUT = 30000; // 30 秒
 
   try {
     // 将本地图片转换为 Base64 内嵌
@@ -220,20 +243,25 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
       }
     });
 
-    // 等待 DOM 结构准备好
+    // 等待 DOM 结构准备好（带超时）
     const domReadyPromise = new Promise<void>((resolve) => {
       window!.webContents.once("dom-ready", () => resolve());
     });
 
     window.loadFile(tempHtmlPath);
-    await domReadyPromise;
+    await withTimeout(domReadyPromise, DOM_READY_TIMEOUT, `DOM 加载超时 (${DOM_READY_TIMEOUT}ms)`);
 
     // 等待页面所有资源加载完成（图片、视频等）
+    // waitForPageLoad 内部已有超时处理
     await waitForPageLoad(window.webContents);
 
-    // 获取页面实际内容高度
-    const contentHeight = await window.webContents.executeJavaScript(
-      "Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+    // 获取页面实际内容高度（带超时）
+    const contentHeight = await withTimeout(
+      window.webContents.executeJavaScript(
+        "Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+      ),
+      EXECUTE_JS_TIMEOUT,
+      `获取页面高度超时 (${EXECUTE_JS_TIMEOUT}ms)`
     );
 
     // 调整窗口大小为内容实际尺寸
@@ -249,8 +277,12 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
       });
     });
 
-    // 截取整个页面
-    return await window.webContents.capturePage();
+    // 截取整个页面（带超时）
+    return await withTimeout(
+      window.webContents.capturePage(),
+      CAPTURE_TIMEOUT,
+      `页面截图超时 (${CAPTURE_TIMEOUT}ms)`
+    );
   } finally {
     if (window && !window.isDestroyed()) {
       window.close();
