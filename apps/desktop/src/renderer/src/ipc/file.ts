@@ -15,7 +15,8 @@ export const fileIpc = {
 
   rename: async (oldPath: string, newPath: string) => unwrapIpcResult(await window.api.file.rename(oldPath, newPath)),
 
-  copy: async (sourcePath: string, destPath: string) => unwrapIpcResult(await window.api.file.copy(sourcePath, destPath)),
+  copy: async (sourcePath: string, destPath: string) =>
+    unwrapIpcResult(await window.api.file.copy(sourcePath, destPath)),
 
   // 事件监听不需要 unwrap，直接透传
   onChanged: window.api.file.onChanged,
