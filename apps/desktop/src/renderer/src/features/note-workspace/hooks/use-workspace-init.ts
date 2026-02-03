@@ -19,21 +19,37 @@ export function useWorkspaceInit() {
     const initWorkspace = async () => {
       try {
         // 尝试获取上次打开的工作区
-        const savedWorkspacePath = await window.api.workspace.getCurrent();
+        const currentResult = await window.api.workspace.getCurrent();
+        if (!currentResult.ok) {
+          console.error("获取当前工作区失败:", currentResult.error.message);
+          return;
+        }
 
-        if (savedWorkspacePath) {
+        if (currentResult.value) {
           // 有保存的工作区，加载它
-          setWorkspacePath(savedWorkspacePath);
-          const data = await window.api.workspace.scan(savedWorkspacePath);
-          setFolders(data.folders);
-          loadFromFileSystem(data);
+          setWorkspacePath(currentResult.value);
+          const scanResult = await window.api.workspace.scan(currentResult.value);
+          if (!scanResult.ok) {
+            console.error("扫描工作区失败:", scanResult.error.message);
+            return;
+          }
+          setFolders(scanResult.value.folders);
+          loadFromFileSystem(scanResult.value);
         } else {
           // 没有保存的工作区，创建默认工作区
-          const defaultWorkspacePath = await window.api.workspace.createDefault();
-          setWorkspacePath(defaultWorkspacePath);
-          const data = await window.api.workspace.scan(defaultWorkspacePath);
-          setFolders(data.folders);
-          loadFromFileSystem(data);
+          const createResult = await window.api.workspace.createDefault();
+          if (!createResult.ok || !createResult.value) {
+            console.error("创建默认工作区失败:", createResult.ok ? "未返回路径" : createResult.error.message);
+            return;
+          }
+          setWorkspacePath(createResult.value);
+          const scanResult = await window.api.workspace.scan(createResult.value);
+          if (!scanResult.ok) {
+            console.error("扫描工作区失败:", scanResult.error.message);
+            return;
+          }
+          setFolders(scanResult.value.folders);
+          loadFromFileSystem(scanResult.value);
         }
       } catch (error) {
         console.error("初始化工作区失败:", error);

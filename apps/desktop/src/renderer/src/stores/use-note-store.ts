@@ -190,7 +190,11 @@ export const useNoteStore = create<NoteStore>()(
         }
 
         // 在文件系统中创建文件
-        await window.api.file.create(filePath, content);
+        const createResult = await window.api.file.create(filePath, content);
+        if (!createResult.ok) {
+          console.error("创建文件失败:", createResult.error.message);
+          return;
+        }
 
         const newNote: Note = {
           id: filePath.replace(workspacePath + "/", ""), // 使用相对路径作为 ID
@@ -303,7 +307,10 @@ export const useNoteStore = create<NoteStore>()(
         const newFilePath = pathParts.join("/");
 
         // 在文件系统中重命名
-        await window.api.file.rename(note.filePath, newFilePath);
+        const renameResult = await window.api.file.rename(note.filePath, newFilePath);
+        if (!renameResult.ok) {
+          throw new Error(renameResult.error.message);
+        }
 
         // 更新 store 中的笔记信息
         const newNoteId = note.id.replace(oldFileName, newFileName);
@@ -366,7 +373,10 @@ export const useNoteStore = create<NoteStore>()(
         const newFilePath = pathParts.join("/");
 
         // 在文件系统中复制文件
-        await window.api.file.copy(note.filePath, newFilePath);
+        const copyResult = await window.api.file.copy(note.filePath, newFilePath);
+        if (!copyResult.ok) {
+          throw new Error(copyResult.error.message);
+        }
 
         // 创建新笔记对象
         const newNoteId = note.id.replace(note.fileName, newFileName);
@@ -486,13 +496,17 @@ export const useNoteStore = create<NoteStore>()(
         // 记录保存时间（用于文件监听器判断）
         recordSaveTime(noteId);
 
-        await window.api.file.write(note.filePath, content);
+        const writeResult = await window.api.file.write(note.filePath, content);
 
         // 写入完成后立即移除标记
         // 文件监听器会通过 wasRecentlySaved() 检查来避免误触发
         set((state) => {
           state.savingNoteIds.delete(noteId);
         });
+
+        if (!writeResult.ok) {
+          toast.error(`${i18n.t("note:errors.saveNoteFailed")}: ${writeResult.error.message}`);
+        }
       } catch (error) {
         // 出错也要移除标记
         set((state) => {

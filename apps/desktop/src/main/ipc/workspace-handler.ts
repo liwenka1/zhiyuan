@@ -12,101 +12,164 @@ import type { IpcResultDTO } from "@shared";
  */
 export function registerWorkspaceHandlers(): void {
   // 选择工作区
-  ipcMain.handle("workspace:select", async (_, options?: { title?: string; buttonLabel?: string }) => {
-    const workspacePath = await workspaceManager.selectWorkspace(options);
-    if (workspacePath) {
-      // 启动文件监听
-      fileWatcher.startWatching(workspacePath);
-    }
-    return workspacePath;
-  });
+  ipcMain.handle(
+    "workspace:select",
+    wrapIpcHandler(async (options?: { title?: string; buttonLabel?: string }) => {
+      const workspacePath = await workspaceManager.selectWorkspace(options);
+      if (workspacePath) {
+        // 启动文件监听
+        fileWatcher.startWatching(workspacePath);
+      }
+      return workspacePath;
+    }, "WORKSPACE_SELECT_FAILED")
+  );
 
   // 获取当前工作区
-  ipcMain.handle("workspace:getCurrent", () => {
-    return workspaceManager.getCurrentWorkspace();
+  ipcMain.handle("workspace:getCurrent", (): IpcResultDTO<string | null> => {
+    try {
+      return ipcOk(workspaceManager.getCurrentWorkspace());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "WORKSPACE_GET_CURRENT_FAILED");
+    }
   });
 
   // 扫描工作区
-  ipcMain.handle("workspace:scan", async (_, workspacePath: string) => {
-    // 扫描工作区时也启动文件监听
-    fileWatcher.startWatching(workspacePath);
-    return await workspaceManager.scanWorkspace(workspacePath);
-  });
+  ipcMain.handle(
+    "workspace:scan",
+    wrapIpcHandler(async (workspacePath: string) => {
+      // 扫描工作区时也启动文件监听
+      fileWatcher.startWatching(workspacePath);
+      return await workspaceManager.scanWorkspace(workspacePath);
+    }, "WORKSPACE_SCAN_FAILED")
+  );
 
   // 暂停文件监听
-  ipcMain.handle("watcher:pause", () => {
-    fileWatcher.pauseWatching();
+  ipcMain.handle("watcher:pause", (): IpcResultDTO<void> => {
+    try {
+      fileWatcher.pauseWatching();
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "WATCHER_PAUSE_FAILED");
+    }
   });
 
   // 恢复文件监听
-  ipcMain.handle("watcher:resume", () => {
-    fileWatcher.resumeWatching();
+  ipcMain.handle("watcher:resume", (): IpcResultDTO<void> => {
+    try {
+      fileWatcher.resumeWatching();
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "WATCHER_RESUME_FAILED");
+    }
   });
 
   // 获取最近打开的工作区
-  ipcMain.handle("workspace:getRecent", () => {
-    return workspaceManager.getRecentWorkspaces();
+  ipcMain.handle("workspace:getRecent", (): IpcResultDTO<string[]> => {
+    try {
+      return ipcOk(workspaceManager.getRecentWorkspaces());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "WORKSPACE_GET_RECENT_FAILED");
+    }
   });
 
   // 创建默认工作区
-  ipcMain.handle("workspace:createDefault", async () => {
-    const workspacePath = await workspaceManager.createDefaultWorkspace();
-    if (workspacePath) {
-      // 启动文件监听
-      fileWatcher.startWatching(workspacePath);
-    }
-    return workspacePath;
-  });
+  ipcMain.handle(
+    "workspace:createDefault",
+    wrapIpcHandler(async () => {
+      const workspacePath = await workspaceManager.createDefaultWorkspace();
+      if (workspacePath) {
+        // 启动文件监听
+        fileWatcher.startWatching(workspacePath);
+      }
+      return workspacePath;
+    }, "WORKSPACE_CREATE_DEFAULT_FAILED")
+  );
 
   // 检查默认工作区是否存在
-  ipcMain.handle("workspace:checkDefaultExists", () => {
-    return workspaceManager.checkDefaultWorkspaceExists();
+  ipcMain.handle("workspace:checkDefaultExists", (): IpcResultDTO<boolean> => {
+    try {
+      return ipcOk(workspaceManager.checkDefaultWorkspaceExists());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "WORKSPACE_CHECK_DEFAULT_FAILED");
+    }
   });
 
   // 读取文件
-  ipcMain.handle("file:read", async (_, filePath: string) => {
-    return await fileSystem.readFile(filePath);
-  });
+  ipcMain.handle(
+    "file:read",
+    wrapIpcHandler(async (filePath: string) => {
+      return await fileSystem.readFile(filePath);
+    }, "FILE_READ_FAILED")
+  );
 
   // 写入文件
-  ipcMain.handle("file:write", async (_, filePath: string, content: string) => {
-    return await fileSystem.writeFile(filePath, content);
-  });
+  ipcMain.handle(
+    "file:write",
+    wrapIpcHandler(async (filePath: string, content: string) => {
+      return await fileSystem.writeFile(filePath, content);
+    }, "FILE_WRITE_FAILED")
+  );
 
   // 创建文件
-  ipcMain.handle("file:create", async (_, filePath: string, content: string) => {
-    return await fileSystem.createFile(filePath, content);
-  });
+  ipcMain.handle(
+    "file:create",
+    wrapIpcHandler(async (filePath: string, content: string) => {
+      return await fileSystem.createFile(filePath, content);
+    }, "FILE_CREATE_FAILED")
+  );
 
   // 删除文件
-  ipcMain.handle("file:delete", async (_, filePath: string) => {
-    return await fileSystem.deleteFile(filePath);
-  });
+  ipcMain.handle(
+    "file:delete",
+    wrapIpcHandler(async (filePath: string) => {
+      return await fileSystem.deleteFile(filePath);
+    }, "FILE_DELETE_FAILED")
+  );
 
   // 重命名文件
-  ipcMain.handle("file:rename", async (_, oldPath: string, newPath: string) => {
-    return await fileSystem.renameFile(oldPath, newPath);
-  });
+  ipcMain.handle(
+    "file:rename",
+    wrapIpcHandler(async (oldPath: string, newPath: string) => {
+      return await fileSystem.renameFile(oldPath, newPath);
+    }, "FILE_RENAME_FAILED")
+  );
 
   // 复制文件
-  ipcMain.handle("file:copy", async (_, sourcePath: string, destPath: string) => {
-    return await fileSystem.copyFile(sourcePath, destPath);
-  });
+  ipcMain.handle(
+    "file:copy",
+    wrapIpcHandler(async (sourcePath: string, destPath: string) => {
+      return await fileSystem.copyFile(sourcePath, destPath);
+    }, "FILE_COPY_FAILED")
+  );
 
   // 创建文件夹
-  ipcMain.handle("folder:create", async (_, folderPath: string) => {
-    return await fileSystem.createFolder(folderPath);
-  });
+  ipcMain.handle(
+    "folder:create",
+    wrapIpcHandler(async (folderPath: string) => {
+      return await fileSystem.createFolder(folderPath);
+    }, "FOLDER_CREATE_FAILED")
+  );
 
   // 删除文件夹
-  ipcMain.handle("folder:delete", async (_, folderPath: string) => {
-    return await fileSystem.deleteFolder(folderPath);
-  });
+  ipcMain.handle(
+    "folder:delete",
+    wrapIpcHandler(async (folderPath: string) => {
+      return await fileSystem.deleteFolder(folderPath);
+    }, "FOLDER_DELETE_FAILED")
+  );
 
   // 重命名文件夹
-  ipcMain.handle("folder:rename", async (_, oldPath: string, newPath: string) => {
-    return await fileSystem.renameFolder(oldPath, newPath);
-  });
+  ipcMain.handle(
+    "folder:rename",
+    wrapIpcHandler(async (oldPath: string, newPath: string) => {
+      return await fileSystem.renameFolder(oldPath, newPath);
+    }, "FOLDER_RENAME_FAILED")
+  );
 
   // 在文件管理器中显示文件
   ipcMain.handle("shell:showItemInFolder", (_, fullPath: string): IpcResultDTO<void> => {
