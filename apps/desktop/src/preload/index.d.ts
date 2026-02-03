@@ -97,51 +97,58 @@ export interface ExportAPI {
     title: string;
     defaultPath: string;
     filters: Array<{ name: string; extensions: string[] }>;
-  }) => Promise<string | null>;
-  saveHTMLFile: (filePath: string, htmlContent: string) => Promise<{ success: boolean }>;
-  exportAsPDF: (htmlContent: string, filePath: string, notePath?: string) => Promise<{ success: boolean }>;
+  }) => Promise<IpcResultDTO<string | null>>;
+  saveHTMLFile: (filePath: string, htmlContent: string) => Promise<IpcResultDTO<void>>;
+  exportAsPDF: (htmlContent: string, filePath: string, notePath?: string) => Promise<IpcResultDTO<void>>;
   exportAsImage: (
     htmlContent: string,
     filePath: string,
     notePath?: string,
     options?: { width?: number }
-  ) => Promise<{ success: boolean }>;
-  getDownloadsPath: () => Promise<string>;
-  inlineCSS: (htmlContent: string) => Promise<string>;
-  copyHTMLToClipboard: (htmlContent: string) => Promise<{ success: boolean }>;
+  ) => Promise<IpcResultDTO<void>>;
+  getDownloadsPath: () => Promise<IpcResultDTO<string>>;
+  copyHTMLToClipboard: (htmlContent: string) => Promise<IpcResultDTO<void>>;
   exportHTMLPackage: (
     htmlContent: string,
     outputPath: string,
     notePath: string | undefined,
     assetsFolder?: string
-  ) => Promise<{
-    filesCount: number;
-    copiedFiles: string[];
-  }>;
+  ) => Promise<
+    IpcResultDTO<{
+      filesCount: number;
+      copiedFiles: string[];
+    }>
+  >;
   exportAsPDFPages: (
     htmlContents: string[],
     filePath: string,
     notePath?: string
-  ) => Promise<{
-    pagesCount: number;
-  }>;
+  ) => Promise<
+    IpcResultDTO<{
+      pagesCount: number;
+    }>
+  >;
   exportAsImagePages: (
     htmlContents: string[],
     folderPath: string,
     baseFileName: string,
     notePath?: string,
     options?: { width?: number }
-  ) => Promise<{
-    filesCount: number;
-    filePaths: string[];
-  }>;
+  ) => Promise<
+    IpcResultDTO<{
+      filesCount: number;
+      filePaths: string[];
+    }>
+  >;
   /**
    * 获取字体文件的 base64 编码（用于 PDF/图片导出时内嵌字体）
    */
-  getFontsBase64: () => Promise<{
-    lxgwBase64: string;
-    jetBrainsBase64: string;
-  }>;
+  getFontsBase64: () => Promise<
+    IpcResultDTO<{
+      lxgwBase64: string;
+      jetBrainsBase64: string;
+    }>
+  >;
 }
 
 // 工具 API 接口
