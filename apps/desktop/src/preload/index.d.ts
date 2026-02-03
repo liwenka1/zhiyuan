@@ -83,12 +83,12 @@ export interface WindowAPI {
   /**
    * 设置窗口全屏状态
    */
-  setFullScreen: (fullScreen: boolean) => Promise<void>;
+  setFullScreen: (fullScreen: boolean) => Promise<IpcResultDTO<void>>;
 
   /**
    * 获取窗口全屏状态
    */
-  isFullScreen: () => Promise<boolean>;
+  isFullScreen: () => Promise<IpcResultDTO<boolean>>;
 }
 
 // 导出 API 接口

@@ -36,11 +36,14 @@ export function PresentationView() {
 
   // 进入/退出演示模式时控制 Electron 全屏
   useEffect(() => {
-    if (isPresentationMode) {
-      window.api.window.setFullScreen(true);
-    } else {
-      window.api.window.setFullScreen(false);
-    }
+    const setFullScreen = async (fullScreen: boolean) => {
+      const result = await window.api.window.setFullScreen(fullScreen);
+      if (!result.ok) {
+        console.error("设置全屏失败:", result.error.message);
+      }
+    };
+
+    setFullScreen(isPresentationMode);
   }, [isPresentationMode]);
 
   return (
