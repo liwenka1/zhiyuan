@@ -57,7 +57,10 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     // 从 store 中获取完整的笔记信息（包含 filePath）
     const fullNote = notes.find((n) => n.id === note.id);
     if (fullNote?.filePath) {
-      await window.api.shell.showItemInFolder(fullNote.filePath);
+      const result = await window.api.shell.showItemInFolder(fullNote.filePath);
+      if (!result.ok) {
+        console.error("在文件管理器中显示失败:", result.error.message);
+      }
     }
   };
 

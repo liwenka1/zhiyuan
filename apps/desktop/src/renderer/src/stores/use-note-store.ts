@@ -415,7 +415,10 @@ export const useNoteStore = create<NoteStore>()(
         const allPinnedNotes = get()
           .notes.filter((n) => n.isPinned)
           .map((n) => n.id);
-        await window.api.config.setPinnedNotes(workspacePath, allPinnedNotes);
+        const result = await window.api.config.setPinnedNotes(workspacePath, allPinnedNotes);
+        if (!result.ok) {
+          throw new Error(result.error.message);
+        }
       } catch (error) {
         console.error("切换置顶状态失败:", error);
         throw error;
@@ -441,7 +444,12 @@ export const useNoteStore = create<NoteStore>()(
 
       if (workspacePath) {
         try {
-          pinnedNoteIds = await window.api.config.getPinnedNotes(workspacePath);
+          const result = await window.api.config.getPinnedNotes(workspacePath);
+          if (result.ok) {
+            pinnedNoteIds = result.value;
+          } else {
+            console.error("加载置顶笔记列表失败:", result.error.message);
+          }
         } catch (error) {
           console.error("加载置顶笔记列表失败:", error);
         }

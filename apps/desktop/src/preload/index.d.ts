@@ -73,9 +73,9 @@ export interface FolderAPI {
 
 // Shell API 接口
 export interface ShellAPI {
-  showItemInFolder: (fullPath: string) => Promise<void>;
-  openPath: (fullPath: string) => Promise<string>;
-  openExternal: (url: string) => Promise<void>;
+  showItemInFolder: (fullPath: string) => Promise<IpcResultDTO<void>>;
+  openPath: (fullPath: string) => Promise<IpcResultDTO<void>>;
+  openExternal: (url: string) => Promise<IpcResultDTO<void>>;
 }
 
 // 窗口 API 接口
@@ -158,12 +158,12 @@ export interface ConfigAPI {
   /**
    * 获取工作区的置顶笔记列表
    */
-  getPinnedNotes: (workspacePath: string) => Promise<string[]>;
+  getPinnedNotes: (workspacePath: string) => Promise<IpcResultDTO<string[]>>;
 
   /**
    * 设置工作区的置顶笔记列表
    */
-  setPinnedNotes: (workspacePath: string, noteIds: string[]) => Promise<void>;
+  setPinnedNotes: (workspacePath: string, noteIds: string[]) => Promise<IpcResultDTO<void>>;
 }
 
 // RSS API 接口
