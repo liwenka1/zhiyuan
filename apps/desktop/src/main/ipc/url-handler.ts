@@ -5,6 +5,7 @@
 
 import { ipcMain } from "electron";
 import { createNoteFromUrl } from "../url-fetcher";
+import { wrapIpcHandler } from "./ipc-result";
 
 /**
  * 注册 URL 相关的 IPC handlers
@@ -13,7 +14,10 @@ export function registerUrlHandlers(): void {
   /**
    * 从 URL 创建笔记
    */
-  ipcMain.handle("url:createNote", async (_, url: string, workspacePath: string, folderId?: string) => {
-    return await createNoteFromUrl(url, workspacePath, folderId);
-  });
+  ipcMain.handle(
+    "url:createNote",
+    wrapIpcHandler(async (url: string, workspacePath: string, folderId?: string) => {
+      return await createNoteFromUrl(url, workspacePath, folderId);
+    }, "URL_CREATE_NOTE_FAILED")
+  );
 }
