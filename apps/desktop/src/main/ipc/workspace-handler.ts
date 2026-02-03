@@ -4,6 +4,8 @@ import { fileSystem } from "../file-system";
 import { fileWatcher } from "../file-watcher";
 import { configManager } from "../config";
 import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
+import { wrapIpcHandler, ipcOk, ipcErr } from "./ipc-result";
+import type { IpcResultDTO } from "@shared";
 
 /**
  * 注册工作区和文件系统相关的 IPC 处理器
@@ -107,33 +109,61 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 在文件管理器中显示文件
-  ipcMain.handle("shell:showItemInFolder", (_, fullPath: string) => {
-    shell.showItemInFolder(fullPath);
+  ipcMain.handle("shell:showItemInFolder", (_, fullPath: string): IpcResultDTO<void> => {
+    try {
+      shell.showItemInFolder(fullPath);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "SHELL_SHOW_ITEM_FAILED");
+    }
   });
 
   // 在文件管理器中打开文件夹
-  ipcMain.handle("shell:openPath", async (_, fullPath: string) => {
-    return await shell.openPath(fullPath);
-  });
+  ipcMain.handle(
+    "shell:openPath",
+    wrapIpcHandler(async (fullPath: string) => {
+      const errorMessage = await shell.openPath(fullPath);
+      // shell.openPath 返回空字符串表示成功，否则返回错误信息
+      if (errorMessage) {
+        throw new Error(errorMessage);
+      }
+    }, "SHELL_OPEN_PATH_FAILED")
+  );
 
   // 在系统默认浏览器中打开链接
-  ipcMain.handle("shell:openExternal", async (_, url: string) => {
-    // 安全检查：只允许安全的协议打开外部链接
-    if (!isSafeUrl(url)) {
-      const protocol = getRejectedProtocol(url);
-      console.warn(`[Security] Blocked unsafe URL protocol: ${protocol} - ${url}`);
-      throw new Error(`Unsafe URL protocol: ${protocol}`);
-    }
-    await shell.openExternal(url);
-  });
+  ipcMain.handle(
+    "shell:openExternal",
+    wrapIpcHandler(async (url: string) => {
+      // 安全检查：只允许安全的协议打开外部链接
+      if (!isSafeUrl(url)) {
+        const protocol = getRejectedProtocol(url);
+        console.warn(`[Security] Blocked unsafe URL protocol: ${protocol} - ${url}`);
+        throw new Error(`Unsafe URL protocol: ${protocol}`);
+      }
+      await shell.openExternal(url);
+    }, "SHELL_OPEN_EXTERNAL_FAILED")
+  );
 
   // 获取工作区的置顶笔记
-  ipcMain.handle("config:getPinnedNotes", (_, workspacePath: string) => {
-    return configManager.getPinnedNotes(workspacePath);
+  ipcMain.handle("config:getPinnedNotes", (_, workspacePath: string): IpcResultDTO<string[]> => {
+    try {
+      const pinnedNotes = configManager.getPinnedNotes(workspacePath);
+      return ipcOk(pinnedNotes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_GET_PINNED_FAILED");
+    }
   });
 
   // 设置工作区的置顶笔记
-  ipcMain.handle("config:setPinnedNotes", (_, workspacePath: string, noteIds: string[]) => {
-    configManager.setPinnedNotes(workspacePath, noteIds);
+  ipcMain.handle("config:setPinnedNotes", (_, workspacePath: string, noteIds: string[]): IpcResultDTO<void> => {
+    try {
+      configManager.setPinnedNotes(workspacePath, noteIds);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_SET_PINNED_FAILED");
+    }
   });
 }

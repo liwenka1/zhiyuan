@@ -107,7 +107,10 @@ export function useFolderHandlers({
   const handleShowFolderInExplorer = async (folder: { id: string; name: string; noteCount?: number }) => {
     if (!workspacePath) return;
     const folderPath = `${workspacePath}/${folder.name}`;
-    await window.api.shell.openPath(folderPath);
+    const result = await window.api.shell.openPath(folderPath);
+    if (!result.ok) {
+      console.error("打开文件夹失败:", result.error.message);
+    }
   };
 
   // 删除文件夹 - 直接删除

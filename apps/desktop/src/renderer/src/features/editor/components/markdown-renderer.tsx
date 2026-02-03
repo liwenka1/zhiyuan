@@ -147,7 +147,11 @@ export function MarkdownRenderer({
               // 外部链接，在系统浏览器中打开
               if (href.startsWith("http://") || href.startsWith("https://")) {
                 e.preventDefault();
-                window.api.shell.openExternal(href);
+                window.api.shell.openExternal(href).then((result) => {
+                  if (!result.ok) {
+                    console.error("打开外部链接失败:", result.error.message);
+                  }
+                });
                 return;
               }
 
@@ -156,7 +160,11 @@ export function MarkdownRenderer({
                 e.preventDefault();
                 // 从 local-resource:// URL 中提取本地路径，需要解码 URL 编码的字符
                 const localPath = decodeURIComponent(href.replace("local-resource://", ""));
-                window.api.shell.openPath(localPath);
+                window.api.shell.openPath(localPath).then((result) => {
+                  if (!result.ok) {
+                    console.error("打开本地文件失败:", result.error.message);
+                  }
+                });
                 return;
               }
             };
