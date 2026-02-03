@@ -9,6 +9,11 @@
 export type Theme = "light" | "dark";
 
 /**
+ * 主题模式：支持跟随系统
+ */
+export type ThemeMode = Theme | "system";
+
+/**
  * HSL 转 Hex 颜色
  * @param h 色相 (0-360)
  * @param s 饱和度 (0-100)

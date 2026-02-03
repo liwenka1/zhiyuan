@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron";
-import type { Theme } from "@shared";
+import type { Theme, ThemeMode, IpcResultDTO } from "@shared";
 
 // 手动创建 electronAPI（替代 @electron-toolkit/preload，因为它在沙盒模式下无法加载）
 // 提供对 ipcRenderer 和 process 的安全访问
@@ -35,12 +35,12 @@ const api = {
     /**
      * 获取当前主题
      */
-    get: (): Promise<Theme> => ipcRenderer.invoke("theme:get"),
+    get: (): Promise<IpcResultDTO<Theme>> => ipcRenderer.invoke("theme:get"),
 
     /**
      * 设置主题
      */
-    set: (theme: Theme): Promise<void> => ipcRenderer.invoke("theme:set", theme),
+    set: (theme: ThemeMode): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("theme:set", theme),
 
     /**
      * 监听主题变化（系统主题或用户设置变化）

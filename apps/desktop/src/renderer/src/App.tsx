@@ -7,13 +7,17 @@ import { PresentationView } from "@/features/editor";
 
 function App(): React.JSX.Element {
   const initTheme = useThemeStore((state) => state.initTheme);
+  const cleanup = useThemeStore((state) => state.cleanup);
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
   const [showPresentation, setShowPresentation] = useState(false);
 
-  // 初始化主题
+  // 初始化主题，组件卸载时清理监听器
   useEffect(() => {
     initTheme();
-  }, [initTheme]);
+    return () => {
+      cleanup();
+    };
+  }, [initTheme, cleanup]);
 
   // 退出演示模式时立即隐藏演示视图
   useEffect(() => {

@@ -1,17 +1,19 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
-import type { Theme } from "@shared";
+import type { Theme, ThemeMode, IpcResultDTO } from "@shared";
 
-// 主题 API 接口
+/**
+ * 主题 API 接口
+ */
 export interface ThemeAPI {
   /**
    * 获取当前主题
    */
-  get: () => Promise<Theme>;
+  get: () => Promise<IpcResultDTO<Theme>>;
 
   /**
    * 设置主题
    */
-  set: (theme: Theme) => Promise<void>;
+  set: (theme: ThemeMode) => Promise<IpcResultDTO<void>>;
 
   /**
    * 监听主题变化（系统主题或用户设置变化）
@@ -91,12 +93,6 @@ export interface WindowAPI {
 
 // 导出 API 接口
 export interface ExportAPI {
-  /**
-   * 将 Markdown 转换为 HTML
-   * @param markdown Markdown 内容
-   * @param notePath 可选，笔记的完整文件路径，用于将相对路径转换为绝对路径
-   */
-  markdownToHTML: (markdown: string, notePath?: string) => Promise<string>;
   showSaveDialog: (options: {
     title: string;
     defaultPath: string;
@@ -197,16 +193,16 @@ export interface UrlAPI {
   }>;
 }
 
-// 扩展的 API 接口
+// API 集合接口
 export interface API {
   theme: ThemeAPI;
   workspace: WorkspaceAPI;
   file: FileAPI;
-  watcher: WatcherAPI;
   folder: FolderAPI;
+  watcher: WatcherAPI;
   shell: ShellAPI;
-  export: ExportAPI;
   window: WindowAPI;
+  export: ExportAPI;
   utils: UtilsAPI;
   config: ConfigAPI;
   rss: RssAPI;
