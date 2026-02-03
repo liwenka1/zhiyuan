@@ -1,0 +1,20 @@
+/**
+ * Workspace IPC wrapper
+ */
+
+import { unwrapIpcResult } from "@/lib/ipc-utils";
+
+export const workspaceIpc = {
+  select: async (options?: { title?: string; buttonLabel?: string }) =>
+    unwrapIpcResult(await window.api.workspace.select(options)),
+
+  getCurrent: async () => unwrapIpcResult(await window.api.workspace.getCurrent()),
+
+  scan: async (workspacePath: string) => unwrapIpcResult(await window.api.workspace.scan(workspacePath)),
+
+  getRecent: async () => unwrapIpcResult(await window.api.workspace.getRecent()),
+
+  createDefault: async () => unwrapIpcResult(await window.api.workspace.createDefault()),
+
+  checkDefaultExists: async () => unwrapIpcResult(await window.api.workspace.checkDefaultExists())
+};

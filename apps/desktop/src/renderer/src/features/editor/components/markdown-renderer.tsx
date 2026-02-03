@@ -18,6 +18,7 @@ import { markdownSanitizeSchema } from "@/lib/markdown-sanitize-config";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { useNoteStore } from "@/stores";
+import { shellIpc } from "@/ipc";
 
 // 初始化 mermaid
 mermaid.initialize({ startOnLoad: false, theme: "default" });
@@ -141,17 +142,17 @@ export function MarkdownRenderer({
             return <img src={src} alt={alt} loading="lazy" {...props} />;
           },
           a({ href, children, ...props }) {
-            const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+            const handleClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
               if (!href) return;
 
               // 外部链接，在系统浏览器中打开
               if (href.startsWith("http://") || href.startsWith("https://")) {
                 e.preventDefault();
-                window.api.shell.openExternal(href).then((result) => {
-                  if (!result.ok) {
-                    console.error("打开外部链接失败:", result.error.message);
-                  }
-                });
+                try {
+                  await shellIpc.openExternal(href);
+                } catch (error) {
+                  console.error("打开外部链接失败:", error);
+                }
                 return;
               }
 
@@ -160,11 +161,11 @@ export function MarkdownRenderer({
                 e.preventDefault();
                 // 从 local-resource:// URL 中提取本地路径，需要解码 URL 编码的字符
                 const localPath = decodeURIComponent(href.replace("local-resource://", ""));
-                window.api.shell.openPath(localPath).then((result) => {
-                  if (!result.ok) {
-                    console.error("打开本地文件失败:", result.error.message);
-                  }
-                });
+                try {
+                  await shellIpc.openPath(localPath);
+                } catch (error) {
+                  console.error("打开本地文件失败:", error);
+                }
                 return;
               }
             };

@@ -2,6 +2,7 @@ import { Note } from "@/types";
 import { markdownToHTML } from "@/lib/markdown-processor";
 import { generateHTMLDocument } from "@/lib/markdown-to-html";
 import i18n from "@/lib/i18n";
+import { exportIpc } from "@/ipc";
 
 /**
  * 导出笔记为 HTML
@@ -9,32 +10,23 @@ import i18n from "@/lib/i18n";
 export async function exportNoteAsHTML(note: Note, isDark: boolean): Promise<void> {
   try {
     // 1. 获取下载目录
-    const downloadsResult = await window.api.export.getDownloadsPath();
-    if (!downloadsResult.ok) {
-      throw new Error(downloadsResult.error.message);
-    }
+    const downloadsPath = await exportIpc.getDownloadsPath();
 
     // 2. 显示保存对话框 - 选择文件夹
     const defaultFolderName = `${note.title}`;
-    const dialogResult = await window.api.export.showSaveDialog({
+    const folderPath = await exportIpc.showSaveDialog({
       title: i18n.t("note:dialog.exportHTML.title"),
-      defaultPath: `${downloadsResult.value}/${defaultFolderName}`,
+      defaultPath: `${downloadsPath}/${defaultFolderName}`,
       filters: [
         { name: i18n.t("note:fileTypes.folder"), extensions: [] },
         { name: i18n.t("note:fileTypes.allFiles"), extensions: ["*"] }
       ]
     });
 
-    if (!dialogResult.ok) {
-      throw new Error(dialogResult.error.message);
-    }
-
     // 用户取消了保存
-    if (!dialogResult.value) {
+    if (!folderPath) {
       throw new Error("USER_CANCELLED");
     }
-
-    const folderPath = dialogResult.value;
 
     // 3. 将 Markdown 转换为 HTML
     const htmlBody = await markdownToHTML(note.content);
@@ -46,13 +38,10 @@ export async function exportNoteAsHTML(note: Note, isDark: boolean): Promise<voi
     });
 
     // 5. 导出为资源包（包含所有图片和字体等资源）
-    const exportResult = await window.api.export.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
-    if (!exportResult.ok) {
-      throw new Error(exportResult.error.message);
-    }
+    const result = await exportIpc.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
 
-    console.log("导出成功:", exportResult.value);
-    console.log(`已导出 ${exportResult.value.filesCount} 个文件`);
+    console.log("导出成功:", result);
+    console.log(`已导出 ${result.filesCount} 个文件`);
   } catch (error) {
     console.error("导出 HTML 失败:", error);
     throw error;

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { clearAllDebouncedSaves } from "@/stores/use-note-store";
+import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
 
 /**
  * 工作区初始化 Hook
@@ -19,37 +20,25 @@ export function useWorkspaceInit() {
     const initWorkspace = async () => {
       try {
         // 尝试获取上次打开的工作区
-        const currentResult = await window.api.workspace.getCurrent();
-        if (!currentResult.ok) {
-          console.error("获取当前工作区失败:", currentResult.error.message);
-          return;
-        }
+        const savedWorkspacePath = await workspaceIpc.getCurrent();
 
-        if (currentResult.value) {
+        if (savedWorkspacePath) {
           // 有保存的工作区，加载它
-          setWorkspacePath(currentResult.value);
-          const scanResult = await window.api.workspace.scan(currentResult.value);
-          if (!scanResult.ok) {
-            console.error("扫描工作区失败:", scanResult.error.message);
-            return;
-          }
-          setFolders(scanResult.value.folders);
-          loadFromFileSystem(scanResult.value);
+          setWorkspacePath(savedWorkspacePath);
+          const data = await workspaceIpc.scan(savedWorkspacePath);
+          setFolders(data.folders);
+          loadFromFileSystem(data);
         } else {
           // 没有保存的工作区，创建默认工作区
-          const createResult = await window.api.workspace.createDefault();
-          if (!createResult.ok || !createResult.value) {
-            console.error("创建默认工作区失败:", createResult.ok ? "未返回路径" : createResult.error.message);
+          const defaultWorkspacePath = await workspaceIpc.createDefault();
+          if (!defaultWorkspacePath) {
+            console.error("创建默认工作区失败: 未返回路径");
             return;
           }
-          setWorkspacePath(createResult.value);
-          const scanResult = await window.api.workspace.scan(createResult.value);
-          if (!scanResult.ok) {
-            console.error("扫描工作区失败:", scanResult.error.message);
-            return;
-          }
-          setFolders(scanResult.value.folders);
-          loadFromFileSystem(scanResult.value);
+          setWorkspacePath(defaultWorkspacePath);
+          const data = await workspaceIpc.scan(defaultWorkspacePath);
+          setFolders(data.folders);
+          loadFromFileSystem(data);
         }
       } catch (error) {
         console.error("初始化工作区失败:", error);
@@ -69,24 +58,24 @@ export function useWorkspaceInit() {
     const handleFolderDeleted = useFolderStore.getState().handleFolderDeleted;
 
     // 注册文件监听器
-    const unsubscribeAdded = window.api.file.onAdded((data) => {
+    const unsubscribeAdded = fileIpc.onAdded((data) => {
       handleFileAdded(data.filePath, data.fullPath);
     });
 
-    const unsubscribeDeleted = window.api.file.onDeleted((data) => {
+    const unsubscribeDeleted = fileIpc.onDeleted((data) => {
       handleFileDeleted(data.filePath);
     });
 
-    const unsubscribeChanged = window.api.file.onChanged((data) => {
+    const unsubscribeChanged = fileIpc.onChanged((data) => {
       handleFileChanged(data.filePath, data.fullPath);
     });
 
     // 注册文件夹监听器
-    const unsubscribeFolderAdded = window.api.folder.onAdded((data) => {
+    const unsubscribeFolderAdded = folderIpc.onAdded((data) => {
       handleFolderAdded(data.folderPath, data.fullPath);
     });
 
-    const unsubscribeFolderDeleted = window.api.folder.onDeleted((data) => {
+    const unsubscribeFolderDeleted = folderIpc.onDeleted((data) => {
       handleFolderDeleted(data.folderPath);
     });
 

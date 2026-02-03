@@ -2,6 +2,7 @@ import { FolderSync } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
 import { useTranslation } from "react-i18next";
+import { workspaceIpc } from "@/ipc";
 
 export function WorkspaceToggle() {
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
@@ -13,28 +14,19 @@ export function WorkspaceToggle() {
   const handleSwitchWorkspace = async () => {
     try {
       // 打开文件夹选择对话框
-      const selectResult = await window.api.workspace.select({
+      const selectedPath = await workspaceIpc.select({
         title: t("workspace.selectFolder"),
         buttonLabel: t("workspace.selectButton")
       });
 
-      if (!selectResult.ok) {
-        console.error("选择工作区失败:", selectResult.error.message);
-        return;
-      }
-
-      if (selectResult.value) {
+      if (selectedPath) {
         // 更新工作区路径
-        setWorkspacePath(selectResult.value);
+        setWorkspacePath(selectedPath);
 
         // 扫描并加载工作区内容
-        const scanResult = await window.api.workspace.scan(selectResult.value);
-        if (!scanResult.ok) {
-          console.error("扫描工作区失败:", scanResult.error.message);
-          return;
-        }
-        setFolders(scanResult.value.folders);
-        loadFromFileSystem(scanResult.value);
+        const data = await workspaceIpc.scan(selectedPath);
+        setFolders(data.folders);
+        loadFromFileSystem(data);
       }
     } catch (error) {
       console.error("选择工作区失败:", error);

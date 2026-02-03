@@ -1,4 +1,5 @@
 import { Note } from "@/types";
+import { fileIpc } from "@/ipc";
 
 /**
  * 处理外部添加的文件
@@ -15,13 +16,7 @@ export async function handleFileAdded(
 
   try {
     // 读取文件内容
-    const readResult = await window.api.file.read(fullPath);
-    if (!readResult.ok) {
-      console.error("读取文件失败:", readResult.error.message);
-      return null;
-    }
-
-    const { content } = readResult.value;
+    const { content } = await fileIpc.read(fullPath);
 
     // 解析文件路径，确定所属文件夹
     const pathParts = filePath.split("/");
@@ -61,12 +56,8 @@ export async function handleFileAdded(
 export async function handleFileChanged(_filePath: string, fullPath: string): Promise<string | null> {
   try {
     // 读取更新后的内容
-    const readResult = await window.api.file.read(fullPath);
-    if (!readResult.ok) {
-      console.error("读取文件失败:", readResult.error.message);
-      return null;
-    }
-    return readResult.value.content;
+    const { content } = await fileIpc.read(fullPath);
+    return content;
   } catch (error) {
     console.error("处理修改的文件失败:", error);
     return null;
