@@ -1,9 +1,11 @@
 import Store from "electron-store";
+import type { ThemeMode } from "@shared";
 
 interface AppConfig {
   workspacePath: string | null;
   recentWorkspaces: string[];
   pinnedNotes: Record<string, string[]>;
+  theme: ThemeMode; // 主题模式（light/dark/system）
 }
 
 // 创建配置存储实例
@@ -11,7 +13,8 @@ const store = new Store<AppConfig>({
   defaults: {
     workspacePath: null,
     recentWorkspaces: [],
-    pinnedNotes: {}
+    pinnedNotes: {},
+    theme: "system" // 默认跟随系统
   }
 });
 
@@ -79,5 +82,27 @@ export const configManager = {
     const pinnedNotes = store.get("pinnedNotes");
     pinnedNotes[workspacePath] = noteIds;
     store.set("pinnedNotes", pinnedNotes);
+  },
+
+  /**
+   * 获取用户设置的主题偏好
+   * @returns ThemeMode
+   */
+  getTheme(): ThemeMode {
+    const theme = store.get("theme");
+    // 校验值是否合法，防止配置文件损坏或被手动修改为非法值
+    const validThemes: ThemeMode[] = ["light", "dark", "system"];
+    if (theme && validThemes.includes(theme)) {
+      return theme;
+    }
+    return "system";
+  },
+
+  /**
+   * 设置用户主题偏好
+   * @param theme ThemeMode
+   */
+  setTheme(theme: ThemeMode): void {
+    store.set("theme", theme);
   }
 };

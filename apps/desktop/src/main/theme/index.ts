@@ -1,26 +1,36 @@
 import { nativeTheme, BrowserWindow } from "electron";
-import type { Theme } from "@shared";
+import type { Theme, ThemeMode } from "@shared";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
+import { configManager } from "../config";
 
 /**
  * 主题管理器
  * 负责管理应用主题和监听系统主题变化
+ *
+ * 主题状态：
+ * - "system": 跟随系统（默认）
+ * - "light": 固定亮色主题
+ * - "dark": 固定暗色主题
  */
 class ThemeManager {
-  private currentTheme: Theme | null = null;
-
   /**
    * 初始化主题管理器
+   * 从持久化存储中读取用户的主题偏好
    */
   init(): void {
-    // 如果没有设置过主题，从系统获取
-    if (this.currentTheme === null) {
-      this.currentTheme = this.getSystemTheme();
-    }
+    // 从持久化存储读取用户设置的主题
+    const savedTheme = configManager.getTheme();
+
+    // 设置 Electron 原生主题来源
+    nativeTheme.themeSource = savedTheme;
 
     // 监听系统主题变化
+    // 只有在"跟随系统"模式下才需要通知渲染进程
+    // 固定主题时，即使系统主题变化也不需要响应
     nativeTheme.on("updated", () => {
-      this.notifyThemeChange();
+      if (configManager.getTheme() === "system") {
+        this.notifyThemeChange();
+      }
     });
   }
 
@@ -32,17 +42,22 @@ class ThemeManager {
   }
 
   /**
-   * 获取当前主题
+   * 获取当前实际生效的主题
+   * 如果用户设置了固定主题，返回用户设置的主题
+   * 否则返回系统主题
    */
   getTheme(): Theme {
-    return this.currentTheme || this.getSystemTheme();
+    const savedTheme = configManager.getTheme();
+    return savedTheme === "system" ? this.getSystemTheme() : savedTheme;
   }
 
   /**
    * 设置主题
+   * @param theme ThemeMode
    */
-  setTheme(theme: Theme): void {
-    this.currentTheme = theme;
+  setTheme(theme: ThemeMode): void {
+    // 持久化用户的选择
+    configManager.setTheme(theme);
 
     // 更新 Electron 原生主题
     nativeTheme.themeSource = theme;
