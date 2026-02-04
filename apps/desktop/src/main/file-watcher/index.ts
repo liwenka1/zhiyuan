@@ -19,16 +19,24 @@ class FileWatcher {
 
     this.workspacePath = workspacePath;
 
-    // 直接监听工作区目录
-    this.watcher = chokidar.watch(workspacePath, {
+    // 只监听 .md 文件和第一层目录
+    // 使用 glob 模式精确匹配，大幅减少监听范围
+    const watchPatterns = [
+      path.join(workspacePath, "*.md"), // 根目录的 .md 文件
+      path.join(workspacePath, "*/*.md"), // 一级子目录的 .md 文件
+      path.join(workspacePath, "*") // 一级子目录（用于监听文件夹增删）
+    ];
+
+    this.watcher = chokidar.watch(watchPatterns, {
       ignoreInitial: true,
       persistent: true,
       awaitWriteFinish: {
         stabilityThreshold: 100,
         pollInterval: 50
       },
-      ignored: /(^|[/\\])\../, // 忽略隐藏文件
-      depth: 99
+      // 忽略隐藏文件/目录
+      ignored: /(^|[/\\])\../,
+      depth: 0 // 不递归，因为 glob 模式已经指定了层级
     });
 
     // 文件修改事件

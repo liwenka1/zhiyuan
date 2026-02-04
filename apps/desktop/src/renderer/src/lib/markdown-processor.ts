@@ -20,8 +20,8 @@ import { stripHiddenFrontmatter } from "./frontmatter";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
 import { normalizeMarkdownPaths } from "./resource-resolver";
 
-// 初始化 mermaid
-mermaid.initialize({ startOnLoad: false, theme: "default" });
+// 初始化 mermaid（securityLevel: "strict" 防止 XSS）
+mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "strict" });
 
 /**
  * 将 Mermaid 代码块转换为 SVG

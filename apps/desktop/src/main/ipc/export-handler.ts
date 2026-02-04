@@ -108,7 +108,7 @@ async function embedLocalImages(htmlContent: string, notePath?: string): Promise
       imagePath = decodeURIComponent(urlPath.replace(/^localhost/, ""));
     } else if (isRelativePath(src)) {
       // 处理相对路径
-      imagePath = path.join(noteDir, src.replace(/^\.\//, ""));
+      imagePath = path.resolve(noteDir, src.replace(/^\.\//, ""));
     } else {
       // 跳过其他协议（http、https、data 等）
       continue;
@@ -350,7 +350,7 @@ async function collectAndCopyAssets(
         sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
       } else if (isRelativePath(src)) {
         // 处理相对路径
-        sourcePath = path.join(noteDir, src.replace(/^\.\//, ""));
+        sourcePath = path.resolve(noteDir, src.replace(/^\.\//, ""));
       } else {
         // 跳过其他协议
         return;
