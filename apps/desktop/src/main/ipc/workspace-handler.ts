@@ -20,8 +20,7 @@ function assertPathInWorkspace(filePath: string, operation: string): void {
 
   const validation = validatePathInWorkspace(workspacePath, filePath);
   if (!validation.isValid) {
-    console.warn(`[Security] ${operation}: ${validation.reason}`);
-    throw new Error(`Access denied: path is outside workspace`);
+    throw new Error(`Access denied (${operation}): path is outside workspace`);
   }
 }
 
@@ -229,7 +228,6 @@ export function registerWorkspaceHandlers(): void {
       // 安全检查：只允许安全的协议打开外部链接
       if (!isSafeUrl(url)) {
         const protocol = getRejectedProtocol(url);
-        console.warn(`[Security] Blocked unsafe URL protocol: ${protocol} - ${url}`);
         throw new Error(`Unsafe URL protocol: ${protocol}`);
       }
       await shell.openExternal(url);

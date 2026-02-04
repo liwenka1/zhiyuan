@@ -68,11 +68,6 @@ class FileWatcher {
       if (this.isPaused) return;
       this.handleFolderDelete(dirPath);
     });
-
-    // 错误处理
-    this.watcher.on("error", (error) => {
-      console.error("文件监听器错误:", error);
-    });
   }
 
   /**

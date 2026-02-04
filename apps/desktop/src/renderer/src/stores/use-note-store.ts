@@ -151,7 +151,7 @@ export const useNoteStore = create<NoteStore>()(
       const workspacePath = useWorkspaceStore.getState().workspacePath;
 
       if (!workspacePath) {
-        console.error("没有工作区路径，无法创建笔记");
+        toast.error(i18n.t("note:errors.noWorkspace"));
         return;
       }
 
@@ -221,8 +221,8 @@ export const useNoteStore = create<NoteStore>()(
           state.selectedNoteId = newNote.id;
           state.editorContent = newNote.content;
         });
-      } catch (error) {
-        console.error("创建笔记失败:", error);
+      } catch {
+        toast.error(i18n.t("note:errors.createNoteFailed"));
       }
     },
 
@@ -267,8 +267,8 @@ export const useNoteStore = create<NoteStore>()(
 
         // 更新笔记内容（这会触发保存）
         get().updateNoteContent(formattedContent);
-      } catch (error) {
-        console.error("格式化笔记失败:", error);
+      } catch {
+        toast.error(i18n.t("note:errors.formatNoteFailed"));
       }
     },
 
@@ -291,7 +291,7 @@ export const useNoteStore = create<NoteStore>()(
       const note = get().notes.find((n) => n.id === noteId);
 
       if (!workspacePath || !note?.filePath) {
-        console.error("没有工作区路径或笔记文件路径，无法重命名");
+        toast.error(i18n.t("note:errors.noWorkspace"));
         return;
       }
 
@@ -330,7 +330,7 @@ export const useNoteStore = create<NoteStore>()(
           }
         });
       } catch (error) {
-        console.error("重命名笔记失败:", error);
+        toast.error(i18n.t("note:errors.renameNoteFailed"));
         throw error;
       }
     },
@@ -340,7 +340,7 @@ export const useNoteStore = create<NoteStore>()(
       const note = get().notes.find((n) => n.id === noteId);
 
       if (!workspacePath || !note?.filePath || !note.fileName) {
-        console.error("没有工作区路径或笔记文件路径，无法复制");
+        toast.error(i18n.t("note:errors.noWorkspace"));
         return;
       }
 
@@ -386,7 +386,7 @@ export const useNoteStore = create<NoteStore>()(
           state.notes.push(newNote);
         });
       } catch (error) {
-        console.error("复制笔记失败:", error);
+        toast.error(i18n.t("note:errors.duplicateNoteFailed"));
         throw error;
       }
     },
@@ -396,7 +396,7 @@ export const useNoteStore = create<NoteStore>()(
       const note = get().notes.find((n) => n.id === noteId);
 
       if (!workspacePath || !note) {
-        console.error("没有工作区路径或笔记不存在，无法切换置顶状态");
+        toast.error(i18n.t("note:errors.noWorkspace"));
         return;
       }
 
@@ -418,7 +418,7 @@ export const useNoteStore = create<NoteStore>()(
           .map((n) => n.id);
         await configIpc.setPinnedNotes(workspacePath, allPinnedNotes);
       } catch (error) {
-        console.error("切换置顶状态失败:", error);
+        toast.error(i18n.t("note:pin.failed"));
         throw error;
       }
     },
@@ -441,11 +441,7 @@ export const useNoteStore = create<NoteStore>()(
       let pinnedNoteIds: string[] = [];
 
       if (workspacePath) {
-        try {
-          pinnedNoteIds = await configIpc.getPinnedNotes(workspacePath);
-        } catch (error) {
-          console.error("加载置顶笔记列表失败:", error);
-        }
+        pinnedNoteIds = await configIpc.getPinnedNotes(workspacePath).catch(() => [] as string[]);
       }
 
       // 将置顶状态应用到笔记数据
@@ -561,28 +557,23 @@ export const useNoteStore = create<NoteStore>()(
 
       // ⭐ 保护1：跳过正在编辑的笔记（防止回退 bug）
       if (selectedNoteId === filePath) {
-        console.log("[文件监听] 跳过正在编辑的笔记:", filePath);
         return;
       }
 
       // ⭐ 保护2：跳过正在保存的笔记（防止循环）
       if (savingNoteIds.has(filePath)) {
-        console.log("[文件监听] 跳过正在保存的笔记:", filePath);
         return;
       }
 
       // ⭐ 保护3：跳过最近被我们保存的笔记（防止误触发）
       // 文件监听器可能在写入完成后的几百毫秒内才触发
       if (wasRecentlySaved(filePath)) {
-        console.log("[文件监听] 跳过最近保存的笔记:", filePath);
         return;
       }
 
       // 只处理外部修改（比如其他程序修改的文件）
       const content = await handleFileChanged(filePath, fullPath);
       if (!content) return;
-
-      console.log("[文件监听] 处理外部修改:", filePath);
 
       // 更新笔记内容（不更新编辑器内容，因为不是当前编辑的笔记）
       set((state) => {

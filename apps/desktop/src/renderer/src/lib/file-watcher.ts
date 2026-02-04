@@ -44,8 +44,7 @@ export async function handleFileAdded(
     };
 
     return newNote;
-  } catch (error) {
-    console.error("处理添加的文件失败:", error);
+  } catch {
     return null;
   }
 }
@@ -58,8 +57,7 @@ export async function handleFileChanged(_filePath: string, fullPath: string): Pr
     // 读取更新后的内容
     const { content } = await fileIpc.read(fullPath);
     return content;
-  } catch (error) {
-    console.error("处理修改的文件失败:", error);
+  } catch {
     return null;
   }
 }

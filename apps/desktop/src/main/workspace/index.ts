@@ -117,8 +117,7 @@ export const workspaceManager = {
       }
 
       return { folders, notes };
-    } catch (error) {
-      console.error("扫描工作区失败:", error);
+    } catch {
       return { folders: [], notes: [] };
     }
   },
@@ -148,8 +147,7 @@ export const workspaceManager = {
         createdAt: stats.birthtime.toISOString(),
         updatedAt: stats.mtime.toISOString()
       };
-    } catch (error) {
-      console.error("加载笔记失败:", filePath, error);
+    } catch {
       return null;
     }
   },
@@ -166,28 +164,23 @@ export const workspaceManager = {
    * 用于首次启动应用时初始化工作环境
    */
   async createDefaultWorkspace(): Promise<string> {
-    try {
-      const workspacePath = DEFAULT_WORKSPACE_CONFIG.WORKSPACE_PATH;
-      const defaultFolderPath = path.join(workspacePath, DEFAULT_WORKSPACE_CONFIG.DEFAULT_FOLDER_NAME);
-      const guideFilePath = path.join(defaultFolderPath, DEFAULT_WORKSPACE_CONFIG.GUIDE_FILE_NAME);
+    const workspacePath = DEFAULT_WORKSPACE_CONFIG.WORKSPACE_PATH;
+    const defaultFolderPath = path.join(workspacePath, DEFAULT_WORKSPACE_CONFIG.DEFAULT_FOLDER_NAME);
+    const guideFilePath = path.join(defaultFolderPath, DEFAULT_WORKSPACE_CONFIG.GUIDE_FILE_NAME);
 
-      // 1. 创建工作区根目录
-      await fs.promises.mkdir(workspacePath, { recursive: true });
+    // 1. 创建工作区根目录
+    await fs.promises.mkdir(workspacePath, { recursive: true });
 
-      // 2. 创建默认文件夹
-      await fs.promises.mkdir(defaultFolderPath, { recursive: true });
+    // 2. 创建默认文件夹
+    await fs.promises.mkdir(defaultFolderPath, { recursive: true });
 
-      // 3. 创建用户指南文件
-      await fs.promises.writeFile(guideFilePath, USER_GUIDE_CONTENT, "utf-8");
+    // 3. 创建用户指南文件
+    await fs.promises.writeFile(guideFilePath, USER_GUIDE_CONTENT, "utf-8");
 
-      // 4. 保存工作区路径到配置
-      configManager.setWorkspacePath(workspacePath);
+    // 4. 保存工作区路径到配置
+    configManager.setWorkspacePath(workspacePath);
 
-      return workspacePath;
-    } catch (error) {
-      console.error("创建默认工作区失败:", error);
-      throw error;
-    }
+    return workspacePath;
   },
 
   /**

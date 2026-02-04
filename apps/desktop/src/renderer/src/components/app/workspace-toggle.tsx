@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 import { workspaceIpc } from "@/ipc";
+import { toast } from "sonner";
 
 export function WorkspaceToggle() {
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
@@ -28,8 +29,8 @@ export function WorkspaceToggle() {
         setFolders(data.folders);
         loadFromFileSystem(data);
       }
-    } catch (error) {
-      console.error("选择工作区失败:", error);
+    } catch {
+      toast.error(t("workspace.selectFailed"));
     }
   };
 

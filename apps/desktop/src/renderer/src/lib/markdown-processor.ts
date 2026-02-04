@@ -36,12 +36,10 @@ async function renderMermaidBlocks(html: string): Promise<string> {
   let result = html;
   for (const match of matches) {
     const code = match[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").trim();
-    try {
-      const id = `mermaid-${Math.random().toString(36).slice(2)}`;
-      const { svg } = await mermaid.render(id, code);
+    const id = `mermaid-${Math.random().toString(36).slice(2)}`;
+    const svg = await mermaid.render(id, code).then(({ svg }) => svg, () => null);
+    if (svg) {
       result = result.replace(match[0], `<div class="mermaid">${svg}</div>`);
-    } catch {
-      // 渲染失败时保留原代码块
     }
   }
   return result;

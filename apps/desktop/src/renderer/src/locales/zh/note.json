@@ -92,6 +92,11 @@
     "allFiles": "所有文件"
   },
   "errors": {
+    "noWorkspace": "未选择工作区，请先选择或创建工作区",
+    "createNoteFailed": "创建笔记失败，请重试",
+    "formatNoteFailed": "格式化笔记失败，请重试",
+    "createFolderFailed": "创建文件夹失败，请重试",
+    "showInExplorerFailed": "在文件管理器中打开失败，请重试",
     "deleteFolderFailed": "删除文件夹失败，请重试",
     "deleteNoteFailed": "删除笔记失败，请重试",
     "renameFolderFailed": "重命名文件夹失败，请重试",

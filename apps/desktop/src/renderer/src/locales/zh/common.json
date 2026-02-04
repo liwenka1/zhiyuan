@@ -10,6 +10,7 @@
   "workspace": {
     "switch": "切换工作区",
     "selectFolder": "选择工作区文件夹",
-    "selectButton": "选择"
+    "selectButton": "选择",
+    "selectFailed": "选择工作区失败，请重试"
   }
 }

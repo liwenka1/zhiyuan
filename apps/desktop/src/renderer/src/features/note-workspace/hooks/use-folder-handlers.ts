@@ -28,7 +28,7 @@ export function useFolderHandlers({
   onOpenRssImportDialog,
   onOpenRenameDialog
 }: UseFolderHandlersProps): FolderHandlers {
-  const { t } = useTranslation("sidebar");
+  const { t } = useTranslation(["sidebar", "note"]);
   const folders = useFolderStore((state) => state.folders);
   const setFolders = useFolderStore((state) => state.setFolders);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
@@ -102,8 +102,8 @@ export function useFolderHandlers({
     const folderPath = `${workspacePath}/${folder.name}`;
     try {
       await shellIpc.openPath(folderPath);
-    } catch (error) {
-      console.error("打开文件夹失败:", error);
+    } catch {
+      toast.error(t("note:errors.showInExplorerFailed"));
     }
   };
 
@@ -118,8 +118,8 @@ export function useFolderHandlers({
       const data = await workspaceIpc.scan(workspacePath);
       setFolders(data.folders);
       await loadFromFileSystem(data);
-    } catch (error) {
-      console.error("删除文件夹失败:", error);
+    } catch {
+      toast.error(t("note:errors.deleteFolderFailed"));
     } finally {
       await watcherIpc.resume();
     }

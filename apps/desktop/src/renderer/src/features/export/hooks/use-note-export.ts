@@ -70,7 +70,6 @@ export function useNoteExport(): UseNoteExportReturn {
         toast.dismiss("exporting");
         return;
       }
-      console.error("导出笔记失败:", error);
       toast.error(t("export.failed"), { id: "exporting" });
     } finally {
       setIsExporting(false);
@@ -84,8 +83,7 @@ export function useNoteExport(): UseNoteExportReturn {
     try {
       await copyNoteToWechat(note);
       toast.success(t("export.wechatSuccess"));
-    } catch (error) {
-      console.error("复制到微信公众号失败:", error);
+    } catch {
       toast.error(t("export.wechatFailed"));
     }
   };

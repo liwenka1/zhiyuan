@@ -37,5 +37,11 @@
     "replaceAll": "全部替换",
     "toggleReplace": "切换替换",
     "close": "关闭"
+  },
+  "errors": {
+    "openExternalFailed": "打开外部链接失败，请重试",
+    "openLocalFileFailed": "打开本地文件失败，请重试",
+    "fullscreenFailed": "切换全屏失败，请重试",
+    "fileDropFailed": "读取拖入的文件失败，请重试"
   }
 }

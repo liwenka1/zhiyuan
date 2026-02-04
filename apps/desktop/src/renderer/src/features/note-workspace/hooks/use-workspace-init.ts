@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { clearAllDebouncedSaves } from "@/stores/use-note-store";
 import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
@@ -11,6 +13,7 @@ import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
  * - 窗口关闭时保存
  */
 export function useWorkspaceInit() {
+  const { t } = useTranslation("note");
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const setFolders = useFolderStore((state) => state.setFolders);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
@@ -32,7 +35,7 @@ export function useWorkspaceInit() {
           // 没有保存的工作区，创建默认工作区
           const defaultWorkspacePath = await workspaceIpc.createDefault();
           if (!defaultWorkspacePath) {
-            console.error("创建默认工作区失败: 未返回路径");
+            toast.error(t("errors.initWorkspaceFailed"));
             return;
           }
           setWorkspacePath(defaultWorkspacePath);
@@ -40,8 +43,8 @@ export function useWorkspaceInit() {
           setFolders(data.folders);
           loadFromFileSystem(data);
         }
-      } catch (error) {
-        console.error("初始化工作区失败:", error);
+      } catch {
+        toast.error(t("errors.initWorkspaceFailed"));
       }
     };
 

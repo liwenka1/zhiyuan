@@ -3,6 +3,8 @@ import { produce } from "immer";
 import { Folder } from "@/types";
 import { useWorkspaceStore } from "./use-workspace-store";
 import { folderIpc } from "@/ipc";
+import { toast } from "sonner";
+import i18n from "@/lib/i18n";
 
 interface FolderStore {
   // 状态
@@ -40,7 +42,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     const workspacePath = useWorkspaceStore.getState().workspacePath;
 
     if (!workspacePath) {
-      console.error("没有工作区路径，无法创建文件夹");
+      toast.error(i18n.t("note:errors.noWorkspace"));
       return;
     }
 
@@ -65,8 +67,8 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
           draft.folders.push(newFolder);
         })
       );
-    } catch (error) {
-      console.error("创建文件夹失败:", error);
+    } catch {
+      toast.error(i18n.t("note:errors.createFolderFailed"));
     }
   },
 
@@ -87,7 +89,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     const folder = get().folders.find((f) => f.id === folderId);
 
     if (!workspacePath || !folder?.path) {
-      console.error("没有工作区路径或文件夹路径，无法重命名");
+      toast.error(i18n.t("note:errors.noWorkspace"));
       return;
     }
 
@@ -116,7 +118,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         })
       );
     } catch (error) {
-      console.error("重命名文件夹失败:", error);
+      toast.error(i18n.t("note:errors.renameFolderFailed"));
       throw error;
     }
   },

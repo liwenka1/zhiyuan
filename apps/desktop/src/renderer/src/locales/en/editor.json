@@ -37,5 +37,11 @@
     "replaceAll": "Replace All",
     "toggleReplace": "Toggle Replace",
     "close": "Close"
+  },
+  "errors": {
+    "openExternalFailed": "Failed to open external link, please try again",
+    "openLocalFileFailed": "Failed to open local file, please try again",
+    "fullscreenFailed": "Failed to toggle fullscreen, please try again",
+    "fileDropFailed": "Failed to read dropped file, please try again"
   }
 }

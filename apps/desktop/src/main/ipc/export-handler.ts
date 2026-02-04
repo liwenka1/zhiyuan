@@ -114,27 +114,25 @@ async function embedLocalImages(htmlContent: string, notePath?: string): Promise
       continue;
     }
 
+    // 检查文件是否存在
     try {
-      // 检查文件是否存在
-      try {
-        await fs.access(imagePath);
-      } catch {
-        console.warn(`图片文件不存在: ${imagePath}`);
-        continue;
-      }
-
-      const imageBuffer = await fs.readFile(imagePath);
-      const ext = path.extname(imagePath);
-      const mimeType = getImageMimeType(ext);
-      const base64 = imageBuffer.toString("base64");
-      const dataUri = `data:${mimeType};base64,${base64}`;
-
-      // 替换 src 属性
-      const newImgTag = fullMatch.replace(`src=${quote}${src}${quote}`, `src=${quote}${dataUri}${quote}`);
-      result = result.replace(fullMatch, newImgTag);
-    } catch (error) {
-      console.warn(`无法嵌入图片: ${src}`, error);
+      await fs.access(imagePath);
+    } catch {
+      continue;
     }
+
+    // 读取并嵌入图片
+    const imageBuffer = await fs.readFile(imagePath).catch(() => null);
+    if (!imageBuffer) continue;
+
+    const ext = path.extname(imagePath);
+    const mimeType = getImageMimeType(ext);
+    const base64 = imageBuffer.toString("base64");
+    const dataUri = `data:${mimeType};base64,${base64}`;
+
+    // 替换 src 属性
+    const newImgTag = fullMatch.replace(`src=${quote}${src}${quote}`, `src=${quote}${dataUri}${quote}`);
+    result = result.replace(fullMatch, newImgTag);
   }
 
   return result;
@@ -192,8 +190,7 @@ async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
-  // 超时警告（但不抛出错误，继续导出）
-  console.warn(`页面加载超时 (${timeoutMs}ms)，继续导出...`);
+  // 超时但不抛出错误，继续导出
 }
 
 /**
@@ -286,11 +283,7 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
       window.close();
     }
     if (tempHtmlPath) {
-      try {
-        await fs.unlink(tempHtmlPath);
-      } catch {
-        // 忽略删除失败
-      }
+      await fs.unlink(tempHtmlPath).catch(() => {});
     }
   }
 }
@@ -312,14 +305,12 @@ async function collectAndCopyAssets(
   // 复制字体文件
   const fontsDir = getFontsDir();
   for (const fontFile of Object.values(FONT_FILES)) {
-    try {
-      const sourcePath = path.join(fontsDir, fontFile);
-      const destPath = path.join(assetsDir, fontFile);
-      await fs.copyFile(sourcePath, destPath);
+    const sourcePath = path.join(fontsDir, fontFile);
+    const destPath = path.join(assetsDir, fontFile);
+    const copied = await fs.copyFile(sourcePath, destPath).then(() => true, () => false);
+    if (copied) {
       copiedFiles.push(destPath);
       copiedFileNames.add(fontFile);
-    } catch (error) {
-      console.warn(`复制字体文件失败: ${fontFile}`, error);
     }
   }
 
@@ -336,57 +327,53 @@ async function collectAndCopyAssets(
       return;
     }
 
+    // 解析源文件路径
+    let sourcePath: string;
+    if (src.startsWith("local-resource://")) {
+      // 处理 local-resource:// 协议（normalizeMarkdownPaths 转换后的路径）
+      // local-resource://localhost/Users/... -> /Users/...
+      // local-resource:///Users/... -> /Users/...
+      const urlPath = src.replace(/^local-resource:\/\//, "");
+      sourcePath = decodeURIComponent(urlPath.replace(/^localhost/, ""));
+    } else if (src.startsWith("file://")) {
+      // 处理 file:// 协议
+      sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
+    } else if (isRelativePath(src)) {
+      // 处理相对路径
+      sourcePath = path.resolve(noteDir, src.replace(/^\.\//, ""));
+    } else {
+      // 跳过其他协议
+      return;
+    }
+
+    // 检查文件是否存在
     try {
-      // 解析源文件路径
-      let sourcePath: string;
-      if (src.startsWith("local-resource://")) {
-        // 处理 local-resource:// 协议（normalizeMarkdownPaths 转换后的路径）
-        // local-resource://localhost/Users/... -> /Users/...
-        // local-resource:///Users/... -> /Users/...
-        const urlPath = src.replace(/^local-resource:\/\//, "");
-        sourcePath = decodeURIComponent(urlPath.replace(/^localhost/, ""));
-      } else if (src.startsWith("file://")) {
-        // 处理 file:// 协议
-        sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
-      } else if (isRelativePath(src)) {
-        // 处理相对路径
-        sourcePath = path.resolve(noteDir, src.replace(/^\.\//, ""));
-      } else {
-        // 跳过其他协议
-        return;
-      }
+      await fs.access(sourcePath);
+    } catch {
+      return;
+    }
 
-      // 检查文件是否存在
-      try {
-        await fs.access(sourcePath);
-      } catch {
-        console.warn(`资源文件不存在: ${sourcePath}`);
-        return;
-      }
+    // 生成目标文件名，处理重名
+    const ext = path.extname(sourcePath);
+    const basename = path.basename(sourcePath, ext);
+    let fileName = `${basename}${ext}`;
+    let counter = 1;
 
-      // 生成目标文件名，处理重名
-      const ext = path.extname(sourcePath);
-      const basename = path.basename(sourcePath, ext);
-      let fileName = `${basename}${ext}`;
-      let counter = 1;
+    while (copiedFileNames.has(fileName)) {
+      fileName = `${basename}-${counter}${ext}`;
+      counter++;
+    }
 
-      while (copiedFileNames.has(fileName)) {
-        fileName = `${basename}-${counter}${ext}`;
-        counter++;
-      }
+    copiedFileNames.add(fileName);
 
-      copiedFileNames.add(fileName);
-
-      // 复制文件
-      const destPath = path.join(assetsDir, fileName);
-      await fs.copyFile(sourcePath, destPath);
+    // 复制文件
+    const destPath = path.join(assetsDir, fileName);
+    const copied = await fs.copyFile(sourcePath, destPath).then(() => true, () => false);
+    if (copied) {
       copiedFiles.push(destPath);
-
       // 记录路径映射
       const relativePath = `./${assetsFolderName}/${fileName}`;
       fileMap.set(src, relativePath);
-    } catch (error) {
-      console.error(`复制资源失败: ${src}`, error);
     }
   });
 
@@ -532,13 +519,11 @@ export function registerExportHandlers(): void {
           const fontsDir = getFontsDir();
           const copiedFiles: string[] = [];
           for (const fontFile of Object.values(FONT_FILES)) {
-            try {
-              const sourcePath = path.join(fontsDir, fontFile);
-              const destPath = path.join(assetsDir, fontFile);
-              await fs.copyFile(sourcePath, destPath);
+            const sourcePath = path.join(fontsDir, fontFile);
+            const destPath = path.join(assetsDir, fontFile);
+            const copied = await fs.copyFile(sourcePath, destPath).then(() => true, () => false);
+            if (copied) {
               copiedFiles.push(destPath);
-            } catch (error) {
-              console.warn(`复制字体文件失败: ${fontFile}`, error);
             }
           }
           await fs.writeFile(path.join(outputPath, "index.html"), htmlContent, "utf-8");
