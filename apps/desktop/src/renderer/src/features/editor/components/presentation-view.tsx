@@ -6,6 +6,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useViewStore, useNoteStore } from "@/stores";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { windowIpc } from "@/ipc";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 /**
  * 演示模式视图
@@ -13,6 +15,7 @@ import { windowIpc } from "@/ipc";
  * 进入时自动调用 Electron 全屏 API
  */
 export function PresentationView() {
+  const { t } = useTranslation("editor");
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
   const exitPresentationMode = useViewStore((state) => state.exitPresentationMode);
   const editorContent = useNoteStore((state) => state.editorContent);
@@ -37,10 +40,10 @@ export function PresentationView() {
 
   // 进入/退出演示模式时控制 Electron 全屏
   useEffect(() => {
-    windowIpc.setFullScreen(isPresentationMode).catch((error) => {
-      console.error("设置全屏失败:", error);
+    windowIpc.setFullScreen(isPresentationMode).catch(() => {
+      toast.error(t("errors.fullscreenFailed"));
     });
-  }, [isPresentationMode]);
+  }, [isPresentationMode, t]);
 
   return (
     <AnimatePresence>

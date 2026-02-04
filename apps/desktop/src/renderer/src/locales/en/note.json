@@ -92,6 +92,11 @@
     "allFiles": "All Files"
   },
   "errors": {
+    "noWorkspace": "No workspace selected, please choose or create one",
+    "createNoteFailed": "Failed to create note, please try again",
+    "formatNoteFailed": "Failed to format note, please try again",
+    "createFolderFailed": "Failed to create folder, please try again",
+    "showInExplorerFailed": "Failed to open in file manager, please try again",
     "deleteFolderFailed": "Failed to delete folder, please try again",
     "deleteNoteFailed": "Failed to delete note, please try again",
     "renameFolderFailed": "Failed to rename folder, please try again",

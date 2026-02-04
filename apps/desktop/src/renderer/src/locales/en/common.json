@@ -10,6 +10,7 @@
   "workspace": {
     "switch": "Switch Workspace",
     "selectFolder": "Select Workspace Folder",
-    "selectButton": "Select"
+    "selectButton": "Select",
+    "selectFailed": "Failed to select workspace, please try again"
   }
 }

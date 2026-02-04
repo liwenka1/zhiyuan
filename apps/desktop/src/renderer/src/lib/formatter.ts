@@ -121,8 +121,7 @@ export async function formatMarkdown(content: string): Promise<string> {
     result = result.replace(/^[ \t]{1,3}(<[a-zA-Z])/gm, "$1");
 
     return result;
-  } catch (error) {
-    console.error("格式化 Markdown 失败:", error);
+  } catch {
     // 格式化失败时返回原内容
     return content;
   }

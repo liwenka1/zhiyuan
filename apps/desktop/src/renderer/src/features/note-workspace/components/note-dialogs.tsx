@@ -112,24 +112,16 @@ export function NoteDialogs({
   const handleConfirmRenameNote = async (newTitle: string) => {
     if (!noteToRename || !newTitle || newTitle === noteToRename.title) return;
 
-    try {
-      await renameNote(noteToRename.id, newTitle);
-      onCloseRenameNoteDialog();
-    } catch (error) {
-      console.error("重命名笔记失败:", error);
-    }
+    await renameNote(noteToRename.id, newTitle).catch(() => {});
+    onCloseRenameNoteDialog();
   };
 
   // 确认重命名文件夹
   const handleConfirmRenameFolder = async (newName: string) => {
     if (!folderToRename || !newName || newName === folderToRename.name) return;
 
-    try {
-      await renameFolder(folderToRename.id, newName);
-      onCloseRenameFolderDialog();
-    } catch (error) {
-      console.error("重命名文件夹失败:", error);
-    }
+    await renameFolder(folderToRename.id, newName).catch(() => {});
+    onCloseRenameFolderDialog();
   };
 
   return (

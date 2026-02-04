@@ -60,8 +60,8 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     if (fullNote?.filePath) {
       try {
         await shellIpc.showItemInFolder(fullNote.filePath);
-      } catch (error) {
-        console.error("在文件管理器中显示失败:", error);
+      } catch {
+        toast.error(t("errors.showInExplorerFailed"));
       }
     }
   };
@@ -74,8 +74,8 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     try {
       await fileIpc.delete(fullNote.filePath);
       deleteNote(note.id);
-    } catch (error) {
-      console.error("删除笔记失败:", error);
+    } catch {
+      toast.error(t("errors.deleteNoteFailed"));
     }
   };
 
@@ -86,21 +86,12 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
 
   // 复制笔记
   const handleDuplicateNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
-    try {
-      await duplicateNote(note.id);
-    } catch (error) {
-      console.error("复制笔记失败:", error);
-    }
+    await duplicateNote(note.id).catch(() => {});
   };
 
   // 切换置顶状态
   const handleTogglePinNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
-    try {
-      await togglePinNote(note.id);
-    } catch (error) {
-      console.error("切换置顶状态失败:", error);
-      toast.error(t("pin.failed"));
-    }
+    await togglePinNote(note.id).catch(() => {});
   };
 
   // 导出笔记

@@ -62,12 +62,8 @@ const api = {
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
 if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld("electron", electronAPI);
-    contextBridge.exposeInMainWorld("api", api);
-  } catch (error) {
-    console.error(error);
-  }
+  contextBridge.exposeInMainWorld("electron", electronAPI);
+  contextBridge.exposeInMainWorld("api", api);
 } else {
   // @ts-expect-error (define in dts)
   window.electron = electronAPI;

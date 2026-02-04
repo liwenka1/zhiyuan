@@ -58,11 +58,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     applyThemeToDocument(theme);
 
     // 2. 同步到主进程（持久化 + 通知其他窗口）
-    try {
-      await themeIpc.set(theme);
-    } catch (error) {
-      console.error("Failed to sync theme to main process:", error);
-    }
+    await themeIpc.set(theme).catch(() => {});
   },
 
   toggleTheme: () => {
@@ -93,8 +89,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
         set({ theme: newTheme });
         applyThemeToDocument(newTheme);
       });
-    } catch (error) {
-      console.error("Failed to get theme from main process:", error);
+    } catch {
       // 出错时回退到系统主题
       const systemTheme = getSystemTheme();
       set({ theme: systemTheme });

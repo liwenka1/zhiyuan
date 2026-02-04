@@ -34,6 +34,5 @@ export function safeUnwrapIpcResult<T>(dto: IpcResultDTO<T>): T | undefined {
   if (dto.ok) {
     return dto.value;
   }
-  console.error(`IPC Error [${dto.error.code}]:`, dto.error.message);
   return undefined;
 }

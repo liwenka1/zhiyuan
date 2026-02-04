@@ -11,7 +11,7 @@ import { registerRssHandlers } from "./ipc/rss-handler";
 import { registerUrlHandlers } from "./ipc/url-handler";
 import { pathToFileURL } from "url";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
-import { isSafeUrl, getRejectedProtocol } from "./security/url-validator";
+import { isSafeUrl } from "./security/url-validator";
 
 function createWindow(): void {
   // 获取当前主题对应的背景色
@@ -78,9 +78,6 @@ function createWindow(): void {
     // 安全检查：只允许安全的协议打开外部链接
     if (isSafeUrl(details.url)) {
       shell.openExternal(details.url);
-    } else {
-      const protocol = getRejectedProtocol(details.url);
-      console.warn(`[Security] Blocked unsafe URL protocol: ${protocol} - ${details.url}`);
     }
     return { action: "deny" };
   });
@@ -149,8 +146,7 @@ app.whenReady().then(() => {
 
       const fileUrl = pathToFileURL(filePath).href;
       return net.fetch(fileUrl);
-    } catch (error) {
-      console.error("local-resource protocol error:", error, request.url);
+    } catch {
       return new Response("File not found", { status: 404 });
     }
   });

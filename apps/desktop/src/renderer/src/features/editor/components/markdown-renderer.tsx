@@ -16,6 +16,7 @@ import { createUrlTransformer, normalizeMarkdownPaths } from "@/lib/resource-res
 import { stripHiddenFrontmatter } from "@/lib/frontmatter";
 import { markdownSanitizeSchema } from "@/lib/markdown-sanitize-config";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNoteStore } from "@/stores";
 import { shellIpc } from "@/ipc";
@@ -150,8 +151,8 @@ export function MarkdownRenderer({
                 e.preventDefault();
                 try {
                   await shellIpc.openExternal(href);
-                } catch (error) {
-                  console.error("打开外部链接失败:", error);
+                } catch {
+                  toast.error(t("errors.openExternalFailed"));
                 }
                 return;
               }
@@ -163,8 +164,8 @@ export function MarkdownRenderer({
                 const localPath = decodeURIComponent(href.replace("local-resource://", ""));
                 try {
                   await shellIpc.openPath(localPath);
-                } catch (error) {
-                  console.error("打开本地文件失败:", error);
+                } catch {
+                  toast.error(t("errors.openLocalFileFailed"));
                 }
                 return;
               }

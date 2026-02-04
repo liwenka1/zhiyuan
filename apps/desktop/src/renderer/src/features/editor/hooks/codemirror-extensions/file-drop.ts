@@ -1,6 +1,8 @@
 import { EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
 import { utilsIpc } from "@/ipc";
+import { toast } from "sonner";
+import i18n from "@/lib/i18n";
 
 // 支持的图片扩展名
 const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"];
@@ -87,6 +89,7 @@ export function createFileDropExtension(): Extension {
 
       // 处理所有拖入的文件
       const markdownTexts: string[] = [];
+      let failedCount = 0;
 
       for (const file of Array.from(files)) {
         try {
@@ -96,10 +99,15 @@ export function createFileDropExtension(): Extension {
 
           const markdown = generateMarkdownFileReference(filePath, file.name);
           markdownTexts.push(markdown);
-        } catch (error) {
-          console.error("Failed to get file path:", error);
+        } catch {
+          failedCount++;
           continue;
         }
+      }
+
+      // 统一显示错误提示
+      if (failedCount > 0) {
+        toast.error(i18n.t("editor:errors.fileDropFailed"));
       }
 
       if (markdownTexts.length === 0) {
