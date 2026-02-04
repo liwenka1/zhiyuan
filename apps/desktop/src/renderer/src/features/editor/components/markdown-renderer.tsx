@@ -20,8 +20,8 @@ import { cn } from "@/lib/utils";
 import { useNoteStore } from "@/stores";
 import { shellIpc } from "@/ipc";
 
-// 初始化 mermaid
-mermaid.initialize({ startOnLoad: false, theme: "default" });
+// 初始化 mermaid（securityLevel: "strict" 防止 XSS）
+mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "strict" });
 
 interface MarkdownRendererProps {
   content: string;

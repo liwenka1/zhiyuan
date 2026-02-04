@@ -4,8 +4,26 @@ import { fileSystem } from "../file-system";
 import { fileWatcher } from "../file-watcher";
 import { configManager } from "../config";
 import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
+import { validatePathInWorkspace } from "../security/path-validator";
 import { wrapIpcHandler, ipcOk, ipcErr } from "./ipc-result";
 import type { IpcResultDTO } from "@shared";
+
+/**
+ * 校验文件路径是否在当前工作区内
+ * 如果不在工作区内，抛出错误
+ */
+function assertPathInWorkspace(filePath: string, operation: string): void {
+  const workspacePath = workspaceManager.getCurrentWorkspace();
+  if (!workspacePath) {
+    throw new Error("No workspace selected");
+  }
+
+  const validation = validatePathInWorkspace(workspacePath, filePath);
+  if (!validation.isValid) {
+    console.warn(`[Security] ${operation}: ${validation.reason}`);
+    throw new Error(`Access denied: path is outside workspace`);
+  }
+}
 
 /**
  * 注册工作区和文件系统相关的 IPC 处理器
@@ -97,74 +115,86 @@ export function registerWorkspaceHandlers(): void {
     }, "WORKSPACE_CHECK_DEFAULT_FAILED")
   );
 
-  // 读取文件
+  // 读取文件（校验路径在工作区内）
   ipcMain.handle(
     "file:read",
     wrapIpcHandler(async (filePath: string) => {
+      assertPathInWorkspace(filePath, "file:read");
       return await fileSystem.readFile(filePath);
     }, "FILE_READ_FAILED")
   );
 
-  // 写入文件
+  // 写入文件（校验路径在工作区内）
   ipcMain.handle(
     "file:write",
     wrapIpcHandler(async (filePath: string, content: string) => {
+      assertPathInWorkspace(filePath, "file:write");
       return await fileSystem.writeFile(filePath, content);
     }, "FILE_WRITE_FAILED")
   );
 
-  // 创建文件
+  // 创建文件（校验路径在工作区内）
   ipcMain.handle(
     "file:create",
     wrapIpcHandler(async (filePath: string, content: string) => {
+      assertPathInWorkspace(filePath, "file:create");
       return await fileSystem.createFile(filePath, content);
     }, "FILE_CREATE_FAILED")
   );
 
-  // 删除文件
+  // 删除文件（校验路径在工作区内）
   ipcMain.handle(
     "file:delete",
     wrapIpcHandler(async (filePath: string) => {
+      assertPathInWorkspace(filePath, "file:delete");
       return await fileSystem.deleteFile(filePath);
     }, "FILE_DELETE_FAILED")
   );
 
-  // 重命名文件
+  // 重命名文件（校验源路径和目标路径都在工作区内）
   ipcMain.handle(
     "file:rename",
     wrapIpcHandler(async (oldPath: string, newPath: string) => {
+      assertPathInWorkspace(oldPath, "file:rename (source)");
+      assertPathInWorkspace(newPath, "file:rename (dest)");
       return await fileSystem.renameFile(oldPath, newPath);
     }, "FILE_RENAME_FAILED")
   );
 
-  // 复制文件
+  // 复制文件（校验源路径和目标路径都在工作区内）
   ipcMain.handle(
     "file:copy",
     wrapIpcHandler(async (sourcePath: string, destPath: string) => {
+      assertPathInWorkspace(sourcePath, "file:copy (source)");
+      assertPathInWorkspace(destPath, "file:copy (dest)");
       return await fileSystem.copyFile(sourcePath, destPath);
     }, "FILE_COPY_FAILED")
   );
 
-  // 创建文件夹
+  // 创建文件夹（校验路径在工作区内）
   ipcMain.handle(
     "folder:create",
     wrapIpcHandler(async (folderPath: string) => {
+      assertPathInWorkspace(folderPath, "folder:create");
       return await fileSystem.createFolder(folderPath);
     }, "FOLDER_CREATE_FAILED")
   );
 
-  // 删除文件夹
+  // 删除文件夹（校验路径在工作区内）
   ipcMain.handle(
     "folder:delete",
     wrapIpcHandler(async (folderPath: string) => {
+      assertPathInWorkspace(folderPath, "folder:delete");
       return await fileSystem.deleteFolder(folderPath);
     }, "FOLDER_DELETE_FAILED")
   );
 
-  // 重命名文件夹
+  // 重命名文件夹（校验源路径和目标路径都在工作区内）
   ipcMain.handle(
     "folder:rename",
     wrapIpcHandler(async (oldPath: string, newPath: string) => {
+      assertPathInWorkspace(oldPath, "folder:rename (source)");
+      assertPathInWorkspace(newPath, "folder:rename (dest)");
       return await fileSystem.renameFolder(oldPath, newPath);
     }, "FOLDER_RENAME_FAILED")
   );
