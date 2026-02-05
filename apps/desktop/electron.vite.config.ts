@@ -43,6 +43,13 @@ export default defineConfig({
         "@shared": resolve(__dirname, "src/shared")
       }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [
+      react({
+        babel: {
+          plugins: [["babel-plugin-react-compiler", {}]]
+        }
+      }),
+      tailwindcss()
+    ]
   }
 });
