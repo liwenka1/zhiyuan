@@ -1,11 +1,10 @@
-import { useRef, useEffect, useMemo, memo } from "react";
+import { useEffect, useMemo, memo, useRef } from "react";
 import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
 import { useViewStore, useNoteStore } from "@/stores";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
-import { ImperativePanelHandle } from "react-resizable-panels";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef } from "@/components/ui/resizable";
 import type { Note } from "@/types";
 
 interface EditorAreaProps {
@@ -41,7 +40,6 @@ export function EditorArea({
   const editorMode = useViewStore((state) => state.editorMode);
   const splitLayout = useViewStore((state) => state.splitLayout);
   const setSplitLayout = useViewStore((state) => state.setSplitLayout);
-  const resetSplitLayout = useViewStore((state) => state.resetSplitLayout);
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
 
   const openNotes = useMemo(
@@ -90,7 +88,6 @@ export function EditorArea({
             editorMode={editorMode}
             splitLayout={splitLayout}
             setSplitLayout={(sizes) => setSplitLayout([sizes[0] ?? 50, sizes[1] ?? 50])}
-            resetSplitLayout={resetSplitLayout}
             onChange={onChange}
           />
         ))}
@@ -108,7 +105,6 @@ const OpenNotePanels = memo(
     editorMode,
     splitLayout,
     setSplitLayout,
-    resetSplitLayout,
     onChange
   }: {
     noteId: string;
@@ -118,61 +114,117 @@ const OpenNotePanels = memo(
     editorMode: "edit" | "preview" | "split";
     splitLayout: number[];
     setSplitLayout: (sizes: number[]) => void;
-    resetSplitLayout: () => void;
     onChange?: (content: string) => void;
   }) {
-    const editorPanelRef = useRef<ImperativePanelHandle>(null);
-    const previewPanelRef = useRef<ImperativePanelHandle>(null);
-    const isSplit = editorMode === "split";
+    const editorPanelRef = usePanelRef();
+    const previewPanelRef = usePanelRef();
+    const isDraggingRef = useRef(false);
+    const editorSizeRef = useRef(splitLayout[0]);
+    const previewSizeRef = useRef(splitLayout[1]);
+    const isProgrammaticRef = useRef(false);
+    const editorPanelId = `${noteId}-editor`;
+    const previewPanelId = `${noteId}-preview`;
 
     const handleContentChange = (value: string) => {
       onChange?.(value);
     };
 
-    const resizePanels = (editorSize: number, previewSize: number) => {
-      editorPanelRef.current?.resize(editorSize);
-      previewPanelRef.current?.resize(previewSize);
-    };
-
-    const handleResetPanels = () => {
-      resizePanels(50, 50);
-      resetSplitLayout();
-    };
-
-    const handleLayoutChange = (sizes: number[]) => {
-      if (editorMode === "split" && sizes.length === 2) {
-        setSplitLayout([sizes[0], sizes[1]]);
+    const handleLayoutChanged = (layout: { [panelId: string]: number }) => {
+      if (editorMode !== "split" || isProgrammaticRef.current) {
+        return;
       }
+      const editorSize = layout[editorPanelId];
+      const previewSize = layout[previewPanelId];
+      if (typeof editorSize === "number" && typeof previewSize === "number") {
+        editorSizeRef.current = editorSize;
+        previewSizeRef.current = previewSize;
+        setSplitLayout([editorSize, previewSize]);
+      }
+    };
+
+    const resetSplitToDefault = () => {
+      if (editorMode !== "split") return;
+      if (!editorPanelRef.current || !previewPanelRef.current) return;
+      isProgrammaticRef.current = true;
+      editorPanelRef.current.resize("50%");
+      previewPanelRef.current.resize("50%");
+      editorSizeRef.current = 50;
+      previewSizeRef.current = 50;
+      setSplitLayout([50, 50]);
+      isProgrammaticRef.current = false;
     };
 
     useEffect(() => {
-      if (editorMode === "edit") {
-        resizePanels(100, 0);
-      } else if (editorMode === "preview") {
-        resizePanels(0, 100);
-      } else if (editorMode === "split") {
-        resizePanels(splitLayout[0], splitLayout[1]);
+      if (editorMode !== "split") {
+        return;
+      }
+      if (!editorPanelRef.current || !previewPanelRef.current) return;
+
+      isProgrammaticRef.current = true;
+      if (!isDraggingRef.current) {
+        editorPanelRef.current.resize(`${splitLayout[0]}%`);
+        previewPanelRef.current.resize(`${splitLayout[1]}%`);
+      }
+      isProgrammaticRef.current = false;
+    }, [editorMode, editorPanelRef, previewPanelRef, splitLayout]);
+
+    useEffect(() => {
+      const handlePointerUp = () => {
+        isDraggingRef.current = false;
+      };
+      document.addEventListener("pointerup", handlePointerUp);
+      return () => document.removeEventListener("pointerup", handlePointerUp);
+    }, []);
+
+    useEffect(() => {
+      editorSizeRef.current = splitLayout[0];
+      previewSizeRef.current = splitLayout[1];
+      if (editorMode !== "split") {
+        isDraggingRef.current = false;
       }
     }, [editorMode, splitLayout]);
 
+    // 根据编辑模式计算初始尺寸
+    const editorDefaultSize = editorMode === "edit" ? "100%" : editorMode === "preview" ? "0%" : `${splitLayout[0]}%`;
+    const previewDefaultSize = editorMode === "edit" ? "0%" : editorMode === "preview" ? "100%" : `${splitLayout[1]}%`;
+
     return (
       <div className={isActive ? "h-full" : "hidden"}>
-        <ResizablePanelGroup direction="horizontal" onLayout={handleLayoutChange} className="h-full">
-          <ResizablePanel ref={editorPanelRef} defaultSize={50} minSize={isSplit ? 30 : 0} collapsible={!isSplit}>
-            <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
-          </ResizablePanel>
+        {editorMode === "split" ? (
+          <ResizablePanelGroup orientation="horizontal" className="h-full" onLayoutChanged={handleLayoutChanged}>
+            <ResizablePanel
+              id={editorPanelId}
+              panelRef={editorPanelRef}
+              defaultSize={editorDefaultSize}
+              minSize="30%"
+              collapsible={false}
+            >
+              <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
+            </ResizablePanel>
 
-          {isSplit && (
             <ResizableHandle
               className="bg-border hover:bg-primary w-px transition-colors"
-              onDoubleClick={handleResetPanels}
+              onPointerDown={() => {
+                isDraggingRef.current = true;
+              }}
+              onDoubleClick={resetSplitToDefault}
             />
-          )}
 
-          <ResizablePanel ref={previewPanelRef} defaultSize={50} minSize={isSplit ? 30 : 0} collapsible={!isSplit}>
-            <PreviewContent content={content} notePath={notePath} noteId={noteId} />
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            <ResizablePanel
+              id={previewPanelId}
+              panelRef={previewPanelRef}
+              defaultSize={previewDefaultSize}
+              minSize="30%"
+              collapsible={false}
+            >
+              <PreviewContent content={content} notePath={notePath} noteId={noteId} />
+            </ResizablePanel>
+          </ResizablePanelGroup>
+        ) : editorMode === "edit" ? (
+          <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
+        ) : (
+          <PreviewContent content={content} notePath={notePath} noteId={noteId} />
+        )}
       </div>
     );
   },

@@ -49,7 +49,7 @@ export function useWorkspaceInit() {
     };
 
     initWorkspace();
-  }, [loadFromFileSystem, setFolders, setWorkspacePath]);
+  }, [loadFromFileSystem, setFolders, setWorkspacePath, t]);
 
   // 监听文件系统变化
   useEffect(() => {
