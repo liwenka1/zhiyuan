@@ -37,7 +37,10 @@ async function renderMermaidBlocks(html: string): Promise<string> {
   for (const match of matches) {
     const code = match[1].replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&").trim();
     const id = `mermaid-${Math.random().toString(36).slice(2)}`;
-    const svg = await mermaid.render(id, code).then(({ svg }) => svg, () => null);
+    const svg = await mermaid.render(id, code).then(
+      ({ svg }) => svg,
+      () => null
+    );
     if (svg) {
       result = result.replace(match[0], `<div class="mermaid">${svg}</div>`);
     }

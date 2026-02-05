@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Eye,
   Wand2,
@@ -61,6 +61,7 @@ export function EditorToolbar({
 
   const isPreviewMode = editorMode === "preview";
   const isSplitMode = editorMode === "split";
+  const isEditMode = editorMode === "edit";
   const hasNote = !!selectedNoteId;
   const showPreview = isPreviewMode || isSplitMode; // 预览或分栏模式下都显示预览内容
   const noteSummary = selectedNote
@@ -72,13 +73,9 @@ export function EditorToolbar({
       }
     : null;
 
-  // 监听编辑模式变化，切换到编辑模式时关闭目录
-  useEffect(() => {
-    if (editorMode === "edit") {
-      setTocOpen(false);
-      setIsPinned(false); // 切换模式时取消固定
-    }
-  }, [editorMode]);
+  // 编辑模式下强制关闭目录（派生状态）
+  const effectiveTocOpen = isEditMode ? false : tocOpen;
+  const effectiveIsPinned = isEditMode ? false : isPinned;
 
   const handleShowInExplorer = () => {
     if (noteSummary) {
@@ -157,7 +154,7 @@ export function EditorToolbar({
         </Button>
 
         {/* 目录按钮 */}
-        <Popover open={tocOpen} onOpenChange={setTocOpen}>
+        <Popover open={effectiveTocOpen} onOpenChange={setTocOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
@@ -174,13 +171,13 @@ export function EditorToolbar({
             className="w-80"
             onInteractOutside={(e) => {
               // 如果已固定，阻止点击外部关闭
-              if (isPinned) {
+              if (effectiveIsPinned) {
                 e.preventDefault();
               }
             }}
             onEscapeKeyDown={(e) => {
               // 如果已固定，阻止 ESC 键关闭
-              if (isPinned) {
+              if (effectiveIsPinned) {
                 e.preventDefault();
               }
             }}
@@ -193,10 +190,10 @@ export function EditorToolbar({
                   variant="ghost"
                   size="sm"
                   className="h-7 w-7 p-0"
-                  onClick={() => setIsPinned(!isPinned)}
-                  aria-label={isPinned ? t("toc.unpin") : t("toc.pin")}
+                  onClick={() => setIsPinned(!effectiveIsPinned)}
+                  aria-label={effectiveIsPinned ? t("toc.unpin") : t("toc.pin")}
                 >
-                  {isPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                  {effectiveIsPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
                 </Button>
               </div>
               <TableOfContents content={content} />

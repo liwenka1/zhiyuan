@@ -1,4 +1,5 @@
-import { useEffect, useState, CSSProperties } from "react";
+import { CSSProperties } from "react";
+import { usePlatform } from "@/hooks";
 
 /**
  * 扩展 CSSProperties 以支持 Electron 的 WebkitAppRegion
@@ -12,13 +13,7 @@ interface ElectronCSSProperties extends CSSProperties {
  * 用于 Windows 平台的拖拽区域
  */
 export function TitleBar() {
-  const [isWindows, setIsWindows] = useState(false);
-
-  useEffect(() => {
-    // 检测是否为 Windows 系统
-    const ua = navigator.userAgent.toLowerCase();
-    setIsWindows(ua.includes("win"));
-  }, []);
+  const { isWindows } = usePlatform();
 
   // 非 Windows 系统不渲染
   if (!isWindows) {

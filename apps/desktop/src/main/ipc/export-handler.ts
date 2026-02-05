@@ -307,7 +307,10 @@ async function collectAndCopyAssets(
   for (const fontFile of Object.values(FONT_FILES)) {
     const sourcePath = path.join(fontsDir, fontFile);
     const destPath = path.join(assetsDir, fontFile);
-    const copied = await fs.copyFile(sourcePath, destPath).then(() => true, () => false);
+    const copied = await fs.copyFile(sourcePath, destPath).then(
+      () => true,
+      () => false
+    );
     if (copied) {
       copiedFiles.push(destPath);
       copiedFileNames.add(fontFile);
@@ -368,7 +371,10 @@ async function collectAndCopyAssets(
 
     // 复制文件
     const destPath = path.join(assetsDir, fileName);
-    const copied = await fs.copyFile(sourcePath, destPath).then(() => true, () => false);
+    const copied = await fs.copyFile(sourcePath, destPath).then(
+      () => true,
+      () => false
+    );
     if (copied) {
       copiedFiles.push(destPath);
       // 记录路径映射
@@ -521,7 +527,10 @@ export function registerExportHandlers(): void {
           for (const fontFile of Object.values(FONT_FILES)) {
             const sourcePath = path.join(fontsDir, fontFile);
             const destPath = path.join(assetsDir, fontFile);
-            const copied = await fs.copyFile(sourcePath, destPath).then(() => true, () => false);
+            const copied = await fs.copyFile(sourcePath, destPath).then(
+              () => true,
+              () => false
+            );
             if (copied) {
               copiedFiles.push(destPath);
             }

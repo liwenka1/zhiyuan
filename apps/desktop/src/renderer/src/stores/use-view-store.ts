@@ -16,6 +16,7 @@ interface ViewStore {
 
   // 侧边栏显示控制（替代原来的 isFocusMode）
   showFolderSidebar: boolean;
+  setShowFolderSidebar: (show: boolean) => void;
   toggleFolderSidebar: () => void;
 
   // 笔记搜索状态
@@ -67,6 +68,7 @@ export const useViewStore = create<ViewStore>()(
       exitPresentationMode: () => set({ isPresentationMode: false }),
 
       // 侧边栏控制
+      setShowFolderSidebar: (show) => set({ showFolderSidebar: show }),
       toggleFolderSidebar: () => set((state) => ({ showFolderSidebar: !state.showFolderSidebar })),
 
       // 笔记搜索状态

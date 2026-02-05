@@ -19,13 +19,6 @@ function App(): React.JSX.Element {
     };
   }, [initTheme, cleanup]);
 
-  // 退出演示模式时立即隐藏演示视图
-  useEffect(() => {
-    if (!isPresentationMode) {
-      setShowPresentation(false);
-    }
-  }, [isPresentationMode]);
-
   // 阻止 Electron 默认的文件拖放导航行为
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
@@ -51,10 +44,10 @@ function App(): React.JSX.Element {
         animate={{ opacity: isPresentationMode ? 0 : 1 }}
         transition={{ duration: 0.2, ease: "easeInOut" }}
         onAnimationComplete={() => {
-          // 当工作区淡出完成时（此时 isPresentationMode 为 true），显示演示视图
-          if (isPresentationMode) {
-            setShowPresentation(true);
-          }
+          // 动画完成时同步 showPresentation 状态
+          // 进入演示模式（淡出完成）-> 显示演示视图
+          // 退出演示模式（淡入完成）-> 隐藏演示视图
+          setShowPresentation(isPresentationMode);
         }}
         style={{ pointerEvents: isPresentationMode ? "none" : "auto" }}
       >
