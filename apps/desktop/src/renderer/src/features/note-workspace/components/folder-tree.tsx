@@ -59,6 +59,8 @@ export function FolderTree({
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
   const parentRef = useRef<HTMLDivElement>(null);
+  
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: folders.length,
     getScrollElement: () => parentRef.current,
