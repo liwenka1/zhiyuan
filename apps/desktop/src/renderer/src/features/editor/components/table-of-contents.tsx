@@ -7,6 +7,7 @@ import { useActiveHeading, useTocScroll } from "../hooks";
 
 interface TableOfContentsProps {
   content: string;
+  noteId?: string;
   onItemClick?: () => void;
 }
 
@@ -16,17 +17,17 @@ interface TableOfContentsProps {
  * - 渲染层级目录
  * - 点击跳转到对应标题
  */
-export function TableOfContents({ content }: TableOfContentsProps) {
+export function TableOfContents({ content, noteId }: TableOfContentsProps) {
   const { t } = useTranslation("editor");
 
   // 1. 提取标题
   const headings = useMemo(() => extractHeadings(content), [content]);
 
   // 2. 标题高亮同步
-  const { activeId, setActiveId, skipNextUpdate } = useActiveHeading(headings);
+  const { activeId, setActiveId, skipNextUpdate } = useActiveHeading(headings, noteId);
 
   // 3. 目录滚动同步
-  const { tocItemRefs, handleClick } = useTocScroll(activeId, setActiveId, skipNextUpdate);
+  const { tocItemRefs, handleClick } = useTocScroll(activeId, setActiveId, skipNextUpdate, noteId);
 
   if (headings.length === 0) {
     return <div className="text-muted-foreground py-4 text-center text-sm">{t("toc.empty")}</div>;

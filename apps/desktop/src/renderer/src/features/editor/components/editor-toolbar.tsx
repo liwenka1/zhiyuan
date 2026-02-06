@@ -196,7 +196,7 @@ export function EditorToolbar({
                   {effectiveIsPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
                 </Button>
               </div>
-              <TableOfContents content={content} />
+              <TableOfContents content={content} noteId={selectedNoteId ?? undefined} />
             </div>
           </PopoverContent>
         </Popover>

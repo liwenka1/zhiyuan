@@ -12,11 +12,13 @@ export interface UseTocScrollReturn {
  * @param activeId 当前活跃的标题 ID
  * @param setActiveId 设置活跃标题的函数
  * @param skipNextUpdate 跳过下一次高亮更新的函数
+ * @param noteId 笔记 ID，用于定位对应的预览滚动区域
  */
 export function useTocScroll(
   activeId: string | null,
   setActiveId: (id: string | null) => void,
-  skipNextUpdate: () => void
+  skipNextUpdate: () => void,
+  noteId?: string
 ): UseTocScrollReturn {
   const tocItemRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const isClickScrollingRef = useRef(false);
@@ -76,7 +78,8 @@ export function useTocScroll(
       }
 
       // 查找预览区域的 ScrollArea 容器
-      const previewScrollArea = document.getElementById("preview-scroll-area");
+      const scrollAreaId = noteId ? `preview-scroll-area-${noteId}` : "preview-scroll-area";
+      const previewScrollArea = document.getElementById(scrollAreaId);
       if (!previewScrollArea) {
         isClickScrollingRef.current = false;
         return;
@@ -129,7 +132,7 @@ export function useTocScroll(
         }, 1000);
       }
     },
-    [setActiveId, skipNextUpdate]
+    [setActiveId, skipNextUpdate, noteId]
   );
 
   return { tocItemRefs, handleClick };
