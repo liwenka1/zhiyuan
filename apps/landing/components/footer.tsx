@@ -1,5 +1,3 @@
-
-
 import { useLanguage } from "@/lib/use-language";
 
 export function Footer() {

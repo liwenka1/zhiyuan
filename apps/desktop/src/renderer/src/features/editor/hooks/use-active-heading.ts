@@ -10,8 +10,9 @@ export interface UseActiveHeadingReturn {
 /**
  * 监听预览区域的滚动，自动高亮当前可见的标题
  * @param headings 标题列表
+ * @param noteId 笔记 ID，用于定位对应的预览滚动区域
  */
-export function useActiveHeading(headings: TocItem[]): UseActiveHeadingReturn {
+export function useActiveHeading(headings: TocItem[], noteId?: string): UseActiveHeadingReturn {
   const [activeId, setActiveId] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const headingElementsRef = useRef<Map<string, IntersectionObserverEntry>>(new Map());
@@ -26,7 +27,8 @@ export function useActiveHeading(headings: TocItem[]): UseActiveHeadingReturn {
   useEffect(() => {
     if (headings.length === 0) return;
 
-    const previewScrollArea = document.getElementById("preview-scroll-area");
+    const scrollAreaId = noteId ? `preview-scroll-area-${noteId}` : "preview-scroll-area";
+    const previewScrollArea = document.getElementById(scrollAreaId);
     if (!previewScrollArea) return;
 
     const scrollContainer = previewScrollArea.querySelector('[data-slot="scroll-area-viewport"]');
@@ -129,7 +131,7 @@ export function useActiveHeading(headings: TocItem[]): UseActiveHeadingReturn {
       }
       currentHeadingElements.clear();
     };
-  }, [headings]);
+  }, [headings, noteId]);
 
   return { activeId, setActiveId, skipNextUpdate };
 }
