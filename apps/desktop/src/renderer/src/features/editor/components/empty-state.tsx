@@ -7,7 +7,7 @@ export function EmptyEditor() {
 
   return (
     <motion.div
-      className="empty-state text-muted-foreground flex h-full flex-col items-center justify-center"
+      className="text-muted-foreground flex h-full flex-col items-center justify-center select-none"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
@@ -17,7 +17,7 @@ export function EmptyEditor() {
         animate={{ scale: 1 }}
         transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
       >
-        <Logo className="empty-state-icon mb-4 h-20 w-20" />
+        <Logo className="mb-4 h-20 w-20 opacity-20" />
       </motion.div>
       <motion.p
         className="text-sm"

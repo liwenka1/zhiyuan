@@ -2,58 +2,5 @@
 
 /* 选中状态 */
 ::selection {
-  background-color: var(--selection);
-}
-
-/* 滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--muted-foreground) 30%, transparent);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--muted-foreground) 50%, transparent);
-}
-
-/* 分割线悬停效果 */
-[data-panel-group-direction="horizontal"] > [data-resize-handle] {
-  transition: background-color 0.15s ease;
-}
-
-[data-panel-group-direction="horizontal"] > [data-resize-handle]:hover {
-  background-color: color-mix(in srgb, var(--highlight) 50%, transparent);
-}
-
-[data-panel-group-direction="horizontal"] > [data-resize-handle]:active {
-  background-color: var(--highlight);
-}
-
-/* 侧边栏项目过渡 */
-.sidebar-item {
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
-}
-
-/* 笔记列表项过渡 */
-.note-item {
-  transition: background-color 0.15s ease;
-}
-
-/* 空状态样式 */
-.empty-state {
-  user-select: none;
-}
-
-.empty-state-icon {
-  opacity: 0.2;
+  background-color: color-mix(in srgb, var(--primary) 40%, transparent);
 }

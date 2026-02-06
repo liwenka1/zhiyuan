@@ -230,12 +230,12 @@ export function NoteList({
       <ScrollArea className="flex-1 overflow-hidden" viewportRef={parentRef}>
         {notes.length === 0 ? (
           <motion.div
-            className="empty-state text-muted-foreground flex flex-col items-center justify-center p-6 text-center"
+            className="text-muted-foreground flex flex-col items-center justify-center p-6 text-center select-none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3 }}
           >
-            <Inbox className="empty-state-icon mb-3 h-10 w-10" />
+            <Inbox className="mb-3 h-10 w-10 opacity-20" />
             <p className="text-sm font-medium">{searchKeyword ? t("emptyState.noResults") : t("emptyState.noNotes")}</p>
             <p className="text-tertiary-foreground mt-1 text-xs">
               {searchKeyword ? t("emptyState.tryOtherKeywords") : t("emptyState.createOrSelect")}
@@ -267,7 +267,7 @@ export function NoteList({
                           backgroundColor: getHoverBgColor(isSelected),
                           transition: { duration: 0.1 }
                         }}
-                        className="note-item cursor-pointer overflow-hidden rounded-md px-3 py-2"
+                        className="cursor-pointer overflow-hidden rounded-md px-3 py-2"
                         onClick={() => onSelectNote?.(note.id)}
                       >
                         {/* 标题行 */}
