@@ -1,6 +1,7 @@
 {
-  "name": "desktop",
+  "name": "zhiyuan",
   "version": "0.0.4-beta",
+  "productName": "纸鸢",
   "private": true,
   "description": "纸鸢 - 优雅的 Markdown 编辑器",
   "main": "./out/main/index.js",
