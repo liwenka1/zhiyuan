@@ -12,6 +12,7 @@ import { registerUrlHandlers } from "./ipc/url-handler";
 import { pathToFileURL } from "url";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
 import { isSafeUrl } from "./security/url-validator";
+import { setupApplicationMenu } from "./menu";
 
 function createWindow(): void {
   // 获取当前主题对应的背景色
@@ -165,6 +166,9 @@ app.whenReady().then(() => {
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window);
   });
+
+  // 设置应用菜单（macOS: 最小化菜单 / Windows & Linux: 移除默认菜单）
+  setupApplicationMenu();
 
   // 初始化主题管理器
   themeManager.init();
