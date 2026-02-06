@@ -32,9 +32,3 @@
     user-select: text;
   }
 }
-
-/* 修复 Radix ScrollArea 的内联样式导致文本截断失效的问题 */
-[data-radix-scroll-area-viewport] > div {
-  min-width: 0 !important;
-  display: block !important;
-}

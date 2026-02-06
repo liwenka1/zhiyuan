@@ -59,7 +59,7 @@ export function FolderTree({
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
   const parentRef = useRef<HTMLDivElement>(null);
-  
+
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: folders.length,
@@ -110,7 +110,7 @@ export function FolderTree({
             }}
             transition={{ duration: 0.1 }}
             className={cn(
-              "sidebar-item flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
+              "flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
               isAllSelected ? "text-foreground font-medium" : "text-muted-foreground"
             )}
             onClick={() => onSelectFolder?.(null)}
@@ -138,7 +138,7 @@ export function FolderTree({
                       }}
                       transition={{ duration: 0.1 }}
                       className={cn(
-                        "sidebar-item absolute right-0 left-0 flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
+                        "absolute right-0 left-0 flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
                         isSelected ? "text-foreground font-medium" : "text-muted-foreground"
                       )}
                       ref={rowVirtualizer.measureElement}
