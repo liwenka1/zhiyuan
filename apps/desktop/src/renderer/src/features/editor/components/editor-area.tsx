@@ -1,10 +1,10 @@
-import { useEffect, useMemo, memo, useRef } from "react";
+import { useEffect, useMemo, useCallback, memo, useRef } from "react";
 import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
 import { useViewStore, useNoteStore } from "@/stores";
-import { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef } from "@/components/ui/resizable";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle, useGroupRef } from "@/components/ui/resizable";
 import type { Note } from "@/types";
 
 interface EditorAreaProps {
@@ -96,6 +96,14 @@ export function EditorArea({
   );
 }
 
+/**
+ * 始终挂载 ResizablePanelGroup，通过 groupRef.setLayout() 一次性切换整个布局，
+ * 避免 EditorContent / PreviewContent 在模式切换时反复卸载和重新挂载。
+ *
+ * - edit 模式：editor = 100%, preview = 0%
+ * - preview 模式：editor = 0%, preview = 100%
+ * - split 模式：按 splitLayout 分配比例
+ */
 const OpenNotePanels = memo(
   function OpenNotePanels({
     noteId,
@@ -116,58 +124,82 @@ const OpenNotePanels = memo(
     setSplitLayout: (sizes: number[]) => void;
     onChange?: (content: string) => void;
   }) {
-    const editorPanelRef = usePanelRef();
-    const previewPanelRef = usePanelRef();
-    const isDraggingRef = useRef(false);
-    const editorSizeRef = useRef(splitLayout[0]);
-    const previewSizeRef = useRef(splitLayout[1]);
+    const groupRef = useGroupRef();
     const isProgrammaticRef = useRef(false);
+    const isDraggingRef = useRef(false);
+    const splitLayoutRef = useRef(splitLayout);
+    const editorModeRef = useRef(editorMode);
     const editorPanelId = `${noteId}-editor`;
     const previewPanelId = `${noteId}-preview`;
 
-    const handleContentChange = (value: string) => {
-      onChange?.(value);
-    };
+    // 保持 ref 同步
+    useEffect(() => {
+      splitLayoutRef.current = splitLayout;
+    }, [splitLayout]);
+    useEffect(() => {
+      editorModeRef.current = editorMode;
+    }, [editorMode]);
 
-    const handleLayoutChanged = (layout: { [panelId: string]: number }) => {
-      if (editorMode !== "split" || isProgrammaticRef.current) {
-        return;
-      }
-      const editorSize = layout[editorPanelId];
-      const previewSize = layout[previewPanelId];
-      if (typeof editorSize === "number" && typeof previewSize === "number") {
-        editorSizeRef.current = editorSize;
-        previewSizeRef.current = previewSize;
-        setSplitLayout([editorSize, previewSize]);
-      }
-    };
+    const handleContentChange = useCallback(
+      (value: string) => {
+        onChange?.(value);
+      },
+      [onChange]
+    );
 
-    const resetSplitToDefault = () => {
-      if (editorMode !== "split") return;
-      if (!editorPanelRef.current || !previewPanelRef.current) return;
+    // 仅在 split 模式下的用户拖动才保存布局
+    const handleLayoutChanged = useCallback(
+      (layout: { [panelId: string]: number }) => {
+        if (editorModeRef.current !== "split" || isProgrammaticRef.current) {
+          return;
+        }
+        const editorSize = layout[editorPanelId];
+        const previewSize = layout[previewPanelId];
+        if (typeof editorSize === "number" && typeof previewSize === "number") {
+          setSplitLayout([editorSize, previewSize]);
+        }
+      },
+      [editorPanelId, previewPanelId, setSplitLayout]
+    );
+
+    // 双击 handle 重置为 50/50
+    const resetSplitToDefault = useCallback(() => {
+      if (editorModeRef.current !== "split" || !groupRef.current) return;
       isProgrammaticRef.current = true;
-      editorPanelRef.current.resize("50%");
-      previewPanelRef.current.resize("50%");
-      editorSizeRef.current = 50;
-      previewSizeRef.current = 50;
+      groupRef.current.setLayout({ [editorPanelId]: 50, [previewPanelId]: 50 });
       setSplitLayout([50, 50]);
       isProgrammaticRef.current = false;
-    };
+    }, [groupRef, editorPanelId, previewPanelId, setSplitLayout]);
 
+    // 计算目标布局的工具函数
+    const getTargetLayout = useCallback(
+      (mode: string) => {
+        if (mode === "edit") {
+          return { [editorPanelId]: 100, [previewPanelId]: 0 };
+        } else if (mode === "preview") {
+          return { [editorPanelId]: 0, [previewPanelId]: 100 };
+        } else {
+          const layout = splitLayoutRef.current;
+          return { [editorPanelId]: layout[0], [previewPanelId]: layout[1] };
+        }
+      },
+      [editorPanelId, previewPanelId]
+    );
+
+    // 核心 effect：只在 editorMode 变化时通过 setLayout 一次性设置整个布局
     useEffect(() => {
-      if (editorMode !== "split") {
-        return;
-      }
-      if (!editorPanelRef.current || !previewPanelRef.current) return;
+      if (!groupRef.current) return;
 
       isProgrammaticRef.current = true;
-      if (!isDraggingRef.current) {
-        editorPanelRef.current.resize(`${splitLayout[0]}%`);
-        previewPanelRef.current.resize(`${splitLayout[1]}%`);
-      }
+      groupRef.current.setLayout(getTargetLayout(editorMode));
       isProgrammaticRef.current = false;
-    }, [editorMode, editorPanelRef, previewPanelRef, splitLayout]);
 
+      if (editorMode !== "split") {
+        isDraggingRef.current = false;
+      }
+    }, [editorMode, groupRef, getTargetLayout]);
+
+    // 监听 pointerup 停止拖动标记
     useEffect(() => {
       const handlePointerUp = () => {
         isDraggingRef.current = false;
@@ -176,55 +208,48 @@ const OpenNotePanels = memo(
       return () => document.removeEventListener("pointerup", handlePointerUp);
     }, []);
 
-    useEffect(() => {
-      editorSizeRef.current = splitLayout[0];
-      previewSizeRef.current = splitLayout[1];
-      if (editorMode !== "split") {
-        isDraggingRef.current = false;
-      }
-    }, [editorMode, splitLayout]);
-
-    // 根据编辑模式计算初始尺寸
-    const editorDefaultSize = editorMode === "edit" ? "100%" : editorMode === "preview" ? "0%" : `${splitLayout[0]}%`;
-    const previewDefaultSize = editorMode === "edit" ? "0%" : editorMode === "preview" ? "100%" : `${splitLayout[1]}%`;
+    const isSplit = editorMode === "split";
 
     return (
       <div className={isActive ? "h-full" : "hidden"}>
-        {editorMode === "split" ? (
-          <ResizablePanelGroup orientation="horizontal" className="h-full" onLayoutChanged={handleLayoutChanged}>
-            <ResizablePanel
-              id={editorPanelId}
-              panelRef={editorPanelRef}
-              defaultSize={editorDefaultSize}
-              minSize="30%"
-              collapsible={false}
-            >
-              <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
-            </ResizablePanel>
+        <ResizablePanelGroup
+          orientation="horizontal"
+          className="h-full"
+          groupRef={groupRef}
+          onLayoutChanged={handleLayoutChanged}
+        >
+          <ResizablePanel
+            id={editorPanelId}
+            defaultSize={editorMode === "preview" ? "0%" : editorMode === "split" ? `${splitLayout[0]}%` : "100%"}
+            minSize="0%"
+            collapsible
+            collapsedSize="0%"
+          >
+            <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
+          </ResizablePanel>
 
-            <ResizableHandle
-              className="bg-border hover:bg-primary w-px transition-colors"
-              onPointerDown={() => {
-                isDraggingRef.current = true;
-              }}
-              onDoubleClick={resetSplitToDefault}
-            />
+          <ResizableHandle
+            className={
+              isSplit
+                ? "bg-border hover:bg-primary w-px transition-colors"
+                : "pointer-events-none w-0 border-0 bg-transparent p-0 opacity-0"
+            }
+            onPointerDown={() => {
+              if (isSplit) isDraggingRef.current = true;
+            }}
+            onDoubleClick={resetSplitToDefault}
+          />
 
-            <ResizablePanel
-              id={previewPanelId}
-              panelRef={previewPanelRef}
-              defaultSize={previewDefaultSize}
-              minSize="30%"
-              collapsible={false}
-            >
-              <PreviewContent content={content} notePath={notePath} noteId={noteId} />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : editorMode === "edit" ? (
-          <EditorContent content={content} onChange={handleContentChange} noteId={noteId} />
-        ) : (
-          <PreviewContent content={content} notePath={notePath} noteId={noteId} />
-        )}
+          <ResizablePanel
+            id={previewPanelId}
+            defaultSize={editorMode === "edit" ? "0%" : editorMode === "split" ? `${splitLayout[1]}%` : "100%"}
+            minSize="0%"
+            collapsible
+            collapsedSize="0%"
+          >
+            <PreviewContent content={content} notePath={notePath} noteId={noteId} />
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     );
   },
