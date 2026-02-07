@@ -12,5 +12,17 @@
     "selectFolder": "选择工作区文件夹",
     "selectButton": "选择",
     "selectFailed": "选择工作区失败，请重试"
+  },
+  "welcome": {
+    "title": "开始使用",
+    "subtitle": "优雅的 Markdown 编辑器",
+    "openFolder": "打开文件夹",
+    "openFolderDesc": "选择一个文件夹作为工作区",
+    "openFile": "打开文件",
+    "openFileDesc": "打开一个 Markdown 文件",
+    "recentWorkspaces": "最近打开",
+    "noRecent": "暂无最近打开的工作区",
+    "openFolderFailed": "打开文件夹失败，请重试",
+    "openFileFailed": "打开文件失败，请重试"
   }
 }

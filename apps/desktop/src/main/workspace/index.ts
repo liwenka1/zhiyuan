@@ -3,8 +3,6 @@ import fs from "fs";
 import path from "path";
 import { configManager } from "../config";
 import { fileSystem } from "../file-system";
-import { DEFAULT_WORKSPACE_CONFIG } from "../constants/default-config";
-import { USER_GUIDE_CONTENT } from "../constants/guide-template";
 
 export interface FolderInfo {
   id: string;
@@ -47,6 +45,32 @@ export const workspaceManager = {
     // 保存到配置
     configManager.setWorkspacePath(selectedPath);
     return selectedPath;
+  },
+
+  /**
+   * 打开文件对话框，选择 .md 文件
+   * 返回选中文件的路径，并将其所在目录设为工作区
+   */
+  async openFile(options?: {
+    title?: string;
+    buttonLabel?: string;
+  }): Promise<{ filePath: string; workspacePath: string } | null> {
+    const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow()!, {
+      properties: ["openFile"],
+      title: options?.title || "Open File",
+      buttonLabel: options?.buttonLabel || "Open",
+      filters: [{ name: "Markdown", extensions: ["md"] }]
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return null;
+    }
+
+    const filePath = result.filePaths[0];
+    // 将文件所在目录作为工作区
+    const workspacePath = path.dirname(filePath);
+    configManager.setWorkspacePath(workspacePath);
+    return { filePath, workspacePath };
   },
 
   /**
@@ -157,42 +181,5 @@ export const workspaceManager = {
    */
   getRecentWorkspaces(): string[] {
     return configManager.getRecentWorkspaces();
-  },
-
-  /**
-   * 创建默认工作区
-   * 用于首次启动应用时初始化工作环境
-   */
-  async createDefaultWorkspace(): Promise<string> {
-    const workspacePath = DEFAULT_WORKSPACE_CONFIG.WORKSPACE_PATH;
-    const defaultFolderPath = path.join(workspacePath, DEFAULT_WORKSPACE_CONFIG.DEFAULT_FOLDER_NAME);
-    const guideFilePath = path.join(defaultFolderPath, DEFAULT_WORKSPACE_CONFIG.GUIDE_FILE_NAME);
-
-    // 1. 创建工作区根目录
-    await fs.promises.mkdir(workspacePath, { recursive: true });
-
-    // 2. 创建默认文件夹
-    await fs.promises.mkdir(defaultFolderPath, { recursive: true });
-
-    // 3. 创建用户指南文件
-    await fs.promises.writeFile(guideFilePath, USER_GUIDE_CONTENT, "utf-8");
-
-    // 4. 保存工作区路径到配置
-    configManager.setWorkspacePath(workspacePath);
-
-    return workspacePath;
-  },
-
-  /**
-   * 检查默认工作区是否存在
-   */
-  async checkDefaultWorkspaceExists(): Promise<boolean> {
-    try {
-      const workspacePath = DEFAULT_WORKSPACE_CONFIG.WORKSPACE_PATH;
-      await fs.promises.access(workspacePath);
-      return true;
-    } catch {
-      return false;
-    }
   }
 };

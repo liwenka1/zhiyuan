@@ -1,15 +1,20 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { NoteWorkspace } from "@/features/note-workspace";
-import { useThemeStore, useViewStore } from "@/stores";
+import { WelcomePage } from "@/features/welcome";
+import { useThemeStore, useViewStore, useWorkspaceStore } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/features/editor";
+import { workspaceIpc } from "@/ipc";
 
 function App(): React.JSX.Element {
   const initTheme = useThemeStore((state) => state.initTheme);
   const cleanup = useThemeStore((state) => state.cleanup);
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const [showPresentation, setShowPresentation] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // 初始化主题，组件卸载时清理监听器
   useEffect(() => {
@@ -18,6 +23,21 @@ function App(): React.JSX.Element {
       cleanup();
     };
   }, [initTheme, cleanup]);
+
+  // 检查是否有上次的工作区（快速判断，决定渲染哪个页面）
+  useEffect(() => {
+    workspaceIpc
+      .getCurrent()
+      .then((saved) => {
+        if (saved) {
+          setWorkspacePath(saved);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        setIsInitialized(true);
+      });
+  }, [setWorkspacePath]);
 
   // 阻止 Electron 默认的文件拖放导航行为
   useEffect(() => {
@@ -36,6 +56,21 @@ function App(): React.JSX.Element {
       document.removeEventListener("drop", handleDrop);
     };
   }, []);
+
+  // 初始化完成前不渲染（避免闪烁）
+  if (!isInitialized) {
+    return <div className="bg-background h-screen w-full" />;
+  }
+
+  // 没有工作区时显示欢迎页
+  if (!workspacePath) {
+    return (
+      <>
+        <WelcomePage />
+        <Toaster position="bottom-right" />
+      </>
+    );
+  }
 
   return (
     <>

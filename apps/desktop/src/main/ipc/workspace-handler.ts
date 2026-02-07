@@ -83,6 +83,19 @@ export function registerWorkspaceHandlers(): void {
     }
   });
 
+  // 打开文件
+  ipcMain.handle(
+    "workspace:openFile",
+    wrapIpcHandler(async (options?: { title?: string; buttonLabel?: string }) => {
+      const result = await workspaceManager.openFile(options);
+      if (result) {
+        // 启动文件监听
+        fileWatcher.startWatching(result.workspacePath);
+      }
+      return result;
+    }, "WORKSPACE_OPEN_FILE_FAILED")
+  );
+
   // 获取最近打开的工作区
   ipcMain.handle("workspace:getRecent", (): IpcResultDTO<string[]> => {
     try {
@@ -92,27 +105,6 @@ export function registerWorkspaceHandlers(): void {
       return ipcErr(message, "WORKSPACE_GET_RECENT_FAILED");
     }
   });
-
-  // 创建默认工作区
-  ipcMain.handle(
-    "workspace:createDefault",
-    wrapIpcHandler(async () => {
-      const workspacePath = await workspaceManager.createDefaultWorkspace();
-      if (workspacePath) {
-        // 启动文件监听
-        fileWatcher.startWatching(workspacePath);
-      }
-      return workspacePath;
-    }, "WORKSPACE_CREATE_DEFAULT_FAILED")
-  );
-
-  // 检查默认工作区是否存在
-  ipcMain.handle(
-    "workspace:checkDefaultExists",
-    wrapIpcHandler(async () => {
-      return await workspaceManager.checkDefaultWorkspaceExists();
-    }, "WORKSPACE_CHECK_DEFAULT_FAILED")
-  );
 
   // 读取文件（校验路径在工作区内）
   ipcMain.handle(
