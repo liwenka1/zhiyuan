@@ -67,15 +67,39 @@ function App(): React.JSX.Element {
     };
   }, [initTheme, cleanup]);
 
-  // 监听菜单「打开文件夹/文件」事件
+  // 监听菜单「打开文件夹/文件」事件（macOS 原生菜单 + Windows 自定义菜单栏）
   useEffect(() => {
     const unsubFolder = workspaceIpc.onMenuOpenFolder(handleMenuOpenFolder);
     const unsubFile = workspaceIpc.onMenuOpenFile(handleMenuOpenFile);
+
+    // Windows 自定义菜单栏通过 DOM 事件触发
+    const onDomOpenFolder = () => handleMenuOpenFolder();
+    const onDomOpenFile = () => handleMenuOpenFile();
+    window.addEventListener("app:menu-open-folder", onDomOpenFolder);
+    window.addEventListener("app:menu-open-file", onDomOpenFile);
+
     return () => {
       unsubFolder();
       unsubFile();
+      window.removeEventListener("app:menu-open-folder", onDomOpenFolder);
+      window.removeEventListener("app:menu-open-file", onDomOpenFile);
     };
   }, [handleMenuOpenFolder, handleMenuOpenFile]);
+
+  // Windows/Linux: Ctrl+O 打开文件夹
+  useEffect(() => {
+    const isMac = navigator.userAgent.toLowerCase().includes("mac");
+    if (isMac) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.key === "o") {
+        e.preventDefault();
+        handleMenuOpenFolder();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleMenuOpenFolder]);
 
   // 检查是否有上次的工作区（快速判断，决定渲染哪个页面）
   useEffect(() => {
