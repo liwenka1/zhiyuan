@@ -46,5 +46,23 @@ export const workspaceApi = {
   /**
    * 获取最近打开的工作区
    */
-  getRecent: (): Promise<IpcResultDTO<string[]>> => ipcRenderer.invoke("workspace:getRecent")
+  getRecent: (): Promise<IpcResultDTO<string[]>> => ipcRenderer.invoke("workspace:getRecent"),
+
+  /**
+   * 监听菜单「打开文件夹」事件
+   */
+  onMenuOpenFolder: (callback: () => void): (() => void) => {
+    const listener = () => callback();
+    ipcRenderer.on("menu:openFolder", listener);
+    return () => ipcRenderer.removeListener("menu:openFolder", listener);
+  },
+
+  /**
+   * 监听菜单「打开文件」事件
+   */
+  onMenuOpenFile: (callback: () => void): (() => void) => {
+    const listener = () => callback();
+    ipcRenderer.on("menu:openFile", listener);
+    return () => ipcRenderer.removeListener("menu:openFile", listener);
+  }
 };
