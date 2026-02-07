@@ -6,12 +6,17 @@ import type { Theme, ThemeMode, IpcResultDTO } from "@shared";
  */
 export interface ThemeAPI {
   /**
-   * 获取当前主题
+   * 获取当前实际生效的主题（light / dark）
    */
   get: () => Promise<IpcResultDTO<Theme>>;
 
   /**
-   * 设置主题
+   * 获取用户设置的主题模式（light / dark / system）
+   */
+  getMode: () => Promise<IpcResultDTO<ThemeMode>>;
+
+  /**
+   * 设置主题模式
    */
   set: (theme: ThemeMode) => Promise<IpcResultDTO<void>>;
 

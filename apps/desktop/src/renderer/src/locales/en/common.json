@@ -1,7 +1,8 @@
 {
   "theme": {
-    "light": "Light Mode",
-    "dark": "Dark Mode"
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   },
   "language": {
     "current": "English (Click to switch)",
@@ -12,6 +13,14 @@
     "selectFolder": "Select Workspace Folder",
     "selectButton": "Select",
     "selectFailed": "Failed to select workspace, please try again"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "theme": "Theme",
+    "language": "Language",
+    "about": "About",
+    "version": "Version"
   },
   "welcome": {
     "title": "Get Started",

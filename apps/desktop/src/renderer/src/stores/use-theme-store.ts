@@ -1,18 +1,20 @@
 import { create } from "zustand";
-import type { Theme } from "@shared";
+import type { Theme, ThemeMode } from "@shared";
 import { themeIpc } from "@/ipc";
 
 interface ThemeState {
-  // 当前主题（light/dark）
+  /** 当前实际生效的主题（light / dark） */
   theme: Theme;
+  /** 用户选择的主题模式（light / dark / system） */
+  themeMode: ThemeMode;
 
-  // 设置主题（异步同步到主进程）
-  setTheme: (theme: Theme) => Promise<void>;
-  // 切换主题
+  /** 设置主题模式（同步到主进程） */
+  setTheme: (mode: ThemeMode) => Promise<void>;
+  /** 切换主题（仅在 light/dark 之间切换，不含 system） */
   toggleTheme: () => void;
-  // 初始化主题（异步从主进程获取）
+  /** 初始化主题（异步从主进程获取） */
   initTheme: () => Promise<void>;
-  // 清理资源
+  /** 清理资源 */
   cleanup: () => void;
 }
 
@@ -46,19 +48,22 @@ const getSystemTheme = (): Theme => {
  * 时序：
  * 1. 主进程启动 -> ThemeManager.init() -> 从 electron-store 读取用户偏好
  * 2. 创建窗口 -> 使用正确的背景色（无白色闪烁）
- * 3. 渲染进程加载 -> initTheme() -> 从主进程获取当前主题
+ * 3. 渲染进程加载 -> initTheme() -> 从主进程获取当前主题 + 模式
  * 4. 用户切换主题 -> setTheme() -> 同步到主进程 -> 主进程持久化 + 通知所有窗口
  */
 export const useThemeStore = create<ThemeState>((set, get) => ({
   theme: "light",
+  themeMode: "system",
 
-  setTheme: async (theme: Theme) => {
+  setTheme: async (mode: ThemeMode) => {
     // 1. 立即更新本地状态（响应快）
-    set({ theme });
-    applyThemeToDocument(theme);
+    // 预测实际主题：system 模式使用系统主题，否则直接使用指定值
+    const resolvedTheme: Theme = mode === "system" ? getSystemTheme() : mode;
+    set({ themeMode: mode, theme: resolvedTheme });
+    applyThemeToDocument(resolvedTheme);
 
     // 2. 同步到主进程（持久化 + 通知其他窗口）
-    await themeIpc.set(theme).catch(() => {});
+    await themeIpc.set(mode).catch(() => {});
   },
 
   toggleTheme: () => {
@@ -71,14 +76,11 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
       // 先清理旧的监听器（防止重复监听）
       unsubscribeThemeChange?.();
 
-      // 从主进程获取当前主题
-      // 主进程会自动处理：
-      // - 用户手动设置的主题（从 electron-store 读取）
-      // - 或系统主题（如果用户没有设置）
-      const theme = await themeIpc.get();
+      // 从主进程获取当前主题和模式
+      const [theme, themeMode] = await Promise.all([themeIpc.get(), themeIpc.getMode()]);
 
       // 更新状态并应用到 document
-      set({ theme });
+      set({ theme, themeMode });
       applyThemeToDocument(theme);
 
       // 监听主进程的主题变化
@@ -92,7 +94,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     } catch {
       // 出错时回退到系统主题
       const systemTheme = getSystemTheme();
-      set({ theme: systemTheme });
+      set({ theme: systemTheme, themeMode: "system" });
       applyThemeToDocument(systemTheme);
     }
   },

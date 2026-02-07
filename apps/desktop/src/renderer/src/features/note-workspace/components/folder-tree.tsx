@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
 import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
-import { ThemeToggle, LanguageToggle, WorkspaceToggle } from "@/components/app";
+import { SettingsPopover } from "@/components/app";
 import { useTranslation } from "react-i18next";
 import { useRef } from "react";
 import { useViewStore } from "@/stores";
@@ -190,11 +190,9 @@ export function FolderTree({
         </div>
       </ScrollArea>
 
-      {/* 底部全局设置按钮 */}
-      <div className="border-divider flex h-12 shrink-0 items-center justify-center gap-2 border-t px-3">
-        <WorkspaceToggle />
-        <ThemeToggle />
-        <LanguageToggle />
+      {/* 底部设置 */}
+      <div className="border-divider flex h-12 shrink-0 items-center justify-center border-t px-3">
+        <SettingsPopover />
       </div>
     </div>
   );

@@ -15,6 +15,14 @@ export function registerThemeHandlers(): void {
     }, "THEME_GET_FAILED")
   );
 
+  // 获取主题模式（用户偏好：light / dark / system）
+  ipcMain.handle(
+    "theme:getMode",
+    wrapIpcHandler(async () => {
+      return themeManager.getMode();
+    }, "THEME_GET_MODE_FAILED")
+  );
+
   // 设置主题
   ipcMain.handle(
     "theme:set",
@@ -30,5 +38,6 @@ export function registerThemeHandlers(): void {
  */
 export function unregisterThemeHandlers(): void {
   ipcMain.removeHandler("theme:get");
+  ipcMain.removeHandler("theme:getMode");
   ipcMain.removeHandler("theme:set");
 }
