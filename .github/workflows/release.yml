@@ -9,12 +9,8 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+  build:
+    runs-on: ubuntu-latest
 
     steps:
       - name: Check out Git repository
@@ -35,26 +31,55 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build desktop app
-        working-directory: apps/desktop
-        run: pnpm run build
-        
-      - name: Publish to GitHub Releases (macOS)
-        if: matrix.os == 'macos-latest'
-        working-directory: apps/desktop
-        run: pnpm exec electron-builder --mac --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm --filter zhiyuan build
 
-      - name: Publish to GitHub Releases (Windows)
-        if: matrix.os == 'windows-latest'
-        working-directory: apps/desktop
-        run: pnpm exec electron-builder --win --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-build
+          path: apps/desktop/out/
 
-      - name: Publish to GitHub Releases (Linux)
-        if: matrix.os == 'ubuntu-latest'
-        working-directory: apps/desktop
-        run: pnpm exec electron-builder --linux --publish always
+  publish:
+    needs: build
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            build_flag: --mac
+          - os: ubuntu-latest
+            build_flag: --linux
+          - os: windows-latest
+            build_flag: --win
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-build
+          path: apps/desktop/out/
+
+      - name: Package and publish
+        run: |
+          cd apps/desktop
+          npx electron-builder ${{ matrix.build_flag }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
