@@ -39,24 +39,18 @@ jobs:
         
       - name: Publish to GitHub Releases (macOS)
         if: matrix.os == 'macos-latest'
-        run: |
-          cd apps/desktop
-          npx electron-builder --mac --publish always
+        run: pnpm --filter desktop exec electron-builder --mac --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Releases (Windows)
         if: matrix.os == 'windows-latest'
-        run: |
-          cd apps/desktop
-          npx electron-builder --win --publish always
+        run: pnpm --filter desktop exec electron-builder --win --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Releases (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: |
-          cd apps/desktop
-          npx electron-builder --linux --publish always
+        run: pnpm --filter desktop exec electron-builder --linux --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
