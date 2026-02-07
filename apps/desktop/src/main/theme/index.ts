@@ -52,6 +52,13 @@ class ThemeManager {
   }
 
   /**
+   * 获取用户设置的主题模式（light / dark / system）
+   */
+  getMode(): ThemeMode {
+    return configManager.getTheme();
+  }
+
+  /**
    * 设置主题
    * @param theme ThemeMode
    */
