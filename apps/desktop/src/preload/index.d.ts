@@ -93,6 +93,11 @@ export interface WindowAPI {
    * 获取窗口全屏状态
    */
   isFullScreen: () => Promise<IpcResultDTO<boolean>>;
+
+  /**
+   * 新建窗口（显示欢迎页）
+   */
+  newWindow: () => Promise<IpcResultDTO<void>>;
 }
 
 // 导出 API 接口

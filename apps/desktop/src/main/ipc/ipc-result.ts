@@ -60,3 +60,32 @@ export function wrapIpcHandler<TArgs extends unknown[], TResult>(
     }
   };
 }
+
+/**
+ * 包装异步函数（需要访问 event），自动处理错误
+ * @param fn 异步函数，第一个参数为 event
+ * @param errorCode 默认错误代码
+ *
+ * @example
+ * ipcMain.handle("workspace:select", wrapIpcHandlerWithEvent(
+ *   async (event, options) => {
+ *     const win = BrowserWindow.fromWebContents(event.sender);
+ *     // ...
+ *   },
+ *   "WORKSPACE_SELECT_FAILED"
+ * ));
+ */
+export function wrapIpcHandlerWithEvent<TArgs extends unknown[], TResult>(
+  fn: (event: Electron.IpcMainInvokeEvent, ...args: TArgs) => Promise<TResult>,
+  errorCode = "UNKNOWN_ERROR"
+): (event: Electron.IpcMainInvokeEvent, ...args: TArgs) => Promise<IpcResultDTO<TResult>> {
+  return async (event: Electron.IpcMainInvokeEvent, ...args: TArgs): Promise<IpcResultDTO<TResult>> => {
+    try {
+      const result = await fn(event, ...args);
+      return ipcOk(result);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, errorCode, error);
+    }
+  };
+}

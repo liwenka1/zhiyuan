@@ -1,19 +1,21 @@
-import { ipcMain, shell } from "electron";
+import { ipcMain, shell, BrowserWindow } from "electron";
 import { workspaceManager } from "../workspace";
 import { fileSystem } from "../file-system";
-import { fileWatcher } from "../file-watcher";
+import { fileWatcherManager } from "../file-watcher";
+import { windowManager } from "../window-manager";
 import { configManager } from "../config";
 import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
 import { validatePathInWorkspace } from "../security/path-validator";
-import { wrapIpcHandler, ipcOk, ipcErr } from "./ipc-result";
+import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "./ipc-result";
 import type { IpcResultDTO } from "@shared";
 
 /**
- * 校验文件路径是否在当前工作区内
- * 如果不在工作区内，抛出错误
+ * 校验文件路径是否在当前窗口的工作区内
+ * 通过 event.sender 获取窗口绑定的工作区路径
  */
-function assertPathInWorkspace(filePath: string, operation: string): void {
-  const workspacePath = workspaceManager.getCurrentWorkspace();
+function assertPathInWorkspace(event: Electron.IpcMainInvokeEvent, filePath: string, operation: string): void {
+  const entry = windowManager.getEntryByWebContents(event.sender);
+  const workspacePath = entry?.workspacePath;
   if (!workspacePath) {
     throw new Error("No workspace selected");
   }
@@ -25,26 +27,44 @@ function assertPathInWorkspace(filePath: string, operation: string): void {
 }
 
 /**
+ * 从 event 获取调用窗口的 BrowserWindow 实例，找不到则抛出错误
+ */
+function getCallerWindow(event: Electron.IpcMainInvokeEvent): BrowserWindow {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win) {
+    throw new Error("Cannot resolve caller window");
+  }
+  return win;
+}
+
+/**
  * 注册工作区和文件系统相关的 IPC 处理器
  */
 export function registerWorkspaceHandlers(): void {
   // 选择工作区
   ipcMain.handle(
     "workspace:select",
-    wrapIpcHandler(async (options?: { title?: string; buttonLabel?: string }) => {
-      const workspacePath = await workspaceManager.selectWorkspace(options);
+    wrapIpcHandlerWithEvent(async (event, options?: { title?: string; buttonLabel?: string }) => {
+      const win = getCallerWindow(event);
+      const workspacePath = await workspaceManager.selectWorkspace(win, options);
       if (workspacePath) {
-        // 启动文件监听
-        fileWatcher.startWatching(workspacePath);
+        // 如果其他窗口已打开该工作区，聚焦过去，当前窗口不变
+        if (windowManager.focusExistingWindow(workspacePath, win.id)) {
+          return null;
+        }
+        // 绑定工作区到当前窗口，并启动文件监听
+        windowManager.setWorkspacePath(win.id, workspacePath);
+        fileWatcherManager.startWatching(workspacePath, win.id);
       }
       return workspacePath;
     }, "WORKSPACE_SELECT_FAILED")
   );
 
-  // 获取当前工作区
-  ipcMain.handle("workspace:getCurrent", (): IpcResultDTO<string | null> => {
+  // 获取当前窗口的工作区
+  ipcMain.handle("workspace:getCurrent", (event): IpcResultDTO<string | null> => {
     try {
-      return ipcOk(workspaceManager.getCurrentWorkspace());
+      const entry = windowManager.getEntryByWebContents(event.sender);
+      return ipcOk(entry?.workspacePath ?? null);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return ipcErr(message, "WORKSPACE_GET_CURRENT_FAILED");
@@ -54,17 +74,26 @@ export function registerWorkspaceHandlers(): void {
   // 扫描工作区
   ipcMain.handle(
     "workspace:scan",
-    wrapIpcHandler(async (workspacePath: string) => {
-      // 扫描工作区时也启动文件监听
-      fileWatcher.startWatching(workspacePath);
+    wrapIpcHandlerWithEvent(async (event, workspacePath: string) => {
+      const win = getCallerWindow(event);
+      // 如果其他窗口已打开该工作区，聚焦过去，当前窗口返回 null
+      if (windowManager.focusExistingWindow(workspacePath, win.id)) {
+        return null;
+      }
+      // 绑定工作区到当前窗口，并启动文件监听
+      windowManager.setWorkspacePath(win.id, workspacePath);
+      fileWatcherManager.startWatching(workspacePath, win.id);
       return await workspaceManager.scanWorkspace(workspacePath);
     }, "WORKSPACE_SCAN_FAILED")
   );
 
   // 暂停文件监听
-  ipcMain.handle("watcher:pause", (): IpcResultDTO<void> => {
+  ipcMain.handle("watcher:pause", (event): IpcResultDTO<void> => {
     try {
-      fileWatcher.pauseWatching();
+      const entry = windowManager.getEntryByWebContents(event.sender);
+      if (entry?.workspacePath) {
+        fileWatcherManager.pauseWatching(entry.workspacePath);
+      }
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -73,9 +102,12 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 恢复文件监听
-  ipcMain.handle("watcher:resume", (): IpcResultDTO<void> => {
+  ipcMain.handle("watcher:resume", (event): IpcResultDTO<void> => {
     try {
-      fileWatcher.resumeWatching();
+      const entry = windowManager.getEntryByWebContents(event.sender);
+      if (entry?.workspacePath) {
+        fileWatcherManager.resumeWatching(entry.workspacePath);
+      }
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -86,11 +118,17 @@ export function registerWorkspaceHandlers(): void {
   // 打开文件
   ipcMain.handle(
     "workspace:openFile",
-    wrapIpcHandler(async (options?: { title?: string; buttonLabel?: string }) => {
-      const result = await workspaceManager.openFile(options);
+    wrapIpcHandlerWithEvent(async (event, options?: { title?: string; buttonLabel?: string }) => {
+      const win = getCallerWindow(event);
+      const result = await workspaceManager.openFile(win, options);
       if (result) {
-        // 启动文件监听
-        fileWatcher.startWatching(result.workspacePath);
+        // 如果其他窗口已打开该工作区，聚焦过去，当前窗口不变
+        if (windowManager.focusExistingWindow(result.workspacePath, win.id)) {
+          return null;
+        }
+        // 绑定工作区到当前窗口，并启动文件监听
+        windowManager.setWorkspacePath(win.id, result.workspacePath);
+        fileWatcherManager.startWatching(result.workspacePath, win.id);
       }
       return result;
     }, "WORKSPACE_OPEN_FILE_FAILED")
@@ -109,8 +147,8 @@ export function registerWorkspaceHandlers(): void {
   // 读取文件（校验路径在工作区内）
   ipcMain.handle(
     "file:read",
-    wrapIpcHandler(async (filePath: string) => {
-      assertPathInWorkspace(filePath, "file:read");
+    wrapIpcHandlerWithEvent(async (event, filePath: string) => {
+      assertPathInWorkspace(event, filePath, "file:read");
       return await fileSystem.readFile(filePath);
     }, "FILE_READ_FAILED")
   );
@@ -118,8 +156,8 @@ export function registerWorkspaceHandlers(): void {
   // 写入文件（校验路径在工作区内）
   ipcMain.handle(
     "file:write",
-    wrapIpcHandler(async (filePath: string, content: string) => {
-      assertPathInWorkspace(filePath, "file:write");
+    wrapIpcHandlerWithEvent(async (event, filePath: string, content: string) => {
+      assertPathInWorkspace(event, filePath, "file:write");
       return await fileSystem.writeFile(filePath, content);
     }, "FILE_WRITE_FAILED")
   );
@@ -127,8 +165,8 @@ export function registerWorkspaceHandlers(): void {
   // 创建文件（校验路径在工作区内）
   ipcMain.handle(
     "file:create",
-    wrapIpcHandler(async (filePath: string, content: string) => {
-      assertPathInWorkspace(filePath, "file:create");
+    wrapIpcHandlerWithEvent(async (event, filePath: string, content: string) => {
+      assertPathInWorkspace(event, filePath, "file:create");
       return await fileSystem.createFile(filePath, content);
     }, "FILE_CREATE_FAILED")
   );
@@ -136,8 +174,8 @@ export function registerWorkspaceHandlers(): void {
   // 删除文件（校验路径在工作区内）
   ipcMain.handle(
     "file:delete",
-    wrapIpcHandler(async (filePath: string) => {
-      assertPathInWorkspace(filePath, "file:delete");
+    wrapIpcHandlerWithEvent(async (event, filePath: string) => {
+      assertPathInWorkspace(event, filePath, "file:delete");
       return await fileSystem.deleteFile(filePath);
     }, "FILE_DELETE_FAILED")
   );
@@ -145,9 +183,9 @@ export function registerWorkspaceHandlers(): void {
   // 重命名文件（校验源路径和目标路径都在工作区内）
   ipcMain.handle(
     "file:rename",
-    wrapIpcHandler(async (oldPath: string, newPath: string) => {
-      assertPathInWorkspace(oldPath, "file:rename (source)");
-      assertPathInWorkspace(newPath, "file:rename (dest)");
+    wrapIpcHandlerWithEvent(async (event, oldPath: string, newPath: string) => {
+      assertPathInWorkspace(event, oldPath, "file:rename (source)");
+      assertPathInWorkspace(event, newPath, "file:rename (dest)");
       return await fileSystem.renameFile(oldPath, newPath);
     }, "FILE_RENAME_FAILED")
   );
@@ -155,9 +193,9 @@ export function registerWorkspaceHandlers(): void {
   // 复制文件（校验源路径和目标路径都在工作区内）
   ipcMain.handle(
     "file:copy",
-    wrapIpcHandler(async (sourcePath: string, destPath: string) => {
-      assertPathInWorkspace(sourcePath, "file:copy (source)");
-      assertPathInWorkspace(destPath, "file:copy (dest)");
+    wrapIpcHandlerWithEvent(async (event, sourcePath: string, destPath: string) => {
+      assertPathInWorkspace(event, sourcePath, "file:copy (source)");
+      assertPathInWorkspace(event, destPath, "file:copy (dest)");
       return await fileSystem.copyFile(sourcePath, destPath);
     }, "FILE_COPY_FAILED")
   );
@@ -165,8 +203,8 @@ export function registerWorkspaceHandlers(): void {
   // 创建文件夹（校验路径在工作区内）
   ipcMain.handle(
     "folder:create",
-    wrapIpcHandler(async (folderPath: string) => {
-      assertPathInWorkspace(folderPath, "folder:create");
+    wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
+      assertPathInWorkspace(event, folderPath, "folder:create");
       return await fileSystem.createFolder(folderPath);
     }, "FOLDER_CREATE_FAILED")
   );
@@ -174,8 +212,8 @@ export function registerWorkspaceHandlers(): void {
   // 删除文件夹（校验路径在工作区内）
   ipcMain.handle(
     "folder:delete",
-    wrapIpcHandler(async (folderPath: string) => {
-      assertPathInWorkspace(folderPath, "folder:delete");
+    wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
+      assertPathInWorkspace(event, folderPath, "folder:delete");
       return await fileSystem.deleteFolder(folderPath);
     }, "FOLDER_DELETE_FAILED")
   );
@@ -183,9 +221,9 @@ export function registerWorkspaceHandlers(): void {
   // 重命名文件夹（校验源路径和目标路径都在工作区内）
   ipcMain.handle(
     "folder:rename",
-    wrapIpcHandler(async (oldPath: string, newPath: string) => {
-      assertPathInWorkspace(oldPath, "folder:rename (source)");
-      assertPathInWorkspace(newPath, "folder:rename (dest)");
+    wrapIpcHandlerWithEvent(async (event, oldPath: string, newPath: string) => {
+      assertPathInWorkspace(event, oldPath, "folder:rename (source)");
+      assertPathInWorkspace(event, newPath, "folder:rename (dest)");
       return await fileSystem.renameFolder(oldPath, newPath);
     }, "FOLDER_RENAME_FAILED")
   );
@@ -206,7 +244,6 @@ export function registerWorkspaceHandlers(): void {
     "shell:openPath",
     wrapIpcHandler(async (fullPath: string) => {
       const errorMessage = await shell.openPath(fullPath);
-      // shell.openPath 返回空字符串表示成功，否则返回错误信息
       if (errorMessage) {
         throw new Error(errorMessage);
       }
@@ -217,7 +254,6 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle(
     "shell:openExternal",
     wrapIpcHandler(async (url: string) => {
-      // 安全检查：只允许安全的协议打开外部链接
       if (!isSafeUrl(url)) {
         const protocol = getRejectedProtocol(url);
         throw new Error(`Unsafe URL protocol: ${protocol}`);

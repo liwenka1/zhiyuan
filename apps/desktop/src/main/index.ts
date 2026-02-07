@@ -1,6 +1,5 @@
-import { app, shell, BrowserWindow, screen, protocol, net } from "electron";
-import { join } from "path";
-import { electronApp, optimizer, is } from "@electron-toolkit/utils";
+import { app, BrowserWindow, ipcMain, protocol, net } from "electron";
+import { electronApp, optimizer } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { themeManager } from "./theme";
 import { registerThemeHandlers } from "./ipc/theme-handler";
@@ -9,99 +8,11 @@ import { registerExportHandlers } from "./ipc/export-handler";
 import { registerWindowHandlers } from "./ipc/window-handler";
 import { registerRssHandlers } from "./ipc/rss-handler";
 import { registerUrlHandlers } from "./ipc/url-handler";
-import { pathToFileURL } from "url";
-import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
-import { isSafeUrl } from "./security/url-validator";
+import { windowManager } from "./window-manager";
 import { setupApplicationMenu } from "./menu";
-
-function createWindow(): void {
-  // 获取当前主题对应的背景色
-  const getBackgroundColor = (): string => {
-    const theme = themeManager.getTheme();
-    return getThemeBackgroundColor(theme);
-  };
-
-  // 获取标题栏覆盖层配置（用于 Windows）
-  const getTitleBarOverlay = () => {
-    const theme = themeManager.getTheme();
-    return {
-      color: getThemeBackgroundColor(theme),
-      symbolColor: getThemeForegroundColor(theme),
-      height: 32
-    };
-  };
-
-  // 计算窗口初始位置
-  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
-  const windowWidth = 1280;
-  const windowHeight = 752;
-  const x = Math.round((screenWidth - windowWidth) / 2);
-  const y = Math.round(screenHeight * 0.15);
-
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
-    minWidth: 1000,
-    minHeight: 600,
-    x: x,
-    y: y,
-    show: false,
-    autoHideMenuBar: true,
-    backgroundColor: getBackgroundColor(),
-    // macOS: 隐藏标题栏但保留红黄绿按钮
-    ...(process.platform === "darwin"
-      ? {
-          titleBarStyle: "hidden"
-        }
-      : {}),
-    // Windows: 使用 titleBarOverlay 自定义标题栏颜色，不显示图标
-    ...(process.platform === "win32"
-      ? {
-          titleBarStyle: "hidden",
-          titleBarOverlay: getTitleBarOverlay()
-        }
-      : {}),
-    icon,
-    webPreferences: {
-      preload: join(__dirname, "../preload/index.cjs"),
-      sandbox: true, // 启用沙盒，提升安全性
-      contextIsolation: true, // 启用上下文隔离（默认值，显式声明）
-      nodeIntegration: false // 禁用 Node.js 集成（默认值，显式声明）
-    }
-  });
-
-  mainWindow.on("ready-to-show", () => {
-    mainWindow.show();
-  });
-
-  mainWindow.webContents.setWindowOpenHandler((details) => {
-    // 安全检查：只允许安全的协议打开外部链接
-    if (isSafeUrl(details.url)) {
-      shell.openExternal(details.url);
-    }
-    return { action: "deny" };
-  });
-
-  // 监听主题变化，动态更新窗口背景色和标题栏
-  mainWindow.webContents.on("ipc-message", (_event, channel) => {
-    if (channel === "theme:changed") {
-      mainWindow.setBackgroundColor(getBackgroundColor());
-      // Windows: 动态更新标题栏颜色
-      if (process.platform === "win32") {
-        mainWindow.setTitleBarOverlay(getTitleBarOverlay());
-      }
-    }
-  });
-
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
-  if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
-  } else {
-    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
-  }
-}
+import { pathToFileURL } from "url";
+import { ipcOk, ipcErr } from "./ipc/ipc-result";
+import type { IpcResultDTO } from "@shared";
 
 // 注册自定义协议用于加载本地资源（支持中文路径）
 // 必须在 app.whenReady() 之前调用
@@ -191,12 +102,26 @@ app.whenReady().then(() => {
   // 注册 URL 相关的 IPC 处理器
   registerUrlHandlers();
 
-  createWindow();
+  // 注册新建窗口 IPC
+  ipcMain.handle("window:new", (): IpcResultDTO<void> => {
+    try {
+      windowManager.createWindow();
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "WINDOW_NEW_FAILED");
+    }
+  });
+
+  // 创建第一个窗口
+  windowManager.createWindow();
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      windowManager.createWindow();
+    }
   });
 });
 

@@ -2,202 +2,171 @@ import chokidar, { FSWatcher } from "chokidar";
 import { BrowserWindow } from "electron";
 import path from "path";
 
+interface WatcherEntry {
+  watcher: FSWatcher;
+  windowIds: Set<number>;
+  isPaused: boolean;
+}
+
 /**
- * 文件监听器
+ * 文件监听管理器
+ * 支持多工作区监听，按工作区做引用计数，精准路由事件到相关窗口
  */
-class FileWatcher {
-  private watcher: FSWatcher | null = null;
-  private workspacePath: string | null = null;
-  private isPaused = false;
+class FileWatcherManager {
+  private watchers: Map<string, WatcherEntry> = new Map();
 
   /**
-   * 开始监听工作区
+   * 开始监听工作区（为指定窗口注册）
+   * 相同工作区只创建一个 chokidar watcher，引用计数追踪窗口
    */
-  startWatching(workspacePath: string): void {
-    // 如果已经在监听，先停止
-    this.stopWatching();
+  startWatching(workspacePath: string, windowId: number): void {
+    const existing = this.watchers.get(workspacePath);
+    if (existing) {
+      // 工作区已有 watcher，只添加窗口引用
+      existing.windowIds.add(windowId);
+      return;
+    }
 
-    this.workspacePath = workspacePath;
-
-    // 只监听 .md 文件和第一层目录
-    // 使用 glob 模式精确匹配，大幅减少监听范围
+    // 创建新的 watcher
     const watchPatterns = [
-      path.join(workspacePath, "*.md"), // 根目录的 .md 文件
-      path.join(workspacePath, "*/*.md"), // 一级子目录的 .md 文件
-      path.join(workspacePath, "*") // 一级子目录（用于监听文件夹增删）
+      path.join(workspacePath, "*.md"),
+      path.join(workspacePath, "*/*.md"),
+      path.join(workspacePath, "*")
     ];
 
-    this.watcher = chokidar.watch(watchPatterns, {
+    const watcher = chokidar.watch(watchPatterns, {
       ignoreInitial: true,
       persistent: true,
       awaitWriteFinish: {
         stabilityThreshold: 100,
         pollInterval: 50
       },
-      // 忽略隐藏文件/目录
       ignored: /(^|[/\\])\../,
-      depth: 0 // 不递归，因为 glob 模式已经指定了层级
+      depth: 0
     });
 
+    const entry: WatcherEntry = {
+      watcher,
+      windowIds: new Set([windowId]),
+      isPaused: false
+    };
+
     // 文件修改事件
-    this.watcher.on("change", (filePath: string) => {
-      if (this.isPaused) return;
-      this.handleFileChange(filePath);
+    watcher.on("change", (filePath: string) => {
+      if (entry.isPaused) return;
+      if (!filePath.endsWith(".md")) return;
+
+      const relativePath = path.relative(workspacePath, filePath);
+      this.broadcastToWorkspace(workspacePath, "file:changed", {
+        filePath: relativePath,
+        fullPath: filePath
+      });
     });
 
     // 文件添加事件
-    this.watcher.on("add", (filePath: string) => {
-      if (this.isPaused) return;
-      this.handleFileAdd(filePath);
+    watcher.on("add", (filePath: string) => {
+      if (entry.isPaused) return;
+      if (!filePath.endsWith(".md")) return;
+
+      const relativePath = path.relative(workspacePath, filePath);
+      this.broadcastToWorkspace(workspacePath, "file:added", {
+        filePath: relativePath,
+        fullPath: filePath
+      });
     });
 
     // 文件删除事件
-    this.watcher.on("unlink", (filePath: string) => {
-      if (this.isPaused) return;
-      this.handleFileDelete(filePath);
+    watcher.on("unlink", (filePath: string) => {
+      if (entry.isPaused) return;
+      if (!filePath.endsWith(".md")) return;
+
+      const relativePath = path.relative(workspacePath, filePath);
+      this.broadcastToWorkspace(workspacePath, "file:deleted", {
+        filePath: relativePath,
+        fullPath: filePath
+      });
     });
 
     // 文件夹添加事件
-    this.watcher.on("addDir", (dirPath: string) => {
-      if (this.isPaused) return;
-      this.handleFolderAdd(dirPath);
+    watcher.on("addDir", (dirPath: string) => {
+      if (entry.isPaused) return;
+
+      const relativePath = path.relative(workspacePath, dirPath);
+      if (!relativePath || relativePath === ".") return;
+
+      this.broadcastToWorkspace(workspacePath, "folder:added", {
+        folderPath: relativePath,
+        fullPath: dirPath
+      });
     });
 
     // 文件夹删除事件
-    this.watcher.on("unlinkDir", (dirPath: string) => {
-      if (this.isPaused) return;
-      this.handleFolderDelete(dirPath);
+    watcher.on("unlinkDir", (dirPath: string) => {
+      if (entry.isPaused) return;
+
+      const relativePath = path.relative(workspacePath, dirPath);
+      if (!relativePath || relativePath === ".") return;
+
+      this.broadcastToWorkspace(workspacePath, "folder:deleted", {
+        folderPath: relativePath,
+        fullPath: dirPath
+      });
     });
+
+    this.watchers.set(workspacePath, entry);
   }
 
   /**
-   * 停止监听
+   * 停止监听工作区（为指定窗口解除注册）
+   * 引用为 0 时销毁 watcher
    */
-  stopWatching(): void {
-    if (this.watcher) {
-      this.watcher.close();
-      this.watcher = null;
-      this.workspacePath = null;
-      this.isPaused = false;
-    }
-  }
+  stopWatching(workspacePath: string, windowId: number): void {
+    const entry = this.watchers.get(workspacePath);
+    if (!entry) return;
 
-  pauseWatching(): void {
-    this.isPaused = true;
-  }
+    entry.windowIds.delete(windowId);
 
-  resumeWatching(): void {
-    this.isPaused = false;
-  }
-
-  /**
-   * 处理文件修改
-   */
-  private handleFileChange(filePath: string): void {
-    if (!this.workspacePath) return;
-
-    // 只处理 .md 文件
-    if (!filePath.endsWith(".md")) return;
-
-    const relativePath = path.relative(this.workspacePath, filePath);
-
-    // 通知渲染进程
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].webContents.send("file:changed", {
-        filePath: relativePath,
-        fullPath: filePath
-      });
+    // 没有窗口引用了，销毁 watcher
+    if (entry.windowIds.size === 0) {
+      entry.watcher.close();
+      this.watchers.delete(workspacePath);
     }
   }
 
   /**
-   * 处理文件添加
+   * 暂停指定工作区的文件监听
    */
-  private handleFileAdd(filePath: string): void {
-    if (!this.workspacePath) return;
-
-    // 只处理 .md 文件
-    if (!filePath.endsWith(".md")) return;
-
-    const relativePath = path.relative(this.workspacePath, filePath);
-
-    // 通知渲染进程
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].webContents.send("file:added", {
-        filePath: relativePath,
-        fullPath: filePath
-      });
+  pauseWatching(workspacePath: string): void {
+    const entry = this.watchers.get(workspacePath);
+    if (entry) {
+      entry.isPaused = true;
     }
   }
 
   /**
-   * 处理文件删除
+   * 恢复指定工作区的文件监听
    */
-  private handleFileDelete(filePath: string): void {
-    if (!this.workspacePath) return;
-
-    // 只处理 .md 文件
-    if (!filePath.endsWith(".md")) return;
-
-    const relativePath = path.relative(this.workspacePath, filePath);
-
-    // 通知渲染进程
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].webContents.send("file:deleted", {
-        filePath: relativePath,
-        fullPath: filePath
-      });
+  resumeWatching(workspacePath: string): void {
+    const entry = this.watchers.get(workspacePath);
+    if (entry) {
+      entry.isPaused = false;
     }
   }
 
   /**
-   * 处理文件夹添加
+   * 广播事件到绑定了指定工作区的所有窗口
    */
-  private handleFolderAdd(dirPath: string): void {
-    if (!this.workspacePath) return;
+  private broadcastToWorkspace(workspacePath: string, channel: string, data: unknown): void {
+    const entry = this.watchers.get(workspacePath);
+    if (!entry) return;
 
-    const relativePath = path.relative(this.workspacePath, dirPath);
-
-    // 忽略工作区根目录
-    if (!relativePath || relativePath === ".") {
-      return;
-    }
-
-    // 通知渲染进程
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].webContents.send("folder:added", {
-        folderPath: relativePath,
-        fullPath: dirPath
-      });
-    }
-  }
-
-  /**
-   * 处理文件夹删除
-   */
-  private handleFolderDelete(dirPath: string): void {
-    if (!this.workspacePath) return;
-
-    const relativePath = path.relative(this.workspacePath, dirPath);
-
-    // 忽略工作区根目录
-    if (!relativePath || relativePath === ".") {
-      return;
-    }
-
-    // 通知渲染进程
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].webContents.send("folder:deleted", {
-        folderPath: relativePath,
-        fullPath: dirPath
-      });
+    for (const windowId of entry.windowIds) {
+      const win = BrowserWindow.fromId(windowId);
+      if (win && !win.isDestroyed()) {
+        win.webContents.send(channel, data);
+      }
     }
   }
 }
 
-export const fileWatcher = new FileWatcher();
+export const fileWatcherManager = new FileWatcherManager();
