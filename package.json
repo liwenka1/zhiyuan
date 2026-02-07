@@ -20,7 +20,8 @@
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "typecheck": "pnpm --filter \"./apps/*\" typecheck",
     "typecheck:desktop": "pnpm --filter desktop typecheck",
-    "typecheck:landing": "pnpm --filter landing typecheck"
+    "typecheck:landing": "pnpm --filter landing typecheck",
+    "release:desktop": "pnpm --filter desktop release"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
