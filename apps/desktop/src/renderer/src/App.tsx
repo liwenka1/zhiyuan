@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { NoteWorkspace } from "@/features/note-workspace";
 import { WelcomePage } from "@/features/welcome";
-import { useThemeStore, useViewStore, useWorkspaceStore } from "@/stores";
+import { useThemeStore, useViewStore, useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/features/editor";
 import { workspaceIpc } from "@/ipc";
@@ -13,8 +13,51 @@ function App(): React.JSX.Element {
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
+  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
+  const selectNote = useNoteStore((state) => state.selectNote);
+  const setFolders = useFolderStore((state) => state.setFolders);
   const [showPresentation, setShowPresentation] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // 打开文件夹（菜单触发）
+  const handleMenuOpenFolder = useCallback(async () => {
+    try {
+      const selectedPath = await workspaceIpc.select();
+      if (!selectedPath) return;
+
+      const data = await workspaceIpc.scan(selectedPath);
+      if (!data) return;
+
+      setWorkspacePath(selectedPath);
+      setFolders(data.folders);
+      loadFromFileSystem(data);
+    } catch {
+      /* 静默处理 */
+    }
+  }, [setWorkspacePath, setFolders, loadFromFileSystem]);
+
+  // 打开文件（菜单触发）
+  const handleMenuOpenFile = useCallback(async () => {
+    try {
+      const result = await workspaceIpc.openFile();
+      if (!result) return;
+
+      const data = await workspaceIpc.scan(result.workspacePath);
+      if (!data) return;
+
+      setWorkspacePath(result.workspacePath);
+      setFolders(data.folders);
+      loadFromFileSystem(data);
+
+      const fileName = result.filePath.split("/").pop() || "";
+      const targetNote = data.notes.find((n) => n.fileName === fileName);
+      if (targetNote) {
+        setTimeout(() => selectNote(targetNote.id), 0);
+      }
+    } catch {
+      /* 静默处理 */
+    }
+  }, [setWorkspacePath, setFolders, loadFromFileSystem, selectNote]);
 
   // 初始化主题，组件卸载时清理监听器
   useEffect(() => {
@@ -23,6 +66,16 @@ function App(): React.JSX.Element {
       cleanup();
     };
   }, [initTheme, cleanup]);
+
+  // 监听菜单「打开文件夹/文件」事件
+  useEffect(() => {
+    const unsubFolder = workspaceIpc.onMenuOpenFolder(handleMenuOpenFolder);
+    const unsubFile = workspaceIpc.onMenuOpenFile(handleMenuOpenFile);
+    return () => {
+      unsubFolder();
+      unsubFile();
+    };
+  }, [handleMenuOpenFolder, handleMenuOpenFile]);
 
   // 检查是否有上次的工作区（快速判断，决定渲染哪个页面）
   useEffect(() => {

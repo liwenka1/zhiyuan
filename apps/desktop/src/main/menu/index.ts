@@ -1,4 +1,4 @@
-import { Menu, app } from "electron";
+import { Menu, app, BrowserWindow } from "electron";
 import { windowManager } from "../window-manager";
 
 /**
@@ -30,6 +30,25 @@ export function setupApplicationMenu(): void {
             label: isZh ? "新建窗口" : "New Window",
             click: () => {
               windowManager.createWindow();
+            }
+          },
+          { type: "separator" },
+          {
+            label: isZh ? "打开文件夹…" : "Open Folder…",
+            click: () => {
+              const win = BrowserWindow.getFocusedWindow();
+              if (win) {
+                win.webContents.send("menu:openFolder");
+              }
+            }
+          },
+          {
+            label: isZh ? "打开文件…" : "Open File…",
+            click: () => {
+              const win = BrowserWindow.getFocusedWindow();
+              if (win) {
+                win.webContents.send("menu:openFile");
+              }
             }
           }
         ]
