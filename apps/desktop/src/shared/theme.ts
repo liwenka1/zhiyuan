@@ -71,11 +71,11 @@ function hslToHex(h: number, s: number, l: number): string {
 export const ThemeColors = {
   light: {
     background: hslToHex(0, 0, 100),
-    foreground: hslToHex(210, 12, 16)
+    foreground: hslToHex(0, 0, 23)
   },
   dark: {
-    background: hslToHex(220, 13, 18),
-    foreground: hslToHex(218, 11, 80)
+    background: hslToHex(0, 0, 12),
+    foreground: hslToHex(0, 0, 80)
   }
 } as const;
 

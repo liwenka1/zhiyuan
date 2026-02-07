@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type CSSProperties } from "react";
-import { Logo } from "@/components/icons";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { windowIpc } from "@/ipc";
 import { useLanguageStore } from "@/stores";
@@ -90,6 +90,7 @@ function MenuButton({
 /* ---------- AppMenuBar 主组件 ---------- */
 
 export function AppMenuBar() {
+  const { t: tEditor } = useTranslation("editor");
   const language = useLanguageStore((s) => s.language);
   const locale = language as MenuLocale;
   const [openIndex, setOpenIndex] = useState<number | null>(null);
@@ -130,12 +131,12 @@ export function AppMenuBar() {
       className="bg-background fixed inset-x-0 top-0 z-9999 flex items-center"
       style={barStyle}
     >
-      {/* Logo */}
+      {/* App Name */}
       <div
         className="flex h-full shrink-0 items-center px-3"
         style={{ WebkitAppRegion: "no-drag" } as ElectronCSSProperties}
       >
-        <Logo className="text-foreground/30 h-4 w-4" />
+        <span className="text-foreground text-sm font-medium">{tEditor("appName")}</span>
       </div>
 
       {/* 菜单按钮（从共享 schema 生成） */}
