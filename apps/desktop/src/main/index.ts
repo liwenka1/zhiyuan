@@ -9,8 +9,10 @@ import { registerWindowHandlers } from "./ipc/window-handler";
 import { registerRssHandlers } from "./ipc/rss-handler";
 import { registerUrlHandlers } from "./ipc/url-handler";
 import { windowManager } from "./window-manager";
+import { configManager } from "./config";
 import { setupApplicationMenu } from "./menu";
 import { pathToFileURL } from "url";
+import { existsSync } from "fs";
 import { ipcOk, ipcErr } from "./ipc/ipc-result";
 import type { IpcResultDTO } from "@shared";
 
@@ -113,8 +115,13 @@ app.whenReady().then(() => {
     }
   });
 
-  // 创建第一个窗口
-  windowManager.createWindow();
+  // 创建第一个窗口，尝试恢复上次的工作区
+  const lastWorkspace = configManager.getRecentWorkspaces()[0];
+  if (lastWorkspace && existsSync(lastWorkspace)) {
+    windowManager.createWindow(lastWorkspace);
+  } else {
+    windowManager.createWindow();
+  }
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the

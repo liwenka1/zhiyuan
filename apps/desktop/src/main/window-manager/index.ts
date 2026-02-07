@@ -6,6 +6,7 @@ import { themeManager } from "../theme";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
 import { isSafeUrl } from "../security/url-validator";
 import { fileWatcherManager } from "../file-watcher";
+import { configManager } from "../config";
 
 interface WindowEntry {
   window: BrowserWindow;
@@ -106,6 +107,8 @@ class WindowManager {
     win.on("closed", () => {
       const entry = this.windows.get(win.id);
       if (entry?.workspacePath) {
+        // 将关闭窗口的工作区移到最近列表顶部，以便下次启动恢复
+        configManager.addRecentWorkspace(entry.workspacePath);
         fileWatcherManager.stopWatching(entry.workspacePath, win.id);
       }
       this.windows.delete(win.id);
