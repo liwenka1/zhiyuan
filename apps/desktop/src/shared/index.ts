@@ -7,3 +7,15 @@ export type { Theme, ThemeMode } from "./theme";
 export { ThemeColors, getThemeBackgroundColor, getThemeForegroundColor } from "./theme";
 
 export type { IpcError, IpcResultDTO } from "./ipc";
+
+export type {
+  MenuLocale,
+  MenuAction,
+  MenuShortcut,
+  MenuLabel,
+  MenuItemDef,
+  MenuSeparatorDef,
+  MenuEntryDef,
+  MenuGroupDef
+} from "./menu";
+export { menuSchema, resolveLabel, toElectronAccelerator, isMenuItem } from "./menu";
