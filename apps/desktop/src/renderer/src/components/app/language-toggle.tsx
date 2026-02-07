@@ -13,7 +13,7 @@ export function LanguageToggle() {
   };
 
   return (
-    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={handleToggle} aria-label={t("language.switch")}>
+    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={handleToggle} aria-label={t("language.switch")}>
       {language === "zh" ? "中" : "EN"}
     </Button>
   );

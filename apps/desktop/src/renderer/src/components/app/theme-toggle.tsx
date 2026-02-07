@@ -12,7 +12,7 @@ export function ThemeToggle() {
   const Icon = theme === "light" ? Sun : Moon;
 
   return (
-    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={toggleTheme} aria-label={t("theme." + theme)}>
+    <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={toggleTheme} aria-label={t("theme." + theme)}>
       <Icon className="h-4 w-4" />
     </Button>
   );
