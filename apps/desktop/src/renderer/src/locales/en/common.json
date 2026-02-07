@@ -12,5 +12,17 @@
     "selectFolder": "Select Workspace Folder",
     "selectButton": "Select",
     "selectFailed": "Failed to select workspace, please try again"
+  },
+  "welcome": {
+    "title": "Get Started",
+    "subtitle": "An elegant Markdown editor",
+    "openFolder": "Open Folder",
+    "openFolderDesc": "Choose a folder as your workspace",
+    "openFile": "Open File",
+    "openFileDesc": "Open a Markdown file",
+    "recentWorkspaces": "Recent",
+    "noRecent": "No recent workspaces",
+    "openFolderFailed": "Failed to open folder, please try again",
+    "openFileFailed": "Failed to open file, please try again"
   }
 }

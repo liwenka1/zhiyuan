@@ -35,17 +35,16 @@ export const workspaceApi = {
   > => ipcRenderer.invoke("workspace:scan", workspacePath),
 
   /**
+   * 打开文件对话框，选择 .md 文件
+   */
+  openFile: (options?: {
+    title?: string;
+    buttonLabel?: string;
+  }): Promise<IpcResultDTO<{ filePath: string; workspacePath: string } | null>> =>
+    ipcRenderer.invoke("workspace:openFile", options),
+
+  /**
    * 获取最近打开的工作区
    */
-  getRecent: (): Promise<IpcResultDTO<string[]>> => ipcRenderer.invoke("workspace:getRecent"),
-
-  /**
-   * 创建默认工作区
-   */
-  createDefault: (): Promise<IpcResultDTO<string | null>> => ipcRenderer.invoke("workspace:createDefault"),
-
-  /**
-   * 检查默认工作区是否存在
-   */
-  checkDefaultExists: (): Promise<IpcResultDTO<boolean>> => ipcRenderer.invoke("workspace:checkDefaultExists")
+  getRecent: (): Promise<IpcResultDTO<string[]>> => ipcRenderer.invoke("workspace:getRecent")
 };

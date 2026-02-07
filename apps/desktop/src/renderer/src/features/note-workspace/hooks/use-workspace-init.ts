@@ -8,7 +8,7 @@ import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
 /**
  * 工作区初始化 Hook
  * 负责：
- * - 初始化工作区（加载或创建）
+ * - 扫描并加载当前工作区内容（workspacePath 由 App.tsx 或 WelcomePage 设置）
  * - 监听文件系统变化
  * - 窗口关闭时保存
  */
@@ -16,40 +16,24 @@ export function useWorkspaceInit() {
   const { t } = useTranslation("note");
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const setFolders = useFolderStore((state) => state.setFolders);
-  const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
 
-  // 初始化：检查是否有保存的工作区，或创建默认工作区
+  // workspacePath 已由 App.tsx 设置，这里只负责扫描和加载工作区内容
   useEffect(() => {
-    const initWorkspace = async () => {
-      try {
-        // 尝试获取上次打开的工作区
-        const savedWorkspacePath = await workspaceIpc.getCurrent();
+    if (!workspacePath) return;
 
-        if (savedWorkspacePath) {
-          // 有保存的工作区，加载它
-          setWorkspacePath(savedWorkspacePath);
-          const data = await workspaceIpc.scan(savedWorkspacePath);
-          setFolders(data.folders);
-          loadFromFileSystem(data);
-        } else {
-          // 没有保存的工作区，创建默认工作区
-          const defaultWorkspacePath = await workspaceIpc.createDefault();
-          if (!defaultWorkspacePath) {
-            toast.error(t("errors.initWorkspaceFailed"));
-            return;
-          }
-          setWorkspacePath(defaultWorkspacePath);
-          const data = await workspaceIpc.scan(defaultWorkspacePath);
-          setFolders(data.folders);
-          loadFromFileSystem(data);
-        }
+    const loadWorkspace = async () => {
+      try {
+        const data = await workspaceIpc.scan(workspacePath);
+        setFolders(data.folders);
+        loadFromFileSystem(data);
       } catch {
         toast.error(t("errors.initWorkspaceFailed"));
       }
     };
 
-    initWorkspace();
-  }, [loadFromFileSystem, setFolders, setWorkspacePath, t]);
+    loadWorkspace();
+  }, [workspacePath, loadFromFileSystem, setFolders, t]);
 
   // 监听文件系统变化
   useEffect(() => {

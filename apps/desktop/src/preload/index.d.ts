@@ -25,6 +25,10 @@ export interface ThemeAPI {
 // 工作区 API 接口
 export interface WorkspaceAPI {
   select: (options?: { title?: string; buttonLabel?: string }) => Promise<IpcResultDTO<string | null>>;
+  openFile: (options?: {
+    title?: string;
+    buttonLabel?: string;
+  }) => Promise<IpcResultDTO<{ filePath: string; workspacePath: string } | null>>;
   getCurrent: () => Promise<IpcResultDTO<string | null>>;
   scan: (workspacePath: string) => Promise<
     IpcResultDTO<{
@@ -42,8 +46,6 @@ export interface WorkspaceAPI {
     }>
   >;
   getRecent: () => Promise<IpcResultDTO<string[]>>;
-  createDefault: () => Promise<IpcResultDTO<string | null>>;
-  checkDefaultExists: () => Promise<IpcResultDTO<boolean>>;
 }
 
 // 文件 API 接口
