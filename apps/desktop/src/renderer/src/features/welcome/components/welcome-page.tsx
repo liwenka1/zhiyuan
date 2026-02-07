@@ -3,8 +3,7 @@ import { FolderOpen, FileText } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { TitleBar } from "@/components/app";
-import { ThemeToggle, LanguageToggle } from "@/components/app";
+import { TitleBar, SettingsPopover } from "@/components/app";
 import { Logo } from "@/components/icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
@@ -198,13 +197,12 @@ export function WelcomePage() {
 
       {/* 底部设置 */}
       <motion.div
-        className="flex shrink-0 items-center justify-center gap-2 pb-4"
+        className="flex shrink-0 items-center justify-center pb-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.4 }}
       >
-        <ThemeToggle />
-        <LanguageToggle />
+        <SettingsPopover />
       </motion.div>
     </div>
   );
