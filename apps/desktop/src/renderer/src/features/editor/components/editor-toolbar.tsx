@@ -107,8 +107,8 @@ export function EditorToolbar({
       <div className="flex shrink-0 items-center gap-1">
         {/* 预览按钮 */}
         <Toggle
-          size="sm"
-          className="hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
+          size="icon-sm"
+          className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
           aria-label={t("toolbar.preview")}
           pressed={editorMode === "preview"}
           onPressedChange={() => toggleEditorMode("preview")}
@@ -119,8 +119,8 @@ export function EditorToolbar({
 
         {/* 分栏按钮 */}
         <Toggle
-          size="sm"
-          className="hover:bg-accent hover:text-accent-foreground data-[state=on]:bg-primary/10 data-[state=on]:text-primary h-8 w-8 p-0"
+          size="icon-sm"
+          className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
           aria-label={t("toolbar.split")}
           pressed={editorMode === "split"}
           onPressedChange={() => toggleEditorMode("split")}
@@ -133,7 +133,7 @@ export function EditorToolbar({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-7 w-7 p-0"
           aria-label={t("toolbar.presentation")}
           onClick={enterPresentationMode}
           disabled={!hasNote}
@@ -145,7 +145,7 @@ export function EditorToolbar({
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-7 w-7 p-0"
           aria-label={t("toolbar.format")}
           onClick={handleFormat}
           disabled={!hasNote || editorMode === "preview"}
@@ -159,7 +159,7 @@ export function EditorToolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               aria-label={t("toolbar.toc")}
               disabled={!hasNote || !showPreview}
             >
@@ -193,7 +193,7 @@ export function EditorToolbar({
                   onClick={() => setIsPinned(!effectiveIsPinned)}
                   aria-label={effectiveIsPinned ? t("toc.unpin") : t("toc.pin")}
                 >
-                  {effectiveIsPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                  {effectiveIsPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
                 </Button>
               </div>
               <TableOfContents content={content} noteId={selectedNoteId ?? undefined} />
@@ -207,7 +207,7 @@ export function EditorToolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               aria-label={t("toolbar.more")}
               disabled={!hasNote}
             >

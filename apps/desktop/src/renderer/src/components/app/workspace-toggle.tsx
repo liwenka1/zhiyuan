@@ -38,7 +38,7 @@ export function WorkspaceToggle() {
     <Button
       variant="ghost"
       size="sm"
-      className="h-8 w-8 p-0"
+      className="h-7 w-7 p-0"
       onClick={handleSwitchWorkspace}
       aria-label={t("workspace.switch")}
     >

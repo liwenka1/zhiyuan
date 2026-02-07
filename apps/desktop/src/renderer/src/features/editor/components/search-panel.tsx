@@ -69,7 +69,7 @@ export function SearchPanel({ search }: SearchPanelProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-7 w-7 p-0"
           onClick={findPrevious}
           disabled={!state.searchText || state.matchCount === 0}
           title={t("search.previous")}
@@ -79,7 +79,7 @@ export function SearchPanel({ search }: SearchPanelProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="h-8 w-8 p-0"
+          className="h-7 w-7 p-0"
           onClick={findNext}
           disabled={!state.searchText || state.matchCount === 0}
           title={t("search.next")}
@@ -89,13 +89,13 @@ export function SearchPanel({ search }: SearchPanelProps) {
         <Button
           variant="ghost"
           size="sm"
-          className={`h-8 w-8 p-0 ${state.showReplace ? "bg-accent" : ""}`}
+          className={`h-7 w-7 p-0 ${state.showReplace ? "bg-muted text-foreground" : ""}`}
           onClick={toggleReplace}
           title={t("search.toggleReplace")}
         >
           <Replace className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={close} title={t("search.close")}>
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={close} title={t("search.close")}>
           <X className="h-4 w-4" />
         </Button>
       </div>
