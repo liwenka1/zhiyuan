@@ -35,11 +35,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build desktop app
-        run: pnpm --filter desktop build
-
-      - name: Verify build output
         working-directory: apps/desktop
-        run: ls -la out/ && ls -la out/main/ && ls -la out/preload/ && ls -la out/renderer/
+        run: pnpm run build
         
       - name: Publish to GitHub Releases (macOS)
         if: matrix.os == 'macos-latest'
