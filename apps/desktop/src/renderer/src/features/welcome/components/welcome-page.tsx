@@ -109,18 +109,6 @@ export function WelcomePage() {
 
       {isWindows && <div className="border-border border-t" />}
 
-      {isMac && (
-        <div
-          className="pointer-events-none fixed inset-x-0 top-0 z-50"
-          style={
-            {
-              height: "var(--titlebar-height-mac)",
-              WebkitAppRegion: "drag"
-            } as React.CSSProperties
-          }
-        />
-      )}
-
       <div className="flex flex-1 items-center justify-center select-none">
         <div className="flex w-full max-w-sm flex-col items-center">
           {/* Logo */}

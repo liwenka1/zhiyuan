@@ -1,17 +1,36 @@
+import { type CSSProperties } from "react";
 import { usePlatform } from "@/hooks";
 import { AppMenuBar } from "./app-menu-bar";
+
+interface ElectronCSSProperties extends CSSProperties {
+  WebkitAppRegion?: "drag" | "no-drag";
+}
 
 /**
  * 自定义标题栏组件
  * Windows 平台渲染自定义菜单栏（含 Logo + 菜单）
- * macOS 平台不渲染（由系统提供标题栏）
+ * macOS 平台渲染透明拖拽区域
  */
 export function TitleBar() {
-  const { isWindows } = usePlatform();
+  const { isMac, isWindows } = usePlatform();
 
-  if (!isWindows) {
-    return null;
+  if (isMac) {
+    return (
+      <div
+        className="fixed inset-x-0 top-0 z-9999"
+        style={
+          {
+            height: "var(--titlebar-height-mac)",
+            WebkitAppRegion: "drag"
+          } as ElectronCSSProperties
+        }
+      />
+    );
   }
 
-  return <AppMenuBar />;
+  if (isWindows) {
+    return <AppMenuBar />;
+  }
+
+  return null;
 }
