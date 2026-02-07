@@ -2,7 +2,6 @@ import Store from "electron-store";
 import type { ThemeMode } from "@shared";
 
 interface AppConfig {
-  workspacePath: string | null;
   recentWorkspaces: string[];
   pinnedNotes: Record<string, string[]>;
   theme: ThemeMode; // 主题模式（light/dark/system）
@@ -11,7 +10,6 @@ interface AppConfig {
 // 创建配置存储实例
 const store = new Store<AppConfig>({
   defaults: {
-    workspacePath: null,
     recentWorkspaces: [],
     pinnedNotes: {},
     theme: "system" // 默认跟随系统
@@ -20,27 +18,11 @@ const store = new Store<AppConfig>({
 
 /**
  * 配置管理器
+ *
+ * 注意：workspacePath 不再持久化到配置中。
+ * 每个窗口的工作区路径由 WindowManager 在内存中管理。
  */
 export const configManager = {
-  /**
-   * 获取当前工作区路径
-   */
-  getWorkspacePath(): string | null {
-    return store.get("workspacePath");
-  },
-
-  /**
-   * 设置当前工作区路径
-   */
-  setWorkspacePath(path: string | null): void {
-    store.set("workspacePath", path);
-
-    // 如果设置了新路径，添加到最近打开列表
-    if (path) {
-      this.addRecentWorkspace(path);
-    }
-  },
-
   /**
    * 获取最近打开的工作区列表
    */

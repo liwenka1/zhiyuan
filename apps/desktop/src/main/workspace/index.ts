@@ -25,13 +25,21 @@ export interface NoteInfo {
 
 /**
  * 工作区管理器
+ *
+ * 注意：不再管理全局 workspacePath，
+ * 每个窗口的工作区路径由 WindowManager 在内存中管理。
+ * dialog 的 parentWindow 由调用方通过参数传入。
  */
 export const workspaceManager = {
   /**
    * 选择工作区文件夹
+   * @param parentWindow 父窗口，用于显示对话框
    */
-  async selectWorkspace(options?: { title?: string; buttonLabel?: string }): Promise<string | null> {
-    const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow()!, {
+  async selectWorkspace(
+    parentWindow: BrowserWindow,
+    options?: { title?: string; buttonLabel?: string }
+  ): Promise<string | null> {
+    const result = await dialog.showOpenDialog(parentWindow, {
       properties: ["openDirectory"],
       title: options?.title || "Select Workspace Folder",
       buttonLabel: options?.buttonLabel || "Select"
@@ -42,20 +50,21 @@ export const workspaceManager = {
     }
 
     const selectedPath = result.filePaths[0];
-    // 保存到配置
-    configManager.setWorkspacePath(selectedPath);
+    // 添加到最近打开列表
+    configManager.addRecentWorkspace(selectedPath);
     return selectedPath;
   },
 
   /**
    * 打开文件对话框，选择 .md 文件
-   * 返回选中文件的路径，并将其所在目录设为工作区
+   * 返回选中文件的路径，并将其所在目录作为工作区路径
+   * @param parentWindow 父窗口，用于显示对话框
    */
-  async openFile(options?: {
-    title?: string;
-    buttonLabel?: string;
-  }): Promise<{ filePath: string; workspacePath: string } | null> {
-    const result = await dialog.showOpenDialog(BrowserWindow.getFocusedWindow()!, {
+  async openFile(
+    parentWindow: BrowserWindow,
+    options?: { title?: string; buttonLabel?: string }
+  ): Promise<{ filePath: string; workspacePath: string } | null> {
+    const result = await dialog.showOpenDialog(parentWindow, {
       properties: ["openFile"],
       title: options?.title || "Open File",
       buttonLabel: options?.buttonLabel || "Open",
@@ -67,17 +76,9 @@ export const workspaceManager = {
     }
 
     const filePath = result.filePaths[0];
-    // 将文件所在目录作为工作区
     const workspacePath = path.dirname(filePath);
-    configManager.setWorkspacePath(workspacePath);
+    configManager.addRecentWorkspace(workspacePath);
     return { filePath, workspacePath };
-  },
-
-  /**
-   * 获取当前工作区路径
-   */
-  getCurrentWorkspace(): string | null {
-    return configManager.getWorkspacePath();
   },
 
   /**

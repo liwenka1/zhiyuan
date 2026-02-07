@@ -1,9 +1,10 @@
 import { Menu, app } from "electron";
+import { windowManager } from "../window-manager";
 
 /**
  * 创建应用菜单
  *
- * - macOS: 设置最小化菜单，保留系统快捷键（Cmd+Q、Cmd+C/V 等）
+ * - macOS: 设置菜单栏，包含应用、文件、编辑菜单
  *   顶层菜单名和 submenu label 根据系统语言设置中/英文
  * - Windows/Linux: 移除默认菜单（快捷键通过 webContents 处理）
  */
@@ -20,6 +21,17 @@ export function setupApplicationMenu(): void {
           { role: "hide", label: isZh ? `隐藏 ${app.name}` : `Hide ${app.name}` },
           { type: "separator" },
           { role: "quit", label: isZh ? `退出 ${app.name}` : `Quit ${app.name}` }
+        ]
+      },
+      {
+        label: isZh ? "文件" : "File",
+        submenu: [
+          {
+            label: isZh ? "新建窗口" : "New Window",
+            click: () => {
+              windowManager.createWindow();
+            }
+          }
         ]
       },
       {

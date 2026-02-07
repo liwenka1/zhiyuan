@@ -65,8 +65,5 @@ if (process.contextIsolated) {
   contextBridge.exposeInMainWorld("electron", electronAPI);
   contextBridge.exposeInMainWorld("api", api);
 } else {
-  // @ts-expect-error (define in dts)
-  window.electron = electronAPI;
-  // @ts-expect-error (define in dts)
-  window.api = api;
+  Object.assign(window, { electron: electronAPI, api });
 }
