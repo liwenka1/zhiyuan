@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+export LANG=en_US.UTF-8
 
 # 定位到 desktop 项目根目录
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
