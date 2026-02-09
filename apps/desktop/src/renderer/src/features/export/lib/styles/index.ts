@@ -7,7 +7,16 @@
 export { FONT_FILES, generateFontFaces, generateEmbeddedFontFaces } from "./font-config";
 
 // 主题颜色
-export { type ThemeColors, getThemeColors, getThemeColorsFromDOM } from "./theme-colors";
+export { type ThemeColors, type ThemeColorsInput, type ExportThemePreset, buildThemeColors } from "./theme-colors";
+
+// 主题预设 & 查找函数
+export {
+  EXPORT_THEME_PRESETS,
+  type ExportThemeId,
+  DEFAULT_EXPORT_THEME_ID,
+  resolveExportThemeId,
+  getExportThemeColors
+} from "./themes";
 
 // Prose 样式（HTML/PDF/图片导出）
 export { generateProseStyles } from "./prose-styles";

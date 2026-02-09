@@ -4,16 +4,23 @@
  * 样式基于统一的导出样式系统
  */
 
-import { getThemeColors, generateWechatStyles } from "@/features/export/lib/styles";
+import {
+  getExportThemeColors,
+  generateWechatStyles,
+  DEFAULT_EXPORT_THEME_ID,
+  type ThemeColors
+} from "@/features/export/lib/styles";
+import { isDarkColor } from "@/lib/color-utils";
 
 /**
  * 生成适配微信公众号的 HTML 文档
  * 所有样式将被内联到 HTML 标签中
  * @param title 笔记标题
  * @param htmlContent HTML 内容
+ * @param themeId 导出主题预设 ID，深色主题会自动 fallback 到 default 以保证可读性
  */
-export function generateWechatHTMLDocument(title: string, htmlContent: string): string {
-  const colors = getThemeColors("wechat");
+export function generateWechatHTMLDocument(title: string, htmlContent: string, themeId: string): string {
+  const colors = getWechatSafeThemeColors(themeId);
   const styles = generateWechatStyles(colors);
 
   return `<!DOCTYPE html>
@@ -30,6 +37,18 @@ ${styles}
 ${htmlContent}
 </body>
 </html>`;
+}
+
+/**
+ * 获取适用于微信公众号的主题颜色
+ * 微信文章在浅色背景下阅读，若选中主题为深色系则 fallback 到 default
+ */
+function getWechatSafeThemeColors(themeId: string): ThemeColors {
+  const colors = getExportThemeColors(themeId);
+  if (isDarkColor(colors.background)) {
+    return getExportThemeColors(DEFAULT_EXPORT_THEME_ID);
+  }
+  return colors;
 }
 
 /**

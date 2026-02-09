@@ -12,5 +12,16 @@ export const configApi = {
    * 设置工作区的置顶笔记列表
    */
   setPinnedNotes: (workspacePath: string, noteIds: string[]): Promise<IpcResultDTO<void>> =>
-    ipcRenderer.invoke("config:setPinnedNotes", workspacePath, noteIds)
+    ipcRenderer.invoke("config:setPinnedNotes", workspacePath, noteIds),
+
+  /**
+   * 获取导出主题预设 ID
+   */
+  getExportThemeId: (): Promise<IpcResultDTO<string>> => ipcRenderer.invoke("config:getExportThemeId"),
+
+  /**
+   * 设置导出主题预设 ID
+   */
+  setExportThemeId: (themeId: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:setExportThemeId", themeId)
 };

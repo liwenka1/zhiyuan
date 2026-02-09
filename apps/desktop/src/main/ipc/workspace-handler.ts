@@ -283,4 +283,29 @@ export function registerWorkspaceHandlers(): void {
       return ipcErr(message, "CONFIG_SET_PINNED_FAILED");
     }
   });
+
+  // 获取导出主题预设 ID
+  ipcMain.handle("config:getExportThemeId", (): IpcResultDTO<string> => {
+    try {
+      return ipcOk(configManager.getExportThemeId());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_GET_EXPORT_THEME_FAILED");
+    }
+  });
+
+  // 设置导出主题预设 ID
+  // themeId 格式约定：仅允许小写字母、数字和连字符（如 "tech-blue"），与主题文件命名一致
+  ipcMain.handle("config:setExportThemeId", (_, themeId: string): IpcResultDTO<void> => {
+    try {
+      if (typeof themeId !== "string" || themeId.length === 0 || themeId.length > 64 || !/^[a-z0-9-]+$/.test(themeId)) {
+        return ipcErr("Invalid themeId", "CONFIG_SET_EXPORT_THEME_INVALID");
+      }
+      configManager.setExportThemeId(themeId);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_SET_EXPORT_THEME_FAILED");
+    }
+  });
 }

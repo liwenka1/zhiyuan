@@ -7,8 +7,10 @@ import { exportIpc } from "@/ipc";
 
 /**
  * 导出笔记为图片（单张长图）
+ * @param note 要导出的笔记
+ * @param themeId 导出主题预设 ID，决定导出颜色方案
  */
-export async function exportNoteAsImage(note: Note, isDark: boolean): Promise<void> {
+export async function exportNoteAsImage(note: Note, themeId: string): Promise<void> {
   // 1. 获取下载目录
   const downloadsPath = await exportIpc.getDownloadsPath();
 
@@ -37,7 +39,7 @@ export async function exportNoteAsImage(note: Note, isDark: boolean): Promise<vo
 
   // 5. 生成完整的 HTML 文档（内嵌字体）
   const fullHTML = generateHTMLDocument(note.title, htmlBody, {
-    isDark,
+    themeId,
     fonts: { type: "embedded", ...fonts }
   });
 
@@ -47,8 +49,10 @@ export async function exportNoteAsImage(note: Note, isDark: boolean): Promise<vo
 
 /**
  * 导出笔记为图片（分页）
+ * @param note 要导出的笔记
+ * @param themeId 导出主题预设 ID，决定导出颜色方案
  */
-export async function exportNoteAsImagePages(note: Note, isDark: boolean): Promise<void> {
+export async function exportNoteAsImagePages(note: Note, themeId: string): Promise<void> {
   // 1. 获取下载目录
   const downloadsPath = await exportIpc.getDownloadsPath();
 
@@ -82,7 +86,7 @@ export async function exportNoteAsImagePages(note: Note, isDark: boolean): Promi
     sections.map(async (section) => {
       const htmlBody = await markdownToHTML(section);
       return generateHTMLDocument(note.title, htmlBody, {
-        isDark,
+        themeId,
         fonts: { type: "embedded", ...fonts }
       });
     })

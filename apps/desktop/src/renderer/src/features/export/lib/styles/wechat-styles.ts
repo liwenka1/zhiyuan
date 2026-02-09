@@ -3,13 +3,15 @@
  * 针对移动端阅读优化，使用更大的字号和行距
  */
 
-import { ThemeColors } from "./theme-colors";
+import type { ThemeColors } from "./theme-colors";
 
 /**
  * 生成微信公众号专用样式
  * 针对移动端阅读优化，使用更大的字号和行距
  */
 export function generateWechatStyles(colors: ThemeColors): string {
+  const strongPadding = colors.strongBg === "transparent" ? "0" : "2px 4px";
+
   return `
     * {
       margin: 0;
@@ -33,10 +35,10 @@ export function generateWechatStyles(colors: ThemeColors): string {
       font-size: 1.75em;
       font-weight: 700;
       line-height: 1.3;
-      color: ${colors.previewTitle};
+      color: ${colors.h1Color};
       margin: 1.2em 0 0.8em;
       padding-bottom: 0.3em;
-      border-bottom: 2px solid ${colors.border};
+      border-bottom: 2px solid ${colors.h1Decoration};
     }
 
     h1:first-child {
@@ -47,17 +49,17 @@ export function generateWechatStyles(colors: ThemeColors): string {
       font-size: 1.5em;
       font-weight: 600;
       line-height: 1.4;
-      color: ${colors.previewTitle};
+      color: ${colors.h2Color};
       margin: 1.5em 0 0.8em;
-      padding-bottom: 0.2em;
-      border-bottom: 1px solid ${colors.border};
+      padding-left: 12px;
+      border-left: 4px solid ${colors.h2Decoration};
     }
 
     h3 {
       font-size: 1.3em;
       font-weight: 600;
       line-height: 1.5;
-      color: ${colors.previewTitle};
+      color: ${colors.headingColor};
       margin: 1.3em 0 0.6em;
     }
 
@@ -65,14 +67,14 @@ export function generateWechatStyles(colors: ThemeColors): string {
       font-size: 1.1em;
       font-weight: 600;
       line-height: 1.5;
-      color: ${colors.previewTitle};
+      color: ${colors.headingColor};
       margin: 1.2em 0 0.5em;
     }
 
     h5, h6 {
       font-size: 1em;
       font-weight: 600;
-      color: ${colors.previewTitle};
+      color: ${colors.headingColor};
       margin: 1em 0 0.5em;
     }
 
@@ -84,7 +86,7 @@ export function generateWechatStyles(colors: ThemeColors): string {
 
     /* 链接 */
     a {
-      color: ${colors.previewLink};
+      color: ${colors.linkColor};
       text-decoration: none;
       font-weight: 500;
       word-wrap: break-word;
@@ -96,20 +98,23 @@ export function generateWechatStyles(colors: ThemeColors): string {
 
     /* 加粗 */
     strong {
-      color: ${colors.editorStrong};
+      color: ${colors.strongColor};
       font-weight: 600;
+      background-color: ${colors.strongBg};
+      padding: ${strongPadding};
+      border-radius: 3px;
     }
 
     /* 斜体 */
     em {
-      color: ${colors.editorEmphasis};
+      color: ${colors.emphasisColor};
       font-style: italic;
     }
 
     /* 行内代码 */
     code {
-      color: ${colors.editorCode};
-      background-color: ${colors.editorCodeBg};
+      color: ${colors.codeColor};
+      background-color: ${colors.codeBg};
       font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
       font-size: 0.9em;
       padding: 2px 6px;
@@ -120,14 +125,14 @@ export function generateWechatStyles(colors: ThemeColors): string {
 
     /* 代码块 */
     pre {
-      background-color: ${colors.previewCodeBg};
+      background-color: ${colors.codeBlockBg};
       overflow-x: auto;
       font-size: 0.9em;
       line-height: 1.6;
       margin: 1.2em 0;
       border-radius: 6px;
       padding: 12px 16px;
-      border: 1px solid ${colors.border};
+      border: 1px solid ${colors.codeBlockBorder};
     }
 
     pre code {
@@ -135,7 +140,7 @@ export function generateWechatStyles(colors: ThemeColors): string {
       border-radius: 0;
       padding: 0;
       margin: 0;
-      color: ${colors.foreground};
+      color: ${colors.codeBlockColor};
       font-size: inherit;
       font-family: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
       line-height: inherit;
@@ -145,9 +150,9 @@ export function generateWechatStyles(colors: ThemeColors): string {
     blockquote {
       font-weight: 400;
       font-style: normal;
-      color: ${colors.editorQuote};
-      border-left: 4px solid ${colors.border};
-      background-color: ${colors.muted};
+      color: ${colors.quoteColor};
+      border-left: 4px solid ${colors.blockquoteBorder};
+      background-color: ${colors.blockquoteBg};
       margin: 1.2em 0;
       padding: 0.8em 1em;
       border-radius: 0 4px 4px 0;
@@ -192,7 +197,7 @@ export function generateWechatStyles(colors: ThemeColors): string {
     /* 水平线 */
     hr {
       border: 0;
-      border-top: 2px solid ${colors.editorHr};
+      border-top: 2px solid ${colors.hrColor};
       margin: 2em 0;
     }
 
@@ -211,11 +216,11 @@ export function generateWechatStyles(colors: ThemeColors): string {
     }
 
     thead {
-      background-color: ${colors.muted};
+      background-color: ${colors.tableTh};
     }
 
     thead th {
-      color: ${colors.foreground};
+      color: ${colors.tableThColor};
       font-weight: 600;
       padding: 12px 16px;
       border-bottom: 2px solid ${colors.border};
@@ -258,7 +263,7 @@ export function generateWechatStyles(colors: ThemeColors): string {
 
     /* 脚注 */
     sup {
-      color: ${colors.previewLink};
+      color: ${colors.linkColor};
     }
 
     /* Mermaid 图表 */
