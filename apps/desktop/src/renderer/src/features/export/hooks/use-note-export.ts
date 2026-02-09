@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Note } from "@/types";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { useThemeStore } from "@/stores";
+import { useExportThemeStore } from "@/stores";
 import {
   exportNoteAsHTML,
   exportNoteAsPDF,
@@ -26,7 +26,7 @@ export interface UseNoteExportReturn {
  */
 export function useNoteExport(): UseNoteExportReturn {
   const { t } = useTranslation("note");
-  const theme = useThemeStore((state) => state.theme);
+  const exportThemeId = useExportThemeStore((state) => state.exportThemeId);
   const [isExporting, setIsExporting] = useState(false);
 
   /**
@@ -43,23 +43,21 @@ export function useNoteExport(): UseNoteExportReturn {
     toast.loading(t("export.exporting"), { id: "exporting" });
 
     try {
-      const isDark = theme === "dark";
-
       switch (format) {
         case "html":
-          await exportNoteAsHTML(note, isDark);
+          await exportNoteAsHTML(note, exportThemeId);
           break;
         case "pdf":
-          await exportNoteAsPDF(note, isDark);
+          await exportNoteAsPDF(note, exportThemeId);
           break;
         case "pdf-pages":
-          await exportNoteAsPDFPages(note, isDark);
+          await exportNoteAsPDFPages(note, exportThemeId);
           break;
         case "image":
-          await exportNoteAsImage(note, isDark);
+          await exportNoteAsImage(note, exportThemeId);
           break;
         case "image-pages":
-          await exportNoteAsImagePages(note, isDark);
+          await exportNoteAsImagePages(note, exportThemeId);
           break;
       }
 
@@ -81,7 +79,7 @@ export function useNoteExport(): UseNoteExportReturn {
    */
   const copyToWechat = async (note: Note) => {
     try {
-      await copyNoteToWechat(note);
+      await copyNoteToWechat(note, exportThemeId);
       toast.success(t("export.wechatSuccess"));
     } catch {
       toast.error(t("export.wechatFailed"));

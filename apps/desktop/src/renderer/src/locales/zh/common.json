@@ -19,6 +19,39 @@
     "general": "通用",
     "theme": "主题",
     "language": "语言",
+    "export": "导出",
+    "exportTheme": "配色主题",
+    "exportThemeDesc": "应用于所有导出格式",
+    "exportPreview": "效果预览",
+    "exportThemes": {
+      "default": "经典白",
+      "tech-blue": "科技蓝",
+      "warm-orange": "暖橙",
+      "elegant-purple": "优雅紫",
+      "forest-green": "森林绿"
+    },
+    "palette": {
+      "bg": "背景",
+      "title": "标题",
+      "link": "链接",
+      "accent": "强调",
+      "code": "代码",
+      "quote": "引用"
+    },
+    "preview": {
+      "appName": "纸鸢",
+      "subtitle": "优雅的 Markdown 编辑器",
+      "body": "纸鸢是一款专注于<bold>写作体验</bold>的笔记工具，支持<link>多格式导出</link>与主题自定义。",
+      "quote": "让写作回归纯粹，让排版自然优雅。",
+      "list1": "微信公众号 / HTML / PDF / <em>图片</em>",
+      "list2": "Mermaid 图表、<code>KaTeX</code> 数学公式",
+      "codeValue": "\"纸鸢\"",
+      "tableFeature": "功能",
+      "tableFormat": "格式",
+      "tableExport": "导出",
+      "tableExportFormats": "HTML / PDF"
+    },
+    "exportThemeSaveFailed": "主题保存失败，已恢复上一个主题",
     "about": "关于",
     "version": "版本"
   },

@@ -6,13 +6,15 @@ import { exportIpc } from "@/ipc";
 
 /**
  * 复制笔记到微信公众号
+ * @param note 要导出的笔记
+ * @param themeId 导出主题预设 ID，决定导出颜色方案
  */
-export async function copyNoteToWechat(note: Note): Promise<void> {
+export async function copyNoteToWechat(note: Note, themeId: string): Promise<void> {
   // 1. 将 Markdown 转换为 HTML
   const htmlBody = await markdownToHTML(note.content);
 
   // 2. 生成适配微信公众号的 HTML 文档
-  const wechatHTML = generateWechatHTMLDocument(note.title, htmlBody);
+  const wechatHTML = generateWechatHTMLDocument(note.title, htmlBody, themeId);
 
   // 3. 将 CSS 内联化（在渲染进程处理）
   const inlinedHTML = inlineCSS(wechatHTML);

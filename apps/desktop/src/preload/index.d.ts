@@ -187,6 +187,16 @@ export interface ConfigAPI {
    * 设置工作区的置顶笔记列表
    */
   setPinnedNotes: (workspacePath: string, noteIds: string[]) => Promise<IpcResultDTO<void>>;
+
+  /**
+   * 获取导出主题预设 ID
+   */
+  getExportThemeId: () => Promise<IpcResultDTO<string>>;
+
+  /**
+   * 设置导出主题预设 ID
+   */
+  setExportThemeId: (themeId: string) => Promise<IpcResultDTO<void>>;
 }
 
 // RSS API 接口

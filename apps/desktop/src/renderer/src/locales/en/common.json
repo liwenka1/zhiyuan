@@ -19,6 +19,39 @@
     "general": "General",
     "theme": "Theme",
     "language": "Language",
+    "export": "Export",
+    "exportTheme": "Color Theme",
+    "exportThemeDesc": "Applies to all export formats",
+    "exportPreview": "Preview",
+    "exportThemes": {
+      "default": "Classic",
+      "tech-blue": "Tech Blue",
+      "warm-orange": "Warm Orange",
+      "elegant-purple": "Elegant Purple",
+      "forest-green": "Forest Green"
+    },
+    "palette": {
+      "bg": "BG",
+      "title": "Title",
+      "link": "Link",
+      "accent": "Accent",
+      "code": "Code",
+      "quote": "Quote"
+    },
+    "preview": {
+      "appName": "Zhiyuan",
+      "subtitle": "An Elegant Markdown Editor",
+      "body": "Zhiyuan is a note-taking tool focused on <bold>writing experience</bold>, supporting <link>multi-format export</link> and theme customization.",
+      "quote": "Let writing be pure, let typography be elegant.",
+      "list1": "WeChat / HTML / PDF / <em>Image</em>",
+      "list2": "Mermaid diagrams, <code>KaTeX</code> math formulas",
+      "codeValue": "\"Zhiyuan\"",
+      "tableFeature": "Feature",
+      "tableFormat": "Format",
+      "tableExport": "Export",
+      "tableExportFormats": "HTML / PDF"
+    },
+    "exportThemeSaveFailed": "Failed to save theme, reverted to previous",
     "about": "About",
     "version": "Version"
   },

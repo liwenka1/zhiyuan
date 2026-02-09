@@ -7,8 +7,10 @@ import { exportIpc } from "@/ipc";
 
 /**
  * 导出笔记为 PDF（单页）
+ * @param note 要导出的笔记
+ * @param themeId 导出主题预设 ID，决定导出颜色方案
  */
-export async function exportNoteAsPDF(note: Note, isDark: boolean): Promise<void> {
+export async function exportNoteAsPDF(note: Note, themeId: string): Promise<void> {
   // 1. 获取下载目录
   const downloadsPath = await exportIpc.getDownloadsPath();
 
@@ -36,7 +38,7 @@ export async function exportNoteAsPDF(note: Note, isDark: boolean): Promise<void
 
   // 5. 生成完整的 HTML 文档（内嵌字体）
   const fullHTML = generateHTMLDocument(note.title, htmlBody, {
-    isDark,
+    themeId,
     fonts: { type: "embedded", ...fonts }
   });
 
@@ -46,8 +48,10 @@ export async function exportNoteAsPDF(note: Note, isDark: boolean): Promise<void
 
 /**
  * 导出笔记为 PDF（分页）
+ * @param note 要导出的笔记
+ * @param themeId 导出主题预设 ID，决定导出颜色方案
  */
-export async function exportNoteAsPDFPages(note: Note, isDark: boolean): Promise<void> {
+export async function exportNoteAsPDFPages(note: Note, themeId: string): Promise<void> {
   // 1. 获取下载目录
   const downloadsPath = await exportIpc.getDownloadsPath();
 
@@ -81,7 +85,7 @@ export async function exportNoteAsPDFPages(note: Note, isDark: boolean): Promise
     sections.map(async (section) => {
       const htmlBody = await markdownToHTML(section);
       return generateHTMLDocument(note.title, htmlBody, {
-        isDark,
+        themeId,
         fonts: { type: "embedded", ...fonts }
       });
     })

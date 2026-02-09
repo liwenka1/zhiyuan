@@ -5,6 +5,7 @@ interface AppConfig {
   recentWorkspaces: string[];
   pinnedNotes: Record<string, string[]>;
   theme: ThemeMode; // 主题模式（light/dark/system）
+  exportThemeId: string; // 导出主题预设 ID
 }
 
 // 创建配置存储实例
@@ -12,7 +13,8 @@ const store = new Store<AppConfig>({
   defaults: {
     recentWorkspaces: [],
     pinnedNotes: {},
-    theme: "system" // 默认跟随系统
+    theme: "system", // 默认跟随系统
+    exportThemeId: "default" // 默认导出主题
   }
 });
 
@@ -86,5 +88,19 @@ export const configManager = {
    */
   setTheme(theme: ThemeMode): void {
     store.set("theme", theme);
+  },
+
+  /**
+   * 获取导出主题预设 ID
+   */
+  getExportThemeId(): string {
+    return store.get("exportThemeId");
+  },
+
+  /**
+   * 设置导出主题预设 ID
+   */
+  setExportThemeId(themeId: string): void {
+    store.set("exportThemeId", themeId);
   }
 };

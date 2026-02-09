@@ -5,11 +5,12 @@
  */
 
 import {
-  getThemeColors,
+  getExportThemeColors,
   generateProseStyles,
   generateFontFaces,
   generateEmbeddedFontFaces
 } from "@/features/export/lib/styles";
+import { isDarkColor } from "@/lib/color-utils";
 
 // 直接导入库里的 CSS 文件（与预览模式使用相同的样式）
 import highlightLight from "highlight.js/styles/github.css?raw";
@@ -17,8 +18,8 @@ import highlightDark from "highlight.js/styles/github-dark.css?raw";
 import katexStyles from "katex/dist/katex.min.css?raw";
 
 export interface HTMLDocumentOptions {
-  /** 是否为深色主题 */
-  isDark: boolean;
+  /** 导出主题预设 ID（由调用方从 store 获取并传入） */
+  themeId: string;
   /** 字体配置 */
   fonts?:
     | { type: "path"; path: string } // HTML 资源包：使用相对路径
@@ -31,25 +32,21 @@ export interface HTMLDocumentOptions {
  * @param htmlContent HTML 内容
  * @param options 配置选项
  */
-export function generateHTMLDocument(
-  title: string,
-  htmlContent: string,
-  options: HTMLDocumentOptions | boolean
-): string {
-  // 兼容旧的 isDark 参数
-  const opts: HTMLDocumentOptions = typeof options === "boolean" ? { isDark: options } : options;
-
-  const colors = getThemeColors(opts.isDark ? "dark" : "light");
+export function generateHTMLDocument(title: string, htmlContent: string, options: HTMLDocumentOptions): string {
+  const colors = getExportThemeColors(options.themeId);
   const proseStyles = generateProseStyles(colors);
-  const highlightStyles = opts.isDark ? highlightDark : highlightLight;
+
+  // 根据导出主题的背景色自动选择代码高亮风格（深色/浅色）
+  // isDarkColor 返回三态：true=深色, false=浅色, null=解析失败；仅明确深色时使用 dark 风格
+  const highlightStyles = isDarkColor(colors.background) === true ? highlightDark : highlightLight;
 
   // 生成字体样式
   let fontStyles = "";
-  if (opts.fonts) {
-    if (opts.fonts.type === "path") {
-      fontStyles = generateFontFaces(opts.fonts.path);
-    } else if (opts.fonts.type === "embedded") {
-      fontStyles = generateEmbeddedFontFaces(opts.fonts.lxgwBase64, opts.fonts.jetBrainsBase64);
+  if (options.fonts) {
+    if (options.fonts.type === "path") {
+      fontStyles = generateFontFaces(options.fonts.path);
+    } else if (options.fonts.type === "embedded") {
+      fontStyles = generateEmbeddedFontFaces(options.fonts.lxgwBase64, options.fonts.jetBrainsBase64);
     }
   }
 

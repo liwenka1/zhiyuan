@@ -6,8 +6,10 @@ import { exportIpc } from "@/ipc";
 
 /**
  * 导出笔记为 HTML
+ * @param note 要导出的笔记
+ * @param themeId 导出主题预设 ID，决定导出颜色方案
  */
-export async function exportNoteAsHTML(note: Note, isDark: boolean): Promise<void> {
+export async function exportNoteAsHTML(note: Note, themeId: string): Promise<void> {
   // 1. 获取下载目录
   const downloadsPath = await exportIpc.getDownloadsPath();
 
@@ -32,7 +34,7 @@ export async function exportNoteAsHTML(note: Note, isDark: boolean): Promise<voi
 
   // 4. 生成完整的 HTML 文档（带字体路径）
   const fullHTML = generateHTMLDocument(note.title, htmlBody, {
-    isDark,
+    themeId,
     fonts: { type: "path", path: "./assets" }
   });
 

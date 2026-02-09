@@ -2,7 +2,14 @@ import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { NoteWorkspace } from "@/features/note-workspace";
 import { WelcomePage } from "@/features/welcome";
-import { useThemeStore, useViewStore, useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
+import {
+  useThemeStore,
+  useViewStore,
+  useWorkspaceStore,
+  useNoteStore,
+  useFolderStore,
+  useExportThemeStore
+} from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/features/editor";
 import { workspaceIpc } from "@/ipc";
@@ -59,6 +66,8 @@ function App(): React.JSX.Element {
     }
   }, [setWorkspacePath, setFolders, loadFromFileSystem, selectNote]);
 
+  const initExportTheme = useExportThemeStore((state) => state.initExportTheme);
+
   // 初始化主题，组件卸载时清理监听器
   useEffect(() => {
     initTheme();
@@ -66,6 +75,11 @@ function App(): React.JSX.Element {
       cleanup();
     };
   }, [initTheme, cleanup]);
+
+  // 初始化导出主题（独立 effect，避免触发 initTheme 的 cleanup 重跑）
+  useEffect(() => {
+    initExportTheme();
+  }, [initExportTheme]);
 
   // 监听菜单「打开文件夹/文件」事件（macOS 原生菜单 + Windows 自定义菜单栏）
   useEffect(() => {
