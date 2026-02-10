@@ -23,6 +23,7 @@
     "exportTheme": "配色主题",
     "exportThemeDesc": "应用于所有导出格式",
     "exportPreview": "效果预览",
+    "exportPreviewHint": "配色主题对所有导出格式生效。微信公众号的背景与布局由平台控制。",
     "exportThemes": {
       "default": "经典白",
       "tech-blue": "科技蓝",
