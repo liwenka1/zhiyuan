@@ -3,8 +3,9 @@
  */
 
 import { useState, useMemo, memo } from "react";
-import { ChevronDown, Check } from "lucide-react";
+import { ChevronDown, Check, Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useExportThemeStore } from "@/stores";
 import { useTranslation, Trans } from "react-i18next";
 import { Logo } from "@/components/icons";
@@ -336,7 +337,20 @@ export function ExportTab() {
 
       {/* 预览 */}
       <div className="mt-6">
-        <div className="text-muted-foreground mb-3 text-xs font-medium">{t("settings.exportPreview")}</div>
+        <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium">
+          <span>{t("settings.exportPreview")}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                aria-label={t("settings.exportPreviewHint")}
+                className="text-muted-foreground/80 hover:text-foreground focus-visible:ring-ring/50 inline-flex cursor-help items-center rounded-sm transition-colors outline-none focus-visible:ring-[3px]"
+              >
+                <Info className="h-3.5 w-3.5" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-64">{t("settings.exportPreviewHint")}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <ExportThemePreview colors={colors} />
       </div>
     </div>

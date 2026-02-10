@@ -23,6 +23,7 @@
     "exportTheme": "Color Theme",
     "exportThemeDesc": "Applies to all export formats",
     "exportPreview": "Preview",
+    "exportPreviewHint": "Color themes apply to all export formats. WeChat controls page background and layout.",
     "exportThemes": {
       "default": "Classic",
       "tech-blue": "Tech Blue",
