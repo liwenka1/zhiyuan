@@ -10,7 +10,9 @@ import {
   DEFAULT_EXPORT_THEME_ID,
   type ThemeColors
 } from "@/features/export/lib/styles";
+import { pickSupportedLayoutFieldsForFormat } from "@/features/export/lib/layout-capabilities";
 import { isDarkColor } from "@/lib/color-utils";
+import type { ExportLayoutConfig } from "@shared";
 
 /**
  * 生成适配微信公众号的 HTML 文档
@@ -19,9 +21,15 @@ import { isDarkColor } from "@/lib/color-utils";
  * @param htmlContent HTML 内容
  * @param themeId 导出主题预设 ID，深色主题会自动 fallback 到 default 以保证可读性
  */
-export function generateWechatHTMLDocument(title: string, htmlContent: string, themeId: string): string {
+export function generateWechatHTMLDocument(
+  title: string,
+  htmlContent: string,
+  themeId: string,
+  layout?: Partial<ExportLayoutConfig>
+): string {
   const colors = getWechatSafeThemeColors(themeId);
-  const styles = generateWechatStyles(colors);
+  const supportedLayout = pickSupportedLayoutFieldsForFormat("wechat", layout ?? {});
+  const styles = generateWechatStyles(colors, { baseFontSize: supportedLayout.baseFontSize });
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">

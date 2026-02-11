@@ -10,7 +10,8 @@ import type { ThemeColors } from "./theme-colors";
  * 生成 Tailwind Typography prose 样式
  * 与预览组件使用的 prose 类保持一致
  */
-export function generateProseStyles(colors: ThemeColors): string {
+export function generateProseStyles(colors: ThemeColors, options?: { baseFontSize?: number }): string {
+  const baseFontSize = options?.baseFontSize ?? 16;
   const strongPadding = colors.strongBg === "transparent" ? "0" : "2px 4px";
 
   return `
@@ -23,7 +24,7 @@ export function generateProseStyles(colors: ThemeColors): string {
 
     html {
       font-family: "LXGW WenKai", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      font-size: 16px;
+      font-size: ${baseFontSize}px;
       line-height: 1.5;
       letter-spacing: 0.5px;
       -webkit-font-smoothing: antialiased;

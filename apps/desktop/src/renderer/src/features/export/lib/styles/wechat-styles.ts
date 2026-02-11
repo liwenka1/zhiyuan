@@ -9,7 +9,8 @@ import type { ThemeColors } from "./theme-colors";
  * 生成微信公众号专用样式
  * 针对移动端阅读优化，使用更大的字号和行距
  */
-export function generateWechatStyles(colors: ThemeColors): string {
+export function generateWechatStyles(colors: ThemeColors, options?: { baseFontSize?: number }): string {
+  const baseFontSize = options?.baseFontSize ?? 16;
   const strongPadding = colors.strongBg === "transparent" ? "0" : "2px 4px";
 
   return `
@@ -23,7 +24,7 @@ export function generateWechatStyles(colors: ThemeColors): string {
       background-color: ${colors.background};
       color: ${colors.foreground};
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
-      font-size: 16px;
+      font-size: ${baseFontSize}px;
       line-height: 1.75;
       letter-spacing: 0.5px;
       padding: 16px 0;

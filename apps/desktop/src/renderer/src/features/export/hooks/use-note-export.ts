@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Note } from "@/types";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { useExportThemeStore } from "@/stores";
+import { useExportLayoutStore, useExportThemeStore } from "@/stores";
 import {
   exportNoteAsHTML,
   exportNoteAsPDF,
@@ -27,6 +27,7 @@ export interface UseNoteExportReturn {
 export function useNoteExport(): UseNoteExportReturn {
   const { t } = useTranslation("note");
   const exportThemeId = useExportThemeStore((state) => state.exportThemeId);
+  const exportLayout = useExportLayoutStore((state) => state.exportLayout);
   const [isExporting, setIsExporting] = useState(false);
 
   /**
@@ -45,19 +46,19 @@ export function useNoteExport(): UseNoteExportReturn {
     try {
       switch (format) {
         case "html":
-          await exportNoteAsHTML(note, exportThemeId);
+          await exportNoteAsHTML(note, exportThemeId, exportLayout);
           break;
         case "pdf":
-          await exportNoteAsPDF(note, exportThemeId);
+          await exportNoteAsPDF(note, exportThemeId, exportLayout);
           break;
         case "pdf-pages":
-          await exportNoteAsPDFPages(note, exportThemeId);
+          await exportNoteAsPDFPages(note, exportThemeId, exportLayout);
           break;
         case "image":
-          await exportNoteAsImage(note, exportThemeId);
+          await exportNoteAsImage(note, exportThemeId, exportLayout);
           break;
         case "image-pages":
-          await exportNoteAsImagePages(note, exportThemeId);
+          await exportNoteAsImagePages(note, exportThemeId, exportLayout);
           break;
       }
 
@@ -79,7 +80,7 @@ export function useNoteExport(): UseNoteExportReturn {
    */
   const copyToWechat = async (note: Note) => {
     try {
-      await copyNoteToWechat(note, exportThemeId);
+      await copyNoteToWechat(note, exportThemeId, exportLayout);
       toast.success(t("export.wechatSuccess"));
     } catch {
       toast.error(t("export.wechatFailed"));

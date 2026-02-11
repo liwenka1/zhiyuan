@@ -10,7 +10,9 @@ import {
   generateFontFaces,
   generateEmbeddedFontFaces
 } from "@/features/export/lib/styles";
+import { pickSupportedLayoutFieldsForFormat, type ExportTargetFormat } from "@/features/export/lib/layout-capabilities";
 import { isDarkColor } from "@/lib/color-utils";
+import type { ExportLayoutConfig } from "@shared";
 
 // 直接导入库里的 CSS 文件（与预览模式使用相同的样式）
 import highlightLight from "highlight.js/styles/github.css?raw";
@@ -20,6 +22,10 @@ import katexStyles from "katex/dist/katex.min.css?raw";
 export interface HTMLDocumentOptions {
   /** 导出主题预设 ID（由调用方从 store 获取并传入） */
   themeId: string;
+  /** 当前导出目标格式（用于能力规则过滤） */
+  format?: Extract<ExportTargetFormat, "html" | "pdf" | "image">;
+  /** 导出布局配置（仅应用于该格式支持的字段） */
+  layout?: Partial<ExportLayoutConfig>;
   /** 字体配置 */
   fonts?:
     | { type: "path"; path: string } // HTML 资源包：使用相对路径
@@ -34,7 +40,9 @@ export interface HTMLDocumentOptions {
  */
 export function generateHTMLDocument(title: string, htmlContent: string, options: HTMLDocumentOptions): string {
   const colors = getExportThemeColors(options.themeId);
-  const proseStyles = generateProseStyles(colors);
+  const format = options.format ?? "html";
+  const supportedLayout = pickSupportedLayoutFieldsForFormat(format, options.layout ?? {});
+  const proseStyles = generateProseStyles(colors, { baseFontSize: supportedLayout.baseFontSize });
 
   // 根据导出主题的背景色自动选择代码高亮风格（深色/浅色）
   // isDarkColor 返回三态：true=深色, false=浅色, null=解析失败；仅明确深色时使用 dark 风格

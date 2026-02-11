@@ -25,10 +25,17 @@
     "exportThemeDesc": "Applies to all export formats",
     "exportPreviewSectionTitle": "Preview",
     "exportPreview": "Preview",
-    "exportPreviewHint": "Color themes apply to all export formats. WeChat controls page background and layout.",
+    "exportPreviewHint": "Color themes apply to all export formats. WeChat does not support: {{fields}}.",
     "exportLayoutSectionTitle": "Layout Settings",
-    "exportLayoutSectionNotice": "Layout settings apply to HTML / PDF / Image exports only. WeChat uses platform-controlled layout.",
+    "exportLayoutSectionNotice": "Layout support differs by export format. WeChat ignores some layout fields (see preview hint).",
     "exportLayoutComingSoon": "Coming soon: outer/inner background, content width, and card spacing controls.",
+    "exportLayoutFields": {
+      "outerBackground": "Outer Background",
+      "innerBackground": "Inner Background",
+      "contentWidth": "Content Width",
+      "cardPadding": "Card Padding",
+      "baseFontSize": "Font Size"
+    },
     "exportThemes": {
       "default": "Classic",
       "tech-blue": "Tech Blue",

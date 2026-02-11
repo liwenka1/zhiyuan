@@ -3,13 +3,18 @@ import { markdownToHTML } from "@/lib/markdown-processor";
 import { generateHTMLDocument } from "@/lib/markdown-to-html";
 import i18n from "@/lib/i18n";
 import { exportIpc } from "@/ipc";
+import type { ExportLayoutConfig } from "@shared";
 
 /**
  * 导出笔记为 HTML
  * @param note 要导出的笔记
  * @param themeId 导出主题预设 ID，决定导出颜色方案
  */
-export async function exportNoteAsHTML(note: Note, themeId: string): Promise<void> {
+export async function exportNoteAsHTML(
+  note: Note,
+  themeId: string,
+  layout?: Partial<ExportLayoutConfig>
+): Promise<void> {
   // 1. 获取下载目录
   const downloadsPath = await exportIpc.getDownloadsPath();
 
@@ -35,6 +40,8 @@ export async function exportNoteAsHTML(note: Note, themeId: string): Promise<voi
   // 4. 生成完整的 HTML 文档（带字体路径）
   const fullHTML = generateHTMLDocument(note.title, htmlBody, {
     themeId,
+    format: "html",
+    layout,
     fonts: { type: "path", path: "./assets" }
   });
 
