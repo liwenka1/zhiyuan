@@ -1,11 +1,17 @@
 import Store from "electron-store";
-import type { ThemeMode } from "@shared";
+import {
+  DEFAULT_EXPORT_LAYOUT_CONFIG,
+  normalizeExportLayoutConfig,
+  type ExportLayoutConfig,
+  type ThemeMode
+} from "@shared";
 
 interface AppConfig {
   recentWorkspaces: string[];
   pinnedNotes: Record<string, string[]>;
   theme: ThemeMode; // 主题模式（light/dark/system）
   exportThemeId: string; // 导出主题预设 ID
+  exportLayout: ExportLayoutConfig; // 导出布局配置
 }
 
 // 创建配置存储实例
@@ -14,7 +20,8 @@ const store = new Store<AppConfig>({
     recentWorkspaces: [],
     pinnedNotes: {},
     theme: "system", // 默认跟随系统
-    exportThemeId: "default" // 默认导出主题
+    exportThemeId: "default", // 默认导出主题
+    exportLayout: DEFAULT_EXPORT_LAYOUT_CONFIG // 默认导出布局
   }
 });
 
@@ -102,5 +109,21 @@ export const configManager = {
    */
   setExportThemeId(themeId: string): void {
     store.set("exportThemeId", themeId);
+  },
+
+  /**
+   * 获取导出布局配置
+   */
+  getExportLayout(): ExportLayoutConfig {
+    return normalizeExportLayoutConfig(store.get("exportLayout"));
+  },
+
+  /**
+   * 设置导出布局配置（支持部分更新）
+   */
+  setExportLayout(patch: Partial<ExportLayoutConfig>): void {
+    const current = normalizeExportLayoutConfig(store.get("exportLayout"));
+    const next = normalizeExportLayoutConfig({ ...current, ...patch });
+    store.set("exportLayout", next);
   }
 };
