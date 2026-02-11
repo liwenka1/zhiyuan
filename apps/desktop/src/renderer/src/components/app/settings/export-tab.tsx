@@ -12,6 +12,7 @@ import { Logo } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { EXPORT_THEME_PRESETS, getExportThemeColors, type ThemeColors } from "@/features/export/lib/styles";
 import { SettingRow } from "./setting-row";
+import { SettingSection } from "./setting-section";
 
 /* ---------- 导出主题选择器 ---------- */
 function ExportThemeSelect() {
@@ -328,15 +329,13 @@ export function ExportTab() {
 
   return (
     <div>
-      {/* 主题选择 */}
-      <div className="divide-border divide-y">
-        <SettingRow label={t("settings.exportTheme")} description={t("settings.exportThemeDesc")}>
+      <SettingSection title={t("settings.exportThemeSectionTitle")} description={t("settings.exportThemeDesc")}>
+        <SettingRow label={t("settings.exportTheme")}>
           <ExportThemeSelect />
         </SettingRow>
-      </div>
+      </SettingSection>
 
-      {/* 预览 */}
-      <div className="mt-6">
+      <SettingSection title={t("settings.exportPreviewSectionTitle")}>
         <div className="text-muted-foreground mb-3 flex items-center gap-1.5 text-xs font-medium">
           <span>{t("settings.exportPreview")}</span>
           <TooltipProvider>
@@ -352,7 +351,13 @@ export function ExportTab() {
           </TooltipProvider>
         </div>
         <ExportThemePreview colors={colors} />
-      </div>
+      </SettingSection>
+
+      <SettingSection title={t("settings.exportLayoutSectionTitle")} notice={t("settings.exportLayoutSectionNotice")}>
+        <div className="border-border bg-muted/20 text-muted-foreground rounded-md border border-dashed px-3 py-4 text-xs">
+          {t("settings.exportLayoutComingSoon")}
+        </div>
+      </SettingSection>
     </div>
   );
 }

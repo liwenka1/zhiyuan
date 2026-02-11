@@ -64,7 +64,7 @@ export function SettingsPopover() {
         </nav>
 
         {/* 右侧内容 */}
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* 内容区标题 */}
           <div className="border-border flex shrink-0 items-center gap-2.5 border-b px-8 py-5">
             {activeTab && (
@@ -76,8 +76,8 @@ export function SettingsPopover() {
           </div>
 
           {/* 内容区主体 */}
-          <ScrollArea className="flex-1">
-            <div className="px-8 py-4">
+          <ScrollArea className="min-h-0 flex-1">
+            <div className="px-8 py-4 pb-6">
               {tab === "general" && <GeneralTab />}
               {tab === "export" && <ExportTab />}
               {tab === "about" && <AboutTab />}
