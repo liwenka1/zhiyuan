@@ -1,5 +1,5 @@
 import { ipcRenderer } from "electron";
-import type { IpcResultDTO } from "@shared";
+import type { ExportLayoutConfig, IpcResultDTO } from "@shared";
 
 export const configApi = {
   /**
@@ -23,5 +23,16 @@ export const configApi = {
    * 设置导出主题预设 ID
    */
   setExportThemeId: (themeId: string): Promise<IpcResultDTO<void>> =>
-    ipcRenderer.invoke("config:setExportThemeId", themeId)
+    ipcRenderer.invoke("config:setExportThemeId", themeId),
+
+  /**
+   * 获取导出布局配置
+   */
+  getExportLayout: (): Promise<IpcResultDTO<ExportLayoutConfig>> => ipcRenderer.invoke("config:getExportLayout"),
+
+  /**
+   * 设置导出布局配置（部分更新）
+   */
+  setExportLayout: (patch: Partial<ExportLayoutConfig>): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:setExportLayout", patch)
 };

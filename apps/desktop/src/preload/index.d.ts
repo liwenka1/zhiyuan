@@ -1,5 +1,5 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
-import type { Theme, ThemeMode, IpcResultDTO } from "@shared";
+import type { ExportLayoutConfig, Theme, ThemeMode, IpcResultDTO } from "@shared";
 
 /**
  * 主题 API 接口
@@ -197,6 +197,16 @@ export interface ConfigAPI {
    * 设置导出主题预设 ID
    */
   setExportThemeId: (themeId: string) => Promise<IpcResultDTO<void>>;
+
+  /**
+   * 获取导出布局配置
+   */
+  getExportLayout: () => Promise<IpcResultDTO<ExportLayoutConfig>>;
+
+  /**
+   * 设置导出布局配置（部分更新）
+   */
+  setExportLayout: (patch: Partial<ExportLayoutConfig>) => Promise<IpcResultDTO<void>>;
 }
 
 // RSS API 接口

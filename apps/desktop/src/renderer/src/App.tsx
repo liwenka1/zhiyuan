@@ -8,7 +8,8 @@ import {
   useWorkspaceStore,
   useNoteStore,
   useFolderStore,
-  useExportThemeStore
+  useExportThemeStore,
+  useExportLayoutStore
 } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/features/editor";
@@ -67,6 +68,7 @@ function App(): React.JSX.Element {
   }, [setWorkspacePath, setFolders, loadFromFileSystem, selectNote]);
 
   const initExportTheme = useExportThemeStore((state) => state.initExportTheme);
+  const initExportLayout = useExportLayoutStore((state) => state.initExportLayout);
 
   // 初始化主题，组件卸载时清理监听器
   useEffect(() => {
@@ -80,6 +82,11 @@ function App(): React.JSX.Element {
   useEffect(() => {
     initExportTheme();
   }, [initExportTheme]);
+
+  // 初始化导出布局配置（数据模型预热，暂不影响现有导出行为）
+  useEffect(() => {
+    initExportLayout();
+  }, [initExportLayout]);
 
   // 监听菜单「打开文件夹/文件」事件（macOS 原生菜单 + Windows 自定义菜单栏）
   useEffect(() => {

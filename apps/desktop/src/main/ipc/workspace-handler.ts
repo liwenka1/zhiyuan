@@ -7,7 +7,7 @@ import { configManager } from "../config";
 import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
 import { validatePathInWorkspace } from "../security/path-validator";
 import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "./ipc-result";
-import type { IpcResultDTO } from "@shared";
+import { normalizeExportLayoutConfig, type ExportLayoutConfig, type IpcResultDTO } from "@shared";
 
 /**
  * 校验文件路径是否在当前窗口的工作区内
@@ -306,6 +306,37 @@ export function registerWorkspaceHandlers(): void {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return ipcErr(message, "CONFIG_SET_EXPORT_THEME_FAILED");
+    }
+  });
+
+  // 获取导出布局配置
+  ipcMain.handle("config:getExportLayout", (): IpcResultDTO<ExportLayoutConfig> => {
+    try {
+      return ipcOk(configManager.getExportLayout());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_GET_EXPORT_LAYOUT_FAILED");
+    }
+  });
+
+  // 设置导出布局配置（允许部分字段更新）
+  ipcMain.handle("config:setExportLayout", (_, patch: Partial<ExportLayoutConfig>): IpcResultDTO<void> => {
+    try {
+      if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
+        return ipcErr("Invalid export layout patch", "CONFIG_SET_EXPORT_LAYOUT_INVALID");
+      }
+      const normalized = normalizeExportLayoutConfig(patch);
+      const sanitizedPatch: Partial<ExportLayoutConfig> = {};
+      if ("outerBackground" in patch) sanitizedPatch.outerBackground = normalized.outerBackground;
+      if ("innerBackground" in patch) sanitizedPatch.innerBackground = normalized.innerBackground;
+      if ("contentWidth" in patch) sanitizedPatch.contentWidth = normalized.contentWidth;
+      if ("cardPadding" in patch) sanitizedPatch.cardPadding = normalized.cardPadding;
+      if ("baseFontSize" in patch) sanitizedPatch.baseFontSize = normalized.baseFontSize;
+      configManager.setExportLayout(sanitizedPatch);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_SET_EXPORT_LAYOUT_FAILED");
     }
   });
 }
