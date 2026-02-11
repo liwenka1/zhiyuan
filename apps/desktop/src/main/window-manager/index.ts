@@ -1,5 +1,5 @@
-import { BrowserWindow, shell, screen } from "electron";
-import { join } from "path";
+import { BrowserWindow, shell, screen, app } from "electron";
+import { join, basename } from "path";
 import { is } from "@electron-toolkit/utils";
 import icon from "../../../resources/icon.png?asset";
 import { themeManager } from "../theme";
@@ -19,6 +19,30 @@ interface WindowEntry {
  */
 class WindowManager {
   private windows: Map<number, WindowEntry> = new Map();
+
+  /**
+   * 生成窗口标题：
+   * - 未绑定工作区：应用名
+   * - 已绑定工作区：工作区文件夹名
+   */
+  private getWindowTitle(workspacePath: string | null): string {
+    if (!workspacePath) {
+      return app.name;
+    }
+    const folderName = basename(workspacePath);
+    return folderName || app.name;
+  }
+
+  /**
+   * 同步窗口身份信息（标题 / macOS represented filename）
+   */
+  private applyWorkspaceIdentity(win: BrowserWindow, workspacePath: string | null): void {
+    win.setTitle(this.getWindowTitle(workspacePath));
+
+    if (process.platform === "darwin") {
+      win.setRepresentedFilename(workspacePath ?? "");
+    }
+  }
 
   /**
    * 创建新窗口
@@ -77,6 +101,7 @@ class WindowManager {
     });
 
     // 注册到管理器
+    this.applyWorkspaceIdentity(win, workspacePath ?? null);
     this.windows.set(win.id, {
       window: win,
       workspacePath: workspacePath ?? null
@@ -151,6 +176,7 @@ class WindowManager {
         fileWatcherManager.stopWatching(entry.workspacePath, windowId);
       }
       entry.workspacePath = workspacePath;
+      this.applyWorkspaceIdentity(entry.window, workspacePath);
     }
   }
 
