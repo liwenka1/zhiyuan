@@ -25,9 +25,13 @@
     "exportThemeDesc": "Applies to all export formats",
     "exportPreviewSectionTitle": "Preview",
     "exportPreview": "Preview",
+    "wechatLayoutNoticeTitle": "WeChat Limitations",
     "exportPreviewHint": "Color themes apply to all export formats. WeChat does not support: {{fields}}.",
     "exportLayoutSectionTitle": "Layout Settings",
     "exportLayoutSectionNotice": "Layout support differs by export format. WeChat ignores some layout fields (see preview hint).",
+    "exportLayoutReset": "Reset layout",
+    "exportLayoutResetSuccess": "Layout defaults restored",
+    "exportLayoutResetFailed": "Failed to reset layout. Please try again.",
     "exportLayoutComingSoon": "Coming soon: outer/inner background, content width, and card spacing controls.",
     "exportLayoutFields": {
       "outerBackground": "Outer Background",
@@ -35,6 +39,13 @@
       "contentWidth": "Content Width",
       "cardPadding": "Card Padding",
       "baseFontSize": "Font Size"
+    },
+    "exportLayoutDescriptions": {
+      "outerBackground": "Page outer background color (ignored by WeChat)",
+      "innerBackground": "Content card background color (ignored by WeChat)",
+      "contentWidth": "Content max width in px (ignored by WeChat)",
+      "cardPadding": "Content card padding in px (ignored by WeChat)",
+      "baseFontSize": "Base body font size in px (applies to all formats)"
     },
     "exportThemes": {
       "default": "Classic",

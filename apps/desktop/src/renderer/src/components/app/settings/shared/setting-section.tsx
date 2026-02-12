@@ -5,17 +5,22 @@ export function SettingSection({
   title,
   description,
   notice,
+  action,
   children
 }: {
   title: string;
   description?: string;
   notice?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="mb-6">
       <div className="mb-2">
-        <div className="text-foreground text-xs font-semibold tracking-wide">{title}</div>
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-foreground text-xs font-semibold tracking-wide">{title}</div>
+          {action ? <div className="shrink-0">{action}</div> : null}
+        </div>
         {description && <div className="text-muted-foreground mt-1 text-xs">{description}</div>}
       </div>
 

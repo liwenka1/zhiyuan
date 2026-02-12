@@ -42,7 +42,13 @@ export function generateHTMLDocument(title: string, htmlContent: string, options
   const colors = getExportThemeColors(options.themeId);
   const format = options.format ?? "html";
   const supportedLayout = pickSupportedLayoutFieldsForFormat(format, options.layout ?? {});
-  const proseStyles = generateProseStyles(colors, { baseFontSize: supportedLayout.baseFontSize });
+  const proseStyles = generateProseStyles(colors, {
+    baseFontSize: supportedLayout.baseFontSize,
+    outerBackground: typeof supportedLayout.outerBackground === "string" ? supportedLayout.outerBackground : undefined,
+    innerBackground: typeof supportedLayout.innerBackground === "string" ? supportedLayout.innerBackground : undefined,
+    contentWidth: typeof supportedLayout.contentWidth === "number" ? supportedLayout.contentWidth : undefined,
+    cardPadding: typeof supportedLayout.cardPadding === "number" ? supportedLayout.cardPadding : undefined
+  });
 
   // 根据导出主题的背景色自动选择代码高亮风格（深色/浅色）
   // isDarkColor 返回三态：true=深色, false=浅色, null=解析失败；仅明确深色时使用 dark 风格
@@ -73,8 +79,12 @@ ${katexStyles}
   </style>
 </head>
 <body>
-  <div class="prose">
+  <div class="export-layout-shell">
+    <div class="export-layout-content">
+      <div class="prose">
 ${htmlContent}
+      </div>
+    </div>
   </div>
 </body>
 </html>`;

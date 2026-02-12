@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ChevronDown, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useExportThemeStore } from "@/stores";
 import { useTranslation } from "react-i18next";
@@ -23,23 +24,25 @@ export function ExportThemeSelect() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button className="border-border hover:bg-muted/40 inline-flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-1.5 text-xs transition-colors">
+        <Button variant="outline" size="sm" className="h-8 gap-3 rounded-lg px-3 text-xs">
           <span
             className="h-3 w-3 shrink-0 rounded-full border"
             style={{ backgroundColor: currentPreset.colors.linkColor, borderColor: currentPreset.colors.border }}
           />
           <span>{currentLabel}</span>
           <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
-        </button>
+        </Button>
       </PopoverTrigger>
       <PopoverContent align="end" sideOffset={4} className="w-44 gap-0 p-1">
         {EXPORT_THEME_PRESETS.map((preset) => (
-          <button
+          <Button
             key={preset.id}
+            variant="ghost"
+            size="sm"
             onClick={() => handleSelect(preset.id)}
             className={cn(
-              "flex w-full cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
-              exportThemeId === preset.id ? "text-foreground font-medium" : "text-muted-foreground hover:bg-muted/40"
+              "h-8 w-full justify-start gap-2.5 rounded-md px-3 text-sm transition-colors",
+              exportThemeId === preset.id ? "text-foreground font-medium" : "text-muted-foreground"
             )}
           >
             <span
@@ -48,7 +51,7 @@ export function ExportThemeSelect() {
             />
             <span className="flex-1 text-left">{t(`settings.exportThemes.${preset.id}`)}</span>
             {exportThemeId === preset.id && <Check className="h-3.5 w-3.5 shrink-0" />}
-          </button>
+          </Button>
         ))}
       </PopoverContent>
     </Popover>

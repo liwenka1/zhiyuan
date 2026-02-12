@@ -9,7 +9,7 @@ import { useThemeStore, useLanguageStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { ThemeMode } from "@shared";
-import { SettingRow } from "./setting-row";
+import { SettingRow } from "../shared/setting-row";
 
 /* ---------- 主题分段控件 ---------- */
 function ThemeSegmentedControl() {

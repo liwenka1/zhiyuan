@@ -6,7 +6,7 @@ interface ExportLayoutState {
   /** 当前导出布局配置 */
   exportLayout: ExportLayoutConfig;
   /** 设置导出布局（部分更新，同步持久化） */
-  setExportLayout: (patch: Partial<ExportLayoutConfig>) => Promise<void>;
+  setExportLayout: (patch: Partial<ExportLayoutConfig>) => Promise<boolean>;
   /** 初始化导出布局（从持久化读取） */
   initExportLayout: () => Promise<void>;
 }
@@ -19,10 +19,14 @@ export const useExportLayoutStore = create<ExportLayoutState>((set, get) => ({
     const next = normalizeExportLayoutConfig({ ...prev, ...patch });
     set({ exportLayout: next });
 
-    await configIpc.setExportLayout(patch).catch(() => {
+    try {
+      await configIpc.setExportLayout(patch);
+      return true;
+    } catch {
       // 持久化失败时回滚，避免 UI 与配置状态不一致
       set({ exportLayout: prev });
-    });
+      return false;
+    }
   },
 
   initExportLayout: async () => {
