@@ -25,9 +25,13 @@
     "exportThemeDesc": "应用于所有导出格式",
     "exportPreviewSectionTitle": "预览",
     "exportPreview": "效果预览",
+    "wechatLayoutNoticeTitle": "微信公众号限制",
     "exportPreviewHint": "配色主题对所有导出格式生效。微信公众号不支持：{{fields}}。",
     "exportLayoutSectionTitle": "布局设置",
     "exportLayoutSectionNotice": "布局设置在不同导出格式中的支持范围不同，微信公众号会忽略部分布局项（详见预览提示）。",
+    "exportLayoutReset": "重置布局",
+    "exportLayoutResetSuccess": "已恢复布局默认值",
+    "exportLayoutResetFailed": "恢复布局失败，请稍后重试",
     "exportLayoutComingSoon": "即将支持外层背景、内层背景、整体宽度、卡片边距等布局配置。",
     "exportLayoutFields": {
       "outerBackground": "外层背景",
@@ -35,6 +39,13 @@
       "contentWidth": "整体宽度",
       "cardPadding": "卡片边距",
       "baseFontSize": "文字大小"
+    },
+    "exportLayoutDescriptions": {
+      "outerBackground": "导出页面最外层背景色（微信忽略）",
+      "innerBackground": "正文卡片背景色（微信忽略）",
+      "contentWidth": "正文区域最大宽度，单位 px（微信忽略）",
+      "cardPadding": "正文卡片内边距，单位 px（微信忽略）",
+      "baseFontSize": "正文基础字号，单位 px（所有格式生效）"
     },
     "exportThemes": {
       "default": "经典白",

@@ -1,76 +1,24 @@
-import { memo } from "react";
 import { useTranslation, Trans } from "react-i18next";
-import { Logo } from "@/components/icons";
 import type { ThemeColors } from "@/features/export/lib/styles";
-
-function ColorPaletteStrip({ colors }: { colors: ThemeColors }) {
-  const { t } = useTranslation("common");
-
-  const swatches = [
-    { color: colors.background, label: t("settings.palette.bg") },
-    { color: colors.h1Color, label: t("settings.palette.title") },
-    { color: colors.linkColor, label: t("settings.palette.link") },
-    { color: colors.blockquoteBorder, label: t("settings.palette.accent") },
-    { color: colors.codeColor, label: t("settings.palette.code") },
-    { color: colors.quoteColor, label: t("settings.palette.quote") }
-  ];
-
-  return (
-    <div
-      className="flex items-center gap-3 border-b px-4 py-2.5"
-      style={{ borderColor: colors.border, backgroundColor: colors.muted }}
-    >
-      {swatches.map((s) => (
-        <div key={s.label} className="flex items-center gap-1.5">
-          <span
-            className="h-2.5 w-2.5 shrink-0 rounded-full"
-            style={{
-              backgroundColor: s.color,
-              border: `1px solid ${colors.border}`,
-              boxShadow: "0 0 0 1px rgba(0,0,0,0.04)"
-            }}
-          />
-          <span style={{ fontSize: "9px", color: colors.mutedForeground, fontWeight: 500 }}>{s.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 function PreviewHeading({ colors }: { colors: ThemeColors }) {
   const { t } = useTranslation("common");
 
   return (
-    <>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          paddingBottom: "6px",
-          borderBottom: `2px solid ${colors.h1Decoration}`,
-          marginBottom: "12px"
-        }}
-      >
-        <Logo style={{ width: "20px", height: "20px", color: colors.h1Color, flexShrink: 0 }} />
-        <span style={{ color: colors.h1Color, fontWeight: 700, fontSize: "16px", letterSpacing: "-0.01em" }}>
-          {t("settings.preview.appName")}
-        </span>
-      </div>
-
-      <div
-        style={{
-          color: colors.h2Color,
-          fontWeight: 600,
-          fontSize: "12.5px",
-          paddingLeft: "10px",
-          borderLeft: `3px solid ${colors.h2Decoration}`,
-          marginBottom: "10px"
-        }}
-      >
-        {t("settings.preview.subtitle")}
-      </div>
-    </>
+    <div
+      style={{
+        color: colors.h1Color,
+        fontWeight: 700,
+        fontSize: "17px",
+        lineHeight: "1.35",
+        borderBottom: `2px solid ${colors.h1Decoration}`,
+        paddingBottom: "8px",
+        marginBottom: "12px",
+        letterSpacing: "-0.01em"
+      }}
+    >
+      {t("settings.preview.appName")}
+    </div>
   );
 }
 
@@ -99,6 +47,22 @@ function PreviewBody({ colors }: { colors: ThemeColors }) {
         }}
       />
     </div>
+  );
+}
+
+function PreviewImage({ colors }: { colors: ThemeColors }) {
+  return (
+    <img
+      alt="preview"
+      src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='675'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop stop-color='%2394a3b8' offset='0'/%3E%3Cstop stop-color='%23cbd5e1' offset='1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1200' height='675' fill='url(%23g)'/%3E%3C/svg%3E"
+      style={{
+        width: "100%",
+        height: "96px",
+        objectFit: "cover",
+        border: `1px solid ${colors.border}`,
+        marginBottom: "10px"
+      }}
+    />
   );
 }
 
@@ -224,27 +188,25 @@ function PreviewTable({ colors }: { colors: ThemeColors }) {
   );
 }
 
-export const ExportThemePreview = memo(function ExportThemePreview({ colors }: { colors: ThemeColors }) {
+export function ExportPreviewArticle({
+  colors,
+  baseFontSize,
+  cardPadding
+}: {
+  colors: ThemeColors;
+  baseFontSize: number;
+  cardPadding: number;
+}) {
   return (
-    <div
-      className="overflow-hidden rounded-xl text-left"
-      style={{
-        backgroundColor: colors.background,
-        border: `1px solid ${colors.border}`,
-        boxShadow: "0 2px 12px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.02)"
-      }}
-    >
-      <ColorPaletteStrip colors={colors} />
-
-      <div className="px-5 py-4" style={{ fontSize: "11.5px", lineHeight: "1.7" }}>
-        <PreviewHeading colors={colors} />
-        <PreviewBody colors={colors} />
-        <PreviewBlockquote colors={colors} />
-        <PreviewList colors={colors} />
-        <PreviewCodeBlock colors={colors} />
-        <div style={{ borderTop: `1.5px solid ${colors.hrColor}`, margin: "10px 0" }} />
-        <PreviewTable colors={colors} />
-      </div>
+    <div style={{ fontSize: `${baseFontSize}px`, lineHeight: "1.7", padding: `${cardPadding}px` }}>
+      <PreviewHeading colors={colors} />
+      <PreviewBody colors={colors} />
+      <PreviewImage colors={colors} />
+      <PreviewBlockquote colors={colors} />
+      <PreviewList colors={colors} />
+      <PreviewCodeBlock colors={colors} />
+      <div style={{ borderTop: `1.5px solid ${colors.hrColor}`, margin: "10px 0" }} />
+      <PreviewTable colors={colors} />
     </div>
   );
-});
+}

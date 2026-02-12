@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
-import { GeneralTab } from "./general-tab";
-import { ExportTab } from "./export-tab";
-import { AboutTab } from "./about-tab";
+import { GeneralTab } from "./tabs/general-tab";
+import { ExportTab } from "./tabs/export/export-tab";
+import { AboutTab } from "./tabs/about-tab";
 
 type SettingsTab = "general" | "export" | "about";
 
@@ -47,19 +46,22 @@ export function SettingsPopover() {
         {/* 左侧导航 */}
         <nav className="border-border flex w-[200px] shrink-0 flex-col gap-0.5 border-r px-3 py-4">
           {tabs.map((item) => (
-            <button
+            <Button
               key={item.id}
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setTab(item.id)}
-              className={cn(
-                "relative flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm transition-colors",
+              className={`h-9 justify-start gap-2.5 rounded-lg px-3 text-sm transition-colors ${
                 tab === item.id
-                  ? "bg-foreground/6 text-foreground font-medium"
+                  ? "bg-foreground/6 text-foreground hover:bg-foreground/6 font-medium"
                   : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-              )}
+              }`}
+              aria-pressed={tab === item.id}
             >
               {item.icon}
               {item.label}
-            </button>
+            </Button>
           ))}
         </nav>
 

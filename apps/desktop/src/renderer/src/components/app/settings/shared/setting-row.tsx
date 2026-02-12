@@ -13,12 +13,12 @@ export function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-8 py-4">
-      <div className="shrink-0">
+    <div className="flex items-start justify-between gap-6 py-4">
+      <div className="min-w-0 flex-1">
         <div className="text-foreground text-sm font-medium">{label}</div>
         {description && <div className="text-muted-foreground mt-0.5 text-xs">{description}</div>}
       </div>
-      <div className="shrink-0">{children}</div>
+      <div className="flex w-[320px] max-w-full shrink-0 justify-end">{children}</div>
     </div>
   );
 }
