@@ -90,15 +90,5 @@ export const exportApi = {
       filesCount: number;
       filePaths: string[];
     }>
-  > => ipcRenderer.invoke("export:export-as-image-pages", htmlContents, folderPath, baseFileName, notePath, options),
-
-  /**
-   * 获取字体文件的 base64 编码（用于 PDF/图片导出时内嵌字体）
-   */
-  getFontsBase64: (): Promise<
-    IpcResultDTO<{
-      lxgwBase64: string;
-      jetBrainsBase64: string;
-    }>
-  > => ipcRenderer.invoke("export:get-fonts-base64")
+  > => ipcRenderer.invoke("export:export-as-image-pages", htmlContents, folderPath, baseFileName, notePath, options)
 };

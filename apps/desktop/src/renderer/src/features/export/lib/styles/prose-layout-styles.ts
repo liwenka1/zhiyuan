@@ -16,7 +16,7 @@ export function generateProseLayoutStyles(options: ProseLayoutOptions): string {
     }
 
     html {
-      font-family: "LXGW WenKai", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
       font-size: ${options.baseFontSize}px;
       line-height: 1.5;
       letter-spacing: 0.5px;

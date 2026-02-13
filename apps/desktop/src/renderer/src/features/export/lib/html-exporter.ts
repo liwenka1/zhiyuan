@@ -37,14 +37,13 @@ export async function exportNoteAsHTML(
   // 3. 将 Markdown 转换为 HTML
   const htmlBody = await markdownToHTML(note.content);
 
-  // 4. 生成完整的 HTML 文档（带字体路径）
+  // 4. 生成完整的 HTML 文档
   const fullHTML = generateHTMLDocument(note.title, htmlBody, {
     themeId,
     format: "html",
-    layout,
-    fonts: { type: "path", path: "./assets" }
+    layout
   });
 
-  // 5. 导出为资源包（包含所有图片和字体等资源）
+  // 5. 导出为资源包（包含所有图片等资源）
   await exportIpc.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");
 }

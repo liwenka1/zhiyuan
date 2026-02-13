@@ -156,15 +156,6 @@ export interface ExportAPI {
       filePaths: string[];
     }>
   >;
-  /**
-   * 获取字体文件的 base64 编码（用于 PDF/图片导出时内嵌字体）
-   */
-  getFontsBase64: () => Promise<
-    IpcResultDTO<{
-      lxgwBase64: string;
-      jetBrainsBase64: string;
-    }>
-  >;
 }
 
 // 工具 API 接口

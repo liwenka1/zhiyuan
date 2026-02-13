@@ -1,50 +1,28 @@
 /* 纸鸢 - 字体声明文件 */
 
 /**
- * 霞鹜文楷 - 中文正文字体
- * 风格：手写楷体，温润优雅
- * 用途：UI界面、编辑器、预览区
- */
-@font-face {
-  font-family: "LXGW WenKai";
-  src: url("/fonts/LXGWWenKaiMono-Medium.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-/**
- * 支持粗体（浏览器自动合成）
- * 当使用 font-weight: bold 时，浏览器会基于 Regular 自动生成粗体
+ * 系统字体栈 - 使用平台原生字体
+ * 优先使用系统默认字体，无需加载额外字体文件
+ * 提供最佳的阅读体验和性能
  */
 
-/**
- * JetBrains Mono - 代码字体
- * 风格：现代等宽，支持连字
- * 用途：代码块、行内代码、kbd
+/* 
+ * 中文阅读字体回退链：
+ * - PingFang SC: macOS/iOS 默认中文字体
+ * - Microsoft YaHei: Windows 默认中文字体
+ * - Noto Sans SC: Linux/Android 默认中文字体
+ * - -apple-system: macOS 系统字体
+ * - BlinkMacSystemFont: macOS Chrome 系统字体
+ * - Segoe UI: Windows 系统字体
+ * - system-ui: 标准系统字体
+ * - sans-serif: 通用无衬线字体回退
  */
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/JetBrainsMono-Regular.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-  /* 启用 OpenType 特性 */
-  font-feature-settings:
-    "liga" 1,
-    "calt" 1;
-}
 
-/**
- * 字体回退策略说明：
- * 
- * 1. 中文字体回退链：
- *    LXGW WenKai → PingFang SC (macOS) → Microsoft YaHei (Windows) → 系统默认
- * 
- * 2. 代码字体回退链：
- *    JetBrains Mono → SF Mono (macOS) → Consolas (Windows) → monospace
- * 
- * 3. 加载策略：
- *    font-display: swap - 优先显示回退字体，避免 FOIT (Flash of Invisible Text)
- *    用户体验优先，即使字体未加载也能看到内容
+/* 
+ * 代码字体回退链：
+ * - SF Mono: macOS/iOS 代码字体
+ * - Monaco: macOS 经典代码字体
+ * - Consolas: Windows 代码字体
+ * - Courier New: 通用等宽字体
+ * - monospace: 通用等宽字体回退
  */

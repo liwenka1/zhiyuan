@@ -7,51 +7,6 @@ import { wrapIpcHandler, ipcOk, ipcErr } from "./ipc-result";
 import type { IpcResultDTO } from "@shared";
 
 /**
- * 字体文件名常量（与 export-styles.ts 保持一致）
- */
-const FONT_FILES = {
-  lxgwWenKai: "LXGWWenKaiMono-Medium.ttf",
-  jetBrainsMono: "JetBrainsMono-Regular.ttf"
-} as const;
-
-/**
- * 获取字体文件目录路径
- * 开发环境和生产环境路径不同
- */
-function getFontsDir(): string {
-  if (app.isPackaged) {
-    // 生产环境：字体在 resources/app.asar/out/renderer/fonts
-    return path.join(process.resourcesPath, "app.asar", "out", "renderer", "fonts");
-  } else {
-    // 开发环境：electron-vite 使用 dev server，不会输出到 out/renderer
-    // 需要直接从源代码目录读取字体文件
-    // __dirname 在开发环境是 out/main，需要回到 apps/desktop 然后进入 src/renderer/public/fonts
-    return path.join(__dirname, "..", "..", "src", "renderer", "public", "fonts");
-  }
-}
-
-/**
- * 读取字体文件并转换为 base64
- */
-async function loadFontAsBase64(fontFileName: string): Promise<string> {
-  const fontsDir = getFontsDir();
-  const fontPath = path.join(fontsDir, fontFileName);
-  const fontBuffer = await fs.readFile(fontPath);
-  return fontBuffer.toString("base64");
-}
-
-/**
- * 加载所有字体为 base64（用于 PDF/图片导出）
- */
-export async function loadAllFontsAsBase64(): Promise<{ lxgwBase64: string; jetBrainsBase64: string }> {
-  const [lxgwBase64, jetBrainsBase64] = await Promise.all([
-    loadFontAsBase64(FONT_FILES.lxgwWenKai),
-    loadFontAsBase64(FONT_FILES.jetBrainsMono)
-  ]);
-  return { lxgwBase64, jetBrainsBase64 };
-}
-
-/**
  * 判断是否为相对路径
  */
 function isRelativePath(src: string): boolean {
@@ -289,7 +244,7 @@ async function captureHtmlAsImage(htmlContent: string, notePath?: string, width 
 }
 
 /**
- * 收集并复制 HTML 中的资源文件（图片、视频等）以及字体文件
+ * 收集并复制 HTML 中的资源文件（图片、视频等）
  */
 async function collectAndCopyAssets(
   html: string,
@@ -301,21 +256,6 @@ async function collectAndCopyAssets(
   const copiedFiles: string[] = [];
   const fileMap = new Map<string, string>();
   const copiedFileNames = new Set<string>();
-
-  // 复制字体文件
-  const fontsDir = getFontsDir();
-  for (const fontFile of Object.values(FONT_FILES)) {
-    const sourcePath = path.join(fontsDir, fontFile);
-    const destPath = path.join(assetsDir, fontFile);
-    const copied = await fs.copyFile(sourcePath, destPath).then(
-      () => true,
-      () => false
-    );
-    if (copied) {
-      copiedFiles.push(destPath);
-      copiedFileNames.add(fontFile);
-    }
-  }
 
   // 匹配 HTML 中的资源标签
   const resourceRegex = /<(img|video|audio|source)[^>]+(src|href)=(["'])([^"']+)\3[^>]*>/gi;
@@ -439,14 +379,6 @@ export function registerExportHandlers(): void {
     }
   });
 
-  // 获取字体 base64（用于 PDF/图片导出）
-  ipcMain.handle(
-    "export:get-fonts-base64",
-    wrapIpcHandler(async () => {
-      return await loadAllFontsAsBase64();
-    }, "EXPORT_GET_FONTS_FAILED")
-  );
-
   // 导出为 PDF（单页长图方式）
   ipcMain.handle(
     "export:export-as-pdf",
@@ -510,7 +442,7 @@ export function registerExportHandlers(): void {
     }
   });
 
-  // 导出 HTML 资源包（包含所有图片等资源和字体）
+  // 导出 HTML 资源包（包含所有图片等资源）
   ipcMain.handle(
     "export:export-html-package",
     wrapIpcHandler(
@@ -520,26 +452,13 @@ export function registerExportHandlers(): void {
         const assetsDir = path.join(outputPath, assetsFolder);
         await fs.mkdir(assetsDir, { recursive: true });
 
-        // 如果没有笔记路径，只复制字体文件
+        // 如果没有笔记路径，直接保存 HTML
         if (!notePath) {
-          const fontsDir = getFontsDir();
-          const copiedFiles: string[] = [];
-          for (const fontFile of Object.values(FONT_FILES)) {
-            const sourcePath = path.join(fontsDir, fontFile);
-            const destPath = path.join(assetsDir, fontFile);
-            const copied = await fs.copyFile(sourcePath, destPath).then(
-              () => true,
-              () => false
-            );
-            if (copied) {
-              copiedFiles.push(destPath);
-            }
-          }
           await fs.writeFile(path.join(outputPath, "index.html"), htmlContent, "utf-8");
-          return { filesCount: copiedFiles.length + 1, copiedFiles };
+          return { filesCount: 1, copiedFiles: [] };
         }
 
-        // 收集并复制资源文件（包含字体）
+        // 收集并复制资源文件
         const { processedHtml, copiedFiles } = await collectAndCopyAssets(
           htmlContent,
           notePath,

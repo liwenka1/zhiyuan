@@ -35,21 +35,17 @@ export async function exportNoteAsPDF(
     throw new Error("USER_CANCELLED");
   }
 
-  // 3. 获取字体 base64
-  const fonts = await exportIpc.getFontsBase64();
-
-  // 4. 将 Markdown 转换为 HTML
+  // 3. 将 Markdown 转换为 HTML
   const htmlBody = await markdownToHTML(note.content);
 
-  // 5. 生成完整的 HTML 文档（内嵌字体）
+  // 4. 生成完整的 HTML 文档
   const fullHTML = generateHTMLDocument(note.title, htmlBody, {
     themeId,
     format: "pdf",
-    layout,
-    fonts: { type: "embedded", ...fonts }
+    layout
   });
 
-  // 6. 导出为 PDF（传入 notePath 以支持本地图片）
+  // 5. 导出为 PDF（传入 notePath 以支持本地图片）
   await exportIpc.exportAsPDF(fullHTML, filePath, note.filePath);
 }
 
@@ -81,29 +77,25 @@ export async function exportNoteAsPDFPages(
     throw new Error("USER_CANCELLED");
   }
 
-  // 3. 获取字体 base64
-  const fonts = await exportIpc.getFontsBase64();
-
-  // 4. 分割 Markdown
+  // 3. 分割 Markdown
   const sections = splitMarkdownByHr(note.content);
 
   if (sections.length === 0) {
     throw new Error("没有内容可导出");
   }
 
-  // 5. 为每个分片生成 HTML（内嵌字体）
+  // 4. 为每个分片生成 HTML
   const htmlContents = await Promise.all(
     sections.map(async (section) => {
       const htmlBody = await markdownToHTML(section);
       return generateHTMLDocument(note.title, htmlBody, {
         themeId,
         format: "pdf",
-        layout,
-        fonts: { type: "embedded", ...fonts }
+        layout
       });
     })
   );
 
-  // 6. 导出为单个 PDF（多页）
+  // 5. 导出为单个 PDF（多页）
   await exportIpc.exportAsPDFPages(htmlContents, filePath, note.filePath);
 }

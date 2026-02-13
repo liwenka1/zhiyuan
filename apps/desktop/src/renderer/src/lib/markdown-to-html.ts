@@ -4,12 +4,7 @@
  * 样式与预览组件保持一致，基于 Tailwind Typography prose 类
  */
 
-import {
-  getExportThemeColors,
-  generateProseStyles,
-  generateFontFaces,
-  generateEmbeddedFontFaces
-} from "@/features/export/lib/styles";
+import { getExportThemeColors, generateProseStyles } from "@/features/export/lib/styles";
 import { pickSupportedLayoutFieldsForFormat, type ExportTargetFormat } from "@/features/export/lib/layout-capabilities";
 import { isDarkColor } from "@/lib/color-utils";
 import type { ExportLayoutConfig } from "@shared";
@@ -26,10 +21,8 @@ export interface HTMLDocumentOptions {
   format?: Extract<ExportTargetFormat, "html" | "pdf" | "image">;
   /** 导出布局配置（仅应用于该格式支持的字段） */
   layout?: Partial<ExportLayoutConfig>;
-  /** 字体配置 */
-  fonts?:
-    | { type: "path"; path: string } // HTML 资源包：使用相对路径
-    | { type: "embedded"; lxgwBase64: string; jetBrainsBase64: string }; // PDF/图片：内嵌 base64
+  /** 字体配置（已弃用：现在使用系统默认字体） */
+  fonts?: never;
 }
 
 /**
@@ -54,16 +47,6 @@ export function generateHTMLDocument(title: string, htmlContent: string, options
   // isDarkColor 返回三态：true=深色, false=浅色, null=解析失败；仅明确深色时使用 dark 风格
   const highlightStyles = isDarkColor(colors.background) === true ? highlightDark : highlightLight;
 
-  // 生成字体样式
-  let fontStyles = "";
-  if (options.fonts) {
-    if (options.fonts.type === "path") {
-      fontStyles = generateFontFaces(options.fonts.path);
-    } else if (options.fonts.type === "embedded") {
-      fontStyles = generateEmbeddedFontFaces(options.fonts.lxgwBase64, options.fonts.jetBrainsBase64);
-    }
-  }
-
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -72,7 +55,6 @@ export function generateHTMLDocument(title: string, htmlContent: string, options
   <meta name="generator" content="zhiyuan">
   <title>${title}</title>
   <style>
-${fontStyles}
 ${proseStyles}
 ${highlightStyles}
 ${katexStyles}
