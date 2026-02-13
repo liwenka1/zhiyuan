@@ -104,8 +104,9 @@ export function PreviewContent({ content, notePath, noteId, noteTitle }: Preview
               srcDoc={previewDoc}
               onLoad={handleIframeLoad}
               className="w-full border-0 bg-transparent"
-              style={{ height: `${iframeHeight}px` }}
+              style={{ height: `${iframeHeight}px`, transition: "height 200ms ease-out" }}
               sandbox="allow-same-origin allow-scripts"
+              scrolling="no"
             />
             {isRendering && (
               <div className="bg-background/80 text-muted-foreground absolute inset-0 flex items-center justify-center text-xs">
