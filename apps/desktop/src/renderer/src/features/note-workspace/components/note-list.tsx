@@ -15,7 +15,7 @@ import {
   Link
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,6 @@ import {
   ContextMenuTrigger
 } from "@/components/ui/context-menu";
 import { cn, formatDateTime } from "@/lib/utils";
-import { getSelectionBgColor, getHoverBgColor } from "@/lib/theme";
 import { useTranslation } from "react-i18next";
 import { useViewStore, useNoteStore } from "@/stores";
 
@@ -77,6 +76,7 @@ export function NoteList({
 }: NoteListProps) {
   const { t } = useTranslation("note");
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
@@ -247,6 +247,7 @@ export function NoteList({
               const note = notes[virtualRow.index];
               if (!note) return null;
               const isSelected = selectedNoteId === note.id;
+              const isHovered = hoveredId === note.id;
               return (
                 <ContextMenu key={note.id}>
                   <ContextMenuTrigger asChild>
@@ -255,23 +256,62 @@ export function NoteList({
                       data-index={virtualRow.index}
                       className="absolute right-0 left-0 px-2"
                       style={{ transform: `translateY(${virtualRow.start}px)` }}
+                      onMouseEnter={() => setHoveredId(note.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      onClick={() => onSelectNote?.(note.id)}
                     >
-                      <motion.div
-                        animate={{
-                          backgroundColor: getSelectionBgColor(isSelected),
-                          transition: {
-                            backgroundColor: { duration: 0.1 }
-                          }
-                        }}
-                        whileHover={{
-                          backgroundColor: getHoverBgColor(isSelected),
-                          transition: { duration: 0.1 }
-                        }}
-                        className="cursor-pointer overflow-hidden rounded-md px-3 py-2"
-                        onClick={() => onSelectNote?.(note.id)}
-                      >
+                      <div className="group relative cursor-pointer overflow-hidden rounded-md px-3 py-2">
+                        {/* Hover 指示器 - 统一的 layoutId 实现滑动效果 */}
+                        <motion.div
+                          layoutId="note-hover-highlight"
+                          className="bg-muted absolute inset-0 rounded-md"
+                          initial={false}
+                          animate={{
+                            opacity: isHovered && !isSelected ? 1 : 0
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
+                            damping: 28,
+                            mass: 0.8
+                          }}
+                          style={{ willChange: "transform, opacity" }}
+                        />
+
+                        {/* 选中背景 */}
+                        {isSelected && (
+                          <motion.div
+                            layoutId="note-selection-highlight"
+                            className="bg-accent absolute inset-0 rounded-md"
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 28,
+                              mass: 0.8
+                            }}
+                            style={{ willChange: "transform" }}
+                          />
+                        )}
+
+                        {/* 选中项 hover 时的微妙边框提示 */}
+                        {isSelected && isHovered && (
+                          <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="ring-primary/20 absolute inset-0 rounded-md ring-1 ring-inset"
+                          />
+                        )}
+                        {/* 选中背景 */}
+                        {isSelected && (
+                          <motion.div
+                            layoutId="note-selection-highlight"
+                            className="bg-accent absolute inset-0 rounded-md"
+                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                          />
+                        )}
+
                         {/* 标题行 */}
-                        <div className="flex min-w-0 items-start gap-2">
+                        <div className="relative z-10 flex min-w-0 items-start gap-2">
                           {playingNoteIds.includes(note.id) ? (
                             <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
                           ) : (
@@ -296,7 +336,7 @@ export function NoteList({
                         {note.updatedAt && (
                           <div
                             className={cn(
-                              "mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
+                              "relative z-10 mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
                               isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
                             )}
                           >
@@ -306,7 +346,7 @@ export function NoteList({
                             <span>{formatDateTime(note.updatedAt)}</span>
                           </div>
                         )}
-                      </motion.div>
+                      </div>
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
