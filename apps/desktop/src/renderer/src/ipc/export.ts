@@ -44,7 +44,5 @@ export const exportIpc = {
   ) =>
     unwrapIpcResult(
       await window.api.export.exportAsImagePages(htmlContents, folderPath, baseFileName, notePath, options)
-    ),
-
-  getFontsBase64: async () => unwrapIpcResult(await window.api.export.getFontsBase64())
+    )
 };

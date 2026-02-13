@@ -96,7 +96,7 @@ export function generateProseTypographyStyles(colors: ThemeColors): string {
     .prose code {
       color: ${colors.codeColor};
       background-color: ${colors.codeBg};
-      font-family: "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
+      font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
       font-size: 0.875em;
       padding: 0.2em 0.4em;
       border-radius: 0.25rem;
@@ -124,7 +124,7 @@ export function generateProseTypographyStyles(colors: ThemeColors): string {
       font-weight: inherit;
       color: ${colors.codeBlockColor};
       font-size: inherit;
-      font-family: "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
+      font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
       line-height: inherit;
     }
 
@@ -238,7 +238,7 @@ export function generateProseTypographyStyles(colors: ThemeColors): string {
 
     /* kbd */
     .prose kbd {
-      font-family: "JetBrains Mono", "SF Mono", Monaco, Consolas, "Courier New", monospace;
+      font-family: "SF Mono", Monaco, Consolas, "Courier New", monospace;
       color: ${colors.tagColor};
       background-color: ${colors.muted};
       border: 1px solid ${colors.border};

@@ -1,8 +1,19 @@
-/* 霞鹜文楷 - 中文正文字体 */
-@font-face {
-  font-family: "LXGW WenKai";
-  src: url("/fonts/LXGWWenKaiMono-Medium.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
+/* 纸鸢 Landing Page - 字体声明文件 */
+
+/**
+ * 系统字体栈 - 使用平台原生字体
+ * 优先使用系统默认字体，无需加载额外字体文件
+ * 提供最佳的阅读体验和性能
+ */
+
+/* 
+ * 字体回退链：
+ * -apple-system: macOS 系统字体
+ * BlinkMacSystemFont: macOS Chrome 系统字体
+ * Segoe UI: Windows 系统字体
+ * PingFang SC: macOS/iOS 默认中文字体
+ * Microsoft YaHei: Windows 默认中文字体
+ * Noto Sans SC: Linux/Android 默认中文字体
+ * system-ui: 标准系统字体
+ * sans-serif: 通用无衬线字体回退
+ */

@@ -78,10 +78,11 @@
     --titlebar-height-mac: 1.25rem;
     --titlebar-height-windows: 32px;
 
-    /* 编辑器 */
+    /* 编辑器 - 使用系统默认字体栈 */
     --editor-font:
-      "LXGW WenKai", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    --editor-font-mono: "JetBrains Mono", "SF Mono", "Monaco", "Consolas", "Courier New", monospace;
+      -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
+      sans-serif;
+    --editor-font-mono: "SF Mono", Monaco, Consolas, "Courier New", monospace;
     --editor-font-size: 1rem;
     --editor-line-height: 1.5;
     --editor-letter-spacing: 0.03125rem;

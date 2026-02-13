@@ -1,63 +1,39 @@
 /**
  * 字体配置
- * 管理导出功能中使用的字体文件和字体声明
+ * 已迁移至使用系统默认字体，无需加载自定义字体文件
  */
 
 /**
- * 字体文件配置
+ * 系统字体栈 - 用于导出功能
+ * 无需实际字体文件，直接使用系统默认字体
  */
-export const FONT_FILES = {
-  lxgwWenKai: "LXGWWenKaiMono-Medium.ttf",
-  jetBrainsMono: "JetBrainsMono-Regular.ttf"
+export const SYSTEM_FONT_STACK = {
+  sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif',
+  mono: '"SF Mono", Monaco, Consolas, "Courier New", monospace'
 } as const;
 
 /**
  * 生成 @font-face 声明
- * 用于 HTML 导出时引用相对路径的字体文件
- * @param fontsPath 字体文件的相对路径前缀（如 "./fonts" 或 "./assets"）
+ * 已弃用：现在使用系统字体，此函数返回空字符串
+ * @deprecated 使用系统默认字体，不再需要生成字体声明
  */
-export function generateFontFaces(fontsPath: string): string {
-  return `
-    @font-face {
-      font-family: "LXGW WenKai";
-      src: url("${fontsPath}/${FONT_FILES.lxgwWenKai}") format("truetype");
-      font-weight: normal;
-      font-style: normal;
-      font-display: swap;
-    }
-
-    @font-face {
-      font-family: "JetBrains Mono";
-      src: url("${fontsPath}/${FONT_FILES.jetBrainsMono}") format("truetype");
-      font-weight: normal;
-      font-style: normal;
-      font-display: swap;
-      font-feature-settings: "liga" 1, "calt" 1;
-    }
-  `;
+export function generateFontFaces(_fontsPath: string): string {
+  // 使用系统字体，无需生成 @font-face
+  return "";
 }
 
 /**
  * 生成内嵌 base64 字体的 @font-face 声明
- * 用于 PDF/图片导出时将字体内嵌到 HTML 中
- * @param lxgwBase64 霞鹜文楷字体的 base64 编码
- * @param jetBrainsBase64 JetBrains Mono 字体的 base64 编码
+ * 已弃用：现在使用系统字体，此函数返回空字符串
+ * @deprecated 使用系统默认字体，不再需要生成字体声明
  */
-export function generateEmbeddedFontFaces(lxgwBase64: string, jetBrainsBase64: string): string {
-  return `
-    @font-face {
-      font-family: "LXGW WenKai";
-      src: url(data:font/truetype;base64,${lxgwBase64}) format("truetype");
-      font-weight: normal;
-      font-style: normal;
-    }
-
-    @font-face {
-      font-family: "JetBrains Mono";
-      src: url(data:font/truetype;base64,${jetBrainsBase64}) format("truetype");
-      font-weight: normal;
-      font-style: normal;
-      font-feature-settings: "liga" 1, "calt" 1;
-    }
-  `;
+export function generateEmbeddedFontFaces(_lxgwBase64: string, _jetBrainsBase64: string): string {
+  // 使用系统字体，无需生成 @font-face
+  return "";
 }
+
+/**
+ * 字体文件名常量（保留空对象以保持兼容性）
+ * @deprecated 使用系统默认字体，不再需要字体文件
+ */
+export const FONT_FILES = {} as const;
