@@ -82,6 +82,7 @@ export function EditorArea({
           <OpenNotePanels
             key={note.id}
             noteId={note.id}
+            noteTitle={note.title}
             content={note.content}
             notePath={note.filePath}
             isActive={note.id === noteId}
@@ -107,6 +108,7 @@ export function EditorArea({
 const OpenNotePanels = memo(
   function OpenNotePanels({
     noteId,
+    noteTitle,
     content,
     notePath,
     isActive,
@@ -116,6 +118,7 @@ const OpenNotePanels = memo(
     onChange
   }: {
     noteId: string;
+    noteTitle: string;
     content: string;
     notePath?: string;
     isActive: boolean;
@@ -247,7 +250,7 @@ const OpenNotePanels = memo(
             collapsible
             collapsedSize="0%"
           >
-            <PreviewContent content={content} notePath={notePath} noteId={noteId} />
+            <PreviewContent content={content} notePath={notePath} noteId={noteId} noteTitle={noteTitle} />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
@@ -255,6 +258,7 @@ const OpenNotePanels = memo(
   },
   (prev, next) =>
     prev.noteId === next.noteId &&
+    prev.noteTitle === next.noteTitle &&
     prev.content === next.content &&
     prev.notePath === next.notePath &&
     prev.isActive === next.isActive &&

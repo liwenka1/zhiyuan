@@ -60,7 +60,11 @@ export function resolveResourcePath(src: string, notePath: string): string {
   if (!isRelativePath(src)) return src;
 
   const noteDir = getDirectory(notePath);
-  const cleanSrc = src.replace(/^\.\//, "");
+
+  // 如果路径已经被 encodeURI 编码过（来自 normalizeMarkdownPaths），先解码
+  // 这样可以避免双重编码
+  const decodedSrc = decodeURI(src);
+  const cleanSrc = decodedSrc.replace(/^\.\//, "");
   const fullPath = `${noteDir}/${cleanSrc}`;
 
   // 使用自定义协议加载本地资源，支持中文路径和特殊字符
@@ -89,6 +93,11 @@ export function resolveLocalPath(src: string, notePath: string): string {
  */
 export function createUrlTransformer(notePath: string | undefined) {
   return (url: string): string => {
+    // 如果已经是 local-resource:// 协议，直接返回（避免重复处理）
+    if (url.startsWith("local-resource://")) {
+      return url;
+    }
+
     // 本地绝对路径转换为 local-resource:// 协议
     // 例如: /Users/xxx/image.png -> local-resource:///Users/xxx/image.png
     if (isLocalAbsolutePath(url)) {
@@ -108,12 +117,24 @@ export function normalizeMarkdownPaths(markdown: string): string {
   const linkRegex = /(!?\[[^\]]*\]\()([^\s)]+|[^\s)]+[^)]*?)(\))/g;
   return markdown.replace(linkRegex, (match, prefix, rawUrl, suffix) => {
     const trimmed = rawUrl.trim();
-    if (!/\s/.test(trimmed) && !isLocalAbsolutePath(trimmed)) return match;
-    if (!(isRelativePath(trimmed) || isLocalAbsolutePath(trimmed))) return match;
+
+    // 如果路径没有空格，不需要处理
+    if (!/\s/.test(trimmed)) return match;
+
+    // 检查是否为本地路径（绝对或相对）
+    const isAbsolute = isLocalAbsolutePath(trimmed);
+    const isRelative = isRelativePath(trimmed);
+
+    if (!isAbsolute && !isRelative) return match;
+
     const encoded = encodeURI(trimmed);
-    if (isLocalAbsolutePath(trimmed)) {
+
+    // 绝对路径：转换为 local-resource:// 协议
+    if (isAbsolute) {
       return `${prefix}local-resource://${encoded}${suffix}`;
     }
+
+    // 相对路径：只编码，不添加协议（后续 createUrlTransformer 会处理）
     return `${prefix}${encoded}${suffix}`;
   });
 }

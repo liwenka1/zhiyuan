@@ -40,4 +40,5 @@ export type EditorViewMode = "edit" | "preview" | "split";
 export interface PreviewConfig {
   showToc: boolean; // 是否显示目录
   syncScroll: boolean; // 是否同步滚动（分屏模式）
+  exportPreview: boolean; // 是否使用导出样式预览
 }

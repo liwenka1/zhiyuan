@@ -10,6 +10,8 @@
     "format": "Format",
     "toc": "Table of Contents",
     "more": "More",
+    "exportPreview": "Export Preview",
+    "exportPreviewOpening": "Opening...",
     "showInExplorer": "Show in File Manager",
     "rename": "Rename",
     "duplicate": "Duplicate",

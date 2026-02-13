@@ -1,11 +1,10 @@
 /**
- * 导出设置 Tab — 主题选择 & 预览
+ * 导出设置 Tab — 主题选择 & 布局配置
  */
 
 import { useMemo } from "react";
-import { useExportLayoutStore, useExportThemeStore } from "@/stores";
+import { useExportLayoutStore } from "@/stores";
 import { useTranslation } from "react-i18next";
-import { getExportThemeColors } from "@/features/export/lib/styles";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DEFAULT_EXPORT_LAYOUT_CONFIG } from "@shared";
@@ -15,15 +14,11 @@ import { getUnsupportedLayoutFieldsForFormat } from "@/features/export/lib";
 import { SettingRow } from "../../shared/setting-row";
 import { SettingSection } from "../../shared/setting-section";
 import { ExportThemeSelect } from "./export-theme-select";
-import { ExportThemePreview } from "./export-theme-preview";
 import { ExportLayoutControls } from "./export-layout-controls";
 
 export function ExportTab() {
   const { t } = useTranslation("common");
-  const exportThemeId = useExportThemeStore((state) => state.exportThemeId);
-  const exportLayout = useExportLayoutStore((state) => state.exportLayout);
   const setExportLayout = useExportLayoutStore((state) => state.setExportLayout);
-  const colors = useMemo(() => getExportThemeColors(exportThemeId), [exportThemeId]);
   const wechatUnsupportedFields = useMemo(() => getUnsupportedLayoutFieldsForFormat("wechat"), []);
   const wechatUnsupportedFieldLabels = useMemo(
     () => wechatUnsupportedFields.map((field) => t(`settings.exportLayoutFields.${field}`)),
@@ -72,10 +67,6 @@ export function ExportTab() {
           <AlertDescription>{exportPreviewHint}</AlertDescription>
         </Alert>
         <ExportLayoutControls />
-      </SettingSection>
-
-      <SettingSection title={t("settings.exportPreviewSectionTitle")}>
-        <ExportThemePreview colors={colors} layout={exportLayout} />
       </SettingSection>
     </div>
   );

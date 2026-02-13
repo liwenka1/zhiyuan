@@ -8,6 +8,7 @@ interface ViewStore {
   editorMode: EditorViewMode;
   setEditorMode: (mode: EditorViewMode) => void;
   toggleEditorMode: (mode: EditorViewMode) => void;
+  setExclusiveMode: (mode: "edit" | "preview" | "split" | "exportPreview" | "presentation") => void;
 
   // 演示模式
   isPresentationMode: boolean;
@@ -52,19 +53,56 @@ export const useViewStore = create<ViewStore>()(
 
       previewConfig: {
         showToc: true,
-        syncScroll: true
+        syncScroll: true,
+        exportPreview: false
       },
 
       // 编辑区模式切换
-      setEditorMode: (mode) => set({ editorMode: mode }),
+      setEditorMode: (mode) =>
+        set(
+          produce((draft) => {
+            draft.editorMode = mode;
+            draft.isPresentationMode = false;
+            draft.previewConfig.exportPreview = false;
+          })
+        ),
 
       toggleEditorMode: (mode) => {
         const currentMode = get().editorMode;
-        set({ editorMode: currentMode === mode ? "edit" : mode });
+        const nextMode = currentMode === mode ? "edit" : mode;
+        set(
+          produce((draft) => {
+            draft.editorMode = nextMode;
+            draft.isPresentationMode = false;
+            draft.previewConfig.exportPreview = false;
+          })
+        );
       },
 
+      setExclusiveMode: (mode) =>
+        set(
+          produce((draft) => {
+            if (mode === "presentation") {
+              draft.isPresentationMode = true;
+              draft.editorMode = "edit";
+              draft.previewConfig.exportPreview = false;
+              return;
+            }
+
+            draft.isPresentationMode = false;
+            if (mode === "exportPreview") {
+              draft.editorMode = "preview";
+              draft.previewConfig.exportPreview = true;
+              return;
+            }
+
+            draft.editorMode = mode;
+            draft.previewConfig.exportPreview = false;
+          })
+        ),
+
       // 演示模式
-      enterPresentationMode: () => set({ isPresentationMode: true }),
+      enterPresentationMode: () => get().setExclusiveMode("presentation"),
       exitPresentationMode: () => set({ isPresentationMode: false }),
 
       // 侧边栏控制
@@ -83,6 +121,10 @@ export const useViewStore = create<ViewStore>()(
         set(
           produce((draft) => {
             Object.assign(draft.previewConfig, config);
+            if (config.exportPreview === true) {
+              draft.isPresentationMode = false;
+              draft.editorMode = "preview";
+            }
           })
         ),
 
