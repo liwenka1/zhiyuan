@@ -23,8 +23,6 @@
     "exportTheme": "配色主题",
     "exportThemeSectionTitle": "配色设置",
     "exportThemeDesc": "应用于所有导出格式",
-    "exportPreviewSectionTitle": "预览",
-    "exportPreview": "效果预览",
     "wechatLayoutNoticeTitle": "微信公众号限制",
     "exportPreviewHint": "配色主题对所有导出格式生效。微信公众号不支持：{{fields}}。",
     "exportLayoutSectionTitle": "布局设置",
@@ -61,19 +59,6 @@
       "accent": "强调",
       "code": "代码",
       "quote": "引用"
-    },
-    "preview": {
-      "appName": "纸鸢",
-      "subtitle": "优雅的 Markdown 编辑器",
-      "body": "纸鸢是一款专注于<bold>写作体验</bold>的笔记工具，支持<link>多格式导出</link>与主题自定义。",
-      "quote": "让写作回归纯粹，让排版自然优雅。",
-      "list1": "微信公众号 / HTML / PDF / <em>图片</em>",
-      "list2": "Mermaid 图表、<code>KaTeX</code> 数学公式",
-      "codeValue": "\"纸鸢\"",
-      "tableFeature": "功能",
-      "tableFormat": "格式",
-      "tableExport": "导出",
-      "tableExportFormats": "HTML / PDF"
     },
     "exportThemeSaveFailed": "主题保存失败，已恢复上一个主题",
     "about": "关于",

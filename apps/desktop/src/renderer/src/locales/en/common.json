@@ -23,8 +23,6 @@
     "exportTheme": "Color Theme",
     "exportThemeSectionTitle": "Color Settings",
     "exportThemeDesc": "Applies to all export formats",
-    "exportPreviewSectionTitle": "Preview",
-    "exportPreview": "Preview",
     "wechatLayoutNoticeTitle": "WeChat Limitations",
     "exportPreviewHint": "Color themes apply to all export formats. WeChat does not support: {{fields}}.",
     "exportLayoutSectionTitle": "Layout Settings",
@@ -61,19 +59,6 @@
       "accent": "Accent",
       "code": "Code",
       "quote": "Quote"
-    },
-    "preview": {
-      "appName": "Zhiyuan",
-      "subtitle": "An Elegant Markdown Editor",
-      "body": "Zhiyuan is a note-taking tool focused on <bold>writing experience</bold>, supporting <link>multi-format export</link> and theme customization.",
-      "quote": "Let writing be pure, let typography be elegant.",
-      "list1": "WeChat / HTML / PDF / <em>Image</em>",
-      "list2": "Mermaid diagrams, <code>KaTeX</code> math formulas",
-      "codeValue": "\"Zhiyuan\"",
-      "tableFeature": "Feature",
-      "tableFormat": "Format",
-      "tableExport": "Export",
-      "tableExportFormats": "HTML / PDF"
     },
     "exportThemeSaveFailed": "Failed to save theme, reverted to previous",
     "about": "About",

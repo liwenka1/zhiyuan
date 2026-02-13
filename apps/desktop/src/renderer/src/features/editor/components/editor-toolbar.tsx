@@ -13,7 +13,8 @@ import {
   Copy,
   Download,
   Trash2,
-  ChevronRight
+  ChevronRight,
+  FileOutput
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -44,8 +45,9 @@ export function EditorToolbar({
   onDeleteNote
 }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
-  const toggleEditorMode = useViewStore((state) => state.toggleEditorMode);
-  const enterPresentationMode = useViewStore((state) => state.enterPresentationMode);
+  const isPresentationMode = useViewStore((state) => state.isPresentationMode);
+  const setExclusiveMode = useViewStore((state) => state.setExclusiveMode);
+  const exportPreview = useViewStore((state) => state.previewConfig.exportPreview);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
   const selectedNote = useNoteStore((state) => state.getSelectedNote());
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
@@ -101,6 +103,25 @@ export function EditorToolbar({
     }
   };
 
+  const handleToggleExportPreview = (pressed: boolean) => {
+    if (pressed) {
+      setTocOpen(false);
+    }
+    setExclusiveMode(pressed ? "exportPreview" : "edit");
+  };
+
+  const handleTogglePreviewMode = (pressed: boolean) => {
+    setExclusiveMode(pressed ? "preview" : "edit");
+  };
+
+  const handleToggleSplitMode = (pressed: boolean) => {
+    setExclusiveMode(pressed ? "split" : "edit");
+  };
+
+  const handleTogglePresentationMode = (pressed: boolean) => {
+    setExclusiveMode(pressed ? "presentation" : "edit");
+  };
+
   return (
     <div className="flex h-12 shrink-0 items-center justify-end px-3">
       {/* 工具按钮 */}
@@ -110,9 +131,9 @@ export function EditorToolbar({
           size="icon-sm"
           className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
           aria-label={t("toolbar.preview")}
-          pressed={editorMode === "preview"}
-          onPressedChange={() => toggleEditorMode("preview")}
-          disabled={!hasNote || isSplitMode}
+          pressed={editorMode === "preview" && !exportPreview && !isPresentationMode}
+          onPressedChange={handleTogglePreviewMode}
+          disabled={!hasNote || isPresentationMode}
         >
           <Eye className="h-4 w-4" />
         </Toggle>
@@ -122,24 +143,35 @@ export function EditorToolbar({
           size="icon-sm"
           className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
           aria-label={t("toolbar.split")}
-          pressed={editorMode === "split"}
-          onPressedChange={() => toggleEditorMode("split")}
-          disabled={!hasNote || isPreviewMode}
+          pressed={editorMode === "split" && !isPresentationMode}
+          onPressedChange={handleToggleSplitMode}
+          disabled={!hasNote || isPresentationMode}
         >
           <Columns2 className="h-4 w-4" />
         </Toggle>
 
+        <Toggle
+          size="icon-sm"
+          className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
+          aria-label={t("toolbar.exportPreview")}
+          pressed={exportPreview && !isPresentationMode}
+          onPressedChange={handleToggleExportPreview}
+          disabled={!hasNote || isPresentationMode}
+        >
+          <FileOutput className="h-4 w-4" />
+        </Toggle>
+
         {/* 演示按钮 */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0"
+        <Toggle
+          size="icon-sm"
+          className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
           aria-label={t("toolbar.presentation")}
-          onClick={enterPresentationMode}
+          pressed={isPresentationMode}
+          onPressedChange={handleTogglePresentationMode}
           disabled={!hasNote}
         >
           <Presentation className="h-4 w-4" />
-        </Button>
+        </Toggle>
 
         {/* 格式化按钮 */}
         <Button
@@ -161,7 +193,7 @@ export function EditorToolbar({
               size="sm"
               className="h-7 w-7 p-0"
               aria-label={t("toolbar.toc")}
-              disabled={!hasNote || !showPreview}
+              disabled={!hasNote || !showPreview || exportPreview}
             >
               <TocIcon className="h-4 w-4" />
             </Button>
