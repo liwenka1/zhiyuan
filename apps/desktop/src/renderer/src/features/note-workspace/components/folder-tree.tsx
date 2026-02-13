@@ -1,5 +1,6 @@
 import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss, RefreshCw, Unlink } from "lucide-react";
 import { motion } from "motion/react";
+
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -111,46 +112,17 @@ export function FolderTree({
             onMouseLeave={() => setHoveredId(null)}
             onClick={() => onSelectFolder?.(null)}
           >
-            {/* Hover 高亮指示器 - 使用 CSS 过渡实现更平滑的效果 */}
+            {/* hover 背景 - 滑动跟随 */}
             <motion.div
-              layoutId="folder-hover-highlight"
-              className="bg-muted absolute inset-0 rounded-md"
+              layoutId="hover-bg"
+              className="bg-accent absolute inset-0 rounded-md"
               initial={false}
-              animate={{
-                opacity: hoveredId === ALL_NOTES_FOLDER_ID && !isAllSelected ? 1 : 0
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 28,
-                mass: 0.8
-              }}
-              style={{ willChange: "transform, opacity" }}
+              animate={{ opacity: hoveredId === ALL_NOTES_FOLDER_ID ? 1 : 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
             />
 
             {/* 选中背景 */}
-            {isAllSelected && (
-              <motion.div
-                layoutId="folder-selection-highlight"
-                className="bg-accent absolute inset-0 rounded-md"
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 28,
-                  mass: 0.8
-                }}
-                style={{ willChange: "transform" }}
-              />
-            )}
-
-            {/* 选中项 hover 时的微妙边框提示 */}
-            {isAllSelected && hoveredId === ALL_NOTES_FOLDER_ID && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="ring-primary/20 absolute inset-0 rounded-md ring-1 ring-inset"
-              />
-            )}
+            <div className={cn("bg-accent absolute inset-0 rounded-md", isAllSelected ? "opacity-100" : "opacity-0")} />
 
             <FileStack className="relative z-10 h-4 w-4 shrink-0" />
             <div className="relative z-10 min-w-0 flex-1 truncate text-sm">{t("allNotes")}</div>
@@ -180,46 +152,22 @@ export function FolderTree({
                       onMouseLeave={() => setHoveredId(null)}
                       onClick={() => onSelectFolder?.(folder.id)}
                     >
-                      {/* Hover 指示器 - 统一的 layoutId 实现滑动效果 */}
+                      {/* hover 背景 - 滑动跟随 */}
                       <motion.div
-                        layoutId="folder-hover-highlight"
-                        className="bg-muted absolute inset-0 rounded-md"
+                        layoutId="hover-bg"
+                        className="bg-accent absolute inset-0 rounded-md"
                         initial={false}
-                        animate={{
-                          opacity: isHovered && !isSelected ? 1 : 0
-                        }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 28,
-                          mass: 0.8
-                        }}
-                        style={{ willChange: "transform, opacity" }}
+                        animate={{ opacity: isHovered ? 1 : 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
                       />
 
                       {/* 选中背景 */}
-                      {isSelected && (
-                        <motion.div
-                          layoutId="folder-selection-highlight"
-                          className="bg-accent absolute inset-0 rounded-md"
-                          transition={{
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 28,
-                            mass: 0.8
-                          }}
-                          style={{ willChange: "transform" }}
-                        />
-                      )}
-
-                      {/* 选中项 hover 时的微妙边框提示 */}
-                      {isSelected && isHovered && (
-                        <motion.div
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="ring-primary/20 absolute inset-0 rounded-md ring-1 ring-inset"
-                        />
-                      )}
+                      <div
+                        className={cn(
+                          "bg-accent absolute inset-0 rounded-md",
+                          isSelected ? "opacity-100" : "opacity-0"
+                        )}
+                      />
                       {folder.isRss ? (
                         <Rss className="relative z-10 h-4 w-4 shrink-0" />
                       ) : (

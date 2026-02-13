@@ -261,54 +261,22 @@ export function NoteList({
                       onClick={() => onSelectNote?.(note.id)}
                     >
                       <div className="group relative cursor-pointer overflow-hidden rounded-md px-3 py-2">
-                        {/* Hover 指示器 - 统一的 layoutId 实现滑动效果 */}
+                        {/* hover 背景 - 滑动跟随 */}
                         <motion.div
-                          layoutId="note-hover-highlight"
-                          className="bg-muted absolute inset-0 rounded-md"
+                          layoutId="note-hover-bg"
+                          className="bg-accent absolute inset-0 rounded-md"
                           initial={false}
-                          animate={{
-                            opacity: isHovered && !isSelected ? 1 : 0
-                          }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 400,
-                            damping: 28,
-                            mass: 0.8
-                          }}
-                          style={{ willChange: "transform, opacity" }}
+                          animate={{ opacity: isHovered ? 1 : 0 }}
+                          transition={{ duration: 0.2, ease: "easeInOut" }}
                         />
 
                         {/* 选中背景 */}
-                        {isSelected && (
-                          <motion.div
-                            layoutId="note-selection-highlight"
-                            className="bg-accent absolute inset-0 rounded-md"
-                            transition={{
-                              type: "spring",
-                              stiffness: 400,
-                              damping: 28,
-                              mass: 0.8
-                            }}
-                            style={{ willChange: "transform" }}
-                          />
-                        )}
-
-                        {/* 选中项 hover 时的微妙边框提示 */}
-                        {isSelected && isHovered && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="ring-primary/20 absolute inset-0 rounded-md ring-1 ring-inset"
-                          />
-                        )}
-                        {/* 选中背景 */}
-                        {isSelected && (
-                          <motion.div
-                            layoutId="note-selection-highlight"
-                            className="bg-accent absolute inset-0 rounded-md"
-                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                          />
-                        )}
+                        <div
+                          className={cn(
+                            "bg-accent absolute inset-0 rounded-md",
+                            isSelected ? "opacity-100" : "opacity-0"
+                          )}
+                        />
 
                         {/* 标题行 */}
                         <div className="relative z-10 flex min-w-0 items-start gap-2">
