@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, isValidElement } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -18,7 +18,7 @@ import { markdownSanitizeSchema } from "@/lib/markdown-sanitize-config";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useNoteStore } from "@/stores";
+import { useNoteStore, useThemeStore } from "@/stores";
 import { shellIpc } from "@/ipc";
 
 // 初始化 mermaid（securityLevel: "strict" 防止 XSS）
@@ -34,17 +34,23 @@ interface MarkdownRendererProps {
 }
 
 // Mermaid 代码块组件
-function MermaidBlock({ code }: { code: string }) {
+function MermaidBlock({ code, isDark }: { code: string; isDark: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (ref.current) {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: isDark ? "dark" : "default",
+        securityLevel: "strict"
+      });
+
       const id = `mermaid-${Math.random().toString(36).slice(2)}`;
       mermaid.render(id, code).then(({ svg }) => {
         if (ref.current) ref.current.innerHTML = svg;
       });
     }
-  }, [code]);
+  }, [code, isDark]);
 
   return <div ref={ref} className="mermaid flex justify-center" />;
 }
@@ -74,6 +80,8 @@ export function MarkdownRenderer({
   emptyStateMessage
 }: MarkdownRendererProps) {
   const { t } = useTranslation("editor");
+  const theme = useThemeStore((state) => state.theme);
+  const isDark = theme === "dark";
   const normalizedContent = normalizeMarkdownPaths(stripHiddenFrontmatter(content));
 
   // 创建 URL 转换函数，将相对路径转换为绝对路径
@@ -131,10 +139,23 @@ export function MarkdownRenderer({
         ]}
         urlTransform={urlTransform}
         components={{
+          pre({ children, ...props }) {
+            const child = Array.isArray(children) ? children[0] : children;
+            if (isValidElement(child)) {
+              const className =
+                typeof (child as React.ReactElement<{ className?: string }>).props?.className === "string"
+                  ? (child as React.ReactElement<{ className?: string }>).props.className
+                  : "";
+              if ((className || "").includes("mermaid")) {
+                return <div className="mermaid-block">{children}</div>;
+              }
+            }
+            return <pre {...props}>{children}</pre>;
+          },
           code({ className, children }) {
             const match = /language-mermaid/.exec(className || "");
             if (match) {
-              return <MermaidBlock code={String(children).trim()} />;
+              return <MermaidBlock code={String(children).trim()} isDark={isDark} />;
             }
             return <code className={className}>{children}</code>;
           },
