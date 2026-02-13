@@ -264,5 +264,17 @@ export function generateProseTypographyStyles(colors: ThemeColors): string {
       margin-right: 0.5em;
       vertical-align: middle;
     }
+
+    /* Mermaid 图表 */
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      margin: 1.5em 0;
+    }
+
+    .mermaid svg {
+      max-width: 100%;
+      height: auto;
+    }
   `;
 }
