@@ -26,8 +26,9 @@ export function generateProseLayoutStyles(options: ProseLayoutOptions): string {
 
     body {
       background-color: ${options.outerBackground};
-      padding: 2rem 1.25rem;
+      padding: 2rem;
       margin: 0;
+      min-height: 100vh;
     }
 
     .export-layout-shell {
@@ -35,9 +36,11 @@ export function generateProseLayoutStyles(options: ProseLayoutOptions): string {
       max-width: ${options.contentWidth}px;
       margin: 0 auto;
       background-color: ${options.innerBackground};
-      border-radius: 12px;
+      border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+      box-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        0 4px 12px rgba(0, 0, 0, 0.05);
     }
 
     .export-layout-content {
