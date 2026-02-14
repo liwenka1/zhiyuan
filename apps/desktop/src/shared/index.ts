@@ -9,6 +9,15 @@ export type { ExportLayoutConfig } from "./export-layout";
 export { DEFAULT_EXPORT_LAYOUT_CONFIG, normalizeExportLayoutConfig } from "./export-layout";
 
 export type { IpcError, IpcResultDTO } from "./ipc";
+export {
+  isRelativePath,
+  isLocalAbsolutePath,
+  resolveResourcePath,
+  resolveLocalPath,
+  createUrlTransformer,
+  normalizeMarkdownPaths,
+  decodeLocalResourceUrl
+} from "./resource-path";
 
 export type {
   MenuLocale,

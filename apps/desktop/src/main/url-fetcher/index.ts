@@ -6,7 +6,7 @@
 import path from "path";
 import { fileSystem } from "../file-system";
 import { fetchArticleFromUrl } from "./fetcher";
-import { sanitizeName, formatDate, buildFrontmatter } from "./utils";
+import { sanitizeName, formatDate, buildFrontmatter } from "../utils/content-import";
 
 export interface UrlFetchResult {
   noteId: string;
@@ -67,7 +67,7 @@ export async function createNoteFromUrl(
   }
 
   // 4. 生成文件名并保存
-  const datePrefix = formatDate();
+  const datePrefix = formatDate() || "undated";
   const fileBaseName = `${datePrefix}-${title}`;
   const fileName = await getAvailableFileName(targetFolder, fileBaseName);
   const filePath = path.join(targetFolder, fileName);
