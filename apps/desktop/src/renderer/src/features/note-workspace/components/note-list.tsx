@@ -267,7 +267,7 @@ export function NoteList({
                           className="bg-accent absolute inset-0 rounded-md"
                           initial={false}
                           animate={{ opacity: isHovered ? 1 : 0 }}
-                          transition={{ duration: 0.2, ease: "easeInOut" }}
+                          transition={{ type: "spring", stiffness: 1200, damping: 40, mass: 0.3 }}
                         />
 
                         {/* 选中背景 */}
