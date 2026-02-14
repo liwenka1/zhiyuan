@@ -1,6 +1,5 @@
 import { Note } from "@/types";
-import { markdownToHTML } from "@/lib/markdown-processor";
-import { generateHTMLDocument } from "@/lib/markdown-to-html";
+import { buildExportDocument } from "./export-pipeline";
 import i18n from "@/lib/i18n";
 import { exportIpc } from "@/ipc";
 import type { ExportLayoutConfig } from "@shared";
@@ -35,14 +34,7 @@ export async function exportNoteAsHTML(
   }
 
   // 3. 将 Markdown 转换为 HTML
-  const htmlBody = await markdownToHTML(note.content);
-
-  // 4. 生成完整的 HTML 文档
-  const fullHTML = generateHTMLDocument(note.title, htmlBody, {
-    themeId,
-    format: "html",
-    layout
-  });
+  const fullHTML = await buildExportDocument(note, "html", themeId, layout);
 
   // 5. 导出为资源包（包含所有图片等资源）
   await exportIpc.exportHTMLPackage(fullHTML, folderPath, note.filePath, "assets");

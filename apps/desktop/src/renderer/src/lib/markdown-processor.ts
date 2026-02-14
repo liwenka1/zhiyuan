@@ -18,7 +18,7 @@ import rehypeStringify from "rehype-stringify";
 import mermaid from "mermaid";
 import { stripHiddenFrontmatter } from "./frontmatter";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
-import { normalizeMarkdownPaths, resolveResourcePath, isRelativePath } from "./resource-resolver";
+import { normalizeMarkdownPaths, resolveResourcePath, isRelativePath } from "@/lib/resource-resolver";
 
 // 初始化 mermaid（securityLevel: "strict" 防止 XSS）
 mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "strict" });

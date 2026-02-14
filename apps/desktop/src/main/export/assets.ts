@@ -1,14 +1,6 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-
-/**
- * 判断是否为相对路径
- */
-export function isRelativePath(src: string): boolean {
-  if (!src) return false;
-  if (/^(https?:|data:|file:|blob:|#|mailto:|local-resource:)/.test(src)) return false;
-  return true;
-}
+import { isRelativePath, decodeLocalResourceUrl } from "@shared";
 
 /**
  * 获取图片的 MIME 类型
@@ -47,8 +39,7 @@ export async function embedLocalImages(htmlContent: string, notePath?: string): 
 
     let imagePath: string;
     if (src.startsWith("local-resource://")) {
-      const urlPath = src.replace(/^local-resource:\/\//, "");
-      imagePath = decodeURIComponent(urlPath.replace(/^localhost/, ""));
+      imagePath = decodeLocalResourceUrl(src);
     } else if (isRelativePath(src)) {
       imagePath = path.resolve(noteDir, src.replace(/^\.\//, ""));
     } else {
@@ -102,8 +93,7 @@ export async function collectAndCopyAssets(
 
     let sourcePath: string;
     if (src.startsWith("local-resource://")) {
-      const urlPath = src.replace(/^local-resource:\/\//, "");
-      sourcePath = decodeURIComponent(urlPath.replace(/^localhost/, ""));
+      sourcePath = decodeLocalResourceUrl(src);
     } else if (src.startsWith("file://")) {
       sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
     } else if (isRelativePath(src)) {

@@ -31,46 +31,7 @@ type RssItem = Parser.Item & {
   [key: string]: unknown;
 };
 
-const INVALID_NAME_CHARS = /[\\/:*?"<>|]/g;
-
-function sanitizeName(name: string): string {
-  return name.replace(INVALID_NAME_CHARS, "-").replace(/\s+/g, " ").trim();
-}
-
-function formatDate(dateValue?: string): string | null {
-  if (!dateValue) return null;
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return null;
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function escapeYamlValue(value: string): string {
-  return value.replace(/"/g, '\\"');
-}
-
-function buildFrontmatter(data: {
-  title?: string;
-  link?: string;
-  guid?: string;
-  published?: string;
-  source?: string;
-  hidden?: boolean;
-}): string {
-  const lines: string[] = ["---"];
-
-  if (data.hidden) lines.push("hidden: true");
-  if (data.title) lines.push(`title: "${escapeYamlValue(data.title)}"`);
-  if (data.link) lines.push(`link: "${escapeYamlValue(data.link)}"`);
-  if (data.guid) lines.push(`guid: "${escapeYamlValue(data.guid)}"`);
-  if (data.published) lines.push(`published: "${data.published}"`);
-  if (data.source) lines.push(`source: "${escapeYamlValue(data.source)}"`);
-
-  lines.push("---", "");
-  return lines.join("\n");
-}
+import { sanitizeName, formatDate, buildFrontmatter } from "../utils/content-import";
 
 async function getAvailableFolderName(workspacePath: string, baseName: string): Promise<string> {
   const normalizedBase = sanitizeName(baseName) || "RSS";
