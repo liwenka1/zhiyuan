@@ -1,9 +1,4 @@
-/**
- * 主题颜色配置
- * 用于组件中需要动态访问颜色值的场景
- *
- * 注意：这些颜色值需要与 variables.css 中的定义保持一致
- */
+import { ThemeColors } from "@shared";
 
 /**
  * 获取 CSS 变量对应的颜色值
@@ -11,48 +6,6 @@
 export const getThemeColor = (variable: string): string => {
   return `var(${variable})`;
 };
-
-/**
- * 主题颜色变量名
- */
-export const ThemeColors = {
-  // 基础颜色
-  background: "--background",
-  foreground: "--foreground",
-  card: "--card",
-  cardForeground: "--card-foreground",
-  popover: "--popover",
-  popoverForeground: "--popover-foreground",
-
-  // 交互颜色
-  primary: "--primary",
-  primaryForeground: "--primary-foreground",
-  secondary: "--secondary",
-  secondaryForeground: "--secondary-foreground",
-  muted: "--muted",
-  mutedForeground: "--muted-foreground",
-  accent: "--accent",
-  accentForeground: "--accent-foreground",
-  destructive: "--destructive",
-  destructiveForeground: "--destructive-foreground",
-
-  // 边框和输入
-  border: "--border",
-  input: "--input",
-  ring: "--ring",
-
-  // 扩展颜色
-  selection: "--selection",
-  divider: "--divider",
-  tertiaryForeground: "--tertiary-foreground",
-  link: "--link",
-  highlight: "--highlight",
-
-  // 编辑器专用颜色
-  editorTitle: "--editor-title",
-  editorLink: "--editor-link",
-  editorList: "--editor-list"
-} as const;
 
 /**
  * 预定义的颜色值（用于 Motion 动画等需要颜色字符串的场景）

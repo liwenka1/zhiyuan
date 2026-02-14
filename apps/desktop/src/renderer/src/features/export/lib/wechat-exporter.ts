@@ -1,6 +1,5 @@
 import { Note } from "@/types";
-import { markdownToHTML } from "@/lib/markdown-processor";
-import { generateWechatHTMLDocument } from "@/lib/wechat-html";
+import { buildWechatDocument } from "./export-pipeline";
 import { inlineCSS } from "@/lib/css-inliner";
 import { exportIpc } from "@/ipc";
 import type { ExportLayoutConfig } from "@shared";
@@ -15,11 +14,8 @@ export async function copyNoteToWechat(
   themeId: string,
   layout?: Partial<ExportLayoutConfig>
 ): Promise<void> {
-  // 1. 将 Markdown 转换为 HTML
-  const htmlBody = await markdownToHTML(note.content);
-
-  // 2. 生成适配微信公众号的 HTML 文档
-  const wechatHTML = generateWechatHTMLDocument(note.title, htmlBody, themeId, layout);
+  // 1. 生成适配微信公众号的 HTML 文档
+  const wechatHTML = await buildWechatDocument(note, themeId, layout);
 
   // 3. 将 CSS 内联化（在渲染进程处理）
   const inlinedHTML = inlineCSS(wechatHTML);

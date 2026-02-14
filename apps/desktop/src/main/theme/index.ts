@@ -1,6 +1,6 @@
 import { nativeTheme, BrowserWindow } from "electron";
 import type { Theme, ThemeMode } from "@shared";
-import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
+import { getThemeBackgroundColor, getThemeForegroundColor } from "./colors";
 import { configManager } from "../config";
 
 /**

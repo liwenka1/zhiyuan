@@ -1,5 +1,4 @@
-import { generateHTMLDocument } from "@/lib/markdown-to-html";
-import { markdownToHTML } from "@/lib/markdown-processor";
+import { buildExportDocumentFromMarkdown } from "./export-pipeline";
 import { getExportThemeColors } from "./styles";
 import { isDarkColor } from "@/lib/color-utils";
 import type { ExportLayoutConfig } from "@shared";
@@ -20,14 +19,13 @@ export async function renderNoteExportPreviewHtml(options: RenderNoteExportPrevi
   const themeColors = getExportThemeColors(options.themeId);
   const isDarkTheme = isDarkColor(themeColors.background) === true;
 
-  const bodyHtml = await markdownToHTML(options.markdown, {
-    notePath: options.notePath,
-    isDarkTheme
-  });
-
-  return generateHTMLDocument(options.title, bodyHtml, {
+  return buildExportDocumentFromMarkdown({
+    title: options.title,
+    markdown: options.markdown,
     themeId: options.themeId,
     format: "html",
-    layout: options.layout
+    layout: options.layout,
+    notePath: options.notePath,
+    isDarkTheme
   });
 }

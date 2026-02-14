@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import "highlight.js/styles/github.css";
 import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
-import { decodeLocalResourceUrl } from "@/lib/resource-resolver";
+import { decodeLocalResourceUrl } from "@shared";
 import { stripHiddenFrontmatter } from "@/lib/frontmatter";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";

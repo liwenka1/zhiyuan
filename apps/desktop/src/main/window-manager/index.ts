@@ -3,7 +3,7 @@ import { join, basename } from "path";
 import { is } from "@electron-toolkit/utils";
 import icon from "../../../resources/icon.png?asset";
 import { themeManager } from "../theme";
-import { getThemeBackgroundColor, getThemeForegroundColor } from "@shared";
+import { getThemeBackgroundColor, getThemeForegroundColor } from "../theme/colors";
 import { isSafeUrl } from "../security/url-validator";
 import { fileWatcherManager } from "../file-watcher";
 import { configManager } from "../config";
