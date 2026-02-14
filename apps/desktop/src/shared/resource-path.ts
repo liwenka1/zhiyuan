@@ -67,21 +67,20 @@ export function normalizeMarkdownPaths(markdown: string): string {
   const linkRegex = /(!?\[[^\]]*\]\()([^\s)]+|[^\s)]+[^)]*?)(\))/g;
   return markdown.replace(linkRegex, (match, prefix, rawUrl, suffix) => {
     const trimmed = rawUrl.trim();
-
-    if (!/\s/.test(trimmed)) return match;
-
     const isAbsolute = isLocalAbsolutePath(trimmed);
     const isRelative = isRelativePath(trimmed);
 
     if (!isAbsolute && !isRelative) return match;
 
-    const encoded = encodeURI(trimmed);
-
     if (isAbsolute) {
-      return `${prefix}local-resource://${encoded}${suffix}`;
+      return `${prefix}local-resource://${encodeURI(trimmed)}${suffix}`;
     }
 
-    return `${prefix}${encoded}${suffix}`;
+    if (/\s/.test(trimmed)) {
+      return `${prefix}${encodeURI(trimmed)}${suffix}`;
+    }
+
+    return match;
   });
 }
 
