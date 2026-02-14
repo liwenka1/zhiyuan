@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
@@ -31,7 +31,9 @@ export function ExportLayoutNumberSliderInput({
 
   useEffect(() => {
     if (!editing) {
-      setSliderValue(value);
+      startTransition(() => {
+        setSliderValue(value);
+      });
     }
   }, [value, editing]);
 

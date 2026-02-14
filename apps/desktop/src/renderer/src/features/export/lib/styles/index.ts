@@ -4,7 +4,7 @@
  */
 
 // 字体配置
-export { SYSTEM_FONT_STACK, generateFontFaces, generateEmbeddedFontFaces } from "./font-config";
+export { SYSTEM_FONT_STACK } from "./font-config";
 
 // 主题颜色
 export { type ThemeColors, type ThemeColorsInput, type ExportThemePreset, buildThemeColors } from "./theme-colors";

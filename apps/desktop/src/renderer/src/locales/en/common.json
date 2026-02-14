@@ -30,7 +30,6 @@
     "exportLayoutReset": "Reset layout",
     "exportLayoutResetSuccess": "Layout defaults restored",
     "exportLayoutResetFailed": "Failed to reset layout. Please try again.",
-    "exportLayoutComingSoon": "Coming soon: outer/inner background, content width, and card spacing controls.",
     "exportLayoutFields": {
       "outerBackground": "Outer Background",
       "innerBackground": "Inner Background",
