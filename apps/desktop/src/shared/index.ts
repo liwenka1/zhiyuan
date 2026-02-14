@@ -4,7 +4,7 @@
  */
 
 export type { Theme, ThemeMode } from "./theme";
-export { ThemeColors, getThemeBackgroundColor, getThemeForegroundColor } from "./theme";
+export { ThemeColors } from "./theme";
 export type { ExportLayoutConfig } from "./export-layout";
 export { DEFAULT_EXPORT_LAYOUT_CONFIG, normalizeExportLayoutConfig } from "./export-layout";
 
