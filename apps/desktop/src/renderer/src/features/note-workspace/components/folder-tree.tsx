@@ -106,7 +106,7 @@ export function FolderTree({
           <div
             className={cn(
               "group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
-              isAllSelected ? "text-foreground font-medium" : "text-muted-foreground"
+              isAllSelected ? "text-foreground" : "text-muted-foreground"
             )}
             onMouseEnter={() => setHoveredId(ALL_NOTES_FOLDER_ID)}
             onMouseLeave={() => setHoveredId(null)}
@@ -144,7 +144,7 @@ export function FolderTree({
                     <div
                       className={cn(
                         "group absolute right-0 left-0 flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
-                        isSelected ? "text-foreground font-medium" : "text-muted-foreground"
+                        isSelected ? "text-foreground" : "text-muted-foreground"
                       )}
                       ref={rowVirtualizer.measureElement}
                       style={{ transform: `translateY(${virtualRow.start}px)` }}
