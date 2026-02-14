@@ -292,8 +292,8 @@ export function NoteList({
                           )}
                           <div
                             className={cn(
-                              "min-w-0 flex-1 truncate text-sm leading-tight font-medium",
-                              isSelected ? "text-foreground" : "text-foreground/90"
+                              "min-w-0 flex-1 truncate text-sm leading-tight",
+                              isSelected ? "text-foreground" : "text-muted-foreground"
                             )}
                           >
                             {note.title}
