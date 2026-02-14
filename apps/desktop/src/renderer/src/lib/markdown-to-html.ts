@@ -4,8 +4,8 @@
  * 样式与预览组件保持一致，基于 Tailwind Typography prose 类
  */
 
-import { getExportThemeColors, generateProseStyles } from "@/features/export/lib/styles";
-import { pickSupportedLayoutFieldsForFormat, type ExportTargetFormat } from "@/features/export/lib/layout-capabilities";
+import { buildProseStyleBundle } from "@/features/export/lib/styles";
+import { type ExportTargetFormat } from "@/features/export/lib/layout-capabilities";
 import { isDarkColor } from "@/lib/color-utils";
 import type { ExportLayoutConfig } from "@shared";
 
@@ -32,16 +32,8 @@ export interface HTMLDocumentOptions {
  * @param options 配置选项
  */
 export function generateHTMLDocument(title: string, htmlContent: string, options: HTMLDocumentOptions): string {
-  const colors = getExportThemeColors(options.themeId);
   const format = options.format ?? "html";
-  const supportedLayout = pickSupportedLayoutFieldsForFormat(format, options.layout ?? {});
-  const proseStyles = generateProseStyles(colors, {
-    baseFontSize: supportedLayout.baseFontSize,
-    outerBackground: typeof supportedLayout.outerBackground === "string" ? supportedLayout.outerBackground : undefined,
-    innerBackground: typeof supportedLayout.innerBackground === "string" ? supportedLayout.innerBackground : undefined,
-    contentWidth: typeof supportedLayout.contentWidth === "number" ? supportedLayout.contentWidth : undefined,
-    cardPadding: typeof supportedLayout.cardPadding === "number" ? supportedLayout.cardPadding : undefined
-  });
+  const { colors, proseStyles } = buildProseStyleBundle(options.themeId, format, options.layout);
 
   // 根据导出主题的背景色自动选择代码高亮风格（深色/浅色）
   // isDarkColor 返回三态：true=深色, false=浅色, null=解析失败；仅明确深色时使用 dark 风格

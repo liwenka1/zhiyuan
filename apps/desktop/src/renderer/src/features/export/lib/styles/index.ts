@@ -23,3 +23,6 @@ export { generateProseStyles } from "./prose-styles";
 
 // 微信公众号样式
 export { generateWechatStyles } from "./wechat-styles";
+
+// 样式构建器
+export { buildProseStyleBundle, buildWechatStyleBundle } from "./style-builder";

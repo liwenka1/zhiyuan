@@ -1,20 +1,20 @@
 /**
  * 导出主题预设聚合
- * 新增主题：创建文件 → 在此导入并添加到数组 → 添加 i18n key
+ * 新增主题：更新 base-theme-colors 列表 → 添加 i18n key
  */
 
 import type { ExportThemePreset, ThemeColors } from "../theme-colors";
-import { defaultTheme } from "./default";
-import { techBlueTheme } from "./tech-blue";
-import { warmOrangeTheme } from "./warm-orange";
-import { elegantPurpleTheme } from "./elegant-purple";
-import { forestGreenTheme } from "./forest-green";
+import { buildThemeColors } from "../theme-colors";
+import { EXPORT_THEME_BASE_COLORS } from "./base-theme-colors";
 
-/** 所有导出主题预设（使用 as const 保留字面量 id 类型） */
-const _PRESETS = [defaultTheme, techBlueTheme, warmOrangeTheme, elegantPurpleTheme, forestGreenTheme] as const;
+/** 所有导出主题预设 */
+const _PRESETS = EXPORT_THEME_BASE_COLORS.map((item) => ({
+  id: item.id,
+  colors: buildThemeColors(item.base)
+})) as ExportThemePreset[];
 
 /** 导出主题 ID 联合类型 */
-export type ExportThemeId = (typeof _PRESETS)[number]["id"];
+export type ExportThemeId = (typeof EXPORT_THEME_BASE_COLORS)[number]["id"];
 
 /** 可变引用，供外部遍历使用 */
 export const EXPORT_THEME_PRESETS: readonly ExportThemePreset[] = _PRESETS;

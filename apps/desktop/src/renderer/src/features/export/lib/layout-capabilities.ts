@@ -6,6 +6,9 @@
  * - 供设置页提示与导出应用逻辑复用，避免规则分散导致不一致
  */
 
+import { normalizeExportLayoutConfig } from "@shared";
+import type { ExportLayoutConfig } from "@shared";
+
 export const EXPORT_TARGET_FORMATS = ["wechat", "html", "pdf", "image"] as const;
 export type ExportTargetFormat = (typeof EXPORT_TARGET_FORMATS)[number];
 
@@ -53,4 +56,12 @@ export function pickSupportedLayoutFieldsForFormat<T extends Partial<Record<Expo
     }
   }
   return next;
+}
+
+export function resolveExportLayoutForFormat(
+  format: ExportTargetFormat,
+  layout?: Partial<ExportLayoutConfig> | null
+): Partial<ExportLayoutConfig> {
+  const normalized = normalizeExportLayoutConfig(layout);
+  return pickSupportedLayoutFieldsForFormat(format, normalized);
 }
