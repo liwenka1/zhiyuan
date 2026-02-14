@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
-import { clearAllDebouncedSaves } from "@/stores/use-note-store";
+import { clearAllDebouncedSaves } from "@/stores";
 import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
 
 /**

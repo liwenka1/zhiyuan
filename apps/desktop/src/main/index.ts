@@ -4,7 +4,7 @@ import icon from "../../resources/icon.png?asset";
 import { themeManager } from "./theme";
 import { registerThemeHandlers } from "./ipc/theme-handler";
 import { registerWorkspaceHandlers } from "./ipc/workspace-handler";
-import { registerExportHandlers } from "./ipc/export-handler";
+import { registerExportHandlers } from "./export";
 import { registerWindowHandlers } from "./ipc/window-handler";
 import { registerRssHandlers } from "./ipc/rss-handler";
 import { registerUrlHandlers } from "./ipc/url-handler";
