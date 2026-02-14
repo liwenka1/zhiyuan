@@ -118,7 +118,7 @@ export function FolderTree({
               className="bg-accent absolute inset-0 rounded-md"
               initial={false}
               animate={{ opacity: hoveredId === ALL_NOTES_FOLDER_ID ? 1 : 0 }}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
+              transition={{ type: "spring", stiffness: 1200, damping: 40, mass: 0.3 }}
             />
 
             {/* 选中背景 */}
@@ -158,7 +158,7 @@ export function FolderTree({
                         className="bg-accent absolute inset-0 rounded-md"
                         initial={false}
                         animate={{ opacity: isHovered ? 1 : 0 }}
-                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        transition={{ type: "spring", stiffness: 1200, damping: 40, mass: 0.3 }}
                       />
 
                       {/* 选中背景 */}
