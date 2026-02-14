@@ -30,7 +30,6 @@
     "exportLayoutReset": "重置布局",
     "exportLayoutResetSuccess": "已恢复布局默认值",
     "exportLayoutResetFailed": "恢复布局失败，请稍后重试",
-    "exportLayoutComingSoon": "即将支持外层背景、内层背景、整体宽度、卡片边距等布局配置。",
     "exportLayoutFields": {
       "outerBackground": "外层背景",
       "innerBackground": "内层背景",

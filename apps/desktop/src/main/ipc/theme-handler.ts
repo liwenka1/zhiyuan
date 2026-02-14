@@ -32,12 +32,3 @@ export function registerThemeHandlers(): void {
     }, "THEME_SET_FAILED")
   );
 }
-
-/**
- * 移除主题相关的 IPC 处理器
- */
-export function unregisterThemeHandlers(): void {
-  ipcMain.removeHandler("theme:get");
-  ipcMain.removeHandler("theme:getMode");
-  ipcMain.removeHandler("theme:set");
-}
