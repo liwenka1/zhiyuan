@@ -1,5 +1,5 @@
 export { useLanguageStore } from "./use-language-store";
-export { useNoteStore } from "./use-note-store";
+export { useNoteStore, clearAllDebouncedSaves } from "./note-store";
 export { useFolderStore } from "./use-folder-store";
 export { useThemeStore } from "./use-theme-store";
 export { useWorkspaceStore } from "./use-workspace-store";
