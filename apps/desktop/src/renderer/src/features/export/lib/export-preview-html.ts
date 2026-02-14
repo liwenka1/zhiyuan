@@ -1,5 +1,5 @@
 import { buildExportDocumentFromMarkdown } from "./export-pipeline";
-import { getExportThemeColors } from "./styles";
+import { buildProseStyleBundle } from "./styles";
 import { isDarkColor } from "@/lib/color-utils";
 import type { ExportLayoutConfig } from "@shared";
 
@@ -16,8 +16,8 @@ interface RenderNoteExportPreviewHtmlOptions {
  */
 export async function renderNoteExportPreviewHtml(options: RenderNoteExportPreviewHtmlOptions): Promise<string> {
   // 根据主题判断是否为深色模式（用于 Mermaid 图表配色）
-  const themeColors = getExportThemeColors(options.themeId);
-  const isDarkTheme = isDarkColor(themeColors.background) === true;
+  const { colors } = buildProseStyleBundle(options.themeId, "html", options.layout);
+  const isDarkTheme = isDarkColor(colors.background) === true;
 
   return buildExportDocumentFromMarkdown({
     title: options.title,

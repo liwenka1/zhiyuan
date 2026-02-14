@@ -4,14 +4,7 @@
  * 样式基于统一的导出样式系统
  */
 
-import {
-  getExportThemeColors,
-  generateWechatStyles,
-  DEFAULT_EXPORT_THEME_ID,
-  type ThemeColors
-} from "@/features/export/lib/styles";
-import { pickSupportedLayoutFieldsForFormat } from "@/features/export/lib/layout-capabilities";
-import { isDarkColor } from "@/lib/color-utils";
+import { buildWechatStyleBundle } from "@/features/export/lib/styles";
 import type { ExportLayoutConfig } from "@shared";
 
 /**
@@ -27,9 +20,7 @@ export function generateWechatHTMLDocument(
   themeId: string,
   layout?: Partial<ExportLayoutConfig>
 ): string {
-  const colors = getWechatSafeThemeColors(themeId);
-  const supportedLayout = pickSupportedLayoutFieldsForFormat("wechat", layout ?? {});
-  const styles = generateWechatStyles(colors, { baseFontSize: supportedLayout.baseFontSize });
+  const { styles } = buildWechatStyleBundle(themeId, layout);
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -45,18 +36,6 @@ ${styles}
 ${htmlContent}
 </body>
 </html>`;
-}
-
-/**
- * 获取适用于微信公众号的主题颜色
- * 微信文章在浅色背景下阅读，若选中主题为深色系则 fallback 到 default
- */
-function getWechatSafeThemeColors(themeId: string): ThemeColors {
-  const colors = getExportThemeColors(themeId);
-  if (isDarkColor(colors.background)) {
-    return getExportThemeColors(DEFAULT_EXPORT_THEME_ID);
-  }
-  return colors;
 }
 
 /**

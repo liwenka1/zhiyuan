@@ -103,6 +103,15 @@ export function buildThemeColors(base: ThemeColorsInput): ThemeColors {
   };
 }
 
+export function buildAccentDecorations(accentColor: string, strongBg: string): Partial<ThemeColors> {
+  return {
+    h1Decoration: accentColor,
+    h2Decoration: accentColor,
+    blockquoteBorder: accentColor,
+    strongBg
+  };
+}
+
 /** 导出主题预设，主题名称通过 i18n 获取（key: settings.exportThemes.${id}） */
 export interface ExportThemePreset {
   id: string;

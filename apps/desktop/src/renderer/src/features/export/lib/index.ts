@@ -11,6 +11,7 @@ export {
   getUnsupportedLayoutFieldsForFormat,
   getSupportedLayoutFieldsForFormat,
   pickSupportedLayoutFieldsForFormat,
+  resolveExportLayoutForFormat,
   type ExportLayoutField,
   type ExportTargetFormat
 } from "./layout-capabilities";
