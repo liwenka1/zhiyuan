@@ -22,3 +22,4 @@ export { rssIpc } from "./rss";
 export { urlIpc } from "./url";
 export { themeIpc } from "./theme";
 export { utilsIpc } from "./utils";
+export { githubIpc } from "./github";

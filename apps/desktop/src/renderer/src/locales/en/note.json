@@ -19,6 +19,7 @@
     "unpin": "Unpin Note",
     "rename": "Rename",
     "duplicate": "Duplicate",
+    "pushToGitHub": "Push to GitHub Issue",
     "export": "Export",
     "exportAsHTML": "Export as HTML",
     "exportAsPDF": "Export as PDF",
@@ -103,7 +104,12 @@
     "renameNoteFailed": "Failed to rename note, please try again",
     "duplicateNoteFailed": "Failed to duplicate note, please try again",
     "saveNoteFailed": "Failed to save note, please check disk space and permissions",
-    "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app"
+    "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app",
+    "githubConfigMissing": "Please configure GitHub settings first",
+    "githubPushFailed": "Push failed: {{message}}"
+  },
+  "github": {
+    "pushSuccess": "Push succeeded: {{url}}"
   },
   "rss": {
     "importing": "Importing RSS...",

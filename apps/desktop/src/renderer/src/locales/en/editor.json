@@ -15,6 +15,7 @@
     "showInExplorer": "Show in File Manager",
     "rename": "Rename",
     "duplicate": "Duplicate",
+    "pushToGitHub": "Push to GitHub Issue",
     "export": "Export",
     "exportAsHTML": "Export as HTML",
     "exportAsPDF": "Export as PDF",

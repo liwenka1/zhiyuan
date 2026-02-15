@@ -24,6 +24,10 @@ export interface Note {
   isPinned?: boolean;
   createdAt?: string;
   updatedAt?: string;
+  github?: {
+    issueNumber?: number;
+    issueUrl?: string;
+  };
 }
 
 /**

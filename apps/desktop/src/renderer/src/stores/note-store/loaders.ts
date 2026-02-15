@@ -1,5 +1,6 @@
 import type { NoteStoreSet } from "./types";
 import type { Note } from "@/types";
+import { parseGitHubMetadata } from "@/lib/github-metadata";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { configIpc } from "@/ipc";
 
@@ -15,7 +16,8 @@ export function createLoaders(set: NoteStoreSet) {
 
       const notesWithPinState = data.notes.map((note) => ({
         ...note,
-        isPinned: pinnedNoteIds.includes(note.id)
+        isPinned: pinnedNoteIds.includes(note.id),
+        github: parseGitHubMetadata(note.content)
       }));
 
       set({

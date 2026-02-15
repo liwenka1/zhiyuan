@@ -3,7 +3,7 @@
  */
 
 import { unwrapIpcResult } from "@/lib/ipc-utils";
-import type { ExportLayoutConfig } from "@shared";
+import type { ExportLayoutConfig, GitHubConfig } from "@shared";
 
 export const configIpc = {
   getPinnedNotes: async (workspacePath: string) =>
@@ -19,5 +19,9 @@ export const configIpc = {
   getExportLayout: async () => unwrapIpcResult(await window.api.config.getExportLayout()),
 
   setExportLayout: async (patch: Partial<ExportLayoutConfig>) =>
-    unwrapIpcResult(await window.api.config.setExportLayout(patch))
+    unwrapIpcResult(await window.api.config.setExportLayout(patch)),
+
+  getGitHubConfig: async (): Promise<GitHubConfig> => unwrapIpcResult(await window.api.config.getGitHubConfig()),
+
+  setGitHubConfig: async (config: GitHubConfig) => unwrapIpcResult(await window.api.config.setGitHubConfig(config))
 };

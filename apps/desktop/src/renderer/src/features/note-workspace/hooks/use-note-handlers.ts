@@ -1,8 +1,9 @@
-import { useNoteStore, useFolderStore } from "@/stores";
+import { useNoteStore, useFolderStore, useGitHubSettingsStore } from "@/stores";
 import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { shellIpc, fileIpc } from "@/ipc";
+import { shellIpc, fileIpc, githubIpc } from "@/ipc";
+import { upsertGitHubMetadata } from "@/lib/github-metadata";
 
 export interface NoteHandlers {
   handleCreateNote: () => Promise<void>;
@@ -21,6 +22,7 @@ export interface NoteHandlers {
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
   ) => Promise<void>;
   handleCopyToWechat: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
+  handlePushToGitHub: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
 }
 
 interface UseNoteHandlersProps {
@@ -34,11 +36,13 @@ interface UseNoteHandlersProps {
 export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): NoteHandlers {
   const { t } = useTranslation("note");
   const notes = useNoteStore((state) => state.notes);
+  const updateNoteContentById = useNoteStore((state) => state.updateNoteContentById);
   const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const createNote = useNoteStore((state) => state.createNote);
   const deleteNote = useNoteStore((state) => state.deleteNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const togglePinNote = useNoteStore((state) => state.togglePinNote);
+  const githubStore = useGitHubSettingsStore;
 
   // 使用导出 hook
   const { exportNote, copyToWechat } = useNoteExport();
@@ -115,6 +119,48 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     await copyToWechat(fullNote);
   };
 
+  const handlePushToGitHub = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    const fullNote = notes.find((n) => n.id === note.id);
+    if (!fullNote?.filePath || !fullNote.fileName) return;
+
+    if (!githubStore.getState().isLoaded) {
+      await githubStore.getState().load();
+    }
+
+    const { owner, repo, token } = githubStore.getState();
+    const currentConfig = { owner, repo, token };
+    if (!currentConfig.owner || !currentConfig.repo || !currentConfig.token) {
+      toast.error(t("errors.githubConfigMissing"));
+      return;
+    }
+
+    try {
+      const title = fullNote.fileName.replace(/\.md$/i, "");
+      const result = await githubIpc.pushIssue({
+        owner: currentConfig.owner,
+        repo: currentConfig.repo,
+        token: currentConfig.token,
+        title,
+        body: fullNote.content,
+        issueNumber: fullNote.github?.issueNumber
+      });
+
+      const nextContent = upsertGitHubMetadata(fullNote.content, {
+        issueNumber: result.issueNumber,
+        issueUrl: result.issueUrl
+      });
+
+      if (nextContent !== fullNote.content) {
+        updateNoteContentById(fullNote.id, nextContent);
+      }
+
+      toast.success(t("github.pushSuccess", { url: result.issueUrl }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(t("errors.githubPushFailed", { message }));
+    }
+  };
+
   return {
     handleCreateNote,
     handleShowNoteInExplorer,
@@ -123,6 +169,7 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     handleDuplicateNote,
     handleTogglePinNote,
     handleExportNote,
-    handleCopyToWechat
+    handleCopyToWechat,
+    handlePushToGitHub
   };
 }

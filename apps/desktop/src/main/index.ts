@@ -8,6 +8,7 @@ import { registerExportHandlers } from "./export";
 import { registerWindowHandlers } from "./ipc/window-handler";
 import { registerRssHandlers } from "./ipc/rss-handler";
 import { registerUrlHandlers } from "./ipc/url-handler";
+import { registerGitHubHandlers } from "./ipc/github-handler";
 import { windowManager } from "./window-manager";
 import { configManager } from "./config";
 import { setupApplicationMenu } from "./menu";
@@ -103,6 +104,9 @@ app.whenReady().then(() => {
 
   // 注册 URL 相关的 IPC 处理器
   registerUrlHandlers();
+
+  // 注册 GitHub 相关的 IPC 处理器
+  registerGitHubHandlers();
 
   // 注册新建窗口 IPC
   ipcMain.handle("window:new", (): IpcResultDTO<void> => {

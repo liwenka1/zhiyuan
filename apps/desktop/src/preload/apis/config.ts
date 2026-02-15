@@ -34,5 +34,17 @@ export const configApi = {
    * 设置导出布局配置（部分更新）
    */
   setExportLayout: (patch: Partial<ExportLayoutConfig>): Promise<IpcResultDTO<void>> =>
-    ipcRenderer.invoke("config:setExportLayout", patch)
+    ipcRenderer.invoke("config:setExportLayout", patch),
+
+  /**
+   * 获取 GitHub 配置
+   */
+  getGitHubConfig: (): Promise<IpcResultDTO<{ owner: string; repo: string; token: string }>> =>
+    ipcRenderer.invoke("config:getGitHubConfig"),
+
+  /**
+   * 设置 GitHub 配置
+   */
+  setGitHubConfig: (config: { owner: string; repo: string; token: string }): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:setGitHubConfig", config)
 };

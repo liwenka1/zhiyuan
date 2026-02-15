@@ -3,6 +3,7 @@ import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
 import { wasRecentlySaved } from "./persistence";
+import { parseGitHubMetadata } from "@/lib/github-metadata";
 
 export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
   return {
@@ -80,6 +81,7 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
         if (targetNote) {
           targetNote.content = content;
           targetNote.updatedAt = new Date().toISOString();
+          targetNote.github = parseGitHubMetadata(content);
         }
       });
     }

@@ -13,5 +13,6 @@ export { windowApi } from "./window";
 export { exportApi } from "./export";
 export { utilsApi } from "./utils";
 export { configApi } from "./config";
+export { githubApi } from "./github";
 export { rssApi } from "./rss";
 export { urlApi } from "./url";

@@ -14,7 +14,8 @@ import {
   Download,
   Trash2,
   ChevronRight,
-  FileOutput
+  FileOutput,
+  Github
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -34,6 +35,7 @@ interface EditorToolbarProps {
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
   ) => void;
   onDeleteNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onPushToGitHub?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
 }
 
 export function EditorToolbar({
@@ -42,7 +44,8 @@ export function EditorToolbar({
   onRenameNote,
   onDuplicateNote,
   onExportNote,
-  onDeleteNote
+  onDeleteNote,
+  onPushToGitHub
 }: EditorToolbarProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
@@ -100,6 +103,12 @@ export function EditorToolbar({
   const handleDeleteNote = () => {
     if (noteSummary) {
       onDeleteNote?.(noteSummary);
+    }
+  };
+
+  const handlePushToGitHub = () => {
+    if (noteSummary) {
+      onPushToGitHub?.(noteSummary);
     }
   };
 
@@ -270,6 +279,10 @@ export function EditorToolbar({
               >
                 <Copy className="h-4 w-4" />
                 <span>{t("toolbar.duplicate")}</span>
+              </Button>
+              <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2" onClick={handlePushToGitHub}>
+                <Github className="h-4 w-4" />
+                <span>{t("toolbar.pushToGitHub")}</span>
               </Button>
               <div className="bg-border my-1 h-px" />
               <div onMouseEnter={() => setExportOpen(true)} onMouseLeave={() => setExportOpen(false)}>

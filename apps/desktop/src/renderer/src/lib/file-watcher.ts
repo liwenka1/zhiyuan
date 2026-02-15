@@ -1,5 +1,6 @@
 import { Note } from "@/types";
 import { fileIpc } from "@/ipc";
+import { parseGitHubMetadata } from "@/lib/github-metadata";
 
 /**
  * 处理外部添加的文件
@@ -31,6 +32,7 @@ export async function handleFileAdded(
     const fileName = pathParts[pathParts.length - 1];
 
     // 创建新笔记对象
+    const githubMetadata = parseGitHubMetadata(content);
     const newNote: Note = {
       id: filePath,
       title: fileName.replace(".md", ""),
@@ -40,7 +42,8 @@ export async function handleFileAdded(
       folderId: folderId || undefined,
       isPinned: false,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      github: githubMetadata
     };
 
     return newNote;

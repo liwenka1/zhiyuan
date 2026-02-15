@@ -12,6 +12,11 @@ interface AppConfig {
   theme: ThemeMode; // 主题模式（light/dark/system）
   exportThemeId: string; // 导出主题预设 ID
   exportLayout: ExportLayoutConfig; // 导出布局配置
+  github: {
+    owner: string;
+    repo: string;
+    token: string;
+  };
 }
 
 // 创建配置存储实例
@@ -21,7 +26,12 @@ const store = new Store<AppConfig>({
     pinnedNotes: {},
     theme: "system", // 默认跟随系统
     exportThemeId: "default", // 默认导出主题
-    exportLayout: DEFAULT_EXPORT_LAYOUT_CONFIG // 默认导出布局
+    exportLayout: DEFAULT_EXPORT_LAYOUT_CONFIG, // 默认导出布局
+    github: {
+      owner: "",
+      repo: "",
+      token: ""
+    }
   }
 });
 
@@ -125,5 +135,23 @@ export const configManager = {
     const current = normalizeExportLayoutConfig(store.get("exportLayout"));
     const next = normalizeExportLayoutConfig({ ...current, ...patch });
     store.set("exportLayout", next);
+  },
+
+  /**
+   * 获取 GitHub 配置
+   */
+  getGitHubConfig(): { owner: string; repo: string; token: string } {
+    return store.get("github");
+  },
+
+  /**
+   * 设置 GitHub 配置
+   */
+  setGitHubConfig(config: { owner: string; repo: string; token: string }): void {
+    store.set("github", {
+      owner: config.owner || "",
+      repo: config.repo || "",
+      token: config.token || ""
+    });
   }
 };
