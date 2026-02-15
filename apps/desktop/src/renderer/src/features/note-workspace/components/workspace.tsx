@@ -80,6 +80,7 @@ export function NoteWorkspace() {
             onTogglePinNote={noteHandlers.handleTogglePinNote}
             onExportNote={noteHandlers.handleExportNote}
             onCopyToWechat={noteHandlers.handleCopyToWechat}
+            onPushToGitHub={noteHandlers.handlePushToGitHub}
           />
         }
         mainContent={
@@ -94,6 +95,7 @@ export function NoteWorkspace() {
             onRenameNote={noteHandlers.handleRenameNote}
             onDuplicateNote={noteHandlers.handleDuplicateNote}
             onExportNote={noteHandlers.handleExportNote}
+            onPushToGitHub={noteHandlers.handlePushToGitHub}
             onDeleteNote={noteHandlers.handleDeleteNote}
           />
         }

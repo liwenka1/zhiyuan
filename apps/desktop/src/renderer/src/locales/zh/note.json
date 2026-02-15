@@ -19,6 +19,7 @@
     "unpin": "取消置顶",
     "rename": "重命名",
     "duplicate": "创建副本",
+    "pushToGitHub": "推送到 GitHub Issue",
     "export": "导出",
     "exportAsHTML": "导出为 HTML",
     "exportAsPDF": "导出为 PDF",
@@ -103,7 +104,12 @@
     "renameNoteFailed": "重命名笔记失败，请重试",
     "duplicateNoteFailed": "复制笔记失败，请重试",
     "saveNoteFailed": "保存笔记失败，请检查磁盘空间和权限",
-    "initWorkspaceFailed": "初始化工作区失败，请检查文件系统权限或重启应用"
+    "initWorkspaceFailed": "初始化工作区失败，请检查文件系统权限或重启应用",
+    "githubConfigMissing": "请先在设置中配置 GitHub 信息",
+    "githubPushFailed": "推送失败：{{message}}"
+  },
+  "github": {
+    "pushSuccess": "推送成功：{{url}}"
   },
   "rss": {
     "importing": "正在导入 RSS...",

@@ -21,6 +21,24 @@ export interface NoteInfo {
   folderId: string | null;
   createdAt: string;
   updatedAt: string;
+  github?: {
+    issueNumber?: number;
+    issueUrl?: string;
+  };
+}
+
+const ISSUE_NUMBER_REGEX = /<!--\s*github-issue-number:\s*(\d+)\s*-->/i;
+const ISSUE_URL_REGEX = /<!--\s*github-issue-url:\s*([^\s]+)\s*-->/i;
+
+function parseGitHubMetadata(markdown: string): { issueNumber?: number; issueUrl?: string } {
+  const issueNumberMatch = markdown.match(ISSUE_NUMBER_REGEX);
+  const issueUrlMatch = markdown.match(ISSUE_URL_REGEX);
+  const issueNumber = issueNumberMatch ? Number(issueNumberMatch[1]) : undefined;
+  const issueUrl = issueUrlMatch ? issueUrlMatch[1] : undefined;
+  return {
+    issueNumber: Number.isFinite(issueNumber) ? issueNumber : undefined,
+    issueUrl: issueUrl || undefined
+  };
 }
 
 /**
@@ -162,6 +180,7 @@ export const workspaceManager = {
       // 生成相对路径作为 ID
       const relativePath = path.relative(workspacePath, filePath);
 
+      const githubMetadata = parseGitHubMetadata(content);
       return {
         id: relativePath,
         title,
@@ -170,7 +189,8 @@ export const workspaceManager = {
         filePath,
         folderId,
         createdAt: stats.birthtime.toISOString(),
-        updatedAt: stats.mtime.toISOString()
+        updatedAt: stats.mtime.toISOString(),
+        github: githubMetadata
       };
     } catch {
       return null;

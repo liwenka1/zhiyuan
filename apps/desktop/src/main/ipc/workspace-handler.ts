@@ -339,4 +339,38 @@ export function registerWorkspaceHandlers(): void {
       return ipcErr(message, "CONFIG_SET_EXPORT_LAYOUT_FAILED");
     }
   });
+
+  // 获取 GitHub 配置
+  ipcMain.handle("config:getGitHubConfig", (): IpcResultDTO<{ owner: string; repo: string; token: string }> => {
+    try {
+      return ipcOk(configManager.getGitHubConfig());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_GET_GITHUB_FAILED");
+    }
+  });
+
+  // 设置 GitHub 配置
+  ipcMain.handle(
+    "config:setGitHubConfig",
+    (
+      _,
+      config: {
+        owner: string;
+        repo: string;
+        token: string;
+      }
+    ): IpcResultDTO<void> => {
+      try {
+        if (!config || typeof config !== "object") {
+          return ipcErr("Invalid GitHub config", "CONFIG_SET_GITHUB_INVALID");
+        }
+        configManager.setGitHubConfig(config);
+        return ipcOk(undefined);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return ipcErr(message, "CONFIG_SET_GITHUB_FAILED");
+      }
+    }
+  );
 }

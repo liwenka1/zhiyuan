@@ -16,6 +16,7 @@ export interface NoteStore extends NoteStoreState {
   selectNote: (noteId: string) => void;
   createNote: (folderId?: string) => Promise<void>;
   updateNoteContent: (content: string) => void;
+  updateNoteContentById: (noteId: string, content: string) => void;
   formatCurrentNote: () => Promise<void>;
   deleteNote: (noteId: string) => void;
   renameNote: (noteId: string, newTitle: string) => Promise<void>;

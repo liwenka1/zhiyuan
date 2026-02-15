@@ -2,6 +2,7 @@ import type { NoteStoreGet, NoteStoreSet } from "./types";
 import i18n from "@/lib/i18n";
 import { toast } from "sonner";
 import { fileIpc } from "@/ipc";
+import { parseGitHubMetadata } from "@/lib/github-metadata";
 
 const debouncedSaves = new Map<string, ReturnType<typeof setTimeout>>();
 const recentSaves = new Map<string, number>();
@@ -45,6 +46,7 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
         if (note) {
           note.content = content;
           note.updatedAt = new Date().toISOString();
+          note.github = parseGitHubMetadata(content);
         }
       });
 
@@ -59,6 +61,33 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
       }, 500);
 
       debouncedSaves.set(selectedNoteId, timer);
+    },
+
+    updateNoteContentById: (noteId, content) => {
+      set((state) => {
+        const note = state.notes.find((n) => n.id === noteId);
+        if (note) {
+          note.content = content;
+          note.updatedAt = new Date().toISOString();
+          note.github = parseGitHubMetadata(content);
+        }
+
+        if (state.selectedNoteId === noteId) {
+          state.editorContent = content;
+        }
+      });
+
+      const targetNote = get().notes.find((n) => n.id === noteId);
+      if (!targetNote?.filePath) return;
+
+      clearDebouncedSave(noteId);
+
+      const timer = setTimeout(() => {
+        get().saveNoteToFileSystem(noteId, content);
+        debouncedSaves.delete(noteId);
+      }, 500);
+
+      debouncedSaves.set(noteId, timer);
     },
 
     saveNoteToFileSystem: async (noteId, content) => {

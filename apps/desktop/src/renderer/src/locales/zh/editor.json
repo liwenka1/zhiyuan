@@ -15,6 +15,7 @@
     "showInExplorer": "在文件管理器中查看",
     "rename": "重命名",
     "duplicate": "创建副本",
+    "pushToGitHub": "推送到 GitHub Issue",
     "export": "导出",
     "exportAsHTML": "导出为 HTML",
     "exportAsPDF": "导出为 PDF",

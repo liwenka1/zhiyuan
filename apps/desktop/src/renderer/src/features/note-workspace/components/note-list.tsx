@@ -12,7 +12,8 @@ import {
   X,
   FolderOpen,
   Volume2,
-  Link
+  Link,
+  Github
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRef, useState } from "react";
@@ -56,6 +57,7 @@ interface NoteListProps {
   onTogglePinNote?: (note: Note) => void;
   onExportNote?: (note: Note, format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages") => void;
   onCopyToWechat?: (note: Note) => void;
+  onPushToGitHub?: (note: Note) => void;
 }
 
 export function NoteList({
@@ -72,7 +74,8 @@ export function NoteList({
   onDuplicateNote,
   onTogglePinNote,
   onExportNote,
-  onCopyToWechat
+  onCopyToWechat,
+  onPushToGitHub
 }: NoteListProps) {
   const { t } = useTranslation("note");
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
@@ -344,6 +347,11 @@ export function NoteList({
                     <ContextMenuItem onClick={() => onDuplicateNote?.(note)}>
                       <Copy className="h-4 w-4" />
                       <span>{t("contextMenu.duplicate")}</span>
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => onPushToGitHub?.(note)}>
+                      <Github className="h-4 w-4" />
+                      <span>{t("contextMenu.pushToGitHub")}</span>
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuSub>

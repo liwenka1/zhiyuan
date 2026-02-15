@@ -22,6 +22,7 @@ interface EditorAreaProps {
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
   ) => void;
   onDeleteNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onPushToGitHub?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
 }
 
 export function EditorArea({
@@ -35,7 +36,8 @@ export function EditorArea({
   onRenameNote,
   onDuplicateNote,
   onExportNote,
-  onDeleteNote
+  onDeleteNote,
+  onPushToGitHub
 }: EditorAreaProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const splitLayout = useViewStore((state) => state.splitLayout);
@@ -76,6 +78,7 @@ export function EditorArea({
         onDuplicateNote={onDuplicateNote}
         onExportNote={onExportNote}
         onDeleteNote={onDeleteNote}
+        onPushToGitHub={onPushToGitHub}
       />
       <div className="flex-1 overflow-hidden">
         {notesToRender.map((note) => (

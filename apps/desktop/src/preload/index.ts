@@ -10,6 +10,7 @@ import {
   exportApi,
   utilsApi,
   configApi,
+  githubApi,
   rssApi,
   urlApi
 } from "./apis";
@@ -54,6 +55,7 @@ const api = {
   export: exportApi,
   utils: utilsApi,
   config: configApi,
+  github: githubApi,
   rss: rssApi,
   url: urlApi
 };

@@ -1,5 +1,13 @@
 import { ElectronAPI } from "@electron-toolkit/preload";
-import type { ExportLayoutConfig, Theme, ThemeMode, IpcResultDTO } from "@shared";
+import type {
+  ExportLayoutConfig,
+  Theme,
+  ThemeMode,
+  IpcResultDTO,
+  GitHubConfig,
+  GitHubIssuePushRequest,
+  GitHubIssuePushResult
+} from "@shared";
 
 /**
  * 主题 API 接口
@@ -198,6 +206,16 @@ export interface ConfigAPI {
    * 设置导出布局配置（部分更新）
    */
   setExportLayout: (patch: Partial<ExportLayoutConfig>) => Promise<IpcResultDTO<void>>;
+
+  /**
+   * 获取 GitHub 配置
+   */
+  getGitHubConfig: () => Promise<IpcResultDTO<GitHubConfig>>;
+
+  /**
+   * 设置 GitHub 配置
+   */
+  setGitHubConfig: (config: GitHubConfig) => Promise<IpcResultDTO<void>>;
 }
 
 // RSS API 接口
@@ -231,6 +249,11 @@ export interface UrlAPI {
   >;
 }
 
+// GitHub API 接口
+export interface GitHubAPI {
+  pushIssue: (payload: GitHubIssuePushRequest) => Promise<IpcResultDTO<GitHubIssuePushResult>>;
+}
+
 // API 集合接口
 export interface API {
   theme: ThemeAPI;
@@ -243,6 +266,7 @@ export interface API {
   export: ExportAPI;
   utils: UtilsAPI;
   config: ConfigAPI;
+  github: GitHubAPI;
   rss: RssAPI;
   url: UrlAPI;
 }

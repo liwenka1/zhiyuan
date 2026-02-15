@@ -9,6 +9,7 @@ export type { ExportLayoutConfig } from "./export-layout";
 export { DEFAULT_EXPORT_LAYOUT_CONFIG, normalizeExportLayoutConfig } from "./export-layout";
 
 export type { IpcError, IpcResultDTO } from "./ipc";
+export type { GitHubConfig, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";
 export {
   isRelativePath,
   isLocalAbsolutePath,
