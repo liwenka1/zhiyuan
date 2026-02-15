@@ -150,8 +150,7 @@ export const useViewStore = create<ViewStore>()(
     {
       name: "view-storage",
       partialize: (state) => ({
-        splitLayout: state.splitLayout,
-        showFolderSidebar: state.showFolderSidebar // 持久化侧边栏状态
+        splitLayout: state.splitLayout
       })
     }
   )
