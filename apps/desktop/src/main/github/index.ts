@@ -58,3 +58,46 @@ export async function createIssueComment(params: {
     body: JSON.stringify({ body: params.body })
   });
 }
+
+export async function getContentSha(params: {
+  owner: string;
+  repo: string;
+  token: string;
+  path: string;
+  ref?: string;
+}): Promise<string | null> {
+  const refQuery = params.ref ? `?ref=${encodeURIComponent(params.ref)}` : "";
+  const url = `${GITHUB_API_BASE}/repos/${params.owner}/${params.repo}/contents/${params.path}${refQuery}`;
+  try {
+    const data = await requestGitHub<{ sha?: string }>(url, {
+      method: "GET",
+      token: params.token
+    });
+    return data.sha ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function uploadContent(params: {
+  owner: string;
+  repo: string;
+  token: string;
+  path: string;
+  contentBase64: string;
+  message: string;
+  branch?: string;
+  sha?: string;
+}): Promise<{ content?: { sha?: string } }> {
+  const url = `${GITHUB_API_BASE}/repos/${params.owner}/${params.repo}/contents/${params.path}`;
+  return requestGitHub(url, {
+    method: "PUT",
+    token: params.token,
+    body: JSON.stringify({
+      message: params.message,
+      content: params.contentBase64,
+      branch: params.branch,
+      sha: params.sha
+    })
+  });
+}

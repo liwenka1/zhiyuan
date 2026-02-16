@@ -106,10 +106,12 @@
     "saveNoteFailed": "保存笔记失败，请检查磁盘空间和权限",
     "initWorkspaceFailed": "初始化工作区失败，请检查文件系统权限或重启应用",
     "githubConfigMissing": "请先在设置中配置 GitHub 信息",
-    "githubPushFailed": "推送失败：{{message}}"
+    "githubPushFailed": "推送失败：{{message}}",
+    "githubAssetsSkipped": "有 {{count}} 个资源未上传（可能过大或不存在）"
   },
   "github": {
-    "pushSuccess": "推送成功：{{url}}"
+    "pushSuccess": "推送成功：{{url}}",
+    "assetsUploaded": "已上传 {{count}} 个资源"
   },
   "rss": {
     "importing": "正在导入 RSS...",

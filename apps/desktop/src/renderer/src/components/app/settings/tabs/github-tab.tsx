@@ -18,11 +18,11 @@ export function GitHubTab() {
     }
   }, [isLoaded, load]);
 
-  useEffect(() => {
-    setLocalOwner(owner);
-    setLocalRepo(repo);
-    setLocalToken(token);
-  }, [owner, repo, token]);
+  const handleReset = () => {
+    setLocalOwner("");
+    setLocalRepo("");
+    setLocalToken("");
+  };
 
   const handleBlur = () => {
     if (localOwner !== owner || localRepo !== repo || localToken !== token) {
@@ -35,26 +35,41 @@ export function GitHubTab() {
       <SettingSection title={t("settings.githubSectionTitle")} description={t("settings.githubSectionDesc")}>
         <SettingRow label={t("settings.githubOwner")}>
           <Input
-            value={localOwner}
+            value={localOwner || owner}
             onChange={(event) => setLocalOwner(event.target.value)}
             onBlur={handleBlur}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                handleReset();
+              }
+            }}
             placeholder={t("settings.githubOwnerPlaceholder")}
           />
         </SettingRow>
         <SettingRow label={t("settings.githubRepo")}>
           <Input
-            value={localRepo}
+            value={localRepo || repo}
             onChange={(event) => setLocalRepo(event.target.value)}
             onBlur={handleBlur}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                handleReset();
+              }
+            }}
             placeholder={t("settings.githubRepoPlaceholder")}
           />
         </SettingRow>
         <SettingRow label={t("settings.githubToken")}>
           <Input
             type="password"
-            value={localToken}
+            value={localToken || token}
             onChange={(event) => setLocalToken(event.target.value)}
             onBlur={handleBlur}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                handleReset();
+              }
+            }}
             placeholder={t("settings.githubTokenPlaceholder")}
           />
         </SettingRow>

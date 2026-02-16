@@ -106,10 +106,12 @@
     "saveNoteFailed": "Failed to save note, please check disk space and permissions",
     "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app",
     "githubConfigMissing": "Please configure GitHub settings first",
-    "githubPushFailed": "Push failed: {{message}}"
+    "githubPushFailed": "Push failed: {{message}}",
+    "githubAssetsSkipped": "{{count}} assets were skipped (too large or missing)"
   },
   "github": {
-    "pushSuccess": "Push succeeded: {{url}}"
+    "pushSuccess": "Push succeeded: {{url}}",
+    "assetsUploaded": "Uploaded {{count}} assets"
   },
   "rss": {
     "importing": "Importing RSS...",

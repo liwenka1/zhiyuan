@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { shellIpc, fileIpc, githubIpc } from "@/ipc";
 import { upsertGitHubMetadata } from "@/lib/github-metadata";
+import { collectLocalMarkdownAssets, replaceMarkdownAssetUrls } from "@/lib/markdown-assets";
+import { uploadMarkdownAssets } from "@/lib/github-assets";
 
 export interface NoteHandlers {
   handleCreateNote: () => Promise<void>;
@@ -136,12 +138,33 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
 
     try {
       const title = fullNote.fileName.replace(/\.md$/i, "");
+      const assets = collectLocalMarkdownAssets(fullNote.content, fullNote.filePath);
+      let body = fullNote.content;
+
+      if (assets.length > 0) {
+        const { replacements, skipped, uploaded } = await uploadMarkdownAssets({
+          assets,
+          owner: currentConfig.owner,
+          repo: currentConfig.repo,
+          token: currentConfig.token,
+          noteId: fullNote.id,
+          branch: "main"
+        });
+        body = replaceMarkdownAssetUrls(body, replacements);
+        if (uploaded.length > 0) {
+          toast.success(t("github.assetsUploaded", { count: uploaded.length }));
+        }
+        if (skipped.length > 0) {
+          toast.error(t("errors.githubAssetsSkipped", { count: skipped.length }));
+        }
+      }
+
       const result = await githubIpc.pushIssue({
         owner: currentConfig.owner,
         repo: currentConfig.repo,
         token: currentConfig.token,
         title,
-        body: fullNote.content,
+        body,
         issueNumber: fullNote.github?.issueNumber
       });
 
