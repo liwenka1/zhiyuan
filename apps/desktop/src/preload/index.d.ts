@@ -6,7 +6,9 @@ import type {
   IpcResultDTO,
   GitHubConfig,
   GitHubIssuePushRequest,
-  GitHubIssuePushResult
+  GitHubIssuePushResult,
+  GitHubAssetUploadRequest,
+  GitHubAssetUploadResult
 } from "@shared";
 
 /**
@@ -252,6 +254,7 @@ export interface UrlAPI {
 // GitHub API 接口
 export interface GitHubAPI {
   pushIssue: (payload: GitHubIssuePushRequest) => Promise<IpcResultDTO<GitHubIssuePushResult>>;
+  uploadAsset: (payload: GitHubAssetUploadRequest) => Promise<IpcResultDTO<GitHubAssetUploadResult>>;
 }
 
 // API 集合接口

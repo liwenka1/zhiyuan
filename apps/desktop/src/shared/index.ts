@@ -10,6 +10,7 @@ export { DEFAULT_EXPORT_LAYOUT_CONFIG, normalizeExportLayoutConfig } from "./exp
 
 export type { IpcError, IpcResultDTO } from "./ipc";
 export type { GitHubConfig, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";
+export type { GitHubAssetUploadRequest, GitHubAssetUploadResult } from "./github-assets";
 export {
   isRelativePath,
   isLocalAbsolutePath,
