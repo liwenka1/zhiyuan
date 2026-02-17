@@ -39,12 +39,6 @@
   letter-spacing: var(--editor-letter-spacing);
 }
 
-/* 覆盖 highlight.js 默认样式，让 Tailwind Typography 控制布局 */
-.prose pre code.hljs {
-  padding: 0 !important;
-  background: transparent !important;
-}
-
 /* Mermaid 图表样式 */
 .prose .mermaid-block {
   max-width: 100%;

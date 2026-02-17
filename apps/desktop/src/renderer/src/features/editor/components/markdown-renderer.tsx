@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import "highlight.js/styles/github.css";
-import "highlight.js/styles/github-dark.css";
 import "katex/dist/katex.min.css";
 import { decodeLocalResourceUrl } from "@shared";
 import { stripHiddenFrontmatter } from "@/lib/frontmatter";
@@ -28,7 +26,7 @@ interface MarkdownRendererProps {
  * - ✅ 支持 GitHub 风格 Markdown (GFM)
  * - ✅ 支持换行 (remarkBreaks)
  * - ✅ 支持 HTML 标签
- * - ✅ 支持代码高亮 (highlight.js)
+ * - ✅ 支持代码高亮 (shiki)
  * - ✅ 支持数学公式 (KaTeX)
  * - ✅ 支持图表 (Mermaid)
  * - ✅ 支持相对路径资源解析
@@ -55,7 +53,11 @@ export function MarkdownRenderer({
 
     const renderMarkdown = async () => {
       try {
-        const html = await markdownToHTML(content, { notePath, isDarkTheme: isDark });
+        const html = await markdownToHTML(content, {
+          notePath,
+          isDarkTheme: isDark,
+          enableCopyButton: true
+        });
         if (!isCancelled) {
           setHtmlContent(html);
         }
@@ -131,6 +133,22 @@ export function MarkdownRenderer({
         onClick={async (e) => {
           const target = e.target as HTMLElement | null;
           if (!target) return;
+
+          const copyButton = target.closest("[data-code-copy-button]") as HTMLElement | null;
+          if (copyButton) {
+            const pre = copyButton.closest("pre");
+            const code = pre?.querySelector("code");
+            const codeText = code?.textContent ?? "";
+            if (!codeText.trim()) return;
+            try {
+              await navigator.clipboard.writeText(codeText);
+              toast.success(t("copyCodeSuccess"));
+            } catch {
+              toast.error(t("errors.copyCodeFailed"));
+            }
+            return;
+          }
+
           const anchor = target.closest("a") as HTMLAnchorElement | null;
           if (!anchor) return;
 

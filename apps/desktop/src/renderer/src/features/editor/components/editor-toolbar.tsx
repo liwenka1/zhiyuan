@@ -17,7 +17,7 @@ import {
   FileOutput,
   Github
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, IconButton } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { TableOfContents } from "./table-of-contents";
@@ -144,7 +144,7 @@ export function EditorToolbar({
           onPressedChange={handleTogglePreviewMode}
           disabled={!hasNote || isPresentationMode}
         >
-          <Eye className="h-4 w-4" />
+          <Eye className="size-4" />
         </Toggle>
 
         {/* 分栏按钮 */}
@@ -156,7 +156,7 @@ export function EditorToolbar({
           onPressedChange={handleToggleSplitMode}
           disabled={!hasNote || isPresentationMode}
         >
-          <Columns2 className="h-4 w-4" />
+          <Columns2 className="size-4" />
         </Toggle>
 
         <Toggle
@@ -167,7 +167,7 @@ export function EditorToolbar({
           onPressedChange={handleToggleExportPreview}
           disabled={!hasNote || isPresentationMode}
         >
-          <FileOutput className="h-4 w-4" />
+          <FileOutput className="size-4" />
         </Toggle>
 
         {/* 演示按钮 */}
@@ -179,33 +179,24 @@ export function EditorToolbar({
           onPressedChange={handleTogglePresentationMode}
           disabled={!hasNote}
         >
-          <Presentation className="h-4 w-4" />
+          <Presentation className="size-4" />
         </Toggle>
 
         {/* 格式化按钮 */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0"
+        <IconButton
           aria-label={t("toolbar.format")}
           onClick={handleFormat}
           disabled={!hasNote || editorMode === "preview"}
         >
-          <Wand2 className="h-4 w-4" />
-        </Button>
+          <Wand2 className="size-4" />
+        </IconButton>
 
         {/* 目录按钮 */}
         <Popover open={effectiveTocOpen} onOpenChange={setTocOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              aria-label={t("toolbar.toc")}
-              disabled={!hasNote || !showPreview || exportPreview}
-            >
-              <TocIcon className="h-4 w-4" />
-            </Button>
+            <IconButton aria-label={t("toolbar.toc")} disabled={!hasNote || !showPreview || exportPreview}>
+              <TocIcon className="size-4" />
+            </IconButton>
           </PopoverTrigger>
           <PopoverContent
             align="end"
@@ -227,15 +218,12 @@ export function EditorToolbar({
               {/* 头部：标题 + 固定按钮 */}
               <div className="flex items-center justify-between">
                 <h4 className="leading-none font-medium">{t("toolbar.toc")}</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 p-0"
+                <IconButton
                   onClick={() => setIsPinned(!effectiveIsPinned)}
                   aria-label={effectiveIsPinned ? t("toc.unpin") : t("toc.pin")}
                 >
-                  {effectiveIsPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-                </Button>
+                  {effectiveIsPinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
+                </IconButton>
               </div>
               <TableOfContents content={content} noteId={selectedNoteId ?? undefined} />
             </div>
@@ -245,15 +233,9 @@ export function EditorToolbar({
         {/* 更多操作 */}
         <Popover open={moreOpen} onOpenChange={setMoreOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0"
-              aria-label={t("toolbar.more")}
-              disabled={!hasNote}
-            >
-              <EllipsisVertical className="h-4 w-4" />
-            </Button>
+            <IconButton aria-label={t("toolbar.more")} disabled={!hasNote}>
+              <EllipsisVertical className="size-4" />
+            </IconButton>
           </PopoverTrigger>
           <PopoverContent align="end" className="w-56 p-1">
             <div className="flex flex-col">
@@ -263,12 +245,12 @@ export function EditorToolbar({
                 className="h-8 w-full justify-start gap-2"
                 onClick={handleShowInExplorer}
               >
-                <FolderOpen className="h-4 w-4" />
+                <FolderOpen className="size-4" />
                 <span>{t("toolbar.showInExplorer")}</span>
               </Button>
               <div className="bg-border my-1 h-px" />
               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2" onClick={handleRenameNote}>
-                <Pencil className="h-4 w-4" />
+                <Pencil className="size-4" />
                 <span>{t("toolbar.rename")}</span>
               </Button>
               <Button
@@ -277,11 +259,11 @@ export function EditorToolbar({
                 className="h-8 w-full justify-start gap-2"
                 onClick={handleDuplicateNote}
               >
-                <Copy className="h-4 w-4" />
+                <Copy className="size-4" />
                 <span>{t("toolbar.duplicate")}</span>
               </Button>
               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2" onClick={handlePushToGitHub}>
-                <Github className="h-4 w-4" />
+                <Github className="size-4" />
                 <span>{t("toolbar.pushToGitHub")}</span>
               </Button>
               <div className="bg-border my-1 h-px" />
@@ -289,9 +271,9 @@ export function EditorToolbar({
                 <Popover open={exportOpen} onOpenChange={setExportOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2">
-                      <Download className="h-4 w-4" />
+                      <Download className="size-4" />
                       <span>{t("toolbar.export")}</span>
-                      <ChevronRight className="text-muted-foreground ml-auto h-4 w-4" />
+                      <ChevronRight className="text-muted-foreground ml-auto size-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start" side="right" className="w-48 p-1">
@@ -347,7 +329,7 @@ export function EditorToolbar({
                 className="text-destructive hover:text-destructive h-8 w-full justify-start gap-2"
                 onClick={handleDeleteNote}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="size-4" />
                 <span>{t("toolbar.delete")}</span>
               </Button>
             </div>
