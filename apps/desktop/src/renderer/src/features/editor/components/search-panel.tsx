@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { ChevronUp, ChevronDown, X, Replace } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, IconButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTranslation } from "react-i18next";
 import type { UseEditorSearchReturn } from "../hooks/use-editor-search";
@@ -66,38 +66,26 @@ export function SearchPanel({ search }: SearchPanelProps) {
         <span className="text-muted-foreground min-w-14 text-center text-xs">
           {state.searchText ? `${state.currentMatch}/${state.matchCount}` : ""}
         </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0"
+        <IconButton
           onClick={findPrevious}
           disabled={!state.searchText || state.matchCount === 0}
           title={t("search.previous")}
         >
-          <ChevronUp className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 w-7 p-0"
-          onClick={findNext}
-          disabled={!state.searchText || state.matchCount === 0}
-          title={t("search.next")}
-        >
-          <ChevronDown className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={`h-7 w-7 p-0 ${state.showReplace ? "bg-muted text-foreground" : ""}`}
+          <ChevronUp className="size-4" />
+        </IconButton>
+        <IconButton onClick={findNext} disabled={!state.searchText || state.matchCount === 0} title={t("search.next")}>
+          <ChevronDown className="size-4" />
+        </IconButton>
+        <IconButton
+          className={state.showReplace ? "bg-muted text-foreground" : ""}
           onClick={toggleReplace}
           title={t("search.toggleReplace")}
         >
-          <Replace className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={close} title={t("search.close")}>
-          <X className="h-4 w-4" />
-        </Button>
+          <Replace className="size-4" />
+        </IconButton>
+        <IconButton onClick={close} title={t("search.close")}>
+          <X className="size-4" />
+        </IconButton>
       </div>
 
       {/* 替换行 */}

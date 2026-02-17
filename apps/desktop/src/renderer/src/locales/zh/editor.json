@@ -26,6 +26,7 @@
   },
   "placeholder": "开始编写你的笔记...",
   "previewEmpty": "暂无内容",
+  "copyCodeSuccess": "已复制",
   "toc": {
     "empty": "文档中没有标题",
     "pin": "固定目录",
@@ -45,6 +46,7 @@
     "openExternalFailed": "打开外部链接失败，请重试",
     "openLocalFileFailed": "打开本地文件失败，请重试",
     "fullscreenFailed": "切换全屏失败，请重试",
-    "fileDropFailed": "读取拖入的文件失败，请重试"
+    "fileDropFailed": "读取拖入的文件失败，请重试",
+    "copyCodeFailed": "复制代码失败，请重试"
   }
 }

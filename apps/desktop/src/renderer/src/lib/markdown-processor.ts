@@ -12,10 +12,13 @@ import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import rehypeSlug from "rehype-slug";
-import rehypeHighlight from "rehype-highlight";
+import rehypePrettyCode from "rehype-pretty-code";
 import rehypeKatex from "rehype-katex";
 import rehypeStringify from "rehype-stringify";
 import mermaid from "mermaid";
+import type { Root, Element } from "hast";
+import { visit } from "unist-util-visit";
+import { iconButtonVariants } from "@/components/ui/button";
 import { stripHiddenFrontmatter } from "./frontmatter";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
 import { normalizeMarkdownPaths, resolveResourcePath, isRelativePath } from "@shared";
@@ -36,10 +39,101 @@ function extractTextFromHTML(html: string): string {
     .replace(/&#39;/g, "'");
 }
 
+function rehypeCodeBlockCopyButton() {
+  const copyButtonClasses = iconButtonVariants({
+    size: "icon-compact",
+    className:
+      "absolute top-2 right-2 opacity-0 -translate-y-0.5 transition-opacity transition-transform group-hover:opacity-100 group-hover:translate-y-0"
+  });
+
+  return (tree: Root) => {
+    visit(tree, "element", (node, index, parent) => {
+      if (!parent || typeof index !== "number") return;
+      if (node.tagName !== "pre") return;
+
+      const preNode = node as Element;
+      const preClassName = preNode.properties?.className;
+      const nextPreClassName = mergeClassName(preClassName, ["relative", "group"]);
+      if (preNode.properties) {
+        preNode.properties.className = nextPreClassName;
+      } else {
+        preNode.properties = { className: nextPreClassName };
+      }
+      const hasCode = preNode.children.some(
+        (child) => child.type === "element" && (child as Element).tagName === "code"
+      );
+
+      if (!hasCode) return;
+
+      const hasButton = preNode.children.some(
+        (child) =>
+          child.type === "element" &&
+          (child as Element).tagName === "button" &&
+          (child as Element).properties?.["data-code-copy-button"] === "true"
+      );
+      if (hasButton) return;
+
+      const buttonNode: Element = {
+        type: "element",
+        tagName: "button",
+        properties: {
+          type: "button",
+          className: copyButtonClasses.split(" "),
+          "data-code-copy-button": "true",
+          "aria-label": "Copy code"
+        },
+        children: [
+          {
+            type: "element",
+            tagName: "svg",
+            properties: {
+              // Lucide official Copy icon
+              xmlns: "http://www.w3.org/2000/svg",
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              "stroke-width": "2",
+              "stroke-linecap": "round",
+              "stroke-linejoin": "round",
+              "aria-hidden": "true"
+            },
+            children: [
+              {
+                type: "element",
+                tagName: "rect",
+                properties: { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2" },
+                children: []
+              },
+              {
+                type: "element",
+                tagName: "path",
+                properties: { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" },
+                children: []
+              }
+            ]
+          }
+        ]
+      };
+
+      preNode.children.push(buttonNode);
+    });
+  };
+}
+
+function mergeClassName(className: unknown, next: string[]): string[] {
+  if (Array.isArray(className)) {
+    return Array.from(new Set([...className, ...next]));
+  }
+  if (typeof className === "string") {
+    return Array.from(new Set([...className.split(" "), ...next]));
+  }
+  return [...next];
+}
+
 async function renderMermaidBlocks(html: string, isDarkTheme = false): Promise<string> {
   // 匹配 mermaid 代码块: <pre><code class="...language-mermaid...">...</code></pre>
-  // 注意：rehypeHighlight 会添加 hljs class 和高亮标签，所以需要用更灵活的正则
-  const mermaidRegex = /<pre><code[^>]*class="[^"]*language-mermaid[^"]*"[^>]*>([\s\S]*?)<\/code><\/pre>/g;
+  const mermaidRegex =
+    /<pre[^>]*><code[^>]*(?:class="[^"]*language-mermaid[^"]*"|data-language="mermaid")[^>]*>([\s\S]*?)<\/code><\/pre>/g;
   const matches = [...html.matchAll(mermaidRegex)];
 
   if (matches.length === 0) return html;
@@ -104,6 +198,8 @@ export interface MarkdownToHTMLOptions {
   notePath?: string;
   /** 是否为深色主题（影响 Mermaid 图表配色） */
   isDarkTheme?: boolean;
+  /** 是否为代码块注入复制按钮（仅预览） */
+  enableCopyButton?: boolean;
 }
 
 /**
@@ -115,24 +211,38 @@ export interface MarkdownToHTMLOptions {
 export async function markdownToHTML(markdown: string, options?: MarkdownToHTMLOptions | string): Promise<string> {
   // 兼容旧版 API：第二个参数可以是字符串（notePath）或对象
   const opts: MarkdownToHTMLOptions = typeof options === "string" ? { notePath: options } : (options ?? {});
-  const { notePath, isDarkTheme } = opts;
+  const { notePath, isDarkTheme, enableCopyButton = true } = opts;
   // 预处理：移除隐藏的 frontmatter + 规范化本地路径
   // normalizeMarkdownPaths 会将本地绝对路径（/Users/...）转换为 local-resource:// 协议
   // 这样导出和预览的行为才能保持一致
   const normalized = normalizeMarkdownPaths(stripHiddenFrontmatter(markdown));
-  const file = await unified()
-    .use(remarkParse) // 解析 Markdown
-    .use(remarkGfm) // 支持 GitHub Flavored Markdown
-    .use(remarkBreaks) // 支持换行
-    .use(remarkMath) // 支持数学公式语法
-    .use(remarkRehype, { allowDangerousHtml: true }) // 转换为 HTML AST
-    .use(rehypeRaw) // 支持原始 HTML
-    .use(rehypeSanitize, markdownSanitizeSchema) // 安全过滤：移除恶意脚本，保留安全的 HTML
-    .use(rehypeSlug) // 为标题添加 id
-    .use(rehypeHighlight, { detect: true }) // 代码语法高亮
-    .use(rehypeKatex) // 渲染数学公式
-    .use(rehypeStringify) // 转换为 HTML 字符串
-    .process(normalized);
+  const buildProcessor = (usePrettyCode: boolean) => {
+    const processor = unified()
+      .use(remarkParse) // 解析 Markdown
+      .use(remarkGfm) // 支持 GitHub Flavored Markdown
+      .use(remarkBreaks) // 支持换行
+      .use(remarkMath) // 支持数学公式语法
+      .use(remarkRehype, { allowDangerousHtml: true }) // 转换为 HTML AST
+      .use(rehypeRaw) // 支持原始 HTML
+      .use(rehypeSanitize, markdownSanitizeSchema) // 安全过滤：移除恶意脚本，保留安全的 HTML
+      .use(rehypeSlug); // 为标题添加 id
+
+    if (usePrettyCode) {
+      processor.use(rehypePrettyCode, {
+        theme: isDarkTheme ? "github-dark" : "github-light",
+        keepBackground: false
+      });
+    }
+
+    if (enableCopyButton) {
+      processor.use(rehypeCodeBlockCopyButton);
+    }
+
+    processor.use(rehypeKatex).use(rehypeStringify);
+    return processor;
+  };
+
+  const file = await buildProcessor(true).process(normalized);
 
   // 处理 Mermaid 图表
   let html = await renderMermaidBlocks(String(file), isDarkTheme);

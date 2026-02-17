@@ -28,8 +28,10 @@ const buttonVariants = cva(
         icon: "size-9",
         "icon-xs":
           "size-6 rounded-[min(var(--radius-md),8px)] in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-8 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md",
-        "icon-lg": "size-10"
+        "icon-compact": "h-7 w-7 p-0 rounded-[min(var(--radius-md),10px)] [&_svg:not([class*='size-'])]:size-4",
+        "icon-sm":
+          "size-8 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-4",
+        "icon-lg": "size-10 [&_svg:not([class*='size-'])]:size-5"
       }
     },
     defaultVariants: {
@@ -48,4 +50,28 @@ function Button({
   return <ButtonPrimitive data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
 }
 
-export { Button, buttonVariants };
+type IconButtonSize = "icon-xs" | "icon-compact" | "icon-sm" | "icon-lg";
+type IconButtonProps = ButtonPrimitive.Props &
+  Omit<VariantProps<typeof buttonVariants>, "size"> & {
+    size?: IconButtonSize;
+  };
+
+function IconButton({ className, variant = "ghost", size = "icon-compact", ...props }: IconButtonProps) {
+  return (
+    <ButtonPrimitive data-slot="icon-button" className={cn(buttonVariants({ variant, size, className }))} {...props} />
+  );
+}
+
+function iconButtonVariants(options?: {
+  className?: string;
+  variant?: VariantProps<typeof buttonVariants>["variant"];
+  size?: IconButtonSize;
+}) {
+  return buttonVariants({
+    variant: options?.variant ?? "ghost",
+    size: options?.size ?? "icon-compact",
+    className: options?.className
+  });
+}
+
+export { Button, buttonVariants, IconButton, iconButtonVariants };

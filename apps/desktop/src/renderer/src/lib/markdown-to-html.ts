@@ -6,12 +6,8 @@
 
 import { buildProseStyleBundle } from "@/features/export/lib/styles";
 import { type ExportTargetFormat } from "@/features/export/lib/layout-capabilities";
-import { isDarkColor } from "@/lib/color-utils";
 import type { ExportLayoutConfig } from "@shared";
 
-// 直接导入库里的 CSS 文件（与预览模式使用相同的样式）
-import highlightLight from "highlight.js/styles/github.css?raw";
-import highlightDark from "highlight.js/styles/github-dark.css?raw";
 import katexStyles from "katex/dist/katex.min.css?raw";
 
 export interface HTMLDocumentOptions {
@@ -33,11 +29,7 @@ export interface HTMLDocumentOptions {
  */
 export function generateHTMLDocument(title: string, htmlContent: string, options: HTMLDocumentOptions): string {
   const format = options.format ?? "html";
-  const { colors, proseStyles } = buildProseStyleBundle(options.themeId, format, options.layout);
-
-  // 根据导出主题的背景色自动选择代码高亮风格（深色/浅色）
-  // isDarkColor 返回三态：true=深色, false=浅色, null=解析失败；仅明确深色时使用 dark 风格
-  const highlightStyles = isDarkColor(colors.background) === true ? highlightDark : highlightLight;
+  const { proseStyles } = buildProseStyleBundle(options.themeId, format, options.layout);
 
   return `<!DOCTYPE html>
 <html lang="zh-CN">
@@ -48,7 +40,6 @@ export function generateHTMLDocument(title: string, htmlContent: string, options
   <title>${title}</title>
   <style>
 ${proseStyles}
-${highlightStyles}
 ${katexStyles}
   </style>
 </head>

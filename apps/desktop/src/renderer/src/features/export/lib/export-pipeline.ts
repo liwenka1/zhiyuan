@@ -59,7 +59,8 @@ export async function buildExportDocumentsBySections(
 export async function buildExportDocumentFromMarkdown(options: BuildFromMarkdownOptions): Promise<string> {
   const htmlBody = await markdownToHTML(options.markdown, {
     notePath: options.notePath,
-    isDarkTheme: options.isDarkTheme
+    isDarkTheme: options.isDarkTheme,
+    enableCopyButton: false
   });
 
   return generateHTMLDocument(options.title, htmlBody, {
@@ -74,6 +75,6 @@ export async function buildWechatDocument(
   themeId: string,
   layout?: Partial<ExportLayoutConfig>
 ): Promise<string> {
-  const htmlBody = await markdownToHTML(note.content);
+  const htmlBody = await markdownToHTML(note.content, { enableCopyButton: false });
   return generateWechatHTMLDocument(note.title, htmlBody, themeId, layout);
 }

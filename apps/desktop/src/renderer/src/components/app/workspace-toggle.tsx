@@ -1,5 +1,5 @@
 import { FolderSync } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/button";
 import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 import { workspaceIpc } from "@/ipc";
@@ -35,14 +35,8 @@ export function WorkspaceToggle() {
   };
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="h-7 w-7 p-0"
-      onClick={handleSwitchWorkspace}
-      aria-label={t("workspace.switch")}
-    >
-      <FolderSync className="h-4 w-4" />
-    </Button>
+    <IconButton onClick={handleSwitchWorkspace} aria-label={t("workspace.switch")}>
+      <FolderSync className="size-4" />
+    </IconButton>
   );
 }

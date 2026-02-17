@@ -22,7 +22,10 @@ export const markdownSanitizeSchema: Options = {
     "source",
     // 布局标签
     "div",
-    "span"
+    "span",
+    "figure",
+    "figcaption",
+    "button"
   ],
 
   // 允许的属性
@@ -35,6 +38,9 @@ export const markdownSanitizeSchema: Options = {
     // 布局元素
     div: ["align", "style"],
     span: ["style"],
+    pre: ["style"],
+    code: ["style"],
+    button: ["type", "aria-label", "data-code-copy-button"],
 
     // 图片
     img: ["src", "alt", "title", "width", "height", "loading", "align", "style"],
