@@ -46,6 +46,15 @@ function getPlatformShell(): string {
   return "bash";
 }
 
+function buildTerminalEnv(): Record<string, string> {
+  const env = { ...(process.env as Record<string, string>) };
+  const utf8Locale = env.LANG || env.LC_ALL || "en_US.UTF-8";
+  env.LANG = env.LANG || utf8Locale;
+  env.LC_ALL = env.LC_ALL || utf8Locale;
+  env.LC_CTYPE = env.LC_CTYPE || utf8Locale;
+  return env;
+}
+
 function safeDisposeSession(sessionId: string): void {
   const session = sessions.get(sessionId);
   if (!session) return;
@@ -73,7 +82,7 @@ export function registerTerminalHandlers(): void {
         cols: 80,
         rows: 24,
         cwd: workspacePath ?? process.env.HOME ?? process.cwd(),
-        env: process.env as Record<string, string>
+        env: buildTerminalEnv()
       });
 
       const id = randomUUID();
