@@ -22,7 +22,11 @@
     "exportAsPDFPages": "导出为 PDF（分页）",
     "exportAsImage": "导出为图片",
     "exportAsImagePages": "导出为图片（分页）",
+    "terminal": "终端",
     "delete": "删除"
+  },
+  "terminal": {
+    "ready": "终端已就绪"
   },
   "placeholder": "开始编写你的笔记...",
   "previewEmpty": "暂无内容",

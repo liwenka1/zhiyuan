@@ -23,3 +23,4 @@ export { urlIpc } from "./url";
 export { themeIpc } from "./theme";
 export { utilsIpc } from "./utils";
 export { githubIpc } from "./github";
+export { terminalIpc } from "./terminal";

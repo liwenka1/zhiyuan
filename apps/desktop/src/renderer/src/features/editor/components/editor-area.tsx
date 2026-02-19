@@ -5,6 +5,7 @@ import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
 import { useViewStore, useNoteStore } from "@/stores";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, useGroupRef } from "@/components/ui/resizable";
+import { TerminalPanel } from "@/features/terminal/components/terminal-panel";
 import type { Note } from "@/types";
 
 interface EditorAreaProps {
@@ -42,7 +43,15 @@ export function EditorArea({
   const editorMode = useViewStore((state) => state.editorMode);
   const splitLayout = useViewStore((state) => state.splitLayout);
   const setSplitLayout = useViewStore((state) => state.setSplitLayout);
+  const isTerminalOpen = useViewStore((state) => state.isTerminalOpen);
+  const terminalHeight = useViewStore((state) => state.terminalHeight);
+  const setTerminalHeight = useViewStore((state) => state.setTerminalHeight);
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
+  const editorShellRef = useRef<HTMLDivElement>(null);
+  const outerGroupRef = useGroupRef();
+  const isOuterProgrammaticRef = useRef(false);
+  const outerMainPanelId = "editor-area-main";
+  const outerTerminalPanelId = "editor-area-terminal";
 
   const openNotes = useMemo(
     () => openNoteIds.map((id) => notes.find((note) => note.id === id)).filter(Boolean) as Note[],
@@ -57,30 +66,49 @@ export function EditorArea({
     [openNotes, noteId, playingNoteIds]
   );
 
-  // 如果没有选中笔记，显示空状态
-  if (!hasNote && !content && notesToRender.length === 0) {
-    return (
-      <div className="flex h-full flex-col">
-        <EditorToolbar />
-        <div className="flex-1">
-          <EmptyEditor />
-        </div>
-      </div>
-    );
-  }
+  const applyOuterLayout = useCallback(() => {
+    if (!outerGroupRef.current || !editorShellRef.current) return;
+    const containerHeight = editorShellRef.current.clientHeight;
+    if (containerHeight <= 0) return;
 
-  return (
-    <div className="flex h-full flex-col">
-      <EditorToolbar
-        content={content}
-        onShowNoteInExplorer={onShowNoteInExplorer}
-        onRenameNote={onRenameNote}
-        onDuplicateNote={onDuplicateNote}
-        onExportNote={onExportNote}
-        onDeleteNote={onDeleteNote}
-        onPushToGitHub={onPushToGitHub}
-      />
-      <div className="flex-1 overflow-hidden">
+    const terminalPercent = isTerminalOpen ? Math.max(12, Math.min(60, (terminalHeight / containerHeight) * 100)) : 0;
+    const mainPercent = 100 - terminalPercent;
+
+    isOuterProgrammaticRef.current = true;
+    outerGroupRef.current.setLayout({
+      [outerMainPanelId]: mainPercent,
+      [outerTerminalPanelId]: terminalPercent
+    });
+    isOuterProgrammaticRef.current = false;
+  }, [isTerminalOpen, outerGroupRef, terminalHeight]);
+
+  useEffect(() => {
+    applyOuterLayout();
+  }, [applyOuterLayout]);
+
+  useEffect(() => {
+    if (!editorShellRef.current) return;
+    const observer = new ResizeObserver(() => applyOuterLayout());
+    observer.observe(editorShellRef.current);
+    return () => observer.disconnect();
+  }, [applyOuterLayout]);
+
+  const handleOuterLayoutChanged = useCallback(
+    (layout: { [panelId: string]: number }) => {
+      if (isOuterProgrammaticRef.current || !isTerminalOpen || !editorShellRef.current) return;
+      const terminalPercent = layout[outerTerminalPanelId];
+      if (typeof terminalPercent !== "number") return;
+      const nextHeight = (editorShellRef.current.clientHeight * terminalPercent) / 100;
+      setTerminalHeight(nextHeight);
+    },
+    [isTerminalOpen, setTerminalHeight]
+  );
+
+  const editorMainContent =
+    !hasNote && !content && notesToRender.length === 0 ? (
+      <EmptyEditor />
+    ) : (
+      <>
         {notesToRender.map((note) => (
           <OpenNotePanels
             key={note.id}
@@ -95,6 +123,52 @@ export function EditorArea({
             onChange={onChange}
           />
         ))}
+      </>
+    );
+
+  return (
+    <div className="flex h-full flex-col">
+      <EditorToolbar
+        content={content}
+        onShowNoteInExplorer={onShowNoteInExplorer}
+        onRenameNote={onRenameNote}
+        onDuplicateNote={onDuplicateNote}
+        onExportNote={onExportNote}
+        onDeleteNote={onDeleteNote}
+        onPushToGitHub={onPushToGitHub}
+      />
+      <div ref={editorShellRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <ResizablePanelGroup
+          orientation="vertical"
+          className="h-full"
+          groupRef={outerGroupRef}
+          onLayoutChanged={handleOuterLayoutChanged}
+        >
+          <ResizablePanel id={outerMainPanelId} defaultSize="100%" minSize="40%">
+            <div className="h-full min-h-0 overflow-hidden">{editorMainContent}</div>
+          </ResizablePanel>
+
+          <ResizableHandle
+            className={
+              isTerminalOpen
+                ? "bg-border hover:bg-primary h-px transition-colors"
+                : "pointer-events-none h-0 border-0 bg-transparent p-0 opacity-0"
+            }
+          />
+
+          <ResizablePanel
+            id={outerTerminalPanelId}
+            defaultSize="0%"
+            minSize="12%"
+            maxSize="60%"
+            collapsible
+            collapsedSize="0%"
+          >
+            <div className="h-full overflow-hidden">
+              <TerminalPanel />
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );

@@ -257,6 +257,16 @@ export interface GitHubAPI {
   uploadAsset: (payload: GitHubAssetUploadRequest) => Promise<IpcResultDTO<GitHubAssetUploadResult>>;
 }
 
+// 终端 API 接口
+export interface TerminalAPI {
+  create: (workspacePath?: string) => Promise<IpcResultDTO<{ id: string }>>;
+  write: (id: string, data: string) => Promise<IpcResultDTO<void>>;
+  resize: (id: string, cols: number, rows: number) => Promise<IpcResultDTO<void>>;
+  dispose: (id: string) => Promise<IpcResultDTO<void>>;
+  onData: (callback: (payload: { id: string; data: string }) => void) => () => void;
+  onExit: (callback: (payload: { id: string; exitCode: number; signal?: number }) => void) => () => void;
+}
+
 // API 集合接口
 export interface API {
   theme: ThemeAPI;
@@ -272,6 +282,7 @@ export interface API {
   github: GitHubAPI;
   rss: RssAPI;
   url: UrlAPI;
+  terminal: TerminalAPI;
 }
 
 declare global {

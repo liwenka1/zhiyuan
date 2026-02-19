@@ -16,3 +16,4 @@ export { configApi } from "./config";
 export { githubApi } from "./github";
 export { rssApi } from "./rss";
 export { urlApi } from "./url";
+export { terminalApi } from "./terminal";
