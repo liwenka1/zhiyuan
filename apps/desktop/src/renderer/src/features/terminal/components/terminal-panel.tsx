@@ -1,9 +1,9 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { ListRow } from "@/components/app/list-row";
 import { IconButton } from "@/components/ui/button";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup, useGroupRef } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useViewStore } from "@/stores";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import "@xterm/xterm/css/xterm.css";
 
 export function TerminalPanel() {
   const setTerminalOpen = useViewStore((state) => state.setTerminalOpen);
+  const splitGroupRef = useGroupRef();
   const nextIndexRef = useRef(2);
   const [sessions, setSessions] = useState(() => [createTerminalSession(1)]);
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id ?? "");
@@ -34,6 +35,15 @@ export function TerminalPanel() {
     setActiveSessionId(id);
   }, []);
 
+  useEffect(() => {
+    if (!splitGroupRef.current) return;
+    if (sessions.length >= 2) {
+      splitGroupRef.current.setLayout({ "terminal-main": 78, "terminal-list": 22 });
+    } else {
+      splitGroupRef.current.setLayout({ "terminal-main": 100, "terminal-list": 0 });
+    }
+  }, [sessions.length, splitGroupRef]);
+
   return (
     <section className="terminal-panel bg-background flex h-full min-h-0 flex-col">
       <div className="text-muted-foreground bg-background flex items-center justify-between px-3 py-1 text-xs">
@@ -47,51 +57,52 @@ export function TerminalPanel() {
         </div>
       </div>
       <div className="terminal-panel__body flex min-h-0 flex-1 overflow-hidden">
-        {sessions.length >= 2 ? (
-          <ResizablePanelGroup orientation="horizontal" className="h-full">
-            <ResizablePanel defaultSize="78%" minSize="55%">
-              <div className="terminal-panel__viewport relative h-full min-h-0 overflow-hidden">
+        <ResizablePanelGroup orientation="horizontal" className="h-full" groupRef={splitGroupRef}>
+          <ResizablePanel id="terminal-main" defaultSize={sessions.length >= 2 ? "78%" : "100%"} minSize="55%">
+            <div className="terminal-panel__viewport relative h-full min-h-0 overflow-hidden">
+              {sessions.map((session) => (
+                <TerminalSessionView
+                  key={session.id}
+                  sessionId={session.id}
+                  isActive={session.id === activeSessionIdSafe}
+                />
+              ))}
+            </div>
+          </ResizablePanel>
+
+          <ResizableHandle
+            className={
+              sessions.length >= 2
+                ? "bg-border hover:bg-primary w-px transition-colors"
+                : "pointer-events-none w-0 border-0 bg-transparent p-0 opacity-0"
+            }
+          />
+
+          <ResizablePanel
+            id="terminal-list"
+            defaultSize={sessions.length >= 2 ? "22%" : "0%"}
+            minSize="0%"
+            maxSize="40%"
+            collapsible
+            collapsedSize="0%"
+          >
+            <ScrollArea className="terminal-panel__list h-full">
+              <div className="terminal-panel__list-inner">
                 {sessions.map((session) => (
-                  <TerminalSessionView
+                  <ListRow
                     key={session.id}
-                    sessionId={session.id}
-                    isActive={session.id === activeSessionIdSafe}
+                    selected={session.id === activeSessionIdSafe}
+                    muted={session.id !== activeSessionIdSafe}
+                    className={cn("terminal-panel__list-item", session.id === activeSessionIdSafe && "is-active")}
+                    onClick={() => handleActivateSession(session.id)}
+                    label={session.label}
+                    labelClassName="text-xs font-medium"
                   />
                 ))}
               </div>
-            </ResizablePanel>
-
-            <ResizableHandle className="bg-border hover:bg-primary w-px transition-colors" />
-
-            <ResizablePanel defaultSize="22%" minSize="16%" maxSize="40%">
-              <ScrollArea className="terminal-panel__list h-full">
-                <div className="terminal-panel__list-inner">
-                  {sessions.map((session) => (
-                    <ListRow
-                      key={session.id}
-                      selected={session.id === activeSessionIdSafe}
-                      muted={session.id !== activeSessionIdSafe}
-                      className={cn("terminal-panel__list-item", session.id === activeSessionIdSafe && "is-active")}
-                      onClick={() => handleActivateSession(session.id)}
-                      label={session.label}
-                      labelClassName="text-xs font-medium"
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        ) : (
-          <div className="terminal-panel__viewport relative min-h-0 flex-1 overflow-hidden">
-            {sessions.map((session) => (
-              <TerminalSessionView
-                key={session.id}
-                sessionId={session.id}
-                isActive={session.id === activeSessionIdSafe}
-              />
-            ))}
-          </div>
-        )}
+            </ScrollArea>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </section>
   );
