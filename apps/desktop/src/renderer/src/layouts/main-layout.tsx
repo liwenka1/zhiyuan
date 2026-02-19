@@ -185,7 +185,9 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
 
         {/* 右侧编辑区 - 自动填充剩余空间 */}
         <ResizablePanel elementRef={mainPanelElementRef} className="bg-background">
-          <main className="allow-select h-full min-w-0 overflow-hidden">{mainContent}</main>
+          <main className="allow-select h-full min-w-0 overflow-hidden">
+            <div className="h-full overflow-hidden">{mainContent}</div>
+          </main>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

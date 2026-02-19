@@ -12,7 +12,8 @@ import {
   configApi,
   githubApi,
   rssApi,
-  urlApi
+  urlApi,
+  terminalApi
 } from "./apis";
 
 // 手动创建 electronAPI（替代 @electron-toolkit/preload，因为它在沙盒模式下无法加载）
@@ -57,7 +58,8 @@ const api = {
   config: configApi,
   github: githubApi,
   rss: rssApi,
-  url: urlApi
+  url: urlApi,
+  terminal: terminalApi
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

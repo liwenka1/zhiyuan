@@ -1,9 +1,9 @@
 import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss, RefreshCw, Unlink } from "lucide-react";
-import { motion } from "motion/react";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
+import { ListRow } from "@/components/app/list-row";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -103,33 +103,18 @@ export function FolderTree({
       <ScrollArea className="flex-1 overflow-hidden" viewportRef={parentRef}>
         <div className="space-y-0.5 px-2">
           {/* 全部笔记 - 始终显示在最上方 */}
-          <div
-            className={cn(
-              "group relative flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
-              isAllSelected ? "text-foreground" : "text-muted-foreground"
-            )}
+          <ListRow
+            layoutId="hover-bg"
+            hovered={hoveredId === ALL_NOTES_FOLDER_ID}
+            selected={isAllSelected}
+            muted={!isAllSelected}
+            leading={<FileStack className="h-4 w-4 shrink-0" />}
+            label={t("allNotes")}
+            trailing={<span className="text-tertiary-foreground text-xs tabular-nums">{totalNoteCount}</span>}
             onMouseEnter={() => setHoveredId(ALL_NOTES_FOLDER_ID)}
             onMouseLeave={() => setHoveredId(null)}
             onClick={() => onSelectFolder?.(null)}
-          >
-            {/* hover 背景 - 滑动跟随 */}
-            <motion.div
-              layoutId="hover-bg"
-              className="bg-accent absolute inset-0 rounded-md"
-              initial={false}
-              animate={{ opacity: hoveredId === ALL_NOTES_FOLDER_ID ? 1 : 0 }}
-              transition={{ type: "spring", stiffness: 1200, damping: 40, mass: 0.3 }}
-            />
-
-            {/* 选中背景 */}
-            <div className={cn("bg-accent absolute inset-0 rounded-md", isAllSelected ? "opacity-100" : "opacity-0")} />
-
-            <FileStack className="relative z-10 h-4 w-4 shrink-0" />
-            <div className="relative z-10 min-w-0 flex-1 truncate text-sm">{t("allNotes")}</div>
-            <span className="text-tertiary-foreground relative z-10 shrink-0 text-xs tabular-nums">
-              {totalNoteCount}
-            </span>
-          </div>
+          />
 
           {/* 文件夹列表 */}
           <div style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
@@ -142,43 +127,28 @@ export function FolderTree({
                 <ContextMenu key={folder.id}>
                   <ContextMenuTrigger asChild>
                     <div
-                      className={cn(
-                        "group absolute right-0 left-0 flex cursor-pointer items-center gap-2 overflow-hidden rounded-md px-3 py-2",
-                        isSelected ? "text-foreground" : "text-muted-foreground"
-                      )}
+                      className="absolute right-0 left-0"
                       ref={rowVirtualizer.measureElement}
                       style={{ transform: `translateY(${virtualRow.start}px)` }}
-                      onMouseEnter={() => setHoveredId(folder.id)}
-                      onMouseLeave={() => setHoveredId(null)}
-                      onClick={() => onSelectFolder?.(folder.id)}
                     >
-                      {/* hover 背景 - 滑动跟随 */}
-                      <motion.div
+                      <ListRow
                         layoutId="hover-bg"
-                        className="bg-accent absolute inset-0 rounded-md"
-                        initial={false}
-                        animate={{ opacity: isHovered ? 1 : 0 }}
-                        transition={{ type: "spring", stiffness: 1200, damping: 40, mass: 0.3 }}
+                        hovered={isHovered}
+                        selected={isSelected}
+                        muted={!isSelected}
+                        leading={
+                          folder.isRss ? <Rss className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />
+                        }
+                        label={folder.name}
+                        trailing={
+                          folder.noteCount !== undefined ? (
+                            <span className="text-tertiary-foreground text-xs tabular-nums">{folder.noteCount}</span>
+                          ) : null
+                        }
+                        onMouseEnter={() => setHoveredId(folder.id)}
+                        onMouseLeave={() => setHoveredId(null)}
+                        onClick={() => onSelectFolder?.(folder.id)}
                       />
-
-                      {/* 选中背景 */}
-                      <div
-                        className={cn(
-                          "bg-accent absolute inset-0 rounded-md",
-                          isSelected ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {folder.isRss ? (
-                        <Rss className="relative z-10 h-4 w-4 shrink-0" />
-                      ) : (
-                        <Folder className="relative z-10 h-4 w-4 shrink-0" />
-                      )}
-                      <div className="relative z-10 min-w-0 flex-1 truncate text-sm">{folder.name}</div>
-                      {folder.noteCount !== undefined && (
-                        <span className="text-tertiary-foreground relative z-10 shrink-0 text-xs tabular-nums">
-                          {folder.noteCount}
-                        </span>
-                      )}
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent>

@@ -29,6 +29,12 @@ interface ViewStore {
   setSplitLayout: (layout: [number, number]) => void;
   resetSplitLayout: () => void;
 
+  // 终端面板显示与尺寸
+  isTerminalOpen: boolean;
+  terminalHeight: number;
+  setTerminalOpen: (open: boolean) => void;
+  setTerminalHeight: (height: number) => void;
+
   // 预览配置
   previewConfig: PreviewConfig;
   setPreviewConfig: (config: Partial<PreviewConfig>) => void;
@@ -50,6 +56,8 @@ export const useViewStore = create<ViewStore>()(
       showFolderSidebar: true, // 默认显示文件夹侧边栏
       isNoteSearchExpanded: false, // 笔记搜索默认收起
       splitLayout: [50, 50],
+      isTerminalOpen: false,
+      terminalHeight: 240,
 
       previewConfig: {
         showToc: true,
@@ -86,6 +94,7 @@ export const useViewStore = create<ViewStore>()(
               draft.isPresentationMode = true;
               draft.editorMode = "edit";
               draft.previewConfig.exportPreview = false;
+              draft.isTerminalOpen = false;
               return;
             }
 
@@ -115,6 +124,10 @@ export const useViewStore = create<ViewStore>()(
       // 分栏布局
       setSplitLayout: (layout) => set({ splitLayout: layout }),
       resetSplitLayout: () => set({ splitLayout: [50, 50] }),
+
+      // 终端面板
+      setTerminalOpen: (open) => set({ isTerminalOpen: open }),
+      setTerminalHeight: (height) => set({ terminalHeight: Math.max(140, Math.min(640, Math.round(height))) }),
 
       // 预览配置
       setPreviewConfig: (config) =>
@@ -150,7 +163,8 @@ export const useViewStore = create<ViewStore>()(
     {
       name: "view-storage",
       partialize: (state) => ({
-        splitLayout: state.splitLayout
+        splitLayout: state.splitLayout,
+        terminalHeight: state.terminalHeight
       })
     }
   )

@@ -15,7 +15,8 @@ import {
   Trash2,
   ChevronRight,
   FileOutput,
-  Github
+  Github,
+  Terminal
 } from "lucide-react";
 import { Button, IconButton } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
@@ -51,6 +52,8 @@ export function EditorToolbar({
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
   const setExclusiveMode = useViewStore((state) => state.setExclusiveMode);
   const exportPreview = useViewStore((state) => state.previewConfig.exportPreview);
+  const isTerminalOpen = useViewStore((state) => state.isTerminalOpen);
+  const setTerminalOpen = useViewStore((state) => state.setTerminalOpen);
   const formatCurrentNote = useNoteStore((state) => state.formatCurrentNote);
   const selectedNote = useNoteStore((state) => state.getSelectedNote());
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
@@ -129,6 +132,10 @@ export function EditorToolbar({
 
   const handleTogglePresentationMode = (pressed: boolean) => {
     setExclusiveMode(pressed ? "presentation" : "edit");
+  };
+
+  const handleToggleTerminal = (pressed: boolean) => {
+    setTerminalOpen(pressed);
   };
 
   return (
@@ -229,6 +236,18 @@ export function EditorToolbar({
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* 终端按钮 */}
+        <Toggle
+          size="icon-sm"
+          className="data-[state=on]:bg-muted data-[state=on]:text-foreground"
+          aria-label={t("toolbar.terminal")}
+          pressed={isTerminalOpen}
+          onPressedChange={handleToggleTerminal}
+          disabled={isPresentationMode}
+        >
+          <Terminal className="size-4" />
+        </Toggle>
 
         {/* 更多操作 */}
         <Popover open={moreOpen} onOpenChange={setMoreOpen}>

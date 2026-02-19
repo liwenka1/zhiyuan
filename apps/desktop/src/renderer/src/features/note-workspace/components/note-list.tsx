@@ -18,6 +18,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { ListRow } from "@/components/app/list-row";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -259,31 +260,19 @@ export function NoteList({
                       data-index={virtualRow.index}
                       className="absolute right-0 left-0 px-2"
                       style={{ transform: `translateY(${virtualRow.start}px)` }}
-                      onMouseEnter={() => setHoveredId(note.id)}
-                      onMouseLeave={() => setHoveredId(null)}
-                      onClick={() => onSelectNote?.(note.id)}
                     >
-                      <div className="group relative cursor-pointer overflow-hidden rounded-md px-3 py-2">
-                        {/* hover 背景 - 滑动跟随 */}
-                        <motion.div
-                          layoutId="note-hover-bg"
-                          className="bg-accent absolute inset-0 rounded-md"
-                          initial={false}
-                          animate={{ opacity: isHovered ? 1 : 0 }}
-                          transition={{ type: "spring", stiffness: 1200, damping: 40, mass: 0.3 }}
-                        />
-
-                        {/* 选中背景 */}
-                        <div
-                          className={cn(
-                            "bg-accent absolute inset-0 rounded-md",
-                            isSelected ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-
-                        {/* 标题行 */}
-                        <div className="relative z-10 flex min-w-0 items-start gap-2">
-                          {playingNoteIds.includes(note.id) ? (
+                      <ListRow
+                        layoutId="note-hover-bg"
+                        hovered={isHovered}
+                        selected={isSelected}
+                        muted={!isSelected}
+                        align="start"
+                        descriptionFullWidth
+                        onMouseEnter={() => setHoveredId(note.id)}
+                        onMouseLeave={() => setHoveredId(null)}
+                        onClick={() => onSelectNote?.(note.id)}
+                        leading={
+                          playingNoteIds.includes(note.id) ? (
                             <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
                           ) : (
                             <FileText
@@ -292,32 +281,26 @@ export function NoteList({
                                 isSelected ? "text-foreground" : "text-muted-foreground"
                               )}
                             />
-                          )}
-                          <div
-                            className={cn(
-                              "min-w-0 flex-1 truncate text-sm leading-tight",
-                              isSelected ? "text-foreground" : "text-muted-foreground"
-                            )}
-                          >
-                            {note.title}
-                          </div>
-                        </div>
-
-                        {/* 日期行 */}
-                        {note.updatedAt && (
-                          <div
-                            className={cn(
-                              "relative z-10 mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
-                              isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
-                            )}
-                          >
-                            {note.isPinned ? (
-                              <Pin className={cn("h-3 w-3", isSelected ? "text-highlight" : "text-highlight/70")} />
-                            ) : null}
-                            <span>{formatDateTime(note.updatedAt)}</span>
-                          </div>
-                        )}
-                      </div>
+                          )
+                        }
+                        label={note.title}
+                        labelClassName={cn(isSelected ? "text-foreground" : "text-muted-foreground")}
+                        description={
+                          note.updatedAt ? (
+                            <div
+                              className={cn(
+                                "mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
+                                isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
+                              )}
+                            >
+                              {note.isPinned ? (
+                                <Pin className={cn("h-3 w-3", isSelected ? "text-highlight" : "text-highlight/70")} />
+                              ) : null}
+                              <span>{formatDateTime(note.updatedAt)}</span>
+                            </div>
+                          ) : null
+                        }
+                      />
                     </div>
                   </ContextMenuTrigger>
                   <ContextMenuContent>

@@ -22,7 +22,11 @@
     "exportAsPDFPages": "Export as PDF (Pages)",
     "exportAsImage": "Export as Image",
     "exportAsImagePages": "Export as Images (Pages)",
+    "terminal": "Terminal",
     "delete": "Delete"
+  },
+  "terminal": {
+    "ready": "Terminal ready"
   },
   "placeholder": "Start writing your note...",
   "previewEmpty": "No content",

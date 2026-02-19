@@ -1,0 +1,94 @@
+.terminal-panel {
+  font-family: var(--editor-font-mono);
+}
+
+.terminal-panel__session {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.terminal-panel__session.is-active {
+  position: relative;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.terminal-panel__list {
+  background: var(--background);
+  padding: 0px 4px 6px 6px;
+}
+
+.terminal-panel__list-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+.terminal-panel__list-item {
+  width: 100%;
+  color: var(--muted-foreground);
+}
+
+.terminal-panel__list-item:hover {
+  background: color-mix(in srgb, var(--foreground) 6%, var(--background));
+  color: var(--foreground);
+}
+
+.terminal-panel__list-item.is-active {
+  color: var(--foreground);
+}
+
+.terminal-panel__viewport .xterm {
+  height: 100%;
+}
+
+.terminal-panel__viewport .xterm-viewport {
+  background-color: transparent;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+}
+
+.terminal-panel__viewport .xterm-viewport::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.terminal-panel__viewport .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.terminal-panel__viewport .xterm-viewport::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.terminal-panel__viewport .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--foreground) 18%, var(--border));
+}
+
+/* 终端内重置编辑器全局字距，避免 IME 合成态错位 */
+.terminal-panel .xterm,
+.terminal-panel .xterm * {
+  letter-spacing: normal !important;
+}
+
+.terminal-panel .xterm-helper-textarea {
+  letter-spacing: normal !important;
+}
+
+.terminal-panel__empty {
+  pointer-events: none;
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  z-index: 1;
+}
