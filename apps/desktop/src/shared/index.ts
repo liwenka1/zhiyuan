@@ -7,6 +7,8 @@ export type { Theme, ThemeMode } from "./theme";
 export { ThemeColors } from "./theme";
 export type { ExportLayoutConfig } from "./export-layout";
 export { DEFAULT_EXPORT_LAYOUT_CONFIG, normalizeExportLayoutConfig } from "./export-layout";
+export type { ShortcutId, ShortcutBinding, ShortcutConfig } from "./shortcuts";
+export { DEFAULT_SHORTCUTS } from "./shortcuts";
 
 export type { IpcError, IpcResultDTO } from "./ipc";
 export type { GitHubConfig, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";

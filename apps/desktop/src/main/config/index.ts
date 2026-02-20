@@ -3,7 +3,9 @@ import {
   DEFAULT_EXPORT_LAYOUT_CONFIG,
   normalizeExportLayoutConfig,
   type ExportLayoutConfig,
-  type ThemeMode
+  type ThemeMode,
+  DEFAULT_SHORTCUTS,
+  type ShortcutConfig
 } from "@shared";
 
 interface AppConfig {
@@ -12,6 +14,7 @@ interface AppConfig {
   theme: ThemeMode; // 主题模式（light/dark/system）
   exportThemeId: string; // 导出主题预设 ID
   exportLayout: ExportLayoutConfig; // 导出布局配置
+  shortcuts: ShortcutConfig; // 快捷键配置
   github: {
     owner: string;
     repo: string;
@@ -27,6 +30,7 @@ const store = new Store<AppConfig>({
     theme: "system", // 默认跟随系统
     exportThemeId: "default", // 默认导出主题
     exportLayout: DEFAULT_EXPORT_LAYOUT_CONFIG, // 默认导出布局
+    shortcuts: DEFAULT_SHORTCUTS,
     github: {
       owner: "",
       repo: "",
@@ -135,6 +139,21 @@ export const configManager = {
     const current = normalizeExportLayoutConfig(store.get("exportLayout"));
     const next = normalizeExportLayoutConfig({ ...current, ...patch });
     store.set("exportLayout", next);
+  },
+
+  /**
+   * 获取快捷键配置
+   */
+  getShortcuts(): ShortcutConfig {
+    const saved = store.get("shortcuts");
+    return { ...DEFAULT_SHORTCUTS, ...saved };
+  },
+
+  /**
+   * 设置快捷键配置（全量覆盖）
+   */
+  setShortcuts(next: ShortcutConfig): void {
+    store.set("shortcuts", next);
   },
 
   /**

@@ -8,7 +8,8 @@ import type {
   GitHubIssuePushRequest,
   GitHubIssuePushResult,
   GitHubAssetUploadRequest,
-  GitHubAssetUploadResult
+  GitHubAssetUploadResult,
+  ShortcutConfig
 } from "@shared";
 
 /**
@@ -208,6 +209,16 @@ export interface ConfigAPI {
    * 设置导出布局配置（部分更新）
    */
   setExportLayout: (patch: Partial<ExportLayoutConfig>) => Promise<IpcResultDTO<void>>;
+
+  /**
+   * 获取快捷键配置
+   */
+  getShortcuts: () => Promise<IpcResultDTO<ShortcutConfig>>;
+
+  /**
+   * 设置快捷键配置（全量覆盖）
+   */
+  setShortcuts: (shortcuts: ShortcutConfig) => Promise<IpcResultDTO<void>>;
 
   /**
    * 获取 GitHub 配置
