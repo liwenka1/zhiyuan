@@ -190,6 +190,19 @@ function resolveRelativePathsInHTML(html: string, notePath: string): string {
     return match;
   });
 
+  // 处理 video/audio/source 标签的 src 属性
+  result = result.replace(
+    /<(video|audio|source)([^>]*?)src="([^"]+)"([^>]*?)>/g,
+    (match, tagName, before, src, after) => {
+      const decodedSrc = decodeURI(src);
+      if (isRelativePath(decodedSrc)) {
+        const resolvedSrc = resolveResourcePath(decodedSrc, notePath);
+        return `<${tagName}${before}src="${resolvedSrc}"${after}>`;
+      }
+      return match;
+    }
+  );
+
   return result;
 }
 
