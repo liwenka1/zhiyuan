@@ -1,5 +1,5 @@
 import { ipcRenderer } from "electron";
-import type { ExportLayoutConfig, IpcResultDTO } from "@shared";
+import type { ExportLayoutConfig, IpcResultDTO, ShortcutConfig } from "@shared";
 
 export const configApi = {
   /**
@@ -35,6 +35,17 @@ export const configApi = {
    */
   setExportLayout: (patch: Partial<ExportLayoutConfig>): Promise<IpcResultDTO<void>> =>
     ipcRenderer.invoke("config:setExportLayout", patch),
+
+  /**
+   * 获取快捷键配置
+   */
+  getShortcuts: (): Promise<IpcResultDTO<ShortcutConfig>> => ipcRenderer.invoke("config:getShortcuts"),
+
+  /**
+   * 设置快捷键配置（全量覆盖）
+   */
+  setShortcuts: (shortcuts: ShortcutConfig): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:setShortcuts", shortcuts),
 
   /**
    * 获取 GitHub 配置

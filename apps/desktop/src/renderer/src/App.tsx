@@ -9,7 +9,8 @@ import {
   useNoteStore,
   useFolderStore,
   useExportThemeStore,
-  useExportLayoutStore
+  useExportLayoutStore,
+  useShortcutsStore
 } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/features/editor";
@@ -19,6 +20,9 @@ function App(): React.JSX.Element {
   const initTheme = useThemeStore((state) => state.initTheme);
   const cleanup = useThemeStore((state) => state.cleanup);
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
+  const isTerminalOpen = useViewStore((state) => state.isTerminalOpen);
+  const setTerminalOpen = useViewStore((state) => state.setTerminalOpen);
+  const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
@@ -88,6 +92,12 @@ function App(): React.JSX.Element {
     initExportLayout();
   }, [initExportLayout]);
 
+  const loadShortcuts = useShortcutsStore((state) => state.load);
+
+  useEffect(() => {
+    void loadShortcuts();
+  }, [loadShortcuts]);
+
   // 监听菜单「打开文件夹/文件」事件（macOS 原生菜单 + Windows 自定义菜单栏）
   useEffect(() => {
     const unsubFolder = workspaceIpc.onMenuOpenFolder(handleMenuOpenFolder);
@@ -121,6 +131,34 @@ function App(): React.JSX.Element {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleMenuOpenFolder]);
+
+  // Ctrl+` 切换终端面板
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isPresentationMode) return;
+
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        const isDialog = target.closest?.('[data-slot="dialog-content"]');
+        if (isDialog) return;
+      }
+
+      const binding = shortcuts.toggleTerminal;
+      if (
+        e.code === binding.code &&
+        e.ctrlKey === binding.ctrl &&
+        e.shiftKey === binding.shift &&
+        e.altKey === binding.alt &&
+        e.metaKey === binding.meta
+      ) {
+        e.preventDefault();
+        setTerminalOpen(!isTerminalOpen);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isTerminalOpen, isPresentationMode, setTerminalOpen, shortcuts.toggleTerminal]);
 
   // 检查是否有上次的工作区（快速判断，决定渲染哪个页面）
   useEffect(() => {

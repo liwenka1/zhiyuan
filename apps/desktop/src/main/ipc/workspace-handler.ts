@@ -7,7 +7,13 @@ import { configManager } from "../config";
 import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
 import { validatePathInWorkspace } from "../security/path-validator";
 import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "./ipc-result";
-import { normalizeExportLayoutConfig, type ExportLayoutConfig, type IpcResultDTO } from "@shared";
+import {
+  normalizeExportLayoutConfig,
+  type ExportLayoutConfig,
+  type IpcResultDTO,
+  type ShortcutConfig,
+  DEFAULT_SHORTCUTS
+} from "@shared";
 
 /**
  * 校验文件路径是否在当前窗口的工作区内
@@ -337,6 +343,27 @@ export function registerWorkspaceHandlers(): void {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return ipcErr(message, "CONFIG_SET_EXPORT_LAYOUT_FAILED");
+    }
+  });
+
+  // 获取快捷键配置
+  ipcMain.handle("config:getShortcuts", (): IpcResultDTO<ShortcutConfig> => {
+    try {
+      return ipcOk(configManager.getShortcuts());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_GET_SHORTCUTS_FAILED");
+    }
+  });
+
+  // 设置快捷键配置（全量覆盖）
+  ipcMain.handle("config:setShortcuts", (_, next: ShortcutConfig): IpcResultDTO<void> => {
+    try {
+      configManager.setShortcuts({ ...DEFAULT_SHORTCUTS, ...next });
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_SET_SHORTCUTS_FAILED");
     }
   });
 

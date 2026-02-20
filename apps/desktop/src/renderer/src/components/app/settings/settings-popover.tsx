@@ -3,7 +3,7 @@
  */
 
 import { useState } from "react";
-import { Settings, Info, SlidersHorizontal, Share2, Github } from "lucide-react";
+import { Settings, Info, SlidersHorizontal, Share2, Github, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,8 +12,9 @@ import { GeneralTab } from "./tabs/general-tab";
 import { ExportTab } from "./tabs/export/export-tab";
 import { AboutTab } from "./tabs/about-tab";
 import { GitHubTab } from "./tabs/github-tab";
+import { ShortcutsTab } from "./tabs/shortcuts";
 
-type SettingsTab = "general" | "export" | "github" | "about";
+type SettingsTab = "general" | "export" | "shortcuts" | "github" | "about";
 
 export function SettingsPopover() {
   const [tab, setTab] = useState<SettingsTab>("general");
@@ -22,6 +23,7 @@ export function SettingsPopover() {
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: "general", label: t("settings.general"), icon: <SlidersHorizontal className="h-4 w-4" /> },
     { id: "export", label: t("settings.export"), icon: <Share2 className="h-4 w-4" /> },
+    { id: "shortcuts", label: t("settings.shortcuts"), icon: <Keyboard className="h-4 w-4" /> },
     { id: "github", label: t("settings.github"), icon: <Github className="h-4 w-4" /> },
     { id: "about", label: t("settings.about"), icon: <Info className="h-4 w-4" /> }
   ];
@@ -84,6 +86,7 @@ export function SettingsPopover() {
             <div className="px-8 py-4 pb-6">
               {tab === "general" && <GeneralTab />}
               {tab === "export" && <ExportTab />}
+              {tab === "shortcuts" && <ShortcutsTab />}
               {tab === "github" && <GitHubTab />}
               {tab === "about" && <AboutTab />}
             </div>
