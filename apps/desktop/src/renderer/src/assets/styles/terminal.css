@@ -40,6 +40,7 @@
 
 .terminal-panel__viewport .xterm {
   height: 100%;
+  background-color: var(--background);
 }
 
 .terminal-panel__viewport .xterm .xterm-viewport {
@@ -47,15 +48,15 @@
 }
 
 .terminal-panel__viewport .xterm .xterm-scrollable-element > .scrollbar {
-  background: transparent;
+  background: var(--background);
   padding: 0px !important;
   box-sizing: border-box;
 }
 
 .terminal-panel__viewport .xterm .xterm-scrollable-element > .scrollbar.vertical {
-  width: 7px !important;
-  min-width: 7px !important;
-  max-width: 7px !important;
+  width: 8px !important;
+  min-width: 8px !important;
+  max-width: 8px !important;
 }
 
 .terminal-panel__viewport .xterm .xterm-scrollable-element > .scrollbar.horizontal {
@@ -80,13 +81,21 @@
   display: none !important;
 }
 
-/* 终端内重置编辑器全局字距，避免 IME 合成态错位 */
-.terminal-panel .xterm,
-.terminal-panel .xterm * {
+/* 避免继承全局 editor 字距，保留 xterm 内部逐字符度量逻辑 */
+.terminal-panel .xterm {
+  letter-spacing: normal;
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0;
+}
+
+/* 仅修正 IME 输入相关层，避免合成态光标错位 */
+.terminal-panel .xterm-helper-textarea {
   letter-spacing: normal !important;
 }
 
-.terminal-panel .xterm-helper-textarea {
+.terminal-panel .xterm .composition-view {
   letter-spacing: normal !important;
 }
 
