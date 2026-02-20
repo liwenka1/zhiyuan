@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
 import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
 import { ipcErr, ipcOk } from "./ipc-result";
@@ -36,22 +36,47 @@ function safeSend(
   }
 }
 
-function getPlatformShell(): string {
+interface ShellCommand {
+  shell: string;
+  args: string[];
+}
+
+function getPlatformShellCommand(): ShellCommand {
   if (process.platform === "win32") {
-    return "powershell.exe";
+    return { shell: process.env.ComSpec || "powershell.exe", args: [] };
   }
+  const envShell = (process.env.SHELL || "").trim();
   if (process.platform === "darwin") {
-    return "zsh";
+    return { shell: envShell || "/bin/zsh", args: ["-il"] };
   }
-  return "bash";
+  return { shell: envShell || "/bin/bash", args: ["-il"] };
+}
+
+function getDefaultUtf8Locale(): string {
+  const locale = app.getLocale().trim();
+  const normalized = locale.replace("-", "_");
+  if (!normalized) return "en_US.UTF-8";
+  const parts = normalized.split("_").filter(Boolean);
+  const language = parts[0]?.toLowerCase();
+  if (!language) return "en_US.UTF-8";
+  const region = (parts[1] || language).toUpperCase();
+  return `${language}_${region}.UTF-8`;
 }
 
 function buildTerminalEnv(): Record<string, string> {
   const env = { ...(process.env as Record<string, string>) };
-  const utf8Locale = env.LANG || env.LC_ALL || "en_US.UTF-8";
+  const sourceLocale = env.LANG || env.LC_ALL || env.LC_CTYPE;
+  const utf8Locale =
+    sourceLocale && sourceLocale.toUpperCase() !== "C" && sourceLocale.toUpperCase() !== "POSIX"
+      ? sourceLocale
+      : getDefaultUtf8Locale();
   env.LANG = env.LANG || utf8Locale;
-  env.LC_ALL = env.LC_ALL || utf8Locale;
   env.LC_CTYPE = env.LC_CTYPE || utf8Locale;
+  env.LC_MESSAGES = env.LC_MESSAGES || utf8Locale;
+  env.LANGUAGE = env.LANGUAGE || utf8Locale.split(".")[0];
+  // Match common modern terminal capabilities so TUI apps render consistently.
+  env.TERM = env.TERM || "xterm-256color";
+  env.COLORTERM = env.COLORTERM || "truecolor";
   return env;
 }
 
@@ -76,8 +101,8 @@ function disposeSenderSessions(senderId: number): void {
 export function registerTerminalHandlers(): void {
   ipcMain.handle("terminal:create", (event, workspacePath?: string): IpcResultDTO<{ id: string }> => {
     try {
-      const shell = getPlatformShell();
-      const pty = spawn(shell, [], {
+      const { shell, args } = getPlatformShellCommand();
+      const pty = spawn(shell, args, {
         name: "xterm-256color",
         cols: 80,
         rows: 24,

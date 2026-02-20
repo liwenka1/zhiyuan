@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, type RefObject } from "react";
 import { Terminal, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { terminalIpc } from "@/ipc";
 import { useWorkspaceStore } from "@/stores";
 
@@ -36,17 +37,36 @@ export function useTerminal({ containerRef }: UseTerminalOptions) {
     const terminal = new Terminal({
       cursorBlink: true,
       convertEol: true,
-      scrollback: 2000,
-      fontFamily: '"SF Mono", "Monaco", "Menlo", "Consolas", "Noto Sans Mono CJK SC", "Source Han Mono SC", monospace',
+      scrollback: 1000,
+      fontFamily: '"Menlo", "Monaco", "SF Mono", "Consolas", "Noto Sans Mono CJK SC", "Source Han Mono SC", monospace',
       fontSize: 12,
-      lineHeight: 1.2,
+      fontWeight: "normal",
+      fontWeightBold: "bold",
+      lineHeight: 1,
+      letterSpacing: 0,
+      customGlyphs: true,
       theme: createTerminalTheme(),
-      allowTransparency: true,
-      tabStopWidth: 4
+      // Avoid compositor artifacts in some Electron hosts (e.g. right-edge gaps).
+      allowTransparency: false,
+      tabStopWidth: 8
     });
 
     terminal.loadAddon(fitAddon);
     terminal.open(containerRef.current);
+
+    // Allow quick fallback for machines where GPU renderer causes visual artifacts.
+    const enableWebgl = window.localStorage.getItem("terminal.webgl") !== "off";
+    if (enableWebgl) {
+      try {
+        const webglAddon = new WebglAddon();
+        terminal.loadAddon(webglAddon);
+        webglAddon.onContextLoss(() => {
+          webglAddon.dispose();
+        });
+      } catch {
+        // Keep default renderer when WebGL is not supported in host environment.
+      }
+    }
 
     const applyResize = () => {
       if (!terminalId || !containerRef.current) return;
