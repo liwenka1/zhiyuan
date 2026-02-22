@@ -16,7 +16,7 @@ import {
   Github
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ListRow } from "@/components/app/list-row";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -85,7 +85,7 @@ export function NoteList({
   const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
 
-  const handleSearchToggle = () => {
+  const handleSearchToggle = useCallback(() => {
     if (isSearchExpanded) {
       // 收起时清空搜索
       onSearchChange?.("");
@@ -94,7 +94,24 @@ export function NoteList({
       // 展开
       setIsSearchExpanded(true);
     }
-  };
+  }, [isSearchExpanded, onSearchChange, setIsSearchExpanded]);
+
+  useEffect(() => {
+    const handleCreateFromUrl = () => onCreateFromUrl?.();
+    const handleCreateNote = () => onCreateNote?.();
+    window.addEventListener("app:open-url-create", handleCreateFromUrl);
+    window.addEventListener("app:open-create-note", handleCreateNote);
+    return () => {
+      window.removeEventListener("app:open-url-create", handleCreateFromUrl);
+      window.removeEventListener("app:open-create-note", handleCreateNote);
+    };
+  }, [onCreateFromUrl, onCreateNote]);
+
+  useEffect(() => {
+    const handleToggle = () => handleSearchToggle();
+    window.addEventListener("app:toggle-note-search", handleToggle);
+    return () => window.removeEventListener("app:toggle-note-search", handleToggle);
+  }, [handleSearchToggle]);
 
   const handleSearchAnimationComplete = () => {
     // 动画完成后自动聚焦
@@ -160,6 +177,12 @@ export function NoteList({
                   placeholder={t("search")}
                   value={searchKeyword}
                   onChange={(e) => onSearchChange?.(e.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Escape") return;
+                    event.preventDefault();
+                    event.stopPropagation();
+                    handleSearchToggle();
+                  }}
                   className="bg-muted/50 h-8 border-none pr-8 pl-8 text-sm focus-visible:ring-1 [&::-webkit-search-cancel-button]:hidden"
                 />
                 <Button
