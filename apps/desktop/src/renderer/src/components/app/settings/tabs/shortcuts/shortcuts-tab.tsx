@@ -8,6 +8,7 @@ import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { ShortcutRecorderDialog } from "./shortcuts-dialog";
 import { buildBindingParts } from "./shortcuts-utils";
 import type { ShortcutBinding } from "@shared";
+import { shortcutsMeta, shortcutGroups } from "@/lib/shortcuts-meta";
 
 export function ShortcutsTab() {
   const { t } = useTranslation("common");
@@ -18,6 +19,7 @@ export function ShortcutsTab() {
   const [isRecording, setIsRecording] = useState(false);
   const [pendingBinding, setPendingBinding] = useState<ShortcutBinding | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [pendingShortcutId, setPendingShortcutId] = useState<(typeof shortcutsMeta)[number]["id"] | null>(null);
   const captureRef = useRef<HTMLDivElement>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -30,13 +32,18 @@ export function ShortcutsTab() {
     captureRef.current?.focus();
   }, [dialogOpen]);
 
-  const currentBinding = shortcuts.toggleTerminal;
   const isMac = useMemo(() => navigator.userAgent.toLowerCase().includes("mac"), []);
-
-  const bindingParts = useMemo(() => buildBindingParts(currentBinding, isMac), [currentBinding, isMac]);
-  const pendingParts = useMemo(
-    () => (pendingBinding ? buildBindingParts(pendingBinding, isMac) : buildBindingParts(currentBinding, isMac)),
-    [pendingBinding, currentBinding, isMac]
+  const activeShortcutId = pendingShortcutId ?? "toggleTerminal";
+  const activeBinding = shortcuts[activeShortcutId] ?? shortcuts.toggleTerminal;
+  const currentBinding = pendingBinding ? pendingBinding : activeBinding;
+  const pendingParts = useMemo(() => buildBindingParts(currentBinding, isMac), [currentBinding, isMac]);
+  const grouped = useMemo(
+    () =>
+      shortcutGroups.map((group) => ({
+        group,
+        items: shortcutsMeta.filter((item) => item.group === group.id)
+      })),
+    []
   );
 
   const resetDialogState = () => {
@@ -44,27 +51,30 @@ export function ShortcutsTab() {
     setPendingBinding(null);
   };
 
-  const handleStartRecord = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleStartRecord = (event: React.MouseEvent<HTMLButtonElement>, id: string) => {
     event.currentTarget.blur();
     setIsRecording(true);
     setPendingBinding(null);
+    setPendingShortcutId(id as (typeof shortcutsMeta)[number]["id"]);
     setDialogOpen(true);
   };
 
   const handleCancelRecord = () => {
     resetDialogState();
+    setPendingShortcutId(null);
     setDialogOpen(false);
   };
 
-  const handleReset = () => {
+  const handleReset = (id: string) => {
     resetDialogState();
-    void resetShortcut("toggleTerminal");
+    void resetShortcut(id as (typeof shortcutsMeta)[number]["id"]);
   };
 
   const handleConfirm = () => {
-    if (!pendingBinding) return;
-    void setShortcut("toggleTerminal", pendingBinding);
+    if (!pendingBinding || !pendingShortcutId) return;
+    void setShortcut(pendingShortcutId, pendingBinding);
     setPendingBinding(null);
+    setPendingShortcutId(null);
     setDialogOpen(false);
   };
 
@@ -119,37 +129,51 @@ export function ShortcutsTab() {
     setDialogOpen(open);
     if (!open) {
       resetDialogState();
+      setPendingShortcutId(null);
       editButtonRef.current?.blur();
     }
   };
 
+  const handleStartRecordForId = (id: string) => (event: React.MouseEvent<HTMLButtonElement>) =>
+    handleStartRecord(event, id);
+
   return (
     <div>
-      <SettingSection title={t("settings.shortcutsSectionTitle")}>
-        <SettingRow label={t("settings.shortcutsToggleTerminal")}>
-          <div className="flex flex-wrap items-center gap-2">
-            <KbdGroup>
-              {bindingParts.map((part) => (
-                <Kbd key={part}>{part}</Kbd>
-              ))}
-            </KbdGroup>
-            <Button
-              type="button"
-              size="xs"
-              variant="outline"
-              onClick={handleStartRecord}
-              aria-pressed={isRecording}
-              aria-label={t("settings.shortcutsEdit")}
-              ref={editButtonRef}
-            >
-              {isRecording ? t("settings.shortcutsRecording") : t("settings.shortcutsEdit")}
-            </Button>
-            <Button type="button" size="xs" variant="ghost" onClick={handleReset}>
-              {t("settings.shortcutsReset")}
-            </Button>
-          </div>
-        </SettingRow>
-      </SettingSection>
+      {grouped.map(({ group, items }) => (
+        <SettingSection key={group.id} title={t(group.labelKey)}>
+          {items.map((item) => {
+            const binding = shortcuts[item.id] ?? item.default;
+            const parts = buildBindingParts(binding, isMac, item.id);
+            return (
+              <SettingRow key={item.id} label={t(item.labelKey)}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <KbdGroup>
+                    {parts.map((part) => (
+                      <Kbd key={part}>{part}</Kbd>
+                    ))}
+                  </KbdGroup>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="outline"
+                    onClick={handleStartRecordForId(item.id)}
+                    aria-pressed={isRecording && pendingShortcutId === item.id}
+                    aria-label={t("settings.shortcutsEdit")}
+                    ref={editButtonRef}
+                  >
+                    {isRecording && pendingShortcutId === item.id
+                      ? t("settings.shortcutsRecording")
+                      : t("settings.shortcutsEdit")}
+                  </Button>
+                  <Button type="button" size="xs" variant="ghost" onClick={() => handleReset(item.id)}>
+                    {t("settings.shortcutsReset")}
+                  </Button>
+                </div>
+              </SettingRow>
+            );
+          })}
+        </SettingSection>
+      ))}
       <ShortcutRecorderDialog
         open={dialogOpen}
         onOpenChange={handleDialogOpenChange}

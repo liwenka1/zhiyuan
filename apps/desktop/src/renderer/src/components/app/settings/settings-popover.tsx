@@ -2,7 +2,7 @@
  * 设置弹窗 — 主壳 + Tab 路由
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Settings, Info, SlidersHorizontal, Share2, Github, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
@@ -19,6 +19,16 @@ type SettingsTab = "general" | "export" | "shortcuts" | "github" | "about";
 export function SettingsPopover() {
   const [tab, setTab] = useState<SettingsTab>("general");
   const { t } = useTranslation("common");
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => {
+      setTab("general");
+      setOpen(true);
+    };
+    window.addEventListener("app:open-settings", handleOpen);
+    return () => window.removeEventListener("app:open-settings", handleOpen);
+  }, []);
 
   const tabs: { id: SettingsTab; label: string; icon: React.ReactNode }[] = [
     { id: "general", label: t("settings.general"), icon: <SlidersHorizontal className="h-4 w-4" /> },
@@ -31,7 +41,7 @@ export function SettingsPopover() {
   const activeTab = tabs.find((item) => item.id === tab);
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
           <Button

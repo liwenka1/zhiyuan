@@ -51,7 +51,7 @@ export function EditorContent({ content, onChange, noteId }: EditorContentProps)
             highlightSelectionMatches: false,
             bracketMatching: true,
             closeBrackets: true,
-            autocompletion: false,
+            autocompletion: true,
             searchKeymap: false
           }}
         />
