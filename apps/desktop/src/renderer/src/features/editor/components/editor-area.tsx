@@ -104,6 +104,17 @@ export function EditorArea({
     [isTerminalOpen, setTerminalHeight]
   );
 
+  useEffect(() => {
+    const handleTerminal = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      const open = event.detail?.open;
+      if (typeof open !== "boolean") return;
+      useViewStore.getState().setTerminalOpen(open);
+    };
+    window.addEventListener("app:set-terminal-open", handleTerminal as EventListener);
+    return () => window.removeEventListener("app:set-terminal-open", handleTerminal as EventListener);
+  }, []);
+
   const editorMainContent =
     !hasNote && !content && notesToRender.length === 0 ? (
       <EmptyEditor />

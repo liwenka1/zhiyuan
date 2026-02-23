@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 import { SettingsPopover } from "@/components/app";
 import { useTranslation } from "react-i18next";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useViewStore } from "@/stores";
 
 // 特殊 ID 表示「全部笔记」
@@ -69,6 +69,17 @@ export function FolderTree({
     estimateSize: () => 36,
     overscan: 6
   });
+
+  useEffect(() => {
+    const handleCreate = () => onCreateFolder?.();
+    const handleImportRss = () => onImportRss?.();
+    window.addEventListener("app:open-create-folder", handleCreate);
+    window.addEventListener("app:open-rss-import", handleImportRss);
+    return () => {
+      window.removeEventListener("app:open-create-folder", handleCreate);
+      window.removeEventListener("app:open-rss-import", handleImportRss);
+    };
+  }, [onCreateFolder, onImportRss]);
 
   return (
     <div

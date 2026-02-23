@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Eye,
   Wand2,
@@ -62,6 +62,25 @@ export function EditorToolbar({
   const [isPinned, setIsPinned] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+
+  useEffect(() => {
+    const handleMode = (event: Event) => {
+      const detail = (event as CustomEvent).detail as { mode?: "preview" | "split" | "exportPreview" | "presentation" };
+      const mode = detail?.mode;
+      if (!mode) return;
+      setExclusiveMode(mode);
+    };
+    const handleToc = () => setTocOpen(true);
+    const handleMore = () => setMoreOpen(true);
+    window.addEventListener("app:set-editor-mode", handleMode as EventListener);
+    window.addEventListener("app:toggle-editor-toc", handleToc);
+    window.addEventListener("app:toggle-more-menu", handleMore);
+    return () => {
+      window.removeEventListener("app:set-editor-mode", handleMode as EventListener);
+      window.removeEventListener("app:toggle-editor-toc", handleToc);
+      window.removeEventListener("app:toggle-more-menu", handleMore);
+    };
+  }, [setExclusiveMode]);
 
   const handleFormat = () => {
     formatCurrentNote();
@@ -199,7 +218,12 @@ export function EditorToolbar({
         </IconButton>
 
         {/* 目录按钮 */}
-        <Popover open={effectiveTocOpen} onOpenChange={setTocOpen}>
+        <Popover
+          open={effectiveTocOpen}
+          onOpenChange={(nextOpen) => {
+            setTocOpen(nextOpen);
+          }}
+        >
           <PopoverTrigger asChild>
             <IconButton aria-label={t("toolbar.toc")} disabled={!hasNote || !showPreview || exportPreview}>
               <TocIcon className="size-4" />
@@ -226,7 +250,9 @@ export function EditorToolbar({
               <div className="flex items-center justify-between">
                 <h4 className="leading-none font-medium">{t("toolbar.toc")}</h4>
                 <IconButton
-                  onClick={() => setIsPinned(!effectiveIsPinned)}
+                  onClick={() => {
+                    setIsPinned(!effectiveIsPinned);
+                  }}
                   aria-label={effectiveIsPinned ? t("toc.unpin") : t("toc.pin")}
                 >
                   {effectiveIsPinned ? <PinOff className="size-4" /> : <Pin className="size-4" />}
@@ -250,7 +276,12 @@ export function EditorToolbar({
         </Toggle>
 
         {/* 更多操作 */}
-        <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+        <Popover
+          open={moreOpen}
+          onOpenChange={(nextOpen) => {
+            setMoreOpen(nextOpen);
+          }}
+        >
           <PopoverTrigger asChild>
             <IconButton aria-label={t("toolbar.more")} disabled={!hasNote}>
               <EllipsisVertical className="size-4" />

@@ -15,14 +15,12 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/features/editor";
 import { workspaceIpc } from "@/ipc";
+import { useShortcutDispatcher } from "@/hooks/use-shortcut-dispatcher";
 
 function App(): React.JSX.Element {
   const initTheme = useThemeStore((state) => state.initTheme);
   const cleanup = useThemeStore((state) => state.cleanup);
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
-  const isTerminalOpen = useViewStore((state) => state.isTerminalOpen);
-  const setTerminalOpen = useViewStore((state) => state.setTerminalOpen);
-  const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
@@ -132,33 +130,17 @@ function App(): React.JSX.Element {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleMenuOpenFolder]);
 
-  // Ctrl+` 切换终端面板
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isPresentationMode) return;
-
-      const target = e.target;
-      if (target instanceof HTMLElement) {
-        const isDialog = target.closest?.('[data-slot="dialog-content"]');
-        if (isDialog) return;
-      }
-
-      const binding = shortcuts.toggleTerminal;
-      if (
-        e.code === binding.code &&
-        e.ctrlKey === binding.ctrl &&
-        e.shiftKey === binding.shift &&
-        e.altKey === binding.alt &&
-        e.metaKey === binding.meta
-      ) {
-        e.preventDefault();
-        setTerminalOpen(!isTerminalOpen);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isTerminalOpen, isPresentationMode, setTerminalOpen, shortcuts.toggleTerminal]);
+  useShortcutDispatcher({
+    context: {
+      openSettings: () => window.dispatchEvent(new Event("app:open-settings")),
+      openCreateFolderDialog: () => window.dispatchEvent(new Event("app:open-create-folder")),
+      openRssImportDialog: () => window.dispatchEvent(new Event("app:open-rss-import")),
+      openUrlCreateDialog: () => window.dispatchEvent(new Event("app:open-url-create")),
+      toggleNoteSearch: () => window.dispatchEvent(new Event("app:toggle-note-search")),
+      formatNote: () => useNoteStore.getState().formatCurrentNote()
+    },
+    enabled: !isPresentationMode
+  });
 
   // 检查是否有上次的工作区（快速判断，决定渲染哪个页面）
   useEffect(() => {
