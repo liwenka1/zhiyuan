@@ -15,13 +15,13 @@ export function SettingSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-6">
-      <div className="mb-2">
+    <section className="mb-5">
+      <div className="mb-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-foreground text-xs font-semibold tracking-wide">{title}</div>
+          <div className="text-foreground text-sm font-semibold tracking-wide">{title}</div>
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
-        {description && <div className="text-muted-foreground mt-1 text-xs">{description}</div>}
+        {description && <div className="text-muted-foreground mt-1 text-xs leading-relaxed">{description}</div>}
       </div>
 
       {notice && (
@@ -30,7 +30,7 @@ export function SettingSection({
         </div>
       )}
 
-      <div className="divide-border divide-y">{children}</div>
+      <div className="space-y-2">{children}</div>
     </section>
   );
 }

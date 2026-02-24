@@ -2,6 +2,8 @@
  * 设置行容器
  */
 
+import { Item, ItemActions, ItemContent, ItemDescription, ItemTitle } from "@/components/ui/item";
+
 /* ---------- 设置行容器 ---------- */
 export function SettingRow({
   label,
@@ -12,13 +14,25 @@ export function SettingRow({
   description?: string;
   children: React.ReactNode;
 }) {
+  const hasDescription = Boolean(description);
+
   return (
-    <div className="flex items-start justify-between gap-6 py-4">
-      <div className="min-w-0 flex-1">
-        <div className="text-foreground text-sm font-medium">{label}</div>
-        {description && <div className="text-muted-foreground mt-0.5 text-xs">{description}</div>}
-      </div>
-      <div className="flex w-[320px] max-w-full shrink-0 justify-end">{children}</div>
-    </div>
+    <Item
+      variant="muted"
+      size="sm"
+      className={`bg-muted/30 flex-nowrap gap-4 rounded-md ${hasDescription ? "items-start" : "items-center"}`}
+    >
+      <ItemContent className={`min-w-0 ${hasDescription ? "" : "gap-0"}`}>
+        <ItemTitle className="text-foreground">{label}</ItemTitle>
+        {description ? (
+          <ItemDescription className="mt-0.5 line-clamp-none text-xs leading-snug">{description}</ItemDescription>
+        ) : null}
+      </ItemContent>
+      <ItemActions
+        className={`w-[min(360px,45%)] max-w-full shrink-0 justify-end ${hasDescription ? "self-start" : "self-center"}`}
+      >
+        {children}
+      </ItemActions>
+    </Item>
   );
 }
