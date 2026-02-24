@@ -97,7 +97,7 @@ export function GeneralTab() {
   const { t } = useTranslation("common");
 
   return (
-    <div className="divide-border divide-y">
+    <div className="space-y-2">
       <SettingRow label={t("settings.theme")}>
         <ThemeSegmentedControl />
       </SettingRow>
