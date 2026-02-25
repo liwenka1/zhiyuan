@@ -19,7 +19,9 @@ export function ExportPreview({ content, notePath, noteTitle }: ExportPreviewPro
   const exportLayout = useExportLayoutStore((state) => state.exportLayout);
   const [previewDoc, setPreviewDoc] = useState<string>("");
   const [isRendering, setIsRendering] = useState(false);
-  const [iframeHeight, setIframeHeight] = useState(480);
+  const [iframeHeight, setIframeHeight] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+  const [hasMeasured, setHasMeasured] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
 
@@ -27,6 +29,9 @@ export function ExportPreview({ content, notePath, noteTitle }: ExportPreviewPro
   useEffect(() => {
     const timer = window.setTimeout(async () => {
       setIsRendering(true);
+      setIsReady(false);
+      setHasMeasured(false);
+      setIframeHeight(0);
       try {
         const html = await renderNoteExportPreviewHtml({
           title: noteTitle || t("toolbar.exportPreview"),
@@ -69,6 +74,10 @@ export function ExportPreview({ content, notePath, noteTitle }: ExportPreviewPro
     };
 
     syncHeight();
+    if (!hasMeasured) {
+      setIsReady(true);
+      window.requestAnimationFrame(() => setHasMeasured(true));
+    }
     observerRef.current?.disconnect();
     const nextObserver = new ResizeObserver(syncHeight);
     nextObserver.observe(doc.documentElement);
@@ -80,14 +89,18 @@ export function ExportPreview({ content, notePath, noteTitle }: ExportPreviewPro
 
   return (
     <div style={{ padding: "0 0 var(--editor-bottom-space) 0" }}>
-      <div className="relative min-h-[220px] overflow-hidden">
+      <div className="relative min-h-55 overflow-hidden">
         <iframe
           ref={iframeRef}
           title="export-preview"
           srcDoc={previewDoc}
           onLoad={handleIframeLoad}
           className="w-full border-0 bg-transparent"
-          style={{ height: `${iframeHeight}px`, transition: "height 200ms ease-out" }}
+          style={{
+            height: `${iframeHeight}px`,
+            transition: hasMeasured ? "height 200ms ease-out" : "none",
+            visibility: isReady ? "visible" : "hidden"
+          }}
           sandbox="allow-same-origin allow-scripts"
           scrolling="no"
         />
