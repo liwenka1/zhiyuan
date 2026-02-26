@@ -64,6 +64,7 @@ function rehypeCodeBlockCopyButton() {
       );
 
       if (!hasCode) return;
+      if (isMermaidCodeBlock(preNode)) return;
 
       const hasButton = preNode.children.some(
         (child) =>
@@ -120,6 +121,23 @@ function rehypeCodeBlockCopyButton() {
   };
 }
 
+function isMermaidCodeBlock(preNode: Element): boolean {
+  const codeNode = preNode.children.find(
+    (child) => child.type === "element" && (child as Element).tagName === "code"
+  ) as Element | undefined;
+  if (!codeNode) return false;
+
+  const className = codeNode.properties?.className;
+  const dataLanguage = codeNode.properties?.["data-language"];
+  const classTokens = Array.isArray(className)
+    ? className.map((token) => String(token))
+    : typeof className === "string"
+      ? className.split(/\s+/)
+      : [];
+
+  return classTokens.includes("language-mermaid") || dataLanguage === "mermaid";
+}
+
 function mergeClassName(className: unknown, next: string[]): string[] {
   if (Array.isArray(className)) {
     return Array.from(new Set([...className, ...next]));
@@ -131,9 +149,9 @@ function mergeClassName(className: unknown, next: string[]): string[] {
 }
 
 async function renderMermaidBlocks(html: string, isDarkTheme = false): Promise<string> {
-  // 匹配 mermaid 代码块: <pre><code class="...language-mermaid...">...</code></pre>
+  // 匹配 mermaid 代码块，允许 pre 内存在额外节点（例如复制按钮）
   const mermaidRegex =
-    /<pre[^>]*><code[^>]*(?:class="[^"]*language-mermaid[^"]*"|data-language="mermaid")[^>]*>([\s\S]*?)<\/code><\/pre>/g;
+    /<pre[^>]*>\s*<code[^>]*(?:class="[^"]*language-mermaid[^"]*"|data-language="mermaid")[^>]*>([\s\S]*?)<\/code>[\s\S]*?<\/pre>/g;
   const matches = [...html.matchAll(mermaidRegex)];
 
   if (matches.length === 0) return html;
