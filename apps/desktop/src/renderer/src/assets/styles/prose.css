@@ -40,13 +40,13 @@
 }
 
 /* Mermaid 图表样式 */
-.prose .mermaid-block {
+.prose .mermaid {
   max-width: 100%;
   overflow-x: auto;
   padding: 0.75rem 0;
 }
 
 /* Mermaid 图表 SVG 样式 */
-.prose .mermaid-block svg {
+.prose .mermaid svg {
   height: auto;
 }
