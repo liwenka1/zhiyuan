@@ -18,5 +18,6 @@ export const workspaceIpc = {
   getRecent: async () => unwrapIpcResult(await window.api.workspace.getRecent()),
 
   onMenuOpenFolder: window.api.workspace.onMenuOpenFolder,
-  onMenuOpenFile: window.api.workspace.onMenuOpenFile
+  onMenuOpenFile: window.api.workspace.onMenuOpenFile,
+  onExternalOpen: window.api.workspace.onExternalOpen
 };

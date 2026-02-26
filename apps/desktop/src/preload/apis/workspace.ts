@@ -64,5 +64,15 @@ export const workspaceApi = {
     const listener = () => callback();
     ipcRenderer.on("menu:openFile", listener);
     return () => ipcRenderer.removeListener("menu:openFile", listener);
+  },
+
+  /**
+   * 监听外部打开（拖拽到图标等）事件
+   */
+  onExternalOpen: (callback: (payload: { workspacePath: string; filePath?: string }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: { workspacePath: string; filePath?: string }) =>
+      callback(payload);
+    ipcRenderer.on("workspace:external-open", listener);
+    return () => ipcRenderer.removeListener("workspace:external-open", listener);
   }
 };

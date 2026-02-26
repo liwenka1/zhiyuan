@@ -69,6 +69,30 @@ function App(): React.JSX.Element {
     }
   }, [setWorkspacePath, setFolders, loadFromFileSystem, selectNote]);
 
+  const handleExternalOpen = useCallback(
+    async (payload: { workspacePath: string; filePath?: string }) => {
+      try {
+        const data = await workspaceIpc.scan(payload.workspacePath);
+        if (!data) return;
+
+        setWorkspacePath(payload.workspacePath);
+        setFolders(data.folders);
+        loadFromFileSystem(data);
+
+        if (payload.filePath) {
+          const relativePath = payload.filePath.replace(payload.workspacePath + "/", "");
+          const targetNote = data.notes.find((note) => note.id === relativePath);
+          if (targetNote) {
+            setTimeout(() => selectNote(targetNote.id), 0);
+          }
+        }
+      } catch {
+        /* 静默处理 */
+      }
+    },
+    [setWorkspacePath, setFolders, loadFromFileSystem, selectNote]
+  );
+
   const initExportTheme = useExportThemeStore((state) => state.initExportTheme);
   const initExportLayout = useExportLayoutStore((state) => state.initExportLayout);
 
@@ -100,6 +124,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     const unsubFolder = workspaceIpc.onMenuOpenFolder(handleMenuOpenFolder);
     const unsubFile = workspaceIpc.onMenuOpenFile(handleMenuOpenFile);
+    const unsubExternal = workspaceIpc.onExternalOpen(handleExternalOpen);
 
     // Windows 自定义菜单栏通过 DOM 事件触发
     const onDomOpenFolder = () => handleMenuOpenFolder();
@@ -110,10 +135,11 @@ function App(): React.JSX.Element {
     return () => {
       unsubFolder();
       unsubFile();
+      unsubExternal();
       window.removeEventListener("app:menu-open-folder", onDomOpenFolder);
       window.removeEventListener("app:menu-open-file", onDomOpenFile);
     };
-  }, [handleMenuOpenFolder, handleMenuOpenFile]);
+  }, [handleMenuOpenFolder, handleMenuOpenFile, handleExternalOpen]);
 
   // Windows/Linux: Ctrl+O 打开文件夹
   useEffect(() => {
