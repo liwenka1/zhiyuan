@@ -64,6 +64,7 @@ export interface WorkspaceAPI {
   getRecent: () => Promise<IpcResultDTO<string[]>>;
   onMenuOpenFolder: (callback: () => void) => () => void;
   onMenuOpenFile: (callback: () => void) => () => void;
+  onExternalOpen: (callback: (payload: { workspacePath: string; filePath?: string }) => void) => () => void;
 }
 
 // 文件 API 接口

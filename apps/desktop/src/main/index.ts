@@ -15,8 +15,94 @@ import { configManager } from "./config";
 import { setupApplicationMenu } from "./menu";
 import { pathToFileURL } from "url";
 import { existsSync } from "fs";
+import fs from "fs";
+import path from "path";
 import { ipcOk, ipcErr } from "./ipc/ipc-result";
 import type { IpcResultDTO } from "@shared";
+
+type ExternalOpenPayload = {
+  workspacePath: string;
+  filePath?: string;
+};
+
+const pendingExternalOpens: ExternalOpenPayload[] = [];
+
+function resolveExternalOpenTarget(targetPath: string): ExternalOpenPayload | null {
+  if (!existsSync(targetPath)) return null;
+  const stat = fs.statSync(targetPath);
+  if (stat.isDirectory()) {
+    return { workspacePath: targetPath };
+  }
+  if (stat.isFile() && targetPath.toLowerCase().endsWith(".md")) {
+    return { workspacePath: path.dirname(targetPath), filePath: targetPath };
+  }
+  return null;
+}
+
+function sendExternalOpen(win: BrowserWindow, payload: ExternalOpenPayload): void {
+  if (win.webContents.isLoadingMainFrame()) {
+    win.webContents.once("did-finish-load", () => {
+      win.webContents.send("workspace:external-open", payload);
+    });
+  } else {
+    win.webContents.send("workspace:external-open", payload);
+  }
+}
+
+function handleExternalOpenPath(targetPath: string): boolean {
+  const payload = resolveExternalOpenTarget(targetPath);
+  if (!payload) return false;
+
+  if (!app.isReady()) {
+    pendingExternalOpens.push(payload);
+    return true;
+  }
+
+  const existingWindows = windowManager.getWindowsForWorkspace(payload.workspacePath);
+  if (existingWindows.length > 0) {
+    const win = existingWindows[0];
+    if (win.isMinimized()) {
+      win.restore();
+    }
+    win.focus();
+    sendExternalOpen(win, payload);
+    return true;
+  }
+
+  const win = windowManager.createWindow(payload.workspacePath);
+  sendExternalOpen(win, payload);
+  return true;
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, argv) => {
+    const candidatePaths = argv.slice(1);
+    for (const candidate of candidatePaths) {
+      if (handleExternalOpenPath(candidate)) {
+        return;
+      }
+    }
+  });
+}
+
+app.on("open-file", (event, filePath) => {
+  event.preventDefault();
+  if (!app.isReady()) {
+    const payload = resolveExternalOpenTarget(filePath);
+    if (payload) pendingExternalOpens.push(payload);
+    return;
+  }
+  handleExternalOpenPath(filePath);
+});
+
+app.on("activate", function () {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    windowManager.createWindow();
+  }
+});
 
 // 注册自定义协议用于加载本地资源（支持中文路径）
 // 必须在 app.whenReady() 之前调用
@@ -124,11 +210,19 @@ app.whenReady().then(() => {
   });
 
   // 创建第一个窗口，尝试恢复上次的工作区
-  const lastWorkspace = configManager.getRecentWorkspaces()[0];
-  if (lastWorkspace && existsSync(lastWorkspace)) {
-    windowManager.createWindow(lastWorkspace);
+  if (pendingExternalOpens.length > 0) {
+    for (const payload of pendingExternalOpens) {
+      const win = windowManager.createWindow(payload.workspacePath);
+      sendExternalOpen(win, payload);
+    }
+    pendingExternalOpens.length = 0;
   } else {
-    windowManager.createWindow();
+    const lastWorkspace = configManager.getRecentWorkspaces()[0];
+    if (lastWorkspace && existsSync(lastWorkspace)) {
+      windowManager.createWindow(lastWorkspace);
+    } else {
+      windowManager.createWindow();
+    }
   }
 
   app.on("activate", function () {

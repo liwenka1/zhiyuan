@@ -14,6 +14,11 @@ asarUnpack:
   - resources/**
 win:
   executableName: zhiyuan
+  fileAssociations:
+    - ext: md
+      name: Markdown Document
+      description: Markdown Document
+      role: Editor
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -26,6 +31,12 @@ mac:
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.
     NSDocumentsFolderUsageDescription: Application requests access to the user's Documents folder.
     NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
+    CFBundleDocumentTypes:
+      - CFBundleTypeName: Markdown Document
+        CFBundleTypeRole: Editor
+        LSHandlerRank: Owner
+        CFBundleTypeExtensions:
+          - md
     CFBundleLocalizations:
       - en
       - zh_CN
@@ -42,6 +53,8 @@ linux:
     - deb
   maintainer: electronjs.org
   category: Utility
+  mimeTypes:
+    - text/markdown
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
@@ -49,5 +62,5 @@ publish:
   provider: github
   owner: liwenka1
   repo: zhiyuan
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/
+# electronDownload:
+#   mirror: https://npmmirror.com/mirrors/electron/
