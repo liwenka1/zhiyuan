@@ -66,6 +66,7 @@ export function NoteWorkspace() {
         }
         rightSidebar={
           <NoteList
+            key={selectedFolderId ?? "__all__"}
             notes={formattedNotes}
             selectedNoteId={selectedNoteId ?? undefined}
             searchKeyword={searchKeyword}
