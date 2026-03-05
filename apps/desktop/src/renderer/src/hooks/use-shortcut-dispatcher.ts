@@ -21,6 +21,7 @@ const MODIFIER_KEYS = new Set([
 
 function shouldIgnoreEvent(target: EventTarget | null, event: KeyboardEvent) {
   if (!(target instanceof HTMLElement)) return false;
+  if (target.closest?.(".xterm")) return false;
   const tag = target.tagName.toLowerCase();
   if (tag === "input" || tag === "textarea" || tag === "select") return true;
   if (target.closest?.('[data-slot="dialog-content"]')) return true;
