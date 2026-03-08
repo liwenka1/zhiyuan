@@ -5,6 +5,7 @@ import type {
   ThemeMode,
   IpcResultDTO,
   GitHubConfig,
+  GitHubProjectConfigMap,
   GitHubIssuePushRequest,
   GitHubIssuePushResult,
   GitHubAssetUploadRequest,
@@ -222,14 +223,34 @@ export interface ConfigAPI {
   setShortcuts: (shortcuts: ShortcutConfig) => Promise<IpcResultDTO<void>>;
 
   /**
+   * 获取全部 GitHub 项目配置
+   */
+  getGitHubProjectConfigs: () => Promise<
+    IpcResultDTO<{
+      projectConfigs: GitHubProjectConfigMap;
+      defaultProjectKey: string;
+    }>
+  >;
+
+  /**
    * 获取 GitHub 配置
    */
-  getGitHubConfig: () => Promise<IpcResultDTO<GitHubConfig>>;
+  getGitHubConfig: (projectKey?: string) => Promise<IpcResultDTO<GitHubConfig>>;
 
   /**
    * 设置 GitHub 配置
    */
-  setGitHubConfig: (config: GitHubConfig) => Promise<IpcResultDTO<void>>;
+  setGitHubConfig: (config: GitHubConfig, projectKey?: string) => Promise<IpcResultDTO<void>>;
+
+  /**
+   * 设置 GitHub 默认项目键
+   */
+  setGitHubDefaultProjectKey: (projectKey: string) => Promise<IpcResultDTO<void>>;
+
+  /**
+   * 删除 GitHub 项目配置
+   */
+  removeGitHubProjectConfig: (projectKey: string) => Promise<IpcResultDTO<void>>;
 }
 
 // RSS API 接口

@@ -11,7 +11,8 @@ export type { ShortcutId, ShortcutBinding, ShortcutConfig } from "./shortcuts";
 export { DEFAULT_SHORTCUTS } from "./shortcuts";
 
 export type { IpcError, IpcResultDTO } from "./ipc";
-export type { GitHubConfig, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";
+export type { GitHubConfig, GitHubProjectConfigMap, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";
+export { DEFAULT_GITHUB_PROJECT_KEY } from "./github";
 export type { GitHubAssetUploadRequest, GitHubAssetUploadResult } from "./github-assets";
 export {
   isRelativePath,

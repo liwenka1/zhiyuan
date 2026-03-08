@@ -3,7 +3,7 @@
  */
 
 import { unwrapIpcResult } from "@/lib/ipc-utils";
-import type { ExportLayoutConfig, GitHubConfig, ShortcutConfig } from "@shared";
+import type { ExportLayoutConfig, GitHubConfig, GitHubProjectConfigMap, ShortcutConfig } from "@shared";
 
 export const configIpc = {
   getPinnedNotes: async (workspacePath: string) =>
@@ -25,7 +25,18 @@ export const configIpc = {
 
   setShortcuts: async (shortcuts: ShortcutConfig) => unwrapIpcResult(await window.api.config.setShortcuts(shortcuts)),
 
-  getGitHubConfig: async (): Promise<GitHubConfig> => unwrapIpcResult(await window.api.config.getGitHubConfig()),
+  getGitHubProjectConfigs: async (): Promise<{ projectConfigs: GitHubProjectConfigMap; defaultProjectKey: string }> =>
+    unwrapIpcResult(await window.api.config.getGitHubProjectConfigs()),
 
-  setGitHubConfig: async (config: GitHubConfig) => unwrapIpcResult(await window.api.config.setGitHubConfig(config))
+  getGitHubConfig: async (projectKey?: string): Promise<GitHubConfig> =>
+    unwrapIpcResult(await window.api.config.getGitHubConfig(projectKey)),
+
+  setGitHubConfig: async (config: GitHubConfig, projectKey?: string) =>
+    unwrapIpcResult(await window.api.config.setGitHubConfig(config, projectKey)),
+
+  setGitHubDefaultProjectKey: async (projectKey: string) =>
+    unwrapIpcResult(await window.api.config.setGitHubDefaultProjectKey(projectKey)),
+
+  removeGitHubProjectConfig: async (projectKey: string) =>
+    unwrapIpcResult(await window.api.config.removeGitHubProjectConfig(projectKey))
 };
