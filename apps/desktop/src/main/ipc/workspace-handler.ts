@@ -12,7 +12,9 @@ import {
   type ExportLayoutConfig,
   type IpcResultDTO,
   type ShortcutConfig,
-  DEFAULT_SHORTCUTS
+  DEFAULT_SHORTCUTS,
+  type GitHubConfig,
+  type GitHubProjectConfigMap
 } from "@shared";
 
 /**
@@ -367,10 +369,26 @@ export function registerWorkspaceHandlers(): void {
     }
   });
 
+  // 获取全部 GitHub 项目配置
+  ipcMain.handle(
+    "config:getGitHubProjectConfigs",
+    (): IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; defaultProjectKey: string }> => {
+      try {
+        return ipcOk({
+          projectConfigs: configManager.getGitHubProjectConfigs(),
+          defaultProjectKey: configManager.getGitHubDefaultProjectKey()
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return ipcErr(message, "CONFIG_GET_GITHUB_PROJECTS_FAILED");
+      }
+    }
+  );
+
   // 获取 GitHub 配置
-  ipcMain.handle("config:getGitHubConfig", (): IpcResultDTO<{ owner: string; repo: string; token: string }> => {
+  ipcMain.handle("config:getGitHubConfig", (_, projectKey?: string): IpcResultDTO<GitHubConfig> => {
     try {
-      return ipcOk(configManager.getGitHubConfig());
+      return ipcOk(configManager.getGitHubConfig(projectKey));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return ipcErr(message, "CONFIG_GET_GITHUB_FAILED");
@@ -378,26 +396,46 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 设置 GitHub 配置
-  ipcMain.handle(
-    "config:setGitHubConfig",
-    (
-      _,
-      config: {
-        owner: string;
-        repo: string;
-        token: string;
+  ipcMain.handle("config:setGitHubConfig", (_, config: GitHubConfig, projectKey?: string): IpcResultDTO<void> => {
+    try {
+      if (!config || typeof config !== "object") {
+        return ipcErr("Invalid GitHub config", "CONFIG_SET_GITHUB_INVALID");
       }
-    ): IpcResultDTO<void> => {
-      try {
-        if (!config || typeof config !== "object") {
-          return ipcErr("Invalid GitHub config", "CONFIG_SET_GITHUB_INVALID");
-        }
-        configManager.setGitHubConfig(config);
-        return ipcOk(undefined);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        return ipcErr(message, "CONFIG_SET_GITHUB_FAILED");
-      }
+      configManager.setGitHubConfig(config, projectKey);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_SET_GITHUB_FAILED");
     }
-  );
+  });
+
+  // 设置 GitHub 默认项目键
+  ipcMain.handle("config:setGitHubDefaultProjectKey", (_, projectKey: string): IpcResultDTO<void> => {
+    try {
+      const normalizedKey = String(projectKey || "").trim();
+      if (!normalizedKey) {
+        return ipcErr("Invalid GitHub project key", "CONFIG_SET_GITHUB_DEFAULT_INVALID");
+      }
+      configManager.setGitHubDefaultProjectKey(normalizedKey);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_SET_GITHUB_DEFAULT_FAILED");
+    }
+  });
+
+  // 删除指定 GitHub 项目配置
+  ipcMain.handle("config:removeGitHubProjectConfig", (_, projectKey: string): IpcResultDTO<void> => {
+    try {
+      const normalizedKey = String(projectKey || "").trim();
+      if (!normalizedKey) {
+        return ipcErr("Invalid GitHub project key", "CONFIG_REMOVE_GITHUB_PROJECT_INVALID");
+      }
+      configManager.removeGitHubProjectConfig(normalizedKey);
+      return ipcOk(undefined);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, "CONFIG_REMOVE_GITHUB_PROJECT_FAILED");
+    }
+  });
 }

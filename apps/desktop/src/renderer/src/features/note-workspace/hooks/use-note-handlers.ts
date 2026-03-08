@@ -125,8 +125,9 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     const fullNote = notes.find((n) => n.id === note.id);
     if (!fullNote?.filePath || !fullNote.fileName) return;
 
-    if (!githubStore.getState().isLoaded) {
-      await githubStore.getState().load();
+    const githubState = githubStore.getState();
+    if (!githubState.isLoaded) {
+      await githubState.load();
     }
 
     const { owner, repo, token } = githubStore.getState();

@@ -1,5 +1,5 @@
 import { ipcRenderer } from "electron";
-import type { ExportLayoutConfig, IpcResultDTO, ShortcutConfig } from "@shared";
+import type { ExportLayoutConfig, GitHubConfig, GitHubProjectConfigMap, IpcResultDTO, ShortcutConfig } from "@shared";
 
 export const configApi = {
   /**
@@ -50,12 +50,28 @@ export const configApi = {
   /**
    * 获取 GitHub 配置
    */
-  getGitHubConfig: (): Promise<IpcResultDTO<{ owner: string; repo: string; token: string }>> =>
-    ipcRenderer.invoke("config:getGitHubConfig"),
+  getGitHubProjectConfigs: (): Promise<
+    IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; defaultProjectKey: string }>
+  > => ipcRenderer.invoke("config:getGitHubProjectConfigs"),
+
+  getGitHubConfig: (projectKey?: string): Promise<IpcResultDTO<GitHubConfig>> =>
+    ipcRenderer.invoke("config:getGitHubConfig", projectKey),
 
   /**
    * 设置 GitHub 配置
    */
-  setGitHubConfig: (config: { owner: string; repo: string; token: string }): Promise<IpcResultDTO<void>> =>
-    ipcRenderer.invoke("config:setGitHubConfig", config)
+  setGitHubConfig: (config: GitHubConfig, projectKey?: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:setGitHubConfig", config, projectKey),
+
+  /**
+   * 设置 GitHub 默认项目键
+   */
+  setGitHubDefaultProjectKey: (projectKey: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:setGitHubDefaultProjectKey", projectKey),
+
+  /**
+   * 删除 GitHub 项目配置
+   */
+  removeGitHubProjectConfig: (projectKey: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:removeGitHubProjectConfig", projectKey)
 };

@@ -5,7 +5,10 @@ import {
   type ExportLayoutConfig,
   type ThemeMode,
   DEFAULT_SHORTCUTS,
-  type ShortcutConfig
+  type ShortcutConfig,
+  type GitHubConfig,
+  type GitHubProjectConfigMap,
+  DEFAULT_GITHUB_PROJECT_KEY
 } from "@shared";
 
 interface AppConfig {
@@ -20,6 +23,20 @@ interface AppConfig {
     repo: string;
     token: string;
   };
+  githubProjects: GitHubProjectConfigMap;
+  githubDefaultProjectKey: string;
+}
+
+function normalizeGitHubConfig(config?: Partial<GitHubConfig> | null): GitHubConfig {
+  return {
+    owner: String(config?.owner || "").trim(),
+    repo: String(config?.repo || "").trim(),
+    token: String(config?.token || "").trim()
+  };
+}
+
+function hasGitHubConfig(config: GitHubConfig): boolean {
+  return Boolean(config.owner || config.repo || config.token);
 }
 
 // 创建配置存储实例
@@ -35,7 +52,9 @@ const store = new Store<AppConfig>({
       owner: "",
       repo: "",
       token: ""
-    }
+    },
+    githubProjects: {},
+    githubDefaultProjectKey: DEFAULT_GITHUB_PROJECT_KEY
   }
 });
 
@@ -159,18 +178,93 @@ export const configManager = {
   /**
    * 获取 GitHub 配置
    */
-  getGitHubConfig(): { owner: string; repo: string; token: string } {
-    return store.get("github");
+  getGitHubProjectConfigs(): GitHubProjectConfigMap {
+    const saved = store.get("githubProjects") || {};
+    const normalized: GitHubProjectConfigMap = {};
+    for (const [projectKey, config] of Object.entries(saved)) {
+      normalized[projectKey] = normalizeGitHubConfig(config);
+    }
+
+    if (Object.keys(normalized).length > 0) {
+      return normalized;
+    }
+
+    // 兼容旧版本：单个 github 配置自动迁移到默认项目键
+    const legacy = normalizeGitHubConfig(store.get("github"));
+    if (hasGitHubConfig(legacy)) {
+      const migrated: GitHubProjectConfigMap = { [DEFAULT_GITHUB_PROJECT_KEY]: legacy };
+      store.set("githubProjects", migrated);
+      store.set("githubDefaultProjectKey", DEFAULT_GITHUB_PROJECT_KEY);
+      return migrated;
+    }
+
+    return {};
+  },
+
+  /**
+   * 获取 GitHub 默认项目键
+   */
+  getGitHubDefaultProjectKey(): string {
+    const projectKey = String(store.get("githubDefaultProjectKey") || "").trim();
+    return projectKey || DEFAULT_GITHUB_PROJECT_KEY;
+  },
+
+  /**
+   * 设置 GitHub 默认项目键
+   */
+  setGitHubDefaultProjectKey(projectKey: string): void {
+    const normalizedKey = String(projectKey || "").trim() || DEFAULT_GITHUB_PROJECT_KEY;
+    store.set("githubDefaultProjectKey", normalizedKey);
+  },
+
+  /**
+   * 获取 GitHub 配置
+   */
+  getGitHubConfig(projectKey?: string): GitHubConfig {
+    const allConfigs = this.getGitHubProjectConfigs();
+    const targetKey = String(projectKey || "").trim();
+    if (targetKey && allConfigs[targetKey]) {
+      return allConfigs[targetKey];
+    }
+
+    const defaultKey = this.getGitHubDefaultProjectKey();
+    return allConfigs[defaultKey] || { owner: "", repo: "", token: "" };
   },
 
   /**
    * 设置 GitHub 配置
    */
-  setGitHubConfig(config: { owner: string; repo: string; token: string }): void {
+  setGitHubConfig(config: GitHubConfig, projectKey?: string): void {
+    const allConfigs = this.getGitHubProjectConfigs();
+    const targetKey = String(projectKey || "").trim() || this.getGitHubDefaultProjectKey();
+    const nextConfig = normalizeGitHubConfig(config);
+    allConfigs[targetKey] = nextConfig;
+
+    store.set("githubProjects", allConfigs);
+    store.set("githubDefaultProjectKey", targetKey);
     store.set("github", {
-      owner: config.owner || "",
-      repo: config.repo || "",
-      token: config.token || ""
+      owner: nextConfig.owner,
+      repo: nextConfig.repo,
+      token: nextConfig.token
     });
+  },
+
+  /**
+   * 删除指定项目的 GitHub 配置
+   */
+  removeGitHubProjectConfig(projectKey: string): void {
+    const targetKey = String(projectKey || "").trim();
+    if (!targetKey) return;
+    const allConfigs = this.getGitHubProjectConfigs();
+    if (!(targetKey in allConfigs)) return;
+
+    delete allConfigs[targetKey];
+    store.set("githubProjects", allConfigs);
+
+    const defaultKey = this.getGitHubDefaultProjectKey();
+    if (defaultKey === targetKey) {
+      const fallbackKey = Object.keys(allConfigs)[0] || DEFAULT_GITHUB_PROJECT_KEY;
+      store.set("githubDefaultProjectKey", fallbackKey);
+    }
   }
 };
