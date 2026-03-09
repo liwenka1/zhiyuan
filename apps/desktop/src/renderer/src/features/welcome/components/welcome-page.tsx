@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { TitleBar, SettingsPopover } from "@/components/app";
 import { Logo } from "@/components/icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
 import { usePlatform } from "@/hooks";
 import { workspaceIpc } from "@/ipc";
@@ -146,21 +147,27 @@ export function WelcomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
           >
-            <button
+            <Button
+              variant="outline"
+              size="default"
+              type="button"
               onClick={handleOpenFolder}
-              className="bg-foreground/6 hover:bg-foreground/10 border-border/60 hover:border-border flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-5 py-2.5 transition-colors"
+              className="bg-foreground/6 hover:bg-foreground/10 border-border/60 hover:border-border h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5 transition-colors"
             >
               <FolderOpen className="text-muted-foreground h-4 w-4" />
               <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFolder")}</span>
-            </button>
+            </Button>
 
-            <button
+            <Button
+              variant="outline"
+              size="default"
+              type="button"
               onClick={handleOpenFile}
-              className="bg-foreground/6 hover:bg-foreground/10 border-border/60 hover:border-border flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border px-5 py-2.5 transition-colors"
+              className="bg-foreground/6 hover:bg-foreground/10 border-border/60 hover:border-border h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5 transition-colors"
             >
               <FileText className="text-muted-foreground h-4 w-4" />
               <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFile")}</span>
-            </button>
+            </Button>
           </motion.div>
 
           {/* 最近打开列表 */}
@@ -174,10 +181,13 @@ export function WelcomePage() {
               <ScrollArea viewportClassName="max-h-52">
                 <div className="space-y-0.5">
                   {recentWorkspaces.map((workspace) => (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="default"
+                      type="button"
                       key={workspace}
                       onClick={() => handleOpenRecent(workspace)}
-                      className="hover:bg-muted/40 group flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors"
+                      className="hover:bg-muted/40 group h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left transition-colors"
                     >
                       <FolderOpen className="text-muted-foreground/30 group-hover:text-muted-foreground/60 h-4 w-4 shrink-0 transition-colors" />
                       <div className="min-w-0 flex-1">
@@ -186,7 +196,7 @@ export function WelcomePage() {
                         </div>
                         <div className="text-muted-foreground/40 truncate text-xs">{workspace}</div>
                       </div>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </ScrollArea>
