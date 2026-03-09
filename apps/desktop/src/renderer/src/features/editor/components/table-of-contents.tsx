@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { extractHeadings } from "@/lib/heading-extractor";
 import { useActiveHeading, useTocScroll } from "../hooks";
@@ -39,7 +40,9 @@ export function TableOfContents({ content, noteId }: TableOfContentsProps) {
         {headings.map((heading, index) => {
           const isActive = activeId === heading.id;
           return (
-            <button
+            <Button
+              variant="ghost"
+              type="button"
               key={`${heading.id}-${index}`}
               ref={(el) => {
                 if (el) {
@@ -50,7 +53,7 @@ export function TableOfContents({ content, noteId }: TableOfContentsProps) {
               }}
               onClick={() => handleClick(heading.id)}
               className={cn(
-                "w-full cursor-pointer overflow-hidden rounded-md px-3 py-2 text-left transition-colors duration-200",
+                "h-auto w-full justify-start overflow-hidden px-3 py-2 text-left",
                 isActive ? "bg-accent/50 text-foreground hover:bg-accent/60" : "text-foreground/90 hover:bg-accent/30"
               )}
               style={{
@@ -58,7 +61,7 @@ export function TableOfContents({ content, noteId }: TableOfContentsProps) {
               }}
             >
               <span className="block truncate text-sm font-medium">{heading.text}</span>
-            </button>
+            </Button>
           );
         })}
       </nav>
