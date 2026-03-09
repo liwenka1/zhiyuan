@@ -42,9 +42,7 @@ export function GitHubTab() {
     createProject,
     removeProject
   } = useGitHubSettingsStore();
-  const [localOwner, setLocalOwner] = useState("");
-  const [localRepo, setLocalRepo] = useState("");
-  const [localToken, setLocalToken] = useState("");
+  const [drafts, setDrafts] = useState<Record<string, { owner: string; repo: string; token: string }>>({});
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -53,25 +51,30 @@ export function GitHubTab() {
     }
   }, [isLoaded, load]);
 
-  useEffect(() => {
-    setLocalOwner(owner);
-    setLocalRepo(repo);
-    setLocalToken(token);
-  }, [owner, repo, token, activeProjectKey]);
-
   const projectKeys = Array.from(
     new Set([...Object.keys(projectConfigs), activeProjectKey, DEFAULT_GITHUB_PROJECT_KEY])
   );
+  const activeDraft = drafts[activeProjectKey] ?? { owner, repo, token };
 
   const handleReset = () => {
-    setLocalOwner(owner);
-    setLocalRepo(repo);
-    setLocalToken(token);
+    setDrafts((prev) => ({
+      ...prev,
+      [activeProjectKey]: { owner, repo, token }
+    }));
   };
 
   const handleBlur = async () => {
-    if (localOwner !== owner || localRepo !== repo || localToken !== token) {
-      await update({ owner: localOwner.trim(), repo: localRepo.trim(), token: localToken.trim() });
+    if (activeDraft.owner !== owner || activeDraft.repo !== repo || activeDraft.token !== token) {
+      const next = {
+        owner: activeDraft.owner.trim(),
+        repo: activeDraft.repo.trim(),
+        token: activeDraft.token.trim()
+      };
+      await update(next);
+      setDrafts((prev) => ({
+        ...prev,
+        [activeProjectKey]: next
+      }));
     }
   };
 
@@ -121,7 +124,7 @@ export function GitHubTab() {
               <SelectTrigger className="w-full" aria-label={t("settings.githubProject")}>
                 <SelectValue>{activeProjectLabel}</SelectValue>
               </SelectTrigger>
-              <SelectContent align="end">
+              <SelectContent align="start" alignItemWithTrigger={false} className="min-w-0">
                 <SelectGroup>
                   <SelectLabel>{t("settings.githubProjectSelectTitle")}</SelectLabel>
                   {projectKeys.map((projectKey, index) => (
@@ -152,8 +155,13 @@ export function GitHubTab() {
         </SettingRow>
         <SettingRow label={t("settings.githubOwner")}>
           <Input
-            value={localOwner}
-            onChange={(event) => setLocalOwner(event.target.value)}
+            value={activeDraft.owner}
+            onChange={(event) =>
+              setDrafts((prev) => ({
+                ...prev,
+                [activeProjectKey]: { ...activeDraft, owner: event.target.value }
+              }))
+            }
             onBlur={handleBlur}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
@@ -165,8 +173,13 @@ export function GitHubTab() {
         </SettingRow>
         <SettingRow label={t("settings.githubRepo")}>
           <Input
-            value={localRepo}
-            onChange={(event) => setLocalRepo(event.target.value)}
+            value={activeDraft.repo}
+            onChange={(event) =>
+              setDrafts((prev) => ({
+                ...prev,
+                [activeProjectKey]: { ...activeDraft, repo: event.target.value }
+              }))
+            }
             onBlur={handleBlur}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
@@ -179,8 +192,13 @@ export function GitHubTab() {
         <SettingRow label={t("settings.githubToken")}>
           <Input
             type="password"
-            value={localToken}
-            onChange={(event) => setLocalToken(event.target.value)}
+            value={activeDraft.token}
+            onChange={(event) =>
+              setDrafts((prev) => ({
+                ...prev,
+                [activeProjectKey]: { ...activeDraft, token: event.target.value }
+              }))
+            }
             onBlur={handleBlur}
             onKeyDown={(event) => {
               if (event.key === "Escape") {

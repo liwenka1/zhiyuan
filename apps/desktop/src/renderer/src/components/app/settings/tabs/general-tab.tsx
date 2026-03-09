@@ -2,14 +2,13 @@
  * 通用设置 Tab — 主题 & 语言
  */
 
-import { useState } from "react";
-import { Sun, Monitor, Moon, ChevronDown, Check } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sun, Monitor, Moon } from "lucide-react";
 import { useThemeStore, useLanguageStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import type { ThemeMode } from "@shared";
 import { SettingRow } from "../shared/setting-row";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /* ---------- 主题分段控件 ---------- */
 function ThemeSegmentedControl() {
@@ -53,42 +52,34 @@ const LANGUAGES = [
 function LanguageSelect() {
   const { language, toggleLanguage } = useLanguageStore();
   const { i18n } = useTranslation();
-  const [open, setOpen] = useState(false);
-
-  const currentLabel = LANGUAGES.find((l) => l.value === language)?.label ?? language;
+  const currentLabel = LANGUAGES.find((lang) => lang.value === language)?.label ?? language;
 
   const handleSelect = (lang: "zh" | "en") => {
     if (lang !== language) {
       toggleLanguage();
-      i18n.changeLanguage(lang);
+      void i18n.changeLanguage(lang);
     }
-    setOpen(false);
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button className="border-border hover:bg-muted/40 inline-flex cursor-pointer items-center gap-6 rounded-lg border px-3 py-1.5 text-xs transition-colors">
-          <span>{currentLabel}</span>
-          <ChevronDown className="text-muted-foreground h-3.5 w-3.5" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={4} className="w-36 gap-0 p-1">
+    <Select
+      value={language}
+      onValueChange={(value) => {
+        if (!value) return;
+        handleSelect(value as "zh" | "en");
+      }}
+    >
+      <SelectTrigger size="sm" className="h-8 min-w-32 rounded-lg px-3 text-xs">
+        <SelectValue>{currentLabel}</SelectValue>
+      </SelectTrigger>
+      <SelectContent align="start" alignItemWithTrigger={false} className="min-w-0">
         {LANGUAGES.map((lang) => (
-          <button
-            key={lang.value}
-            onClick={() => handleSelect(lang.value)}
-            className={cn(
-              "flex w-full cursor-pointer items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
-              language === lang.value ? "text-foreground font-medium" : "text-muted-foreground hover:bg-muted/40"
-            )}
-          >
+          <SelectItem key={lang.value} value={lang.value}>
             {lang.label}
-            {language === lang.value && <Check className="h-3.5 w-3.5" />}
-          </button>
+          </SelectItem>
         ))}
-      </PopoverContent>
-    </Popover>
+      </SelectContent>
+    </Select>
   );
 }
 
