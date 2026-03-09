@@ -152,7 +152,7 @@ export function WelcomePage() {
               size="default"
               type="button"
               onClick={handleOpenFolder}
-              className="bg-foreground/6 hover:bg-foreground/10 border-border/60 hover:border-border h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5 transition-colors"
+              className="h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5"
             >
               <FolderOpen className="text-muted-foreground h-4 w-4" />
               <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFolder")}</span>
@@ -163,7 +163,7 @@ export function WelcomePage() {
               size="default"
               type="button"
               onClick={handleOpenFile}
-              className="bg-foreground/6 hover:bg-foreground/10 border-border/60 hover:border-border h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5 transition-colors"
+              className="h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5"
             >
               <FileText className="text-muted-foreground h-4 w-4" />
               <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFile")}</span>
@@ -187,7 +187,7 @@ export function WelcomePage() {
                       type="button"
                       key={workspace}
                       onClick={() => handleOpenRecent(workspace)}
-                      className="hover:bg-muted/40 group h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left transition-colors"
+                      className="group h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left"
                     >
                       <FolderOpen className="text-muted-foreground/30 group-hover:text-muted-foreground/60 h-4 w-4 shrink-0 transition-colors" />
                       <div className="min-w-0 flex-1">
