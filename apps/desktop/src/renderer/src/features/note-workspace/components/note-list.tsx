@@ -36,8 +36,7 @@ import { cn, formatDateTime } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useDraggable } from "@dnd-kit/core";
 import { useViewStore, useNoteStore } from "@/stores";
-import { utilsIpc } from "@/ipc";
-import { toast } from "sonner";
+import { useExternalMarkdownDrop } from "@/hooks";
 
 interface Note {
   id: string;
@@ -135,76 +134,10 @@ export function NoteList({
   const inputRef = useRef<HTMLInputElement>(null);
   const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
-  const [isFileDropHover, setIsFileDropHover] = useState(false);
-  const [isImportingExternal, setIsImportingExternal] = useState(false);
-  const fileDragDepthRef = useRef(0);
-
-  const isFileDragEvent = (event: DragEvent): boolean => {
-    return event.dataTransfer?.types?.includes("Files") ?? false;
-  };
-
-  const handleExternalDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!isFileDragEvent(event.nativeEvent)) return;
-    event.preventDefault();
-    fileDragDepthRef.current += 1;
-    setIsFileDropHover(true);
-  };
-
-  const handleExternalDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    if (!isFileDragEvent(event.nativeEvent)) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
-    if (!isFileDropHover) {
-      setIsFileDropHover(true);
-    }
-  };
-
-  const handleExternalDragLeave = (_event: React.DragEvent<HTMLDivElement>) => {
-    fileDragDepthRef.current = Math.max(0, fileDragDepthRef.current - 1);
-    if (fileDragDepthRef.current === 0) {
-      setIsFileDropHover(false);
-    }
-  };
-
-  const handleExternalDrop = async (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    fileDragDepthRef.current = 0;
-    setIsFileDropHover(false);
-    if (isImportingExternal || !onImportExternalMarkdownFiles) return;
-
-    const files = event.dataTransfer?.files;
-    if (!files || files.length === 0) return;
-    const markdownPaths = Array.from(files)
-      .filter((file) => file.name.toLowerCase().endsWith(".md"))
-      .map((file) => utilsIpc.getPathForFile(file))
-      .filter((filePath) => !!filePath);
-
-    if (markdownPaths.length === 0) {
-      toast.error(t("externalDrop.onlyMarkdown"));
-      return;
-    }
-
-    setIsImportingExternal(true);
-    try {
-      const result = await onImportExternalMarkdownFiles(markdownPaths);
-      if (result.importedCount > 0) {
-        toast.success(
-          result.skippedCount > 0
-            ? t("externalDrop.importSuccessWithSkipped", {
-                importedCount: result.importedCount,
-                skippedCount: result.skippedCount
-              })
-            : t("externalDrop.importSuccess", { count: result.importedCount })
-        );
-      } else {
-        toast.error(t("externalDrop.importFailed"));
-      }
-    } catch {
-      toast.error(t("externalDrop.importFailed"));
-    } finally {
-      setIsImportingExternal(false);
-    }
-  };
+  const { isImportingExternal, dragHandlers } = useExternalMarkdownDrop({
+    onImportExternalMarkdownFiles,
+    onHoverChange: onExternalFileDragHoverChange
+  });
 
   const handleSearchToggle = useCallback(() => {
     if (isSearchExpanded) {
@@ -216,14 +149,6 @@ export function NoteList({
       setIsSearchExpanded(true);
     }
   }, [isSearchExpanded, onSearchChange, setIsSearchExpanded]);
-
-  useEffect(() => {
-    onExternalFileDragHoverChange?.(isFileDropHover);
-  }, [isFileDropHover, onExternalFileDragHoverChange]);
-
-  useEffect(() => {
-    return () => onExternalFileDragHoverChange?.(false);
-  }, [onExternalFileDragHoverChange]);
 
   useEffect(() => {
     const handleCreateFromUrl = () => onCreateFromUrl?.();
@@ -251,6 +176,7 @@ export function NoteList({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: notes.length,
     getScrollElement: () => parentRef.current,
@@ -261,10 +187,10 @@ export function NoteList({
   return (
     <div
       className="flex h-full flex-col"
-      onDragEnter={handleExternalDragEnter}
-      onDragOver={handleExternalDragOver}
-      onDragLeave={handleExternalDragLeave}
-      onDrop={handleExternalDrop}
+      onDragEnter={dragHandlers.onDragEnter}
+      onDragOver={dragHandlers.onDragOver}
+      onDragLeave={dragHandlers.onDragLeave}
+      onDrop={dragHandlers.onDrop}
     >
       {/* 顶部搜索栏 */}
       <div className="flex h-12 shrink-0 items-center gap-2 overflow-hidden px-3">

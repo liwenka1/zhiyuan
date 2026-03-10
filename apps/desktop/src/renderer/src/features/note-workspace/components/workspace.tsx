@@ -69,7 +69,8 @@ export function NoteWorkspace() {
   // 数据派生
   const { formattedNotes, foldersWithCount } = useNoteData();
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
-  const [isExternalFileDropHover, setIsExternalFileDropHover] = useState(false);
+  const [isNoteListExternalFileDropHover, setIsNoteListExternalFileDropHover] = useState(false);
+  const [isEditorExternalFileDropHover, setIsEditorExternalFileDropHover] = useState(false);
 
   const moveNote = useNoteStore((state) => state.moveNote);
 
@@ -110,14 +111,18 @@ export function NoteWorkspace() {
 
       const result = await workspaceIpc.importMarkdownFiles(sourcePaths, targetDir);
       const refreshed = await workspaceIpc.scan(workspacePath);
+      const importedNoteIds = (result.importedPaths ?? []).map((filePath) =>
+        filePath.replaceAll("\\", "/").replace(`${workspacePath.replaceAll("\\", "/")}/`, "")
+      );
       if (refreshed) {
         setFolders(refreshed.folders);
-        loadFromFileSystem(refreshed);
+        await loadFromFileSystem(refreshed);
       }
-      return result;
+      return { ...result, importedNoteIds };
     },
     [folders, loadFromFileSystem, selectedFolderId, setFolders, workspacePath]
   );
+  const handleOpenImportedMarkdownNote = useCallback((noteId: string) => selectNote(noteId), [selectNote]);
   const cursorOverlayModifier: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
     if (!activeNodeRect || !activatorEvent) return transform;
 
@@ -164,7 +169,8 @@ export function NoteWorkspace() {
       onDragCancel={() => setDraggingNoteId(null)}
     >
       <MainLayout
-        showRightSidebarDropMask={isExternalFileDropHover}
+        showRightSidebarDropMask={isNoteListExternalFileDropHover}
+        showMainContentDropMask={isEditorExternalFileDropHover}
         leftSidebar={
           <FolderTree
             folders={foldersWithCount}
@@ -199,7 +205,7 @@ export function NoteWorkspace() {
             onCopyToWechat={noteHandlers.handleCopyToWechat}
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
-            onExternalFileDragHoverChange={setIsExternalFileDropHover}
+            onExternalFileDragHoverChange={setIsNoteListExternalFileDropHover}
           />
         }
         mainContent={
@@ -216,6 +222,9 @@ export function NoteWorkspace() {
             onExportNote={noteHandlers.handleExportNote}
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onDeleteNote={noteHandlers.handleDeleteNote}
+            onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
+            onExternalFileDragHoverChange={setIsEditorExternalFileDropHover}
+            onOpenImportedMarkdownNote={handleOpenImportedMarkdownNote}
           />
         }
       />
