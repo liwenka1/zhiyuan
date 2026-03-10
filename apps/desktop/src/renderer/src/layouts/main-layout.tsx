@@ -13,6 +13,7 @@ interface MainLayoutProps {
   rightSidebar: ReactNode;
   mainContent: ReactNode;
   showRightSidebarDropMask?: boolean;
+  showMainContentDropMask?: boolean;
 }
 
 // 动画过渡样式
@@ -22,7 +23,8 @@ export function MainLayout({
   leftSidebar,
   rightSidebar,
   mainContent,
-  showRightSidebarDropMask = false
+  showRightSidebarDropMask = false,
+  showMainContentDropMask = false
 }: MainLayoutProps) {
   const { isMac, isWindows } = usePlatform();
   const showFolderSidebar = useViewStore((state) => state.showFolderSidebar);
@@ -44,6 +46,10 @@ export function MainLayout({
     left: 0,
     width: 0
   });
+  const [mainContentMaskRect, setMainContentMaskRect] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0
+  });
 
   const syncRightSidebarMaskRect = useCallback(() => {
     const outer = outerContainerRef.current;
@@ -51,10 +57,17 @@ export function MainLayout({
     if (!outer || !notePanel) return;
     const outerRect = outer.getBoundingClientRect();
     const noteRect = notePanel.getBoundingClientRect();
+    const mainRect = mainPanelElementRef.current?.getBoundingClientRect();
     setRightSidebarMaskRect({
       left: Math.max(0, noteRect.left - outerRect.left),
       width: Math.max(0, noteRect.width)
     });
+    if (mainRect) {
+      setMainContentMaskRect({
+        left: Math.max(0, mainRect.left - outerRect.left),
+        width: Math.max(0, mainRect.width)
+      });
+    }
   }, []);
 
   // 标记是否是编程触发的变化（用于区分拖拽和按钮点击）
@@ -159,6 +172,13 @@ export function MainLayout({
         visible={showRightSidebarDropMask && rightSidebarMaskRect.width > 0}
         left={rightSidebarMaskRect.left}
         width={rightSidebarMaskRect.width}
+        bottomGapPx={8}
+      />
+      <DropHoverMask
+        visible={showMainContentDropMask && mainContentMaskRect.width > 0}
+        left={mainContentMaskRect.left}
+        width={mainContentMaskRect.width}
+        bottomGapPx={0}
       />
 
       {/* 固定的文件夹切换按钮 - 文件夹收起且搜索展开时隐藏 */}

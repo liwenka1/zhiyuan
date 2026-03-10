@@ -4,6 +4,7 @@ import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
 import { useViewStore, useNoteStore } from "@/stores";
+import { useExternalMarkdownDrop } from "@/hooks";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, useGroupRef } from "@/components/ui/resizable";
 import { TerminalPanel } from "@/features/terminal/components/terminal-panel";
 import type { Note } from "@/types";
@@ -24,6 +25,9 @@ interface EditorAreaProps {
   ) => void;
   onDeleteNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onPushToGitHub?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
+  onExternalFileDragHoverChange?: (hovering: boolean) => void;
+  onOpenImportedMarkdownNote?: (noteId: string) => void;
 }
 
 export function EditorArea({
@@ -38,7 +42,10 @@ export function EditorArea({
   onDuplicateNote,
   onExportNote,
   onDeleteNote,
-  onPushToGitHub
+  onPushToGitHub,
+  onImportExternalMarkdownFiles,
+  onExternalFileDragHoverChange,
+  onOpenImportedMarkdownNote
 }: EditorAreaProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const splitLayout = useViewStore((state) => state.splitLayout);
@@ -52,6 +59,18 @@ export function EditorArea({
   const isOuterProgrammaticRef = useRef(false);
   const outerMainPanelId = "editor-area-main";
   const outerTerminalPanelId = "editor-area-terminal";
+  const { dragHandlers } = useExternalMarkdownDrop({
+    onImportExternalMarkdownFiles,
+    onHoverChange: onExternalFileDragHoverChange,
+    onImportCompleted: (result) => {
+      const importedNoteIds = result.importedNoteIds ?? [];
+      if (importedNoteIds.length === 0) return;
+      const latestImportedNoteId = importedNoteIds[importedNoteIds.length - 1];
+      if (latestImportedNoteId) {
+        onOpenImportedMarkdownNote?.(latestImportedNoteId);
+      }
+    }
+  });
 
   const openNotes = useMemo(
     () => openNoteIds.map((id) => notes.find((note) => note.id === id)).filter(Boolean) as Note[],
@@ -138,7 +157,13 @@ export function EditorArea({
     );
 
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className="flex h-full flex-col"
+      onDragEnter={dragHandlers.onDragEnter}
+      onDragOver={dragHandlers.onDragOver}
+      onDragLeave={dragHandlers.onDragLeave}
+      onDrop={dragHandlers.onDrop}
+    >
       <EditorToolbar
         content={content}
         onShowNoteInExplorer={onShowNoteInExplorer}
