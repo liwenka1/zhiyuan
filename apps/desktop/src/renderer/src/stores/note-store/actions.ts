@@ -6,7 +6,7 @@ import i18n from "@/lib/i18n";
 import { toast } from "sonner";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
-import { fileIpc, configIpc } from "@/ipc";
+import { fileIpc, configIpc, watcherIpc } from "@/ipc";
 import { clearDebouncedSave } from "./persistence";
 
 export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
@@ -271,6 +271,79 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           state.playingNoteIds = state.playingNoteIds.filter((id) => id !== noteId);
         }
       });
+    },
+
+    moveNote: async (noteId: string, targetFolderId: string) => {
+      const workspacePath = useWorkspaceStore.getState().workspacePath;
+      const note = get().notes.find((n) => n.id === noteId);
+      const folders = useFolderStore.getState().folders;
+      const targetFolder = folders.find((f) => f.id === targetFolderId);
+
+      if (!workspacePath || !note?.filePath || !note.fileName) {
+        toast.error(i18n.t("note:errors.noWorkspace"));
+        return;
+      }
+      if (!targetFolder?.path) {
+        toast.error(i18n.t("note:errors.moveNoteFailed"));
+        return;
+      }
+      if (note.folderId === targetFolderId) {
+        return;
+      }
+
+      const newFilePath = `${targetFolder.path}/${note.fileName}`;
+
+      try {
+        await watcherIpc.pause();
+        const exists = await fileIpc.exists(newFilePath);
+        if (exists) {
+          toast.error(i18n.t("note:errors.moveNoteTargetExists"));
+          return;
+        }
+        await fileIpc.rename(note.filePath, newFilePath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(
+          message ? `${i18n.t("note:errors.moveNoteFailed")}: ${message}` : i18n.t("note:errors.moveNoteFailed")
+        );
+        return;
+      } finally {
+        await watcherIpc.resume();
+      }
+
+      const newNoteId = targetFolderId + "/" + note.fileName;
+      set((state) => {
+        const targetNote = state.notes.find((n) => n.id === noteId);
+        if (targetNote) {
+          targetNote.id = newNoteId;
+          targetNote.filePath = newFilePath;
+          targetNote.folderId = targetFolderId;
+          targetNote.updatedAt = new Date().toISOString();
+        }
+        const openIndex = state.openNoteIds.indexOf(noteId);
+        if (openIndex !== -1) {
+          state.openNoteIds[openIndex] = newNoteId;
+        }
+        const playingIndex = state.playingNoteIds.indexOf(noteId);
+        if (playingIndex !== -1) {
+          state.playingNoteIds[playingIndex] = newNoteId;
+        }
+        if (state.selectedNoteId === noteId) {
+          state.selectedNoteId = newNoteId;
+        }
+      });
+
+      const folderStore = useFolderStore.getState();
+      folderStore.setFolders(
+        folderStore.folders.map((f) =>
+          f.id === targetFolderId
+            ? { ...f, noteCount: (f.noteCount ?? 0) + 1 }
+            : f.id === note.folderId
+              ? { ...f, noteCount: Math.max(0, (f.noteCount ?? 0) - 1) }
+              : f
+        )
+      );
+      toast.success(i18n.t("note:moveNoteSuccess"));
     }
   };
 }

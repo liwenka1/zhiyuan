@@ -18,6 +18,8 @@ export const fileIpc = {
   copy: async (sourcePath: string, destPath: string) =>
     unwrapIpcResult(await window.api.file.copy(sourcePath, destPath)),
 
+  exists: async (filePath: string) => unwrapIpcResult(await window.api.file.exists(filePath)),
+
   // 事件监听不需要 unwrap，直接透传
   onChanged: window.api.file.onChanged,
   onAdded: window.api.file.onAdded,

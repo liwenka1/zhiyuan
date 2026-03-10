@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/context-menu";
 import { cn, formatDateTime } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { useDraggable } from "@dnd-kit/core";
 import { useViewStore, useNoteStore } from "@/stores";
 
 interface Note {
@@ -41,6 +42,50 @@ interface Note {
   title: string;
   updatedAt?: string;
   isPinned?: boolean;
+}
+
+const NOTE_DRAG_PREFIX = "note-";
+
+function DraggableNoteRow({
+  note,
+  virtualRowIndex,
+  virtualRowStart,
+  measureRef,
+  children
+}: {
+  note: Note;
+  virtualRowIndex: number;
+  virtualRowStart: number;
+  measureRef: (el: HTMLDivElement | null) => void;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
+    id: NOTE_DRAG_PREFIX + note.id,
+    data: { noteId: note.id }
+  });
+  const refCallback = useCallback(
+    (el: HTMLDivElement | null) => {
+      measureRef(el);
+      setNodeRef(el);
+    },
+    [measureRef, setNodeRef]
+  );
+  const style: React.CSSProperties = {
+    transform: `translateY(${virtualRowStart}px)`,
+    opacity: isDragging ? 0.25 : 1
+  };
+  return (
+    <div
+      ref={refCallback}
+      data-index={virtualRowIndex}
+      className={cn("absolute right-0 left-0 px-2", isDragging ? "cursor-grabbing" : "cursor-grab")}
+      style={style}
+      {...listeners}
+      {...attributes}
+    >
+      {children}
+    </div>
+  );
 }
 
 interface NoteListProps {
@@ -278,11 +323,11 @@ export function NoteList({
               return (
                 <ContextMenu key={note.id}>
                   <ContextMenuTrigger asChild>
-                    <div
-                      ref={rowVirtualizer.measureElement}
-                      data-index={virtualRow.index}
-                      className="absolute right-0 left-0 px-2"
-                      style={{ transform: `translateY(${virtualRow.start}px)` }}
+                    <DraggableNoteRow
+                      note={note}
+                      virtualRowIndex={virtualRow.index}
+                      virtualRowStart={virtualRow.start}
+                      measureRef={rowVirtualizer.measureElement}
                     >
                       <ListRow
                         layoutId="note-hover-bg"
@@ -324,7 +369,7 @@ export function NoteList({
                           ) : null
                         }
                       />
-                    </div>
+                    </DraggableNoteRow>
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>

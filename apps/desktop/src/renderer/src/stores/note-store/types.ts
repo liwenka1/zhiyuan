@@ -22,6 +22,7 @@ export interface NoteStore extends NoteStoreState {
   renameNote: (noteId: string, newTitle: string) => Promise<void>;
   duplicateNote: (noteId: string) => Promise<void>;
   togglePinNote: (noteId: string) => Promise<void>;
+  moveNote: (noteId: string, targetFolderId: string) => Promise<void>;
 
   setSearchKeyword: (keyword: string) => void;
 

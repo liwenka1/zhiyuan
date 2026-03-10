@@ -1,6 +1,6 @@
 import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss, RefreshCw, Unlink } from "lucide-react";
 
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { useDroppable } from "@dnd-kit/core";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { ListRow } from "@/components/app/list-row";
@@ -15,11 +15,57 @@ import { cn } from "@/lib/utils";
 
 import { SettingsPopover } from "@/components/app";
 import { useTranslation } from "react-i18next";
-import { useRef, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useViewStore } from "@/stores";
 
 // 特殊 ID 表示「全部笔记」
 export const ALL_NOTES_FOLDER_ID = "__all__";
+
+const FOLDER_DROP_PREFIX = "folder-";
+
+function DroppableFolderRow({
+  droppableId,
+  isSelected,
+  isHovered,
+  onSelectFolder,
+  onMouseEnter,
+  onMouseLeave,
+  leading,
+  label,
+  trailing
+}: {
+  droppableId: string;
+  isSelected: boolean;
+  isHovered: boolean;
+  onSelectFolder: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  leading: React.ReactNode;
+  label: React.ReactNode;
+  trailing: React.ReactNode | null;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: droppableId
+  });
+
+  return (
+    <div ref={setNodeRef}>
+      <ListRow
+        layoutId="hover-bg"
+        hovered={isHovered || isOver}
+        selected={isSelected}
+        muted={!isSelected}
+        className={cn(isOver && "ring-primary/40 bg-accent ring-1")}
+        leading={leading}
+        label={label}
+        trailing={trailing}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        onClick={onSelectFolder}
+      />
+    </div>
+  );
+}
 
 interface FolderItem {
   id: string;
@@ -60,15 +106,6 @@ export function FolderTree({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   // 是否选中「全部笔记」
   const isAllSelected = selectedFolderId === null;
-  const parentRef = useRef<HTMLDivElement>(null);
-
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const rowVirtualizer = useVirtualizer({
-    count: folders.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 36,
-    overscan: 6
-  });
 
   useEffect(() => {
     const handleCreate = () => onCreateFolder?.();
@@ -111,7 +148,7 @@ export function FolderTree({
       </div>
 
       {/* 文件夹列表 */}
-      <ScrollArea className="flex-1 overflow-hidden" viewportRef={parentRef}>
+      <ScrollArea className="flex-1 overflow-hidden">
         <div className="space-y-0.5 px-2">
           {/* 全部笔记 - 始终显示在最上方 */}
           <ListRow
@@ -128,39 +165,30 @@ export function FolderTree({
           />
 
           {/* 文件夹列表 */}
-          <div style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const folder = folders[virtualRow.index];
-              if (!folder) return null;
+          <div className="space-y-0.5">
+            {folders.map((folder) => {
               const isSelected = selectedFolderId === folder.id;
               const isHovered = hoveredId === folder.id;
               return (
                 <ContextMenu key={folder.id}>
                   <ContextMenuTrigger asChild>
-                    <div
-                      className="absolute right-0 left-0"
-                      ref={rowVirtualizer.measureElement}
-                      style={{ transform: `translateY(${virtualRow.start}px)` }}
-                    >
-                      <ListRow
-                        layoutId="hover-bg"
-                        hovered={isHovered}
-                        selected={isSelected}
-                        muted={!isSelected}
-                        leading={
-                          folder.isRss ? <Rss className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />
-                        }
-                        label={folder.name}
-                        trailing={
-                          folder.noteCount !== undefined ? (
-                            <span className="text-tertiary-foreground text-xs tabular-nums">{folder.noteCount}</span>
-                          ) : null
-                        }
-                        onMouseEnter={() => setHoveredId(folder.id)}
-                        onMouseLeave={() => setHoveredId(null)}
-                        onClick={() => onSelectFolder?.(folder.id)}
-                      />
-                    </div>
+                    <DroppableFolderRow
+                      droppableId={FOLDER_DROP_PREFIX + folder.id}
+                      isSelected={isSelected}
+                      isHovered={isHovered}
+                      onSelectFolder={() => onSelectFolder?.(folder.id)}
+                      onMouseEnter={() => setHoveredId(folder.id)}
+                      onMouseLeave={() => setHoveredId(null)}
+                      leading={
+                        folder.isRss ? <Rss className="h-4 w-4 shrink-0" /> : <Folder className="h-4 w-4 shrink-0" />
+                      }
+                      label={folder.name}
+                      trailing={
+                        folder.noteCount !== undefined ? (
+                          <span className="text-tertiary-foreground text-xs tabular-nums">{folder.noteCount}</span>
+                        ) : null
+                      }
+                    />
                   </ContextMenuTrigger>
                   <ContextMenuContent>
                     <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
