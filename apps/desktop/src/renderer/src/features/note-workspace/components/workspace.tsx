@@ -11,15 +11,16 @@ import {
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { FileText } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
 import { ListRow } from "@/components/app/list-row";
 import { FolderTree } from "./folder-tree";
 import { NoteList } from "./note-list";
 import { NoteDialogs } from "./note-dialogs";
 import { EditorArea } from "@/features/editor";
-import { useNoteStore, useFolderStore } from "@/stores";
+import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { useWorkspaceInit, useNoteHandlers, useFolderHandlers, useNoteData, useDialogState } from "../hooks";
+import { workspaceIpc } from "@/ipc";
 
 const NOTE_DRAG_PREFIX = "note-";
 const FOLDER_DROP_PREFIX = "folder-";
@@ -44,7 +45,11 @@ export function NoteWorkspace() {
   const openNoteIds = useNoteStore((state) => state.openNoteIds);
   const searchKeyword = useNoteStore((state) => state.searchKeyword);
   const notes = useNoteStore((state) => state.notes);
+  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
+  const folders = useFolderStore((state) => state.folders);
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const selectFolder = useFolderStore((state) => state.selectFolder);
+  const setFolders = useFolderStore((state) => state.setFolders);
   const selectNote = useNoteStore((state) => state.selectNote);
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
   const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);
@@ -64,6 +69,7 @@ export function NoteWorkspace() {
   // 数据派生
   const { formattedNotes, foldersWithCount } = useNoteData();
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+  const [isExternalFileDropHover, setIsExternalFileDropHover] = useState(false);
 
   const moveNote = useNoteStore((state) => state.moveNote);
 
@@ -92,6 +98,26 @@ export function NoteWorkspace() {
   };
 
   const draggingNote = draggingNoteId ? notes.find((note) => note.id === draggingNoteId) : null;
+  const handleImportExternalMarkdownFiles = useCallback(
+    async (sourcePaths: string[]) => {
+      if (!workspacePath) {
+        throw new Error("No workspace selected");
+      }
+
+      const targetDir = selectedFolderId
+        ? (folders.find((folder) => folder.id === selectedFolderId)?.path ?? `${workspacePath}/${selectedFolderId}`)
+        : workspacePath;
+
+      const result = await workspaceIpc.importMarkdownFiles(sourcePaths, targetDir);
+      const refreshed = await workspaceIpc.scan(workspacePath);
+      if (refreshed) {
+        setFolders(refreshed.folders);
+        loadFromFileSystem(refreshed);
+      }
+      return result;
+    },
+    [folders, loadFromFileSystem, selectedFolderId, setFolders, workspacePath]
+  );
   const cursorOverlayModifier: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
     if (!activeNodeRect || !activatorEvent) return transform;
 
@@ -138,6 +164,7 @@ export function NoteWorkspace() {
       onDragCancel={() => setDraggingNoteId(null)}
     >
       <MainLayout
+        showRightSidebarDropMask={isExternalFileDropHover}
         leftSidebar={
           <FolderTree
             folders={foldersWithCount}
@@ -171,6 +198,8 @@ export function NoteWorkspace() {
             onExportNote={noteHandlers.handleExportNote}
             onCopyToWechat={noteHandlers.handleCopyToWechat}
             onPushToGitHub={noteHandlers.handlePushToGitHub}
+            onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
+            onExternalFileDragHoverChange={setIsExternalFileDropHover}
           />
         }
         mainContent={

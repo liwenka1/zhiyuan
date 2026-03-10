@@ -63,6 +63,16 @@ export interface WorkspaceAPI {
     }>
   >;
   getRecent: () => Promise<IpcResultDTO<string[]>>;
+  importMarkdownFiles: (
+    sourcePaths: string[],
+    targetDir: string
+  ) => Promise<
+    IpcResultDTO<{
+      importedCount: number;
+      skippedCount: number;
+      importedPaths: string[];
+    }>
+  >;
   onMenuOpenFolder: (callback: () => void) => () => void;
   onMenuOpenFile: (callback: () => void) => () => void;
   onExternalOpen: (callback: (payload: { workspacePath: string; filePath?: string }) => void) => () => void;

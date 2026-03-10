@@ -36,6 +36,8 @@ import { cn, formatDateTime } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useDraggable } from "@dnd-kit/core";
 import { useViewStore, useNoteStore } from "@/stores";
+import { utilsIpc } from "@/ipc";
+import { toast } from "sonner";
 
 interface Note {
   id: string;
@@ -104,6 +106,8 @@ interface NoteListProps {
   onExportNote?: (note: Note, format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages") => void;
   onCopyToWechat?: (note: Note) => void;
   onPushToGitHub?: (note: Note) => void;
+  onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
+  onExternalFileDragHoverChange?: (hovering: boolean) => void;
 }
 
 export function NoteList({
@@ -121,7 +125,9 @@ export function NoteList({
   onTogglePinNote,
   onExportNote,
   onCopyToWechat,
-  onPushToGitHub
+  onPushToGitHub,
+  onImportExternalMarkdownFiles,
+  onExternalFileDragHoverChange
 }: NoteListProps) {
   const { t } = useTranslation("note");
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
@@ -129,6 +135,76 @@ export function NoteList({
   const inputRef = useRef<HTMLInputElement>(null);
   const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
+  const [isFileDropHover, setIsFileDropHover] = useState(false);
+  const [isImportingExternal, setIsImportingExternal] = useState(false);
+  const fileDragDepthRef = useRef(0);
+
+  const isFileDragEvent = (event: DragEvent): boolean => {
+    return event.dataTransfer?.types?.includes("Files") ?? false;
+  };
+
+  const handleExternalDragEnter = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!isFileDragEvent(event.nativeEvent)) return;
+    event.preventDefault();
+    fileDragDepthRef.current += 1;
+    setIsFileDropHover(true);
+  };
+
+  const handleExternalDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!isFileDragEvent(event.nativeEvent)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    if (!isFileDropHover) {
+      setIsFileDropHover(true);
+    }
+  };
+
+  const handleExternalDragLeave = (_event: React.DragEvent<HTMLDivElement>) => {
+    fileDragDepthRef.current = Math.max(0, fileDragDepthRef.current - 1);
+    if (fileDragDepthRef.current === 0) {
+      setIsFileDropHover(false);
+    }
+  };
+
+  const handleExternalDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    fileDragDepthRef.current = 0;
+    setIsFileDropHover(false);
+    if (isImportingExternal || !onImportExternalMarkdownFiles) return;
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+    const markdownPaths = Array.from(files)
+      .filter((file) => file.name.toLowerCase().endsWith(".md"))
+      .map((file) => utilsIpc.getPathForFile(file))
+      .filter((filePath) => !!filePath);
+
+    if (markdownPaths.length === 0) {
+      toast.error(t("externalDrop.onlyMarkdown"));
+      return;
+    }
+
+    setIsImportingExternal(true);
+    try {
+      const result = await onImportExternalMarkdownFiles(markdownPaths);
+      if (result.importedCount > 0) {
+        toast.success(
+          result.skippedCount > 0
+            ? t("externalDrop.importSuccessWithSkipped", {
+                importedCount: result.importedCount,
+                skippedCount: result.skippedCount
+              })
+            : t("externalDrop.importSuccess", { count: result.importedCount })
+        );
+      } else {
+        toast.error(t("externalDrop.importFailed"));
+      }
+    } catch {
+      toast.error(t("externalDrop.importFailed"));
+    } finally {
+      setIsImportingExternal(false);
+    }
+  };
 
   const handleSearchToggle = useCallback(() => {
     if (isSearchExpanded) {
@@ -140,6 +216,14 @@ export function NoteList({
       setIsSearchExpanded(true);
     }
   }, [isSearchExpanded, onSearchChange, setIsSearchExpanded]);
+
+  useEffect(() => {
+    onExternalFileDragHoverChange?.(isFileDropHover);
+  }, [isFileDropHover, onExternalFileDragHoverChange]);
+
+  useEffect(() => {
+    return () => onExternalFileDragHoverChange?.(false);
+  }, [onExternalFileDragHoverChange]);
 
   useEffect(() => {
     const handleCreateFromUrl = () => onCreateFromUrl?.();
@@ -167,7 +251,6 @@ export function NoteList({
 
   const parentRef = useRef<HTMLDivElement>(null);
 
-  // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
     count: notes.length,
     getScrollElement: () => parentRef.current,
@@ -176,7 +259,13 @@ export function NoteList({
   });
 
   return (
-    <div className="flex h-full flex-col">
+    <div
+      className="flex h-full flex-col"
+      onDragEnter={handleExternalDragEnter}
+      onDragOver={handleExternalDragOver}
+      onDragLeave={handleExternalDragLeave}
+      onDrop={handleExternalDrop}
+    >
       {/* 顶部搜索栏 */}
       <div className="flex h-12 shrink-0 items-center gap-2 overflow-hidden px-3">
         <AnimatePresence mode="wait" initial={false}>
@@ -299,150 +388,164 @@ export function NoteList({
       </div>
 
       {/* 笔记列表 */}
-      <ScrollArea className="flex-1 overflow-hidden" viewportRef={parentRef}>
-        {notes.length === 0 ? (
-          <motion.div
-            className="text-muted-foreground flex flex-col items-center justify-center p-6 text-center select-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Inbox className="mb-3 h-10 w-10 opacity-20" />
-            <p className="text-sm font-medium">{searchKeyword ? t("emptyState.noResults") : t("emptyState.noNotes")}</p>
-            <p className="text-tertiary-foreground mt-1 text-xs">
-              {searchKeyword ? t("emptyState.tryOtherKeywords") : t("emptyState.createOrSelect")}
-            </p>
-          </motion.div>
-        ) : (
-          <div className="px-0" style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const note = notes[virtualRow.index];
-              if (!note) return null;
-              const isSelected = selectedNoteId === note.id;
-              const isHovered = hoveredId === note.id;
-              return (
-                <ContextMenu key={note.id}>
-                  <ContextMenuTrigger asChild>
-                    <DraggableNoteRow
-                      note={note}
-                      virtualRowIndex={virtualRow.index}
-                      virtualRowStart={virtualRow.start}
-                      measureRef={rowVirtualizer.measureElement}
-                    >
-                      <ListRow
-                        layoutId="note-hover-bg"
-                        hovered={isHovered}
-                        selected={isSelected}
-                        muted={!isSelected}
-                        align="start"
-                        descriptionFullWidth
-                        onMouseEnter={() => setHoveredId(note.id)}
-                        onMouseLeave={() => setHoveredId(null)}
-                        onClick={() => onSelectNote?.(note.id)}
-                        leading={
-                          playingNoteIds.includes(note.id) ? (
-                            <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
-                          ) : (
-                            <FileText
-                              className={cn(
-                                "mt-0.5 h-3.5 w-3.5 shrink-0",
-                                isSelected ? "text-foreground" : "text-muted-foreground"
-                              )}
-                            />
-                          )
-                        }
-                        label={note.title}
-                        labelClassName={cn(isSelected ? "text-foreground" : "text-muted-foreground")}
-                        description={
-                          note.updatedAt ? (
-                            <div
-                              className={cn(
-                                "mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
-                                isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
-                              )}
-                            >
-                              {note.isPinned ? (
-                                <Pin className={cn("h-3 w-3", isSelected ? "text-highlight" : "text-highlight/70")} />
-                              ) : null}
-                              <span>{formatDateTime(note.updatedAt)}</span>
-                            </div>
-                          ) : null
-                        }
-                      />
-                    </DraggableNoteRow>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
-                      <FolderOpen className="h-4 w-4" />
-                      <span>{t("contextMenu.showInExplorer")}</span>
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => onTogglePinNote?.(note)}>
-                      {note.isPinned ? (
-                        <>
-                          <PinOff className="h-4 w-4" />
-                          <span>{t("contextMenu.unpin")}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Pin className="h-4 w-4" />
-                          <span>{t("contextMenu.pin")}</span>
-                        </>
-                      )}
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => onRenameNote?.(note)}>
-                      <Pencil className="h-4 w-4" />
-                      <span>{t("contextMenu.rename")}</span>
-                    </ContextMenuItem>
-                    <ContextMenuItem onClick={() => onDuplicateNote?.(note)}>
-                      <Copy className="h-4 w-4" />
-                      <span>{t("contextMenu.duplicate")}</span>
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => onPushToGitHub?.(note)}>
-                      <Github className="h-4 w-4" />
-                      <span>{t("contextMenu.pushToGitHub")}</span>
-                    </ContextMenuItem>
-                    <ContextMenuSeparator />
-                    <ContextMenuSub>
-                      <ContextMenuSubTrigger>
-                        <Download className="h-4 w-4" />
-                        <span>{t("contextMenu.export")}</span>
-                      </ContextMenuSubTrigger>
-                      <ContextMenuSubContent>
-                        <ContextMenuItem onClick={() => onExportNote?.(note, "html")}>
-                          <span>{t("contextMenu.exportAsHTML")}</span>
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => onExportNote?.(note, "pdf")}>
-                          <span>{t("contextMenu.exportAsPDF")}</span>
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => onExportNote?.(note, "pdf-pages")}>
-                          <span>{t("contextMenu.exportAsPDFPages")}</span>
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => onExportNote?.(note, "image")}>
-                          <span>{t("contextMenu.exportAsImage")}</span>
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => onExportNote?.(note, "image-pages")}>
-                          <span>{t("contextMenu.exportAsImagePages")}</span>
-                        </ContextMenuItem>
-                        <ContextMenuItem onClick={() => onCopyToWechat?.(note)}>
-                          <span>{t("contextMenu.copyToWechat")}</span>
-                        </ContextMenuItem>
-                      </ContextMenuSubContent>
-                    </ContextMenuSub>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
-                      <Trash2 className="h-4 w-4" />
-                      <span>{t("contextMenu.delete")}</span>
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              );
-            })}
+      <div
+        className={cn(
+          "relative flex-1 overflow-hidden transition-colors duration-200",
+          isImportingExternal && "pointer-events-none opacity-80"
+        )}
+      >
+        {isImportingExternal && (
+          <div className="text-muted-foreground border-divider bg-background/80 absolute top-2 right-2 left-2 z-10 rounded-md border px-2 py-1 text-center text-xs backdrop-blur-sm">
+            {t("externalDrop.importingHint")}
           </div>
         )}
-      </ScrollArea>
+        <ScrollArea className="h-full overflow-hidden" viewportRef={parentRef}>
+          {notes.length === 0 ? (
+            <motion.div
+              className="text-muted-foreground flex flex-col items-center justify-center p-6 text-center select-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Inbox className="mb-3 h-10 w-10 opacity-20" />
+              <p className="text-sm font-medium">
+                {searchKeyword ? t("emptyState.noResults") : t("emptyState.noNotes")}
+              </p>
+              <p className="text-tertiary-foreground mt-1 text-xs">
+                {searchKeyword ? t("emptyState.tryOtherKeywords") : t("emptyState.createOrSelect")}
+              </p>
+            </motion.div>
+          ) : (
+            <div className="px-0" style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const note = notes[virtualRow.index];
+                if (!note) return null;
+                const isSelected = selectedNoteId === note.id;
+                const isHovered = hoveredId === note.id;
+                return (
+                  <ContextMenu key={note.id}>
+                    <ContextMenuTrigger asChild>
+                      <DraggableNoteRow
+                        note={note}
+                        virtualRowIndex={virtualRow.index}
+                        virtualRowStart={virtualRow.start}
+                        measureRef={rowVirtualizer.measureElement}
+                      >
+                        <ListRow
+                          layoutId="note-hover-bg"
+                          hovered={isHovered}
+                          selected={isSelected}
+                          muted={!isSelected}
+                          align="start"
+                          descriptionFullWidth
+                          onMouseEnter={() => setHoveredId(note.id)}
+                          onMouseLeave={() => setHoveredId(null)}
+                          onClick={() => onSelectNote?.(note.id)}
+                          leading={
+                            playingNoteIds.includes(note.id) ? (
+                              <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            ) : (
+                              <FileText
+                                className={cn(
+                                  "mt-0.5 h-3.5 w-3.5 shrink-0",
+                                  isSelected ? "text-foreground" : "text-muted-foreground"
+                                )}
+                              />
+                            )
+                          }
+                          label={note.title}
+                          labelClassName={cn(isSelected ? "text-foreground" : "text-muted-foreground")}
+                          description={
+                            note.updatedAt ? (
+                              <div
+                                className={cn(
+                                  "mt-1.5 flex items-center gap-2.5 text-xs leading-tight",
+                                  isSelected ? "text-muted-foreground" : "text-muted-foreground/80"
+                                )}
+                              >
+                                {note.isPinned ? (
+                                  <Pin className={cn("h-3 w-3", isSelected ? "text-highlight" : "text-highlight/70")} />
+                                ) : null}
+                                <span>{formatDateTime(note.updatedAt)}</span>
+                              </div>
+                            ) : null
+                          }
+                        />
+                      </DraggableNoteRow>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent>
+                      <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
+                        <FolderOpen className="h-4 w-4" />
+                        <span>{t("contextMenu.showInExplorer")}</span>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onTogglePinNote?.(note)}>
+                        {note.isPinned ? (
+                          <>
+                            <PinOff className="h-4 w-4" />
+                            <span>{t("contextMenu.unpin")}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pin className="h-4 w-4" />
+                            <span>{t("contextMenu.pin")}</span>
+                          </>
+                        )}
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onRenameNote?.(note)}>
+                        <Pencil className="h-4 w-4" />
+                        <span>{t("contextMenu.rename")}</span>
+                      </ContextMenuItem>
+                      <ContextMenuItem onClick={() => onDuplicateNote?.(note)}>
+                        <Copy className="h-4 w-4" />
+                        <span>{t("contextMenu.duplicate")}</span>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onPushToGitHub?.(note)}>
+                        <Github className="h-4 w-4" />
+                        <span>{t("contextMenu.pushToGitHub")}</span>
+                      </ContextMenuItem>
+                      <ContextMenuSeparator />
+                      <ContextMenuSub>
+                        <ContextMenuSubTrigger>
+                          <Download className="h-4 w-4" />
+                          <span>{t("contextMenu.export")}</span>
+                        </ContextMenuSubTrigger>
+                        <ContextMenuSubContent>
+                          <ContextMenuItem onClick={() => onExportNote?.(note, "html")}>
+                            <span>{t("contextMenu.exportAsHTML")}</span>
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => onExportNote?.(note, "pdf")}>
+                            <span>{t("contextMenu.exportAsPDF")}</span>
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => onExportNote?.(note, "pdf-pages")}>
+                            <span>{t("contextMenu.exportAsPDFPages")}</span>
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => onExportNote?.(note, "image")}>
+                            <span>{t("contextMenu.exportAsImage")}</span>
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => onExportNote?.(note, "image-pages")}>
+                            <span>{t("contextMenu.exportAsImagePages")}</span>
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => onCopyToWechat?.(note)}>
+                            <span>{t("contextMenu.copyToWechat")}</span>
+                          </ContextMenuItem>
+                        </ContextMenuSubContent>
+                      </ContextMenuSub>
+                      <ContextMenuSeparator />
+                      <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span>{t("contextMenu.delete")}</span>
+                      </ContextMenuItem>
+                    </ContextMenuContent>
+                  </ContextMenu>
+                );
+              })}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
     </div>
   );
 }
