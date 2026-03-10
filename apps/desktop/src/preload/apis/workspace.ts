@@ -49,6 +49,20 @@ export const workspaceApi = {
   getRecent: (): Promise<IpcResultDTO<string[]>> => ipcRenderer.invoke("workspace:getRecent"),
 
   /**
+   * 导入外部 Markdown 文件到目标目录
+   */
+  importMarkdownFiles: (
+    sourcePaths: string[],
+    targetDir: string
+  ): Promise<
+    IpcResultDTO<{
+      importedCount: number;
+      skippedCount: number;
+      importedPaths: string[];
+    }>
+  > => ipcRenderer.invoke("workspace:importMarkdownFiles", sourcePaths, targetDir),
+
+  /**
    * 监听菜单「打开文件夹」事件
    */
   onMenuOpenFolder: (callback: () => void): (() => void) => {

@@ -112,6 +112,14 @@
     "moveNoteTargetExists": "A note with the same name already exists in the target folder"
   },
   "moveNoteSuccess": "Note moved",
+  "externalDrop": {
+    "hoverHint": "Release to import Markdown files",
+    "importingHint": "Importing...",
+    "onlyMarkdown": "Only .md files are supported",
+    "importSuccess": "Imported {{count}} file(s)",
+    "importSuccessWithSkipped": "Imported {{importedCount}}, skipped {{skippedCount}}",
+    "importFailed": "Import failed, please try again"
+  },
   "github": {
     "pushSuccess": "Push succeeded: {{url}}",
     "assetsUploaded": "Uploaded {{count}} assets"

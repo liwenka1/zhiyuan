@@ -1,4 +1,6 @@
 import { ipcMain, shell, BrowserWindow } from "electron";
+import fs from "fs";
+import path from "path";
 import { workspaceManager } from "../workspace";
 import { fileSystem } from "../file-system";
 import { fileWatcherManager } from "../file-watcher";
@@ -43,6 +45,28 @@ function getCallerWindow(event: Electron.IpcMainInvokeEvent): BrowserWindow {
     throw new Error("Cannot resolve caller window");
   }
   return win;
+}
+
+async function resolveAvailableMarkdownPath(
+  event: Electron.IpcMainInvokeEvent,
+  targetDir: string,
+  fileName: string
+): Promise<string> {
+  const parsed = path.parse(fileName);
+  const ext = parsed.ext || ".md";
+  const baseName = parsed.name;
+  let candidate = path.join(targetDir, `${baseName}${ext}`);
+  assertPathInWorkspace(event, candidate, "workspace:importMarkdownFiles (candidate)");
+  if (!(await fileSystem.exists(candidate))) return candidate;
+
+  let index = 1;
+  while (index < 10_000) {
+    candidate = path.join(targetDir, `${baseName} (${index})${ext}`);
+    assertPathInWorkspace(event, candidate, "workspace:importMarkdownFiles (candidate)");
+    if (!(await fileSystem.exists(candidate))) return candidate;
+    index += 1;
+  }
+  throw new Error("Cannot resolve unique target file name");
 }
 
 /**
@@ -151,6 +175,50 @@ export function registerWorkspaceHandlers(): void {
       return ipcErr(message, "WORKSPACE_GET_RECENT_FAILED");
     }
   });
+
+  // 导入外部 Markdown 文件到工作区内目标目录
+  ipcMain.handle(
+    "workspace:importMarkdownFiles",
+    wrapIpcHandlerWithEvent(async (event, sourcePaths: string[], targetDir: string) => {
+      assertPathInWorkspace(event, targetDir, "workspace:importMarkdownFiles (targetDir)");
+      if (!Array.isArray(sourcePaths)) {
+        throw new Error("Invalid sourcePaths");
+      }
+
+      const importedPaths: string[] = [];
+      let skippedCount = 0;
+
+      await fs.promises.mkdir(targetDir, { recursive: true });
+
+      for (const sourcePath of sourcePaths) {
+        try {
+          if (typeof sourcePath !== "string" || !sourcePath.toLowerCase().endsWith(".md")) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const stat = await fs.promises.stat(sourcePath);
+          if (!stat.isFile()) {
+            skippedCount += 1;
+            continue;
+          }
+
+          const fileName = path.basename(sourcePath);
+          const targetPath = await resolveAvailableMarkdownPath(event, targetDir, fileName);
+          await fs.promises.copyFile(sourcePath, targetPath);
+          importedPaths.push(targetPath);
+        } catch {
+          skippedCount += 1;
+        }
+      }
+
+      return {
+        importedCount: importedPaths.length,
+        skippedCount,
+        importedPaths
+      };
+    }, "WORKSPACE_IMPORT_MARKDOWN_FILES_FAILED")
+  );
 
   // 读取文件（校验路径在工作区内）
   ipcMain.handle(

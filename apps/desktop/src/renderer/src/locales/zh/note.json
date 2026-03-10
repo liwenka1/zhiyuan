@@ -112,6 +112,14 @@
     "moveNoteTargetExists": "目标文件夹中已存在同名笔记"
   },
   "moveNoteSuccess": "笔记已移动",
+  "externalDrop": {
+    "hoverHint": "松开导入 Markdown 文件",
+    "importingHint": "正在导入...",
+    "onlyMarkdown": "仅支持导入 .md 文件",
+    "importSuccess": "已导入 {{count}} 个文件",
+    "importSuccessWithSkipped": "已导入 {{importedCount}} 个，跳过 {{skippedCount}} 个",
+    "importFailed": "导入失败，请重试"
+  },
   "github": {
     "pushSuccess": "推送成功：{{url}}",
     "assetsUploaded": "已上传 {{count}} 个资源"

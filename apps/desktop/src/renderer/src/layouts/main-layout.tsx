@@ -1,9 +1,9 @@
-import { ReactNode, CSSProperties, useEffect, useRef } from "react";
+import { ReactNode, CSSProperties, useEffect, useRef, useState, useCallback } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef } from "@/components/ui/resizable";
 import type { PanelSize } from "@/components/ui/resizable";
 import { Button } from "@/components/ui/button";
-import { TitleBar } from "@/components/app";
+import { DropHoverMask, TitleBar } from "@/components/app";
 import { usePlatform } from "@/hooks";
 import { useViewStore } from "@/stores";
 import { cn } from "@/lib/utils";
@@ -12,12 +12,18 @@ interface MainLayoutProps {
   leftSidebar: ReactNode;
   rightSidebar: ReactNode;
   mainContent: ReactNode;
+  showRightSidebarDropMask?: boolean;
 }
 
 // 动画过渡样式
 const TRANSITION_STYLE = "flex-grow 0.25s cubic-bezier(0.32, 0.72, 0, 1)";
 
-export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayoutProps) {
+export function MainLayout({
+  leftSidebar,
+  rightSidebar,
+  mainContent,
+  showRightSidebarDropMask = false
+}: MainLayoutProps) {
   const { isMac, isWindows } = usePlatform();
   const showFolderSidebar = useViewStore((state) => state.showFolderSidebar);
   const setShowFolderSidebar = useViewStore((state) => state.setShowFolderSidebar);
@@ -33,6 +39,23 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
   const folderPanelElementRef = useRef<HTMLDivElement | null>(null);
   const notePanelElementRef = useRef<HTMLDivElement | null>(null);
   const mainPanelElementRef = useRef<HTMLDivElement | null>(null);
+  const outerContainerRef = useRef<HTMLDivElement | null>(null);
+  const [rightSidebarMaskRect, setRightSidebarMaskRect] = useState<{ left: number; width: number }>({
+    left: 0,
+    width: 0
+  });
+
+  const syncRightSidebarMaskRect = useCallback(() => {
+    const outer = outerContainerRef.current;
+    const notePanel = notePanelElementRef.current;
+    if (!outer || !notePanel) return;
+    const outerRect = outer.getBoundingClientRect();
+    const noteRect = notePanel.getBoundingClientRect();
+    setRightSidebarMaskRect({
+      left: Math.max(0, noteRect.left - outerRect.left),
+      width: Math.max(0, noteRect.width)
+    });
+  }, []);
 
   // 标记是否是编程触发的变化（用于区分拖拽和按钮点击）
   const isProgrammaticRef = useRef(false);
@@ -106,10 +129,37 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
     disableTransitions();
   };
 
+  useEffect(() => {
+    syncRightSidebarMaskRect();
+  }, [syncRightSidebarMaskRect, showFolderSidebar]);
+
+  useEffect(() => {
+    const handleWindowResize = () => syncRightSidebarMaskRect();
+    window.addEventListener("resize", handleWindowResize);
+    return () => window.removeEventListener("resize", handleWindowResize);
+  }, [syncRightSidebarMaskRect]);
+
+  useEffect(() => {
+    const notePanel = notePanelElementRef.current;
+    if (!notePanel || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => syncRightSidebarMaskRect());
+    observer.observe(notePanel);
+    return () => observer.disconnect();
+  }, [syncRightSidebarMaskRect]);
+
   return (
-    <div className="bg-background flex h-screen w-full overflow-hidden" style={outerStyle}>
+    <div
+      ref={outerContainerRef}
+      className="bg-background relative flex h-screen w-full overflow-hidden"
+      style={outerStyle}
+    >
       {/* 自定义标题栏（Windows 拖拽区域） */}
       <TitleBar />
+      <DropHoverMask
+        visible={showRightSidebarDropMask && rightSidebarMaskRect.width > 0}
+        left={rightSidebarMaskRect.left}
+        width={rightSidebarMaskRect.width}
+      />
 
       {/* 固定的文件夹切换按钮 - 文件夹收起且搜索展开时隐藏 */}
       {shouldShowToggleButton && (
@@ -174,8 +224,9 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
           onResize={(size: PanelSize) => {
             // 保存笔记列表的宽度到 ref（不触发重渲染）
             noteListSizeRef.current = size.asPercentage;
+            syncRightSidebarMaskRect();
           }}
-          className="bg-background"
+          className="bg-background overflow-visible"
         >
           <aside className="no-select h-full">{rightSidebar}</aside>
         </ResizablePanel>

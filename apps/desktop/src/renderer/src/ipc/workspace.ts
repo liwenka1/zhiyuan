@@ -17,6 +17,9 @@ export const workspaceIpc = {
 
   getRecent: async () => unwrapIpcResult(await window.api.workspace.getRecent()),
 
+  importMarkdownFiles: async (sourcePaths: string[], targetDir: string) =>
+    unwrapIpcResult(await window.api.workspace.importMarkdownFiles(sourcePaths, targetDir)),
+
   onMenuOpenFolder: window.api.workspace.onMenuOpenFolder,
   onMenuOpenFile: window.api.workspace.onMenuOpenFile,
   onExternalOpen: window.api.workspace.onExternalOpen
