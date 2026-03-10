@@ -38,6 +38,11 @@ export const fileApi = {
     ipcRenderer.invoke("file:copy", sourcePath, destPath),
 
   /**
+   * 检查文件是否存在
+   */
+  exists: (filePath: string): Promise<IpcResultDTO<boolean>> => ipcRenderer.invoke("file:exists", filePath),
+
+  /**
    * 监听文件变化
    */
   onChanged: (callback: (data: { filePath: string; fullPath: string }) => void): (() => void) => {

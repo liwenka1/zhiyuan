@@ -76,6 +76,7 @@ export interface FileAPI {
   delete: (filePath: string) => Promise<IpcResultDTO<void>>;
   rename: (oldPath: string, newPath: string) => Promise<IpcResultDTO<void>>;
   copy: (sourcePath: string, destPath: string) => Promise<IpcResultDTO<void>>;
+  exists: (filePath: string) => Promise<IpcResultDTO<boolean>>;
   onChanged: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
   onAdded: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;
   onDeleted: (callback: (data: { filePath: string; fullPath: string }) => void) => () => void;

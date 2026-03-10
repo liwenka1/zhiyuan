@@ -208,6 +208,15 @@ export function registerWorkspaceHandlers(): void {
     }, "FILE_COPY_FAILED")
   );
 
+  // 检查文件是否存在（校验路径在工作区内）
+  ipcMain.handle(
+    "file:exists",
+    wrapIpcHandlerWithEvent(async (event, filePath: string) => {
+      assertPathInWorkspace(event, filePath, "file:exists");
+      return await fileSystem.exists(filePath);
+    }, "FILE_EXISTS_FAILED")
+  );
+
   // 创建文件夹（校验路径在工作区内）
   ipcMain.handle(
     "folder:create",

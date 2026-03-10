@@ -107,8 +107,11 @@
     "initWorkspaceFailed": "初始化工作区失败，请检查文件系统权限或重启应用",
     "githubConfigMissing": "请先在设置中配置 GitHub 信息",
     "githubPushFailed": "推送失败：{{message}}",
-    "githubAssetsSkipped": "有 {{count}} 个资源未上传（可能过大或不存在）"
+    "githubAssetsSkipped": "有 {{count}} 个资源未上传（可能过大或不存在）",
+    "moveNoteFailed": "移动笔记失败",
+    "moveNoteTargetExists": "目标文件夹中已存在同名笔记"
   },
+  "moveNoteSuccess": "笔记已移动",
   "github": {
     "pushSuccess": "推送成功：{{url}}",
     "assetsUploaded": "已上传 {{count}} 个资源"

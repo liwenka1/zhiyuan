@@ -1,10 +1,28 @@
+import {
+  DndContext,
+  DragOverlay,
+  MeasuringStrategy,
+  type Modifier,
+  PointerSensor,
+  pointerWithin,
+  rectIntersection,
+  useSensor,
+  useSensors
+} from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import { FileText } from "lucide-react";
+import { useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
+import { ListRow } from "@/components/app/list-row";
 import { FolderTree } from "./folder-tree";
 import { NoteList } from "./note-list";
 import { NoteDialogs } from "./note-dialogs";
 import { EditorArea } from "@/features/editor";
 import { useNoteStore, useFolderStore } from "@/stores";
 import { useWorkspaceInit, useNoteHandlers, useFolderHandlers, useNoteData, useDialogState } from "../hooks";
+
+const NOTE_DRAG_PREFIX = "note-";
+const FOLDER_DROP_PREFIX = "folder-";
 
 /**
  * 笔记工作区
@@ -45,9 +63,80 @@ export function NoteWorkspace() {
 
   // 数据派生
   const { formattedNotes, foldersWithCount } = useNoteData();
+  const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+
+  const moveNote = useNoteStore((state) => state.moveNote);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 }
+    })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const activeId = String(event.active.id);
+    if (!activeId.startsWith(NOTE_DRAG_PREFIX)) return;
+    setDraggingNoteId(activeId.slice(NOTE_DRAG_PREFIX.length));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setDraggingNoteId(null);
+    if (!over?.id || typeof active.id !== "string" || typeof over.id !== "string") return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (!activeId.startsWith(NOTE_DRAG_PREFIX) || !overId.startsWith(FOLDER_DROP_PREFIX)) return;
+    const noteId = activeId.slice(NOTE_DRAG_PREFIX.length);
+    const targetFolderId = overId.slice(FOLDER_DROP_PREFIX.length);
+    void moveNote(noteId, targetFolderId);
+  };
+
+  const draggingNote = draggingNoteId ? notes.find((note) => note.id === draggingNoteId) : null;
+  const cursorOverlayModifier: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
+    if (!activeNodeRect || !activatorEvent) return transform;
+
+    const event = activatorEvent as MouseEvent | PointerEvent | TouchEvent;
+    let pointerX: number | null = null;
+    let pointerY: number | null = null;
+
+    if ("clientX" in event && "clientY" in event) {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+    } else if ("touches" in event && event.touches.length > 0) {
+      pointerX = event.touches[0].clientX;
+      pointerY = event.touches[0].clientY;
+    }
+
+    if (pointerX === null || pointerY === null) {
+      return transform;
+    }
+
+    const offsetX = pointerX - activeNodeRect.left + 12;
+    const offsetY = pointerY - activeNodeRect.top + 10;
+
+    return {
+      ...transform,
+      x: transform.x + offsetX,
+      y: transform.y + offsetY
+    };
+  };
 
   return (
-    <>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={(args) => {
+        const pointerCollisions = pointerWithin(args);
+        return pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
+      }}
+      measuring={{
+        droppable: {
+          strategy: MeasuringStrategy.Always
+        }
+      }}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={() => setDraggingNoteId(null)}
+    >
       <MainLayout
         leftSidebar={
           <FolderTree
@@ -116,6 +205,22 @@ export function NoteWorkspace() {
         folderToRename={dialogState.folderToRename}
         onCloseRenameFolderDialog={dialogState.closeRenameFolderDialog}
       />
-    </>
+      <DragOverlay adjustScale={false} dropAnimation={null} modifiers={[cursorOverlayModifier]}>
+        {draggingNote ? (
+          <div className="pointer-events-none cursor-grabbing shadow-xl">
+            <ListRow
+              selected
+              layoutId={undefined}
+              leading={<FileText className="h-3.5 w-3.5 shrink-0" />}
+              label={<span className="block w-full truncate">{draggingNote.title}</span>}
+              align="start"
+              className="pointer-events-none w-auto max-w-[min(460px,calc(100vw-48px))]"
+              contentClassName="min-w-0"
+              labelClassName="truncate"
+            />
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

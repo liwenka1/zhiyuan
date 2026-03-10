@@ -107,8 +107,11 @@
     "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app",
     "githubConfigMissing": "Please configure GitHub settings first",
     "githubPushFailed": "Push failed: {{message}}",
-    "githubAssetsSkipped": "{{count}} assets were skipped (too large or missing)"
+    "githubAssetsSkipped": "{{count}} assets were skipped (too large or missing)",
+    "moveNoteFailed": "Failed to move note",
+    "moveNoteTargetExists": "A note with the same name already exists in the target folder"
   },
+  "moveNoteSuccess": "Note moved",
   "github": {
     "pushSuccess": "Push succeeded: {{url}}",
     "assetsUploaded": "Uploaded {{count}} assets"
