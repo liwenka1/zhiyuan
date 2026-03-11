@@ -63,6 +63,12 @@ export const workspaceApi = {
   > => ipcRenderer.invoke("workspace:importMarkdownFiles", sourcePaths, targetDir),
 
   /**
+   * 将工作区内文件拖出到系统（Copy-out）
+   */
+  startDragOut: (filePath: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("workspace:startDragOut", filePath),
+
+  /**
    * 监听菜单「打开文件夹」事件
    */
   onMenuOpenFolder: (callback: () => void): (() => void) => {

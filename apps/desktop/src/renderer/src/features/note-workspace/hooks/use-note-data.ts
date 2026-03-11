@@ -42,6 +42,7 @@ export function useNoteData() {
       .map((note) => ({
         id: note.id,
         title: note.title,
+        filePath: note.filePath,
         updatedAt: note.updatedAt,
         isPinned: note.isPinned
       }));

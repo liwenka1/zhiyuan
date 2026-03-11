@@ -1,4 +1,4 @@
-import { ipcMain, shell, BrowserWindow } from "electron";
+import { ipcMain, shell, BrowserWindow, app } from "electron";
 import fs from "fs";
 import path from "path";
 import { workspaceManager } from "../workspace";
@@ -218,6 +218,27 @@ export function registerWorkspaceHandlers(): void {
         importedPaths
       };
     }, "WORKSPACE_IMPORT_MARKDOWN_FILES_FAILED")
+  );
+
+  // 从应用拖出文件到系统（Copy-out）
+  ipcMain.handle(
+    "workspace:startDragOut",
+    wrapIpcHandlerWithEvent(async (event, filePath: string) => {
+      assertPathInWorkspace(event, filePath, "workspace:startDragOut");
+      if (typeof filePath !== "string" || !filePath.toLowerCase().endsWith(".md")) {
+        throw new Error("Only markdown file drag-out is supported");
+      }
+      const stat = await fs.promises.stat(filePath);
+      if (!stat.isFile()) {
+        throw new Error("Invalid file to drag out");
+      }
+
+      const icon = await app.getFileIcon(filePath, { size: "normal" });
+      event.sender.startDrag({
+        file: filePath,
+        icon
+      });
+    }, "WORKSPACE_START_DRAG_OUT_FAILED")
   );
 
   // 读取文件（校验路径在工作区内）
