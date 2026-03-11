@@ -342,7 +342,7 @@ export function NoteList({
               </p>
             </motion.div>
           ) : (
-            <div className="px-0" style={{ height: rowVirtualizer.getTotalSize(), position: "relative" }}>
+            <div className="px-0" style={{ height: rowVirtualizer.getTotalSize() + 12, position: "relative" }}>
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const note = notes[virtualRow.index];
                 if (!note) return null;

@@ -14,7 +14,11 @@ function ScrollArea({
   viewportClassName?: string;
 }) {
   return (
-    <ScrollAreaPrimitive.Root data-slot="scroll-area" className={cn("relative", className)} {...props}>
+    <ScrollAreaPrimitive.Root
+      data-slot="scroll-area"
+      className={cn("group/scroll-area relative", className)}
+      {...props}
+    >
       <ScrollAreaPrimitive.Viewport
         ref={viewportRef}
         data-slot="scroll-area-viewport"
@@ -38,7 +42,7 @@ function ScrollBar({ className, orientation = "vertical", ...props }: ScrollArea
       data-orientation={orientation}
       orientation={orientation}
       className={cn(
-        "hidden touch-none p-px transition-colors select-none data-has-overflow-x:flex data-has-overflow-y:flex data-[orientation=horizontal]:h-2.5 data-[orientation=horizontal]:flex-col data-[orientation=horizontal]:border-t data-[orientation=horizontal]:border-t-transparent data-[orientation=vertical]:h-full data-[orientation=vertical]:w-2.5 data-[orientation=vertical]:border-l data-[orientation=vertical]:border-l-transparent",
+        "pointer-events-none hidden touch-none p-px opacity-0 transition-[opacity,color] duration-150 select-none group-hover/scroll-area:pointer-events-auto group-hover/scroll-area:opacity-100 data-has-overflow-x:flex data-has-overflow-y:flex data-[orientation=horizontal]:h-2.5 data-[orientation=horizontal]:flex-col data-[orientation=horizontal]:border-t data-[orientation=horizontal]:border-t-transparent data-[orientation=vertical]:h-full data-[orientation=vertical]:w-2.5 data-[orientation=vertical]:border-l data-[orientation=vertical]:border-l-transparent",
         className
       )}
       {...props}
