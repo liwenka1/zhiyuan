@@ -109,7 +109,8 @@
     "githubPushFailed": "Push failed: {{message}}",
     "githubAssetsSkipped": "{{count}} assets were skipped (too large or missing)",
     "moveNoteFailed": "Failed to move note",
-    "moveNoteTargetExists": "A note with the same name already exists in the target folder"
+    "moveNoteTargetExists": "A note with the same name already exists in the target folder",
+    "dragOutFailed": "Failed to drag file out"
   },
   "moveNoteSuccess": "Note moved",
   "externalDrop": {

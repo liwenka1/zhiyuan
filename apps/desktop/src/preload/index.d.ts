@@ -73,6 +73,7 @@ export interface WorkspaceAPI {
       importedPaths: string[];
     }>
   >;
+  startDragOut: (filePath: string) => Promise<IpcResultDTO<void>>;
   onMenuOpenFolder: (callback: () => void) => () => void;
   onMenuOpenFile: (callback: () => void) => () => void;
   onExternalOpen: (callback: (payload: { workspacePath: string; filePath?: string }) => void) => () => void;

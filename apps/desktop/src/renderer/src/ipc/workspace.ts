@@ -20,6 +20,8 @@ export const workspaceIpc = {
   importMarkdownFiles: async (sourcePaths: string[], targetDir: string) =>
     unwrapIpcResult(await window.api.workspace.importMarkdownFiles(sourcePaths, targetDir)),
 
+  startDragOut: async (filePath: string) => unwrapIpcResult(await window.api.workspace.startDragOut(filePath)),
+
   onMenuOpenFolder: window.api.workspace.onMenuOpenFolder,
   onMenuOpenFile: window.api.workspace.onMenuOpenFile,
   onExternalOpen: window.api.workspace.onExternalOpen

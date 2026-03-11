@@ -37,10 +37,13 @@ import { useTranslation } from "react-i18next";
 import { useDraggable } from "@dnd-kit/core";
 import { useViewStore, useNoteStore } from "@/stores";
 import { useExternalMarkdownDrop } from "@/hooks";
+import { workspaceIpc } from "@/ipc";
+import { toast } from "sonner";
 
 interface Note {
   id: string;
   title: string;
+  filePath?: string;
   updatedAt?: string;
   isPinned?: boolean;
 }
@@ -52,12 +55,14 @@ function DraggableNoteRow({
   virtualRowIndex,
   virtualRowStart,
   measureRef,
+  onDraggingChange,
   children
 }: {
   note: Note;
   virtualRowIndex: number;
   virtualRowStart: number;
   measureRef: (el: HTMLDivElement | null) => void;
+  onDraggingChange?: (note: Note, isDragging: boolean) => void;
   children: React.ReactNode;
 }) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
@@ -75,6 +80,11 @@ function DraggableNoteRow({
     transform: `translateY(${virtualRowStart}px)`,
     opacity: isDragging ? 0.25 : 1
   };
+
+  useEffect(() => {
+    onDraggingChange?.(note, isDragging);
+  }, [isDragging, note, onDraggingChange]);
+
   return (
     <div
       ref={refCallback}
@@ -131,6 +141,13 @@ export function NoteList({
   const { t } = useTranslation("note");
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const dragOutSessionRef = useRef<{
+    activeNote: Note | null;
+    dragOutStarted: boolean;
+  }>({
+    activeNote: null,
+    dragOutStarted: false
+  });
   const inputRef = useRef<HTMLInputElement>(null);
   const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
@@ -175,6 +192,51 @@ export function NoteList({
   };
 
   const parentRef = useRef<HTMLDivElement>(null);
+
+  const handleNoteDraggingChange = useCallback((note: Note, isDragging: boolean) => {
+    if (isDragging) {
+      dragOutSessionRef.current.activeNote = note;
+      dragOutSessionRef.current.dragOutStarted = false;
+      return;
+    }
+
+    const currentNoteId = dragOutSessionRef.current.activeNote?.id;
+    if (currentNoteId === note.id) {
+      dragOutSessionRef.current.activeNote = null;
+      dragOutSessionRef.current.dragOutStarted = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handlePointerMove = (event: PointerEvent) => {
+      const { activeNote, dragOutStarted } = dragOutSessionRef.current;
+      if (!activeNote?.filePath || dragOutStarted) return;
+      const shouldStartDragOut =
+        event.clientX <= 0 ||
+        event.clientY <= 0 ||
+        event.clientX >= window.innerWidth - 1 ||
+        event.clientY >= window.innerHeight - 1;
+      if (!shouldStartDragOut) return;
+
+      dragOutSessionRef.current.dragOutStarted = true;
+      void workspaceIpc.startDragOut(activeNote.filePath).catch(() => {
+        dragOutSessionRef.current.dragOutStarted = false;
+        toast.error(t("errors.dragOutFailed"));
+      });
+    };
+
+    const handlePointerUp = () => {
+      dragOutSessionRef.current.activeNote = null;
+      dragOutSessionRef.current.dragOutStarted = false;
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [t]);
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const rowVirtualizer = useVirtualizer({
@@ -356,6 +418,7 @@ export function NoteList({
                         virtualRowIndex={virtualRow.index}
                         virtualRowStart={virtualRow.start}
                         measureRef={rowVirtualizer.measureElement}
+                        onDraggingChange={handleNoteDraggingChange}
                       >
                         <ListRow
                           layoutId="note-hover-bg"
