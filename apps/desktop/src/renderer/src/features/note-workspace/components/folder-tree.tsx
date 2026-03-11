@@ -149,7 +149,7 @@ export function FolderTree({
 
       {/* 文件夹列表 */}
       <ScrollArea className="flex-1 overflow-hidden">
-        <div className="space-y-0.5 px-2">
+        <div className="space-y-0.5 px-2 pb-3">
           {/* 全部笔记 - 始终显示在最上方 */}
           <ListRow
             layoutId="hover-bg"
