@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useCallback, memo, useRef } from "react";
+import { useDroppable } from "@dnd-kit/core";
 import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
@@ -28,6 +29,7 @@ interface EditorAreaProps {
   onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
   onExternalFileDragHoverChange?: (hovering: boolean) => void;
   onOpenImportedMarkdownNote?: (noteId: string) => void;
+  noteDropTargetId?: string;
 }
 
 export function EditorArea({
@@ -45,7 +47,8 @@ export function EditorArea({
   onPushToGitHub,
   onImportExternalMarkdownFiles,
   onExternalFileDragHoverChange,
-  onOpenImportedMarkdownNote
+  onOpenImportedMarkdownNote,
+  noteDropTargetId
 }: EditorAreaProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const splitLayout = useViewStore((state) => state.splitLayout);
@@ -59,6 +62,9 @@ export function EditorArea({
   const isOuterProgrammaticRef = useRef(false);
   const outerMainPanelId = "editor-area-main";
   const outerTerminalPanelId = "editor-area-terminal";
+  const { setNodeRef: setEditorDropNodeRef } = useDroppable({
+    id: noteDropTargetId ?? "editor-drop-open"
+  });
   const { dragHandlers } = useExternalMarkdownDrop({
     onImportExternalMarkdownFiles,
     onHoverChange: onExternalFileDragHoverChange,
@@ -158,6 +164,7 @@ export function EditorArea({
 
   return (
     <div
+      ref={setEditorDropNodeRef}
       className="flex h-full flex-col"
       onDragEnter={dragHandlers.onDragEnter}
       onDragOver={dragHandlers.onDragOver}

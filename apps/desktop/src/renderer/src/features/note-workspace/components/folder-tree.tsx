@@ -55,7 +55,7 @@ function DroppableFolderRow({
         hovered={isHovered || isOver}
         selected={isSelected}
         muted={!isSelected}
-        className={cn(isOver && "ring-primary/40 bg-accent ring-1")}
+        className={cn(isOver && "bg-accent")}
         leading={leading}
         label={label}
         trailing={trailing}

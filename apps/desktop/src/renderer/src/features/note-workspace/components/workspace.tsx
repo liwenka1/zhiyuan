@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors
 } from "@dnd-kit/core";
-import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core";
 import { FileText } from "lucide-react";
 import { useCallback, useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
@@ -24,6 +24,7 @@ import { workspaceIpc } from "@/ipc";
 
 const NOTE_DRAG_PREFIX = "note-";
 const FOLDER_DROP_PREFIX = "folder-";
+const EDITOR_DROP_OPEN_ID = "editor-drop-open";
 
 /**
  * 笔记工作区
@@ -71,6 +72,7 @@ export function NoteWorkspace() {
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
   const [isNoteListExternalFileDropHover, setIsNoteListExternalFileDropHover] = useState(false);
   const [isEditorExternalFileDropHover, setIsEditorExternalFileDropHover] = useState(false);
+  const [isEditorNoteDragHover, setIsEditorNoteDragHover] = useState(false);
 
   const moveNote = useNoteStore((state) => state.moveNote);
 
@@ -84,16 +86,32 @@ export function NoteWorkspace() {
     const activeId = String(event.active.id);
     if (!activeId.startsWith(NOTE_DRAG_PREFIX)) return;
     setDraggingNoteId(activeId.slice(NOTE_DRAG_PREFIX.length));
+    setIsEditorNoteDragHover(false);
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const activeId = String(event.active.id);
+    const overId = event.over?.id ? String(event.over.id) : "";
+    const isNoteDrag = activeId.startsWith(NOTE_DRAG_PREFIX);
+    setIsEditorNoteDragHover(isNoteDrag && overId === EDITOR_DROP_OPEN_ID);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setDraggingNoteId(null);
+    setIsEditorNoteDragHover(false);
     if (!over?.id || typeof active.id !== "string" || typeof over.id !== "string") return;
     const activeId = String(active.id);
     const overId = String(over.id);
-    if (!activeId.startsWith(NOTE_DRAG_PREFIX) || !overId.startsWith(FOLDER_DROP_PREFIX)) return;
+    if (!activeId.startsWith(NOTE_DRAG_PREFIX)) return;
     const noteId = activeId.slice(NOTE_DRAG_PREFIX.length);
+
+    if (overId === EDITOR_DROP_OPEN_ID) {
+      selectNote(noteId);
+      return;
+    }
+
+    if (!overId.startsWith(FOLDER_DROP_PREFIX)) return;
     const targetFolderId = overId.slice(FOLDER_DROP_PREFIX.length);
     void moveNote(noteId, targetFolderId);
   };
@@ -157,7 +175,9 @@ export function NoteWorkspace() {
       sensors={sensors}
       collisionDetection={(args) => {
         const pointerCollisions = pointerWithin(args);
-        return pointerCollisions.length > 0 ? pointerCollisions : rectIntersection(args);
+        if (pointerCollisions.length > 0) return pointerCollisions;
+        // Fallback only for folder drop targets. Editor open should require pointer-within.
+        return rectIntersection(args).filter(({ id }) => String(id).startsWith(FOLDER_DROP_PREFIX));
       }}
       measuring={{
         droppable: {
@@ -165,12 +185,16 @@ export function NoteWorkspace() {
         }
       }}
       onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setDraggingNoteId(null)}
+      onDragCancel={() => {
+        setDraggingNoteId(null);
+        setIsEditorNoteDragHover(false);
+      }}
     >
       <MainLayout
         showRightSidebarDropMask={isNoteListExternalFileDropHover}
-        showMainContentDropMask={isEditorExternalFileDropHover}
+        showMainContentDropMask={isEditorExternalFileDropHover || isEditorNoteDragHover}
         leftSidebar={
           <FolderTree
             folders={foldersWithCount}
@@ -225,6 +249,7 @@ export function NoteWorkspace() {
             onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
             onExternalFileDragHoverChange={setIsEditorExternalFileDropHover}
             onOpenImportedMarkdownNote={handleOpenImportedMarkdownNote}
+            noteDropTargetId={EDITOR_DROP_OPEN_ID}
           />
         }
       />
@@ -245,7 +270,7 @@ export function NoteWorkspace() {
       />
       <DragOverlay adjustScale={false} dropAnimation={null} modifiers={[cursorOverlayModifier]}>
         {draggingNote ? (
-          <div className="pointer-events-none cursor-grabbing shadow-xl">
+          <div className="pointer-events-none cursor-grabbing">
             <ListRow
               selected
               layoutId={undefined}
