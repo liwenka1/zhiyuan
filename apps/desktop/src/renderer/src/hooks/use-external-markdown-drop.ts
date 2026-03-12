@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { utilsIpc } from "@/ipc";
+import { useWorkspaceStore } from "@/stores";
 
 type ImportResult = {
   importedCount: number;
@@ -22,6 +23,7 @@ export function useExternalMarkdownDrop({
   onImportCompleted
 }: UseExternalMarkdownDropOptions) {
   const { t } = useTranslation("note");
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const [isFileDropHover, setIsFileDropHover] = useState(false);
   const [isImportingExternal, setIsImportingExternal] = useState(false);
   const fileDragDepthRef = useRef(0);
@@ -74,6 +76,18 @@ export function useExternalMarkdownDrop({
         .map((file) => utilsIpc.getPathForFile(file))
         .filter((filePath) => !!filePath);
 
+      const workspacePrefix = workspacePath ? `${workspacePath.replaceAll("\\", "/")}/` : null;
+      const externalMarkdownPaths = markdownPaths.filter((filePath) => {
+        if (!workspacePrefix) return true;
+        const normalizedPath = filePath.replaceAll("\\", "/");
+        return !normalizedPath.startsWith(workspacePrefix);
+      });
+
+      // Ignore files dragged back from current workspace (e.g. copy-out then drag-in).
+      if (externalMarkdownPaths.length === 0) {
+        return;
+      }
+
       if (markdownPaths.length === 0) {
         toast.error(t("externalDrop.onlyMarkdown"));
         return;
@@ -81,7 +95,7 @@ export function useExternalMarkdownDrop({
 
       setIsImportingExternal(true);
       try {
-        const result = await onImportExternalMarkdownFiles(markdownPaths);
+        const result = await onImportExternalMarkdownFiles(externalMarkdownPaths);
         if (result.importedCount > 0) {
           toast.success(
             result.skippedCount > 0
@@ -101,7 +115,7 @@ export function useExternalMarkdownDrop({
         setIsImportingExternal(false);
       }
     },
-    [isImportingExternal, onImportExternalMarkdownFiles, onImportCompleted, t]
+    [isImportingExternal, onImportExternalMarkdownFiles, onImportCompleted, t, workspacePath]
   );
 
   useEffect(() => {
