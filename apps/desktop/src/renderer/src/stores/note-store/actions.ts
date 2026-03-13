@@ -273,22 +273,23 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       });
     },
 
-    moveNote: async (noteId: string, targetFolderId: string) => {
+    moveNote: async (noteId: string, targetFolderId: string, options) => {
+      const silent = options?.silent ?? false;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
       const folders = useFolderStore.getState().folders;
       const targetFolder = folders.find((f) => f.id === targetFolderId);
 
       if (!workspacePath || !note?.filePath || !note.fileName) {
-        toast.error(i18n.t("note:errors.noWorkspace"));
-        return;
+        if (!silent) toast.error(i18n.t("note:errors.noWorkspace"));
+        return { moved: false, reason: "no-workspace" as const };
       }
       if (!targetFolder?.path) {
-        toast.error(i18n.t("note:errors.moveNoteFailed"));
-        return;
+        if (!silent) toast.error(i18n.t("note:errors.moveNoteFailed"));
+        return { moved: false, reason: "invalid-target" as const };
       }
       if (note.folderId === targetFolderId) {
-        return;
+        return { moved: false, reason: "same-folder" as const };
       }
 
       const newFilePath = `${targetFolder.path}/${note.fileName}`;
@@ -297,16 +298,18 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         await watcherIpc.pause();
         const exists = await fileIpc.exists(newFilePath);
         if (exists) {
-          toast.error(i18n.t("note:errors.moveNoteTargetExists"));
-          return;
+          if (!silent) toast.error(i18n.t("note:errors.moveNoteTargetExists"));
+          return { moved: false, reason: "target-exists" as const };
         }
         await fileIpc.rename(note.filePath, newFilePath);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        toast.error(
-          message ? `${i18n.t("note:errors.moveNoteFailed")}: ${message}` : i18n.t("note:errors.moveNoteFailed")
-        );
-        return;
+        if (!silent) {
+          toast.error(
+            message ? `${i18n.t("note:errors.moveNoteFailed")}: ${message}` : i18n.t("note:errors.moveNoteFailed")
+          );
+        }
+        return { moved: false, reason: "failed" as const, errorMessage: message || undefined };
       } finally {
         await watcherIpc.resume();
       }
@@ -343,7 +346,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
               : f
         )
       );
-      toast.success(i18n.t("note:moveNoteSuccess"));
+      if (!silent) toast.success(i18n.t("note:moveNoteSuccess"));
+      return { moved: true };
     }
   };
 }

@@ -11,6 +11,16 @@ export interface NoteStoreState {
   searchKeyword: string;
 }
 
+export interface MoveNoteOptions {
+  silent?: boolean;
+}
+
+export interface MoveNoteResult {
+  moved: boolean;
+  reason?: "no-workspace" | "invalid-target" | "same-folder" | "target-exists" | "failed";
+  errorMessage?: string;
+}
+
 export interface NoteStore extends NoteStoreState {
   setNotes: (notes: Note[]) => void;
   selectNote: (noteId: string) => void;
@@ -22,7 +32,7 @@ export interface NoteStore extends NoteStoreState {
   renameNote: (noteId: string, newTitle: string) => Promise<void>;
   duplicateNote: (noteId: string) => Promise<void>;
   togglePinNote: (noteId: string) => Promise<void>;
-  moveNote: (noteId: string, targetFolderId: string) => Promise<void>;
+  moveNote: (noteId: string, targetFolderId: string, options?: MoveNoteOptions) => Promise<MoveNoteResult>;
 
   setSearchKeyword: (keyword: string) => void;
 

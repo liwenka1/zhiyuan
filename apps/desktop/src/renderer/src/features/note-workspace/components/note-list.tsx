@@ -16,7 +16,7 @@ import {
   Github
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useRef, useState, useEffect, useCallback } from "react";
+import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ListRow } from "@/components/app/list-row";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -89,6 +89,7 @@ function DraggableNoteRow({
     <div
       ref={refCallback}
       data-index={virtualRowIndex}
+      data-note-item="true"
       className={cn("absolute right-0 left-0 px-2", isDragging ? "cursor-grabbing" : "cursor-grab")}
       style={style}
       {...listeners}
@@ -102,6 +103,7 @@ function DraggableNoteRow({
 interface NoteListProps {
   notes?: Note[];
   selectedNoteId?: string;
+  selectedNoteIds?: string[];
   searchKeyword?: string;
   onSelectNote?: (noteId: string) => void;
   onCreateNote?: () => void;
@@ -117,11 +119,13 @@ interface NoteListProps {
   onPushToGitHub?: (note: Note) => void;
   onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
   onExternalFileDragHoverChange?: (hovering: boolean) => void;
+  onSelectedNoteIdsChange?: (noteIds: string[]) => void;
 }
 
 export function NoteList({
   notes = [],
   selectedNoteId,
+  selectedNoteIds = [],
   searchKeyword = "",
   onSelectNote,
   onCreateNote,
@@ -136,11 +140,14 @@ export function NoteList({
   onCopyToWechat,
   onPushToGitHub,
   onImportExternalMarkdownFiles,
-  onExternalFileDragHoverChange
+  onExternalFileDragHoverChange,
+  onSelectedNoteIdsChange
 }: NoteListProps) {
   const { t } = useTranslation("note");
+  const rootRef = useRef<HTMLDivElement>(null);
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(null);
   const dragOutSessionRef = useRef<{
     activeNote: Note | null;
     dragOutStarted: boolean;
@@ -192,6 +199,100 @@ export function NoteList({
   };
 
   const parentRef = useRef<HTMLDivElement>(null);
+  const selectedSet = useMemo(() => new Set(selectedNoteIds), [selectedNoteIds]);
+
+  const handleSelectRange = useCallback(
+    (targetNoteId: string) => {
+      const anchorId = selectionAnchorId ?? selectedNoteId ?? selectedNoteIds[0] ?? targetNoteId;
+      const orderedIds = notes.map((note) => note.id);
+      const startIndex = orderedIds.indexOf(anchorId);
+      const endIndex = orderedIds.indexOf(targetNoteId);
+      if (startIndex === -1 || endIndex === -1) {
+        onSelectedNoteIdsChange?.([targetNoteId]);
+        setSelectionAnchorId(targetNoteId);
+        return;
+      }
+      const [from, to] = startIndex <= endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
+      const rangeIds = orderedIds.slice(from, to + 1);
+      onSelectedNoteIdsChange?.(rangeIds);
+      setSelectionAnchorId(anchorId);
+    },
+    [notes, onSelectedNoteIdsChange, selectedNoteId, selectedNoteIds, selectionAnchorId]
+  );
+
+  const handleNotePointerDown = useCallback(
+    (note: Note, event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.button !== 0) return;
+      if (event.shiftKey || event.metaKey || event.ctrlKey) return;
+      if (selectedSet.has(note.id)) return;
+      onSelectedNoteIdsChange?.([note.id]);
+      setSelectionAnchorId(note.id);
+    },
+    [onSelectedNoteIdsChange, selectedSet]
+  );
+
+  const handleNoteClick = useCallback(
+    (note: Note, event: React.MouseEvent<HTMLButtonElement>) => {
+      if (event.shiftKey) {
+        handleSelectRange(note.id);
+        event.preventDefault();
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey) {
+        const isCurrentSelectedVisible = selectedNoteId ? notes.some((item) => item.id === selectedNoteId) : false;
+        const baseSelectedIds =
+          selectedNoteIds.length > 0
+            ? selectedNoteIds
+            : isCurrentSelectedVisible && selectedNoteId
+              ? [selectedNoteId]
+              : [];
+        const baseSet = new Set(baseSelectedIds);
+        const nextSelected = baseSet.has(note.id)
+          ? baseSelectedIds.filter((id) => id !== note.id)
+          : [...baseSelectedIds, note.id];
+        onSelectedNoteIdsChange?.(nextSelected);
+        setSelectionAnchorId(note.id);
+        event.preventDefault();
+        return;
+      }
+
+      onSelectedNoteIdsChange?.([note.id]);
+      setSelectionAnchorId(note.id);
+      onSelectNote?.(note.id);
+    },
+    [handleSelectRange, onSelectNote, onSelectedNoteIdsChange, selectedNoteIds, selectedSet]
+  );
+
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      onSelectedNoteIdsChange?.([]);
+      setSelectionAnchorId(null);
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onSelectedNoteIdsChange]);
+
+  useEffect(() => {
+    const handleDocumentMouseDown = (event: MouseEvent) => {
+      if (event.button !== 0) return;
+      if (selectedNoteIds.length === 0) return;
+      const root = rootRef.current;
+      if (!root) return;
+      const target = event.target as Node | null;
+      const targetElement = event.target instanceof Element ? event.target : null;
+      if (target && root.contains(target)) {
+        const isClickingNoteItem = !!targetElement?.closest('[data-note-item="true"]');
+        if (isClickingNoteItem) return;
+      }
+      onSelectedNoteIdsChange?.([]);
+      setSelectionAnchorId(null);
+    };
+
+    document.addEventListener("mousedown", handleDocumentMouseDown, true);
+    return () => document.removeEventListener("mousedown", handleDocumentMouseDown, true);
+  }, [onSelectedNoteIdsChange, selectedNoteIds.length]);
 
   const handleNoteDraggingChange = useCallback((note: Note, isDragging: boolean) => {
     if (isDragging) {
@@ -248,6 +349,7 @@ export function NoteList({
 
   return (
     <div
+      ref={rootRef}
       className="flex h-full flex-col"
       onDragEnter={dragHandlers.onDragEnter}
       onDragOver={dragHandlers.onDragOver}
@@ -408,7 +510,7 @@ export function NoteList({
               {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                 const note = notes[virtualRow.index];
                 if (!note) return null;
-                const isSelected = selectedNoteId === note.id;
+                const isSelected = selectedNoteIds.length > 0 ? selectedSet.has(note.id) : selectedNoteId === note.id;
                 const isHovered = hoveredId === note.id;
                 return (
                   <ContextMenu key={note.id}>
@@ -425,11 +527,13 @@ export function NoteList({
                           hovered={isHovered}
                           selected={isSelected}
                           muted={!isSelected}
+                          className="focus-visible:ring-0 focus-visible:outline-none"
                           align="start"
                           descriptionFullWidth
                           onMouseEnter={() => setHoveredId(note.id)}
                           onMouseLeave={() => setHoveredId(null)}
-                          onClick={() => onSelectNote?.(note.id)}
+                          onPointerDown={(event) => handleNotePointerDown(note, event)}
+                          onClick={(event) => handleNoteClick(note, event)}
                           leading={
                             playingNoteIds.includes(note.id) ? (
                               <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />

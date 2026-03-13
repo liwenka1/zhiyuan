@@ -113,6 +113,11 @@
     "dragOutFailed": "Failed to drag file out"
   },
   "moveNoteSuccess": "Note moved",
+  "moveNotesSuccess": "Moved {{count}} note(s)",
+  "moveNotesPartial": "Moved {{movedCount}}, skipped {{skippedCount}}",
+  "drag": {
+    "selectedCount": "{{count}} notes"
+  },
   "externalDrop": {
     "hoverHint": "Release to import Markdown files",
     "importingHint": "Importing...",
