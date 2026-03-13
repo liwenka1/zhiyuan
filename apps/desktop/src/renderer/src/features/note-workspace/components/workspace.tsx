@@ -21,6 +21,8 @@ import { EditorArea } from "@/features/editor";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { useWorkspaceInit, useNoteHandlers, useFolderHandlers, useNoteData, useDialogState } from "../hooks";
 import { workspaceIpc } from "@/ipc";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 const NOTE_DRAG_PREFIX = "note-";
 const FOLDER_DROP_PREFIX = "folder-";
@@ -38,6 +40,7 @@ export function NoteWorkspace() {
 
   // Dialog 状态管理
   const dialogState = useDialogState();
+  const { t } = useTranslation("note");
 
   // Store 状态
   const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
@@ -70,6 +73,8 @@ export function NoteWorkspace() {
   // 数据派生
   const { formattedNotes, foldersWithCount } = useNoteData();
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
+  const [draggingNoteIds, setDraggingNoteIds] = useState<string[]>([]);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
   const [isNoteListExternalFileDropHover, setIsNoteListExternalFileDropHover] = useState(false);
   const [isEditorExternalFileDropHover, setIsEditorExternalFileDropHover] = useState(false);
   const [isEditorNoteDragHover, setIsEditorNoteDragHover] = useState(false);
@@ -85,7 +90,17 @@ export function NoteWorkspace() {
   const handleDragStart = (event: DragStartEvent) => {
     const activeId = String(event.active.id);
     if (!activeId.startsWith(NOTE_DRAG_PREFIX)) return;
-    setDraggingNoteId(activeId.slice(NOTE_DRAG_PREFIX.length));
+    const noteId = activeId.slice(NOTE_DRAG_PREFIX.length);
+    const isDraggingSelected = selectedNoteIds.includes(noteId);
+    const visibleNoteIdSet = new Set(formattedNotes.map((note) => note.id));
+    const visibleSelectedNoteIds = selectedNoteIds.filter((id) => visibleNoteIdSet.has(id));
+    const currentDraggingIds =
+      isDraggingSelected && visibleSelectedNoteIds.length > 0 ? visibleSelectedNoteIds : [noteId];
+    setDraggingNoteId(noteId);
+    setDraggingNoteIds(currentDraggingIds);
+    if (!isDraggingSelected) {
+      setSelectedNoteIds([noteId]);
+    }
     setIsEditorNoteDragHover(false);
   };
 
@@ -99,12 +114,14 @@ export function NoteWorkspace() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setDraggingNoteId(null);
+    setDraggingNoteIds([]);
     setIsEditorNoteDragHover(false);
     if (!over?.id || typeof active.id !== "string" || typeof over.id !== "string") return;
     const activeId = String(active.id);
     const overId = String(over.id);
     if (!activeId.startsWith(NOTE_DRAG_PREFIX)) return;
     const noteId = activeId.slice(NOTE_DRAG_PREFIX.length);
+    const currentDraggingIds = draggingNoteIds.length > 0 ? draggingNoteIds : [noteId];
 
     if (overId === EDITOR_DROP_OPEN_ID) {
       selectNote(noteId);
@@ -113,7 +130,30 @@ export function NoteWorkspace() {
 
     if (!overId.startsWith(FOLDER_DROP_PREFIX)) return;
     const targetFolderId = overId.slice(FOLDER_DROP_PREFIX.length);
-    void moveNote(noteId, targetFolderId);
+    if (currentDraggingIds.length <= 1) {
+      void moveNote(noteId, targetFolderId);
+      return;
+    }
+
+    void (async () => {
+      let movedCount = 0;
+      let skippedCount = 0;
+      for (const movingNoteId of currentDraggingIds) {
+        const result = await moveNote(movingNoteId, targetFolderId, { silent: true });
+        if (result.moved) {
+          movedCount += 1;
+        } else {
+          skippedCount += 1;
+        }
+      }
+      if (movedCount > 0 && skippedCount === 0) {
+        toast.success(t("moveNotesSuccess", { count: movedCount }));
+      } else if (movedCount > 0) {
+        toast.success(t("moveNotesPartial", { movedCount, skippedCount }));
+      } else {
+        toast.error(t("errors.moveNoteFailed"));
+      }
+    })();
   };
 
   const draggingNote = draggingNoteId ? notes.find((note) => note.id === draggingNoteId) : null;
@@ -189,6 +229,7 @@ export function NoteWorkspace() {
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
         setDraggingNoteId(null);
+        setDraggingNoteIds([]);
         setIsEditorNoteDragHover(false);
       }}
     >
@@ -215,6 +256,7 @@ export function NoteWorkspace() {
             key={selectedFolderId ?? "__all__"}
             notes={formattedNotes}
             selectedNoteId={selectedNoteId ?? undefined}
+            selectedNoteIds={selectedNoteIds}
             searchKeyword={searchKeyword}
             onSelectNote={selectNote}
             onCreateNote={noteHandlers.handleCreateNote}
@@ -230,6 +272,7 @@ export function NoteWorkspace() {
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
             onExternalFileDragHoverChange={setIsNoteListExternalFileDropHover}
+            onSelectedNoteIdsChange={setSelectedNoteIds}
           />
         }
         mainContent={
@@ -275,7 +318,15 @@ export function NoteWorkspace() {
               selected
               layoutId={undefined}
               leading={<FileText className="h-3.5 w-3.5 shrink-0" />}
-              label={<span className="block w-full truncate">{draggingNote.title}</span>}
+              label={
+                draggingNoteIds.length > 1 ? (
+                  <span className="block w-full truncate">
+                    {t("drag.selectedCount", { count: draggingNoteIds.length })}
+                  </span>
+                ) : (
+                  <span className="block w-full truncate">{draggingNote.title}</span>
+                )
+              }
               align="start"
               className="pointer-events-none w-auto max-w-[min(460px,calc(100vw-48px))]"
               contentClassName="min-w-0"

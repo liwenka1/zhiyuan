@@ -113,6 +113,11 @@
     "dragOutFailed": "拖出文件失败"
   },
   "moveNoteSuccess": "笔记已移动",
+  "moveNotesSuccess": "已移动 {{count}} 个笔记",
+  "moveNotesPartial": "已移动 {{movedCount}} 个，跳过 {{skippedCount}} 个",
+  "drag": {
+    "selectedCount": "{{count}} 个笔记"
+  },
   "externalDrop": {
     "hoverHint": "松开导入 Markdown 文件",
     "importingHint": "正在导入...",
