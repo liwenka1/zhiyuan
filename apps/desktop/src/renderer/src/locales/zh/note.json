@@ -113,8 +113,11 @@
     "dragOutFailed": "拖出文件失败"
   },
   "moveNoteSuccess": "笔记已移动",
+  "moveNoteRenamedSuccess": "笔记已移动（同名已自动重命名）",
   "moveNotesSuccess": "已移动 {{count}} 个笔记",
+  "moveNotesSuccessWithRenamed": "已移动 {{count}} 个笔记，其中 {{renamedCount}} 个已自动重命名",
   "moveNotesPartial": "已移动 {{movedCount}} 个，跳过 {{skippedCount}} 个",
+  "moveNotesPartialWithRenamed": "已移动 {{movedCount}} 个，跳过 {{skippedCount}} 个，其中 {{renamedCount}} 个已自动重命名",
   "drag": {
     "selectedCount": "{{count}} 个笔记"
   },

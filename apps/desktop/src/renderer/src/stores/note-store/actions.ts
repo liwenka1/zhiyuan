@@ -292,16 +292,23 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         return { moved: false, reason: "same-folder" as const };
       }
 
-      const newFilePath = `${targetFolder.path}/${note.fileName}`;
+      const parsedName = /^(.+?)(\.[^.]+)?$/.exec(note.fileName);
+      const baseName = parsedName?.[1] ?? note.fileName;
+      const extension = parsedName?.[2] ?? ".md";
+      let resolvedFileName = `${baseName}${extension}`;
+      let resolvedFilePath = `${targetFolder.path}/${resolvedFileName}`;
+      let renamed = false;
 
       try {
         await watcherIpc.pause();
-        const exists = await fileIpc.exists(newFilePath);
-        if (exists) {
-          if (!silent) toast.error(i18n.t("note:errors.moveNoteTargetExists"));
-          return { moved: false, reason: "target-exists" as const };
+        let index = 1;
+        while (await fileIpc.exists(resolvedFilePath)) {
+          renamed = true;
+          resolvedFileName = `${baseName} (${index})${extension}`;
+          resolvedFilePath = `${targetFolder.path}/${resolvedFileName}`;
+          index += 1;
         }
-        await fileIpc.rename(note.filePath, newFilePath);
+        await fileIpc.rename(note.filePath, resolvedFilePath);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (!silent) {
@@ -314,12 +321,14 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         await watcherIpc.resume();
       }
 
-      const newNoteId = targetFolderId + "/" + note.fileName;
+      const newNoteId = targetFolderId + "/" + resolvedFileName;
       set((state) => {
         const targetNote = state.notes.find((n) => n.id === noteId);
         if (targetNote) {
           targetNote.id = newNoteId;
-          targetNote.filePath = newFilePath;
+          targetNote.filePath = resolvedFilePath;
+          targetNote.fileName = resolvedFileName;
+          targetNote.title = resolvedFileName.replace(/\.md$/i, "");
           targetNote.folderId = targetFolderId;
           targetNote.updatedAt = new Date().toISOString();
         }
@@ -346,8 +355,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
               : f
         )
       );
-      if (!silent) toast.success(i18n.t("note:moveNoteSuccess"));
-      return { moved: true };
+      if (!silent) {
+        toast.success(renamed ? i18n.t("note:moveNoteRenamedSuccess") : i18n.t("note:moveNoteSuccess"));
+      }
+      return { moved: true, renamed };
     }
   };
 }

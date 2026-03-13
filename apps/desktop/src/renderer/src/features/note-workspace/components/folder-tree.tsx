@@ -32,7 +32,8 @@ function DroppableFolderRow({
   onMouseLeave,
   leading,
   label,
-  trailing
+  trailing,
+  ...containerProps
 }: {
   droppableId: string;
   isSelected: boolean;
@@ -43,13 +44,13 @@ function DroppableFolderRow({
   leading: React.ReactNode;
   label: React.ReactNode;
   trailing: React.ReactNode | null;
-}) {
+} & React.HTMLAttributes<HTMLDivElement>) {
   const { setNodeRef, isOver } = useDroppable({
     id: droppableId
   });
 
   return (
-    <div ref={setNodeRef}>
+    <div ref={setNodeRef} {...containerProps}>
       <ListRow
         layoutId="hover-bg"
         hovered={isHovered || isOver}

@@ -56,7 +56,10 @@ function DraggableNoteRow({
   virtualRowStart,
   measureRef,
   onDraggingChange,
-  children
+  children,
+  className: containerClassName,
+  style: containerStyle,
+  ...containerProps
 }: {
   note: Note;
   virtualRowIndex: number;
@@ -64,7 +67,7 @@ function DraggableNoteRow({
   measureRef: (el: HTMLDivElement | null) => void;
   onDraggingChange?: (note: Note, isDragging: boolean) => void;
   children: React.ReactNode;
-}) {
+} & React.HTMLAttributes<HTMLDivElement>) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: NOTE_DRAG_PREFIX + note.id,
     data: { noteId: note.id }
@@ -77,6 +80,7 @@ function DraggableNoteRow({
     [measureRef, setNodeRef]
   );
   const style: React.CSSProperties = {
+    ...(containerStyle as React.CSSProperties),
     transform: `translateY(${virtualRowStart}px)`,
     opacity: isDragging ? 0.25 : 1
   };
@@ -90,8 +94,9 @@ function DraggableNoteRow({
       ref={refCallback}
       data-index={virtualRowIndex}
       data-note-item="true"
-      className={cn("absolute right-0 left-0 px-2", isDragging ? "cursor-grabbing" : "cursor-grab")}
+      className={cn("absolute right-0 left-0 px-2", isDragging ? "cursor-grabbing" : "cursor-grab", containerClassName)}
       style={style}
+      {...containerProps}
       {...listeners}
       {...attributes}
     >
@@ -261,7 +266,7 @@ export function NoteList({
       setSelectionAnchorId(note.id);
       onSelectNote?.(note.id);
     },
-    [handleSelectRange, onSelectNote, onSelectedNoteIdsChange, selectedNoteIds, selectedSet]
+    [handleSelectRange, notes, onSelectNote, onSelectedNoteIdsChange, selectedNoteId, selectedNoteIds]
   );
 
   useEffect(() => {
