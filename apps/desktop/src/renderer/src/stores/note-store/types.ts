@@ -19,6 +19,7 @@ export interface MoveNoteResult {
   moved: boolean;
   reason?: "no-workspace" | "invalid-target" | "same-folder" | "target-exists" | "failed";
   errorMessage?: string;
+  renamed?: boolean;
 }
 
 export interface NoteStore extends NoteStoreState {

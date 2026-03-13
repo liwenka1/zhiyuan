@@ -138,18 +138,28 @@ export function NoteWorkspace() {
     void (async () => {
       let movedCount = 0;
       let skippedCount = 0;
+      let renamedCount = 0;
       for (const movingNoteId of currentDraggingIds) {
         const result = await moveNote(movingNoteId, targetFolderId, { silent: true });
         if (result.moved) {
           movedCount += 1;
+          if (result.renamed) renamedCount += 1;
         } else {
           skippedCount += 1;
         }
       }
       if (movedCount > 0 && skippedCount === 0) {
-        toast.success(t("moveNotesSuccess", { count: movedCount }));
+        toast.success(
+          renamedCount > 0
+            ? t("moveNotesSuccessWithRenamed", { count: movedCount, renamedCount })
+            : t("moveNotesSuccess", { count: movedCount })
+        );
       } else if (movedCount > 0) {
-        toast.success(t("moveNotesPartial", { movedCount, skippedCount }));
+        toast.success(
+          renamedCount > 0
+            ? t("moveNotesPartialWithRenamed", { movedCount, skippedCount, renamedCount })
+            : t("moveNotesPartial", { movedCount, skippedCount })
+        );
       } else {
         toast.error(t("errors.moveNoteFailed"));
       }

@@ -113,8 +113,11 @@
     "dragOutFailed": "Failed to drag file out"
   },
   "moveNoteSuccess": "Note moved",
+  "moveNoteRenamedSuccess": "Note moved (renamed to avoid conflicts)",
   "moveNotesSuccess": "Moved {{count}} note(s)",
+  "moveNotesSuccessWithRenamed": "Moved {{count}} note(s), auto-renamed {{renamedCount}}",
   "moveNotesPartial": "Moved {{movedCount}}, skipped {{skippedCount}}",
+  "moveNotesPartialWithRenamed": "Moved {{movedCount}}, skipped {{skippedCount}}, auto-renamed {{renamedCount}}",
   "drag": {
     "selectedCount": "{{count}} notes"
   },
