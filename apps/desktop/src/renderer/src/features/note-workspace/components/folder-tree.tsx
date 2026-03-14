@@ -15,13 +15,23 @@ import { cn } from "@/lib/utils";
 
 import { SettingsPopover } from "@/components/app";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useViewStore } from "@/stores";
 
 // 特殊 ID 表示「全部笔记」
 export const ALL_NOTES_FOLDER_ID = "__all__";
 
 const FOLDER_DROP_PREFIX = "folder-";
+
+function setComposedRef<T>(ref: React.Ref<T> | undefined, value: T) {
+  if (typeof ref === "function") {
+    ref(value);
+    return;
+  }
+  if (ref && "current" in ref) {
+    (ref as React.RefObject<T | null>).current = value;
+  }
+}
 
 function DroppableFolderRow({
   droppableId,
@@ -45,12 +55,22 @@ function DroppableFolderRow({
   label: React.ReactNode;
   trailing: React.ReactNode | null;
 } & React.HTMLAttributes<HTMLDivElement>) {
+  const { ref: forwardedRef, ...restContainerProps } = containerProps as React.HTMLAttributes<HTMLDivElement> & {
+    ref?: React.Ref<HTMLDivElement>;
+  };
   const { setNodeRef, isOver } = useDroppable({
     id: droppableId
   });
+  const refCallback = useCallback(
+    (el: HTMLDivElement | null) => {
+      setNodeRef(el);
+      setComposedRef(forwardedRef, el);
+    },
+    [forwardedRef, setNodeRef]
+  );
 
   return (
-    <div ref={setNodeRef} {...containerProps}>
+    <div ref={refCallback} {...restContainerProps}>
       <ListRow
         layoutId="hover-bg"
         hovered={isHovered || isOver}

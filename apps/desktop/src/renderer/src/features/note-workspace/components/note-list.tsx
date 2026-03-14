@@ -50,6 +50,16 @@ interface Note {
 
 const NOTE_DRAG_PREFIX = "note-";
 
+function setComposedRef<T>(ref: React.Ref<T> | undefined, value: T) {
+  if (typeof ref === "function") {
+    ref(value);
+    return;
+  }
+  if (ref && "current" in ref) {
+    (ref as React.RefObject<T | null>).current = value;
+  }
+}
+
 function DraggableNoteRow({
   note,
   virtualRowIndex,
@@ -68,6 +78,9 @@ function DraggableNoteRow({
   onDraggingChange?: (note: Note, isDragging: boolean) => void;
   children: React.ReactNode;
 } & React.HTMLAttributes<HTMLDivElement>) {
+  const { ref: forwardedRef, ...restContainerProps } = containerProps as React.HTMLAttributes<HTMLDivElement> & {
+    ref?: React.Ref<HTMLDivElement>;
+  };
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({
     id: NOTE_DRAG_PREFIX + note.id,
     data: { noteId: note.id }
@@ -76,8 +89,9 @@ function DraggableNoteRow({
     (el: HTMLDivElement | null) => {
       measureRef(el);
       setNodeRef(el);
+      setComposedRef(forwardedRef, el);
     },
-    [measureRef, setNodeRef]
+    [forwardedRef, measureRef, setNodeRef]
   );
   const style: React.CSSProperties = {
     ...(containerStyle as React.CSSProperties),
@@ -96,7 +110,7 @@ function DraggableNoteRow({
       data-note-item="true"
       className={cn("absolute right-0 left-0 px-2", isDragging ? "cursor-grabbing" : "cursor-grab", containerClassName)}
       style={style}
-      {...containerProps}
+      {...restContainerProps}
       {...listeners}
       {...attributes}
     >
