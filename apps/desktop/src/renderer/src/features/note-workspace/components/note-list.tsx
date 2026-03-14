@@ -546,7 +546,6 @@ export function NoteList({
                           hovered={isHovered}
                           selected={isSelected}
                           muted={!isSelected}
-                          className="focus-visible:ring-0 focus-visible:outline-none"
                           align="start"
                           descriptionFullWidth
                           onMouseEnter={() => setHoveredId(note.id)}
