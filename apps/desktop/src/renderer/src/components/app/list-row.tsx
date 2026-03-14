@@ -49,7 +49,6 @@ const ListRow = React.forwardRef<HTMLButtonElement, ListRowProps>(function ListR
         "group relative flex w-full min-w-0 cursor-pointer appearance-none justify-start gap-2 overflow-hidden rounded-md px-3 py-2 text-left text-sm transition-colors outline-none",
         align === "start" ? "items-start" : "items-center",
         selected ? "text-foreground" : muted ? "text-muted-foreground" : "text-foreground",
-        "focus-visible:ring-ring/50 focus-visible:ring-[3px]",
         className
       )}
       {...props}
