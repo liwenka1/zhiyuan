@@ -191,6 +191,42 @@ export function NoteWorkspace() {
     [folders, loadFromFileSystem, selectedFolderId, setFolders, workspacePath]
   );
   const handleOpenImportedMarkdownNote = useCallback((noteId: string) => selectNote(noteId), [selectNote]);
+  const handleDeleteSelectedNotes = useCallback(
+    async (noteIds: string[]) => {
+      const uniqueNoteIds = Array.from(new Set(noteIds));
+      const deletingSet = new Set(uniqueNoteIds);
+
+      for (const noteId of uniqueNoteIds) {
+        const target = notes.find((note) => note.id === noteId);
+        if (!target) continue;
+        await noteHandlers.handleDeleteNote({
+          id: target.id,
+          title: target.title,
+          updatedAt: target.updatedAt,
+          isPinned: target.isPinned
+        });
+      }
+
+      setSelectedNoteIds((prev) => prev.filter((id) => !deletingSet.has(id)));
+    },
+    [noteHandlers, notes]
+  );
+  const handlePinSelectedNotes = useCallback(
+    async (noteIds: string[]) => {
+      const uniqueNoteIds = Array.from(new Set(noteIds));
+      for (const noteId of uniqueNoteIds) {
+        const target = notes.find((note) => note.id === noteId);
+        if (!target || target.isPinned) continue;
+        await noteHandlers.handleTogglePinNote({
+          id: target.id,
+          title: target.title,
+          updatedAt: target.updatedAt,
+          isPinned: target.isPinned
+        });
+      }
+    },
+    [noteHandlers, notes]
+  );
   const cursorOverlayModifier: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
     if (!activeNodeRect || !activatorEvent) return transform;
 
@@ -274,9 +310,11 @@ export function NoteWorkspace() {
             onSearchChange={setSearchKeyword}
             onShowNoteInExplorer={noteHandlers.handleShowNoteInExplorer}
             onDeleteNote={noteHandlers.handleDeleteNote}
+            onDeleteNotes={handleDeleteSelectedNotes}
             onRenameNote={noteHandlers.handleRenameNote}
             onDuplicateNote={noteHandlers.handleDuplicateNote}
             onTogglePinNote={noteHandlers.handleTogglePinNote}
+            onPinNotes={handlePinSelectedNotes}
             onExportNote={noteHandlers.handleExportNote}
             onCopyToWechat={noteHandlers.handleCopyToWechat}
             onPushToGitHub={noteHandlers.handlePushToGitHub}
