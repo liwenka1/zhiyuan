@@ -16,6 +16,7 @@
   "contextMenu": {
     "showInExplorer": "Show in File Manager",
     "pin": "Pin Note",
+    "pinSelected": "Pin {{count}} Notes",
     "unpin": "Unpin Note",
     "rename": "Rename",
     "duplicate": "Duplicate",
@@ -27,7 +28,8 @@
     "exportAsImage": "Export as Image",
     "exportAsImagePages": "Export as Images (Pages)",
     "copyToWechat": "Copy to WeChat Official Account",
-    "delete": "Delete Note"
+    "delete": "Delete Note",
+    "deleteSelected": "Delete {{count}} Notes"
   },
   "pin": {
     "pinSuccess": "Note pinned",

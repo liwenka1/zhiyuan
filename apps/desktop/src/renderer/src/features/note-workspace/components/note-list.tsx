@@ -130,9 +130,11 @@ interface NoteListProps {
   onSearchChange?: (keyword: string) => void;
   onShowNoteInExplorer?: (note: Note) => void;
   onDeleteNote?: (note: Note) => void;
+  onDeleteNotes?: (noteIds: string[]) => void | Promise<void>;
   onRenameNote?: (note: Note) => void;
   onDuplicateNote?: (note: Note) => void;
   onTogglePinNote?: (note: Note) => void;
+  onPinNotes?: (noteIds: string[]) => void | Promise<void>;
   onExportNote?: (note: Note, format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages") => void;
   onCopyToWechat?: (note: Note) => void;
   onPushToGitHub?: (note: Note) => void;
@@ -152,9 +154,11 @@ export function NoteList({
   onSearchChange,
   onShowNoteInExplorer,
   onDeleteNote,
+  onDeleteNotes,
   onRenameNote,
   onDuplicateNote,
   onTogglePinNote,
+  onPinNotes,
   onExportNote,
   onCopyToWechat,
   onPushToGitHub,
@@ -219,6 +223,7 @@ export function NoteList({
 
   const parentRef = useRef<HTMLDivElement>(null);
   const selectedSet = useMemo(() => new Set(selectedNoteIds), [selectedNoteIds]);
+  const notesById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
 
   const handleSelectRange = useCallback(
     (targetNoteId: string) => {
@@ -281,6 +286,18 @@ export function NoteList({
       onSelectNote?.(note.id);
     },
     [handleSelectRange, notes, onSelectNote, onSelectedNoteIdsChange, selectedNoteId, selectedNoteIds]
+  );
+
+  const handleNoteContextMenu = useCallback(
+    (note: Note) => {
+      if (selectedSet.has(note.id)) {
+        setSelectionAnchorId(note.id);
+        return;
+      }
+      onSelectedNoteIdsChange?.([note.id]);
+      setSelectionAnchorId(note.id);
+    },
+    [onSelectedNoteIdsChange, selectedSet]
   );
 
   useEffect(() => {
@@ -531,6 +548,10 @@ export function NoteList({
                 if (!note) return null;
                 const isSelected = selectedNoteIds.length > 0 ? selectedSet.has(note.id) : selectedNoteId === note.id;
                 const isHovered = hoveredId === note.id;
+                const contextSelectedIds = selectedSet.has(note.id) ? selectedNoteIds : [note.id];
+                const contextSelectedCount = contextSelectedIds.length;
+                const isMultiContext = contextSelectedCount > 1;
+                const contextHasUnpinned = contextSelectedIds.some((id) => !notesById.get(id)?.isPinned);
                 return (
                   <ContextMenu key={note.id}>
                     <ContextMenuTrigger asChild>
@@ -552,6 +573,7 @@ export function NoteList({
                           onMouseLeave={() => setHoveredId(null)}
                           onPointerDown={(event) => handleNotePointerDown(note, event)}
                           onClick={(event) => handleNoteClick(note, event)}
+                          onContextMenu={() => handleNoteContextMenu(note)}
                           leading={
                             playingNoteIds.includes(note.id) ? (
                               <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -585,70 +607,90 @@ export function NoteList({
                       </DraggableNoteRow>
                     </ContextMenuTrigger>
                     <ContextMenuContent>
-                      <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
-                        <FolderOpen className="h-4 w-4" />
-                        <span>{t("contextMenu.showInExplorer")}</span>
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => onTogglePinNote?.(note)}>
-                        {note.isPinned ? (
-                          <>
-                            <PinOff className="h-4 w-4" />
-                            <span>{t("contextMenu.unpin")}</span>
-                          </>
-                        ) : (
-                          <>
-                            <Pin className="h-4 w-4" />
-                            <span>{t("contextMenu.pin")}</span>
-                          </>
-                        )}
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => onRenameNote?.(note)}>
-                        <Pencil className="h-4 w-4" />
-                        <span>{t("contextMenu.rename")}</span>
-                      </ContextMenuItem>
-                      <ContextMenuItem onClick={() => onDuplicateNote?.(note)}>
-                        <Copy className="h-4 w-4" />
-                        <span>{t("contextMenu.duplicate")}</span>
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => onPushToGitHub?.(note)}>
-                        <Github className="h-4 w-4" />
-                        <span>{t("contextMenu.pushToGitHub")}</span>
-                      </ContextMenuItem>
-                      <ContextMenuSeparator />
-                      <ContextMenuSub>
-                        <ContextMenuSubTrigger>
-                          <Download className="h-4 w-4" />
-                          <span>{t("contextMenu.export")}</span>
-                        </ContextMenuSubTrigger>
-                        <ContextMenuSubContent>
-                          <ContextMenuItem onClick={() => onExportNote?.(note, "html")}>
-                            <span>{t("contextMenu.exportAsHTML")}</span>
+                      {isMultiContext ? (
+                        <>
+                          {contextHasUnpinned ? (
+                            <>
+                              <ContextMenuItem onClick={() => void onPinNotes?.(contextSelectedIds)}>
+                                <Pin className="h-4 w-4" />
+                                <span>{t("contextMenu.pinSelected", { count: contextSelectedCount })}</span>
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                            </>
+                          ) : null}
+                          <ContextMenuItem onClick={() => void onDeleteNotes?.(contextSelectedIds)}>
+                            <Trash2 className="h-4 w-4" />
+                            <span>{t("contextMenu.deleteSelected", { count: contextSelectedCount })}</span>
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onExportNote?.(note, "pdf")}>
-                            <span>{t("contextMenu.exportAsPDF")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
+                            <FolderOpen className="h-4 w-4" />
+                            <span>{t("contextMenu.showInExplorer")}</span>
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onExportNote?.(note, "pdf-pages")}>
-                            <span>{t("contextMenu.exportAsPDFPages")}</span>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => onTogglePinNote?.(note)}>
+                            {note.isPinned ? (
+                              <>
+                                <PinOff className="h-4 w-4" />
+                                <span>{t("contextMenu.unpin")}</span>
+                              </>
+                            ) : (
+                              <>
+                                <Pin className="h-4 w-4" />
+                                <span>{t("contextMenu.pin")}</span>
+                              </>
+                            )}
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onExportNote?.(note, "image")}>
-                            <span>{t("contextMenu.exportAsImage")}</span>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => onRenameNote?.(note)}>
+                            <Pencil className="h-4 w-4" />
+                            <span>{t("contextMenu.rename")}</span>
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onExportNote?.(note, "image-pages")}>
-                            <span>{t("contextMenu.exportAsImagePages")}</span>
+                          <ContextMenuItem onClick={() => onDuplicateNote?.(note)}>
+                            <Copy className="h-4 w-4" />
+                            <span>{t("contextMenu.duplicate")}</span>
                           </ContextMenuItem>
-                          <ContextMenuItem onClick={() => onCopyToWechat?.(note)}>
-                            <span>{t("contextMenu.copyToWechat")}</span>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => onPushToGitHub?.(note)}>
+                            <Github className="h-4 w-4" />
+                            <span>{t("contextMenu.pushToGitHub")}</span>
                           </ContextMenuItem>
-                        </ContextMenuSubContent>
-                      </ContextMenuSub>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
-                        <Trash2 className="h-4 w-4" />
-                        <span>{t("contextMenu.delete")}</span>
-                      </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuSub>
+                            <ContextMenuSubTrigger>
+                              <Download className="h-4 w-4" />
+                              <span>{t("contextMenu.export")}</span>
+                            </ContextMenuSubTrigger>
+                            <ContextMenuSubContent>
+                              <ContextMenuItem onClick={() => onExportNote?.(note, "html")}>
+                                <span>{t("contextMenu.exportAsHTML")}</span>
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => onExportNote?.(note, "pdf")}>
+                                <span>{t("contextMenu.exportAsPDF")}</span>
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => onExportNote?.(note, "pdf-pages")}>
+                                <span>{t("contextMenu.exportAsPDFPages")}</span>
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => onExportNote?.(note, "image")}>
+                                <span>{t("contextMenu.exportAsImage")}</span>
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => onExportNote?.(note, "image-pages")}>
+                                <span>{t("contextMenu.exportAsImagePages")}</span>
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => onCopyToWechat?.(note)}>
+                                <span>{t("contextMenu.copyToWechat")}</span>
+                              </ContextMenuItem>
+                            </ContextMenuSubContent>
+                          </ContextMenuSub>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => onDeleteNote?.(note)}>
+                            <Trash2 className="h-4 w-4" />
+                            <span>{t("contextMenu.delete")}</span>
+                          </ContextMenuItem>
+                        </>
+                      )}
                     </ContextMenuContent>
                   </ContextMenu>
                 );

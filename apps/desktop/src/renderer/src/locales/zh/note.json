@@ -16,6 +16,7 @@
   "contextMenu": {
     "showInExplorer": "在文件管理器中查看",
     "pin": "置顶笔记",
+    "pinSelected": "置顶 {{count}} 个笔记",
     "unpin": "取消置顶",
     "rename": "重命名",
     "duplicate": "创建副本",
@@ -27,7 +28,8 @@
     "exportAsImage": "导出为图片",
     "exportAsImagePages": "导出为图片（分页）",
     "copyToWechat": "复制到微信公众号",
-    "delete": "删除笔记"
+    "delete": "删除笔记",
+    "deleteSelected": "删除 {{count}} 个笔记"
   },
   "pin": {
     "pinSuccess": "已置顶笔记",
