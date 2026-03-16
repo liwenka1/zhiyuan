@@ -8,7 +8,17 @@ const CODE_LABELS: Record<string, string> = {
   Space: "Space",
   Enter: "Enter",
   Tab: "Tab",
-  Backspace: "Backspace"
+  Backspace: "Backspace",
+  Comma: ",",
+  Period: ".",
+  Slash: "/",
+  Semicolon: ";",
+  Quote: "'",
+  BracketLeft: "[",
+  BracketRight: "]",
+  Backslash: "\\",
+  Minus: "-",
+  Equal: "="
 };
 
 const MOD_LABELS: Record<ModKey, string> = {

@@ -36,7 +36,10 @@ export function ShortcutsTab() {
   const activeShortcutId = pendingShortcutId ?? "toggleTerminal";
   const activeBinding = shortcuts[activeShortcutId] ?? shortcuts.toggleTerminal;
   const currentBinding = pendingBinding ? pendingBinding : activeBinding;
-  const pendingParts = useMemo(() => buildBindingParts(currentBinding, isMac), [currentBinding, isMac]);
+  const pendingParts = useMemo(
+    () => buildBindingParts(currentBinding, isMac, activeShortcutId),
+    [activeShortcutId, currentBinding, isMac]
+  );
   const grouped = useMemo(
     () =>
       shortcutGroups.map((group) => ({
