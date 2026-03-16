@@ -11,7 +11,7 @@ CURRENT_VERSION=$(node -p "require('$PACKAGE_JSON').version")
 
 echo "Current version: $CURRENT_VERSION"
 echo ""
-echo "Enter new version (e.g. x.x.x-beta):"
+echo "Enter new version (e.g. x.x.x or x.x.x-beta):"
 read -r NEW_VERSION
 
 if [ -z "$NEW_VERSION" ]; then
