@@ -318,6 +318,8 @@ export function NoteList({
       if (!root) return;
       const target = event.target as Node | null;
       const targetElement = event.target instanceof Element ? event.target : null;
+      const isContextMenuInteraction = !!targetElement?.closest('[data-slot^="context-menu"]');
+      if (isContextMenuInteraction) return;
       if (target && root.contains(target)) {
         const isClickingNoteItem = !!targetElement?.closest('[data-note-item="true"]');
         if (isClickingNoteItem) return;
