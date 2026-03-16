@@ -5,6 +5,7 @@
 import { useEffect, useState } from "react";
 import { Settings, Info, SlidersHorizontal, Share2, Github, Keyboard } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ListRow } from "@/components/app/list-row";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useTranslation } from "react-i18next";
@@ -60,22 +61,19 @@ export function SettingsPopover() {
         {/* 左侧导航 */}
         <nav className="border-border flex w-[200px] shrink-0 flex-col gap-0.5 border-r px-3 py-4">
           {tabs.map((item) => (
-            <Button
+            <ListRow
               key={item.id}
               type="button"
-              variant="ghost"
-              size="sm"
               onClick={() => setTab(item.id)}
-              className={`h-9 justify-start gap-2.5 rounded-lg px-3 text-sm transition-colors ${
-                tab === item.id
-                  ? "bg-foreground/6 text-foreground hover:bg-foreground/6 font-medium"
-                  : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+              selected={tab === item.id}
+              muted={tab !== item.id}
+              className={`h-9 rounded-lg px-3 ${
+                tab === item.id ? "font-medium" : "hover:bg-muted/40 hover:text-foreground"
               }`}
+              leading={item.icon}
+              label={item.label}
               aria-pressed={tab === item.id}
-            >
-              {item.icon}
-              {item.label}
-            </Button>
+            />
           ))}
         </nav>
 
