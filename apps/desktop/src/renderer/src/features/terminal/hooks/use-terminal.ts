@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { Terminal, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
@@ -7,6 +7,7 @@ import { useWorkspaceStore } from "@/stores";
 
 interface UseTerminalOptions {
   containerRef: RefObject<HTMLDivElement | null>;
+  isActive: boolean;
 }
 
 function createTerminalTheme(): ITheme {
@@ -24,9 +25,12 @@ function createTerminalTheme(): ITheme {
   };
 }
 
-export function useTerminal({ containerRef }: UseTerminalOptions) {
-  const [hasOutput, setHasOutput] = useState(false);
+export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
   const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isActiveRef = useRef(isActive);
+  const applyResizeRef = useRef<(() => void) | null>(null);
+  const hasStableLayoutRef = useRef(false);
+  const pendingOutputRef = useRef<string[]>([]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -68,17 +72,34 @@ export function useTerminal({ containerRef }: UseTerminalOptions) {
       }
     }
 
+    const flushPendingOutput = () => {
+      if (pendingOutputRef.current.length === 0) return;
+      terminal.write(pendingOutputRef.current.join(""));
+      pendingOutputRef.current = [];
+    };
+
     const applyResize = () => {
-      if (!terminalId || !containerRef.current) return;
+      if (!isActiveRef.current || !terminalId || !containerRef.current) return;
+      const width = containerRef.current.clientWidth;
+      const height = containerRef.current.clientHeight;
+      // Guard against transient zero/small sizes during tab visibility switch.
+      if (width < 20 || height < 20) return;
       // 统一使用 xterm 官方 fit 算法，避免手算列数导致中文输入偏移和提前换行
       fitAddon.fit();
+      if (terminal.cols < 2 || terminal.rows < 1) return;
+      hasStableLayoutRef.current = true;
+      flushPendingOutput();
       void terminalIpc.resize(terminalId, terminal.cols, terminal.rows).catch(() => {});
     };
+    applyResizeRef.current = applyResize;
 
     const stopDataSubscription = terminalIpc.onData(({ id, data }) => {
       if (id !== terminalId) return;
+      if (!hasStableLayoutRef.current) {
+        pendingOutputRef.current.push(data);
+        return;
+      }
       terminal.write(data);
-      setHasOutput(true);
     });
 
     const stopExitSubscription = terminalIpc.onExit(({ id, exitCode }) => {
@@ -88,6 +109,7 @@ export function useTerminal({ containerRef }: UseTerminalOptions) {
     });
 
     const resizeObserver = new ResizeObserver(() => {
+      if (!isActiveRef.current) return;
       // 防抖处理resize事件
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
@@ -120,7 +142,11 @@ export function useTerminal({ containerRef }: UseTerminalOptions) {
           return;
         }
         terminalId = id;
-        applyResize();
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            applyResize();
+          });
+        });
       } catch {
         terminal.writeln("[failed to start shell]");
       }
@@ -132,6 +158,9 @@ export function useTerminal({ containerRef }: UseTerminalOptions) {
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
       }
+      applyResizeRef.current = null;
+      hasStableLayoutRef.current = false;
+      pendingOutputRef.current = [];
       stopDataSubscription();
       stopExitSubscription();
       stopTerminalInput.dispose();
@@ -144,5 +173,17 @@ export function useTerminal({ containerRef }: UseTerminalOptions) {
     };
   }, [containerRef]);
 
-  return { hasOutput };
+  useEffect(() => {
+    isActiveRef.current = isActive;
+    if (!isActive) return;
+    const applyResize = applyResizeRef.current;
+    if (!applyResize) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        applyResize();
+      });
+    });
+  }, [isActive]);
+
+  return undefined;
 }

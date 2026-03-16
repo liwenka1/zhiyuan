@@ -25,9 +25,6 @@
     "terminal": "Terminal",
     "delete": "Delete"
   },
-  "terminal": {
-    "ready": "Terminal ready"
-  },
   "placeholder": "Start writing your note...",
   "previewEmpty": "No content",
   "copyCodeSuccess": "Copied",
