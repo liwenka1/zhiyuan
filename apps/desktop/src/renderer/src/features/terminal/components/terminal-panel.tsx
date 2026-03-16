@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Plus, X } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { ListRow } from "@/components/app/list-row";
 import { IconButton } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup, useGroupRef } from "@/components/ui/resizable";
@@ -115,8 +114,7 @@ interface TerminalSessionViewProps {
 
 function TerminalSessionView({ sessionId, isActive }: TerminalSessionViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { t } = useTranslation();
-  const { hasOutput } = useTerminal({ containerRef });
+  useTerminal({ containerRef, isActive });
 
   return (
     <div
@@ -124,7 +122,6 @@ function TerminalSessionView({ sessionId, isActive }: TerminalSessionViewProps) 
       className={isActive ? "terminal-panel__session is-active" : "terminal-panel__session"}
     >
       <div ref={containerRef} className="h-full w-full overflow-hidden pl-2" />
-      {isActive && !hasOutput && <div className="terminal-panel__empty">{t("terminal.ready")}</div>}
     </div>
   );
 }

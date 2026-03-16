@@ -25,9 +25,6 @@
     "terminal": "终端",
     "delete": "删除"
   },
-  "terminal": {
-    "ready": "终端已就绪"
-  },
   "placeholder": "开始编写你的笔记...",
   "previewEmpty": "暂无内容",
   "copyCodeSuccess": "已复制",
