@@ -15,12 +15,12 @@ export function TerminalPanel() {
   const nextIndexRef = useRef(2);
   const [sessions, setSessions] = useState(() => [createTerminalSession(1)]);
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id ?? "");
+  const hasSessionList = sessions.length >= 2;
 
-  const activeSession = useMemo(
-    () => sessions.find((session) => session.id === activeSessionId) ?? sessions[0],
-    [activeSessionId, sessions]
-  );
-  const activeSessionIdSafe = activeSession?.id ?? "";
+  const activeSessionIdSafe = useMemo(() => {
+    if (sessions.length === 0) return "";
+    return sessions.some((session) => session.id === activeSessionId) ? activeSessionId : (sessions[0]?.id ?? "");
+  }, [activeSessionId, sessions]);
 
   const handleAddTerminal = useCallback(() => {
     const index = nextIndexRef.current;
@@ -34,14 +34,30 @@ export function TerminalPanel() {
     setActiveSessionId(id);
   }, []);
 
+  const handleRemoveSession = useCallback((id: string) => {
+    setSessions((prev) => {
+      if (prev.length <= 1) return prev;
+      const removeIndex = prev.findIndex((session) => session.id === id);
+      if (removeIndex < 0) return prev;
+
+      const nextSessions = prev.filter((session) => session.id !== id);
+      setActiveSessionId((currentActiveId) => {
+        if (currentActiveId !== id) return currentActiveId;
+        const fallbackSession = nextSessions[removeIndex] ?? nextSessions[removeIndex - 1] ?? nextSessions[0];
+        return fallbackSession?.id ?? "";
+      });
+      return nextSessions;
+    });
+  }, []);
+
   useEffect(() => {
     if (!splitGroupRef.current) return;
-    if (sessions.length >= 2) {
+    if (hasSessionList) {
       splitGroupRef.current.setLayout({ "terminal-main": 78, "terminal-list": 22 });
     } else {
       splitGroupRef.current.setLayout({ "terminal-main": 100, "terminal-list": 0 });
     }
-  }, [sessions.length, splitGroupRef]);
+  }, [hasSessionList, splitGroupRef]);
 
   return (
     <section className="terminal-panel bg-background flex h-full min-h-0 flex-col">
@@ -57,7 +73,7 @@ export function TerminalPanel() {
       </div>
       <div className="terminal-panel__body flex min-h-0 flex-1 overflow-hidden">
         <ResizablePanelGroup orientation="horizontal" className="h-full" groupRef={splitGroupRef}>
-          <ResizablePanel id="terminal-main" defaultSize={sessions.length >= 2 ? "78%" : "100%"} minSize="55%">
+          <ResizablePanel id="terminal-main" defaultSize={hasSessionList ? "78%" : "100%"} minSize="55%">
             <div className="terminal-panel__viewport relative h-full min-h-0 overflow-hidden">
               {sessions.map((session) => (
                 <TerminalSessionView
@@ -79,7 +95,7 @@ export function TerminalPanel() {
 
           <ResizablePanel
             id="terminal-list"
-            defaultSize={sessions.length >= 2 ? "22%" : "0%"}
+            defaultSize={hasSessionList ? "22%" : "0%"}
             minSize="0%"
             maxSize="40%"
             collapsible
@@ -92,10 +108,30 @@ export function TerminalPanel() {
                     key={session.id}
                     selected={session.id === activeSessionIdSafe}
                     muted={session.id !== activeSessionIdSafe}
-                    className={cn("terminal-panel__list-item", session.id === activeSessionIdSafe && "is-active")}
+                    className={cn(
+                      "terminal-panel__list-item h-8 px-2 py-1.5",
+                      session.id === activeSessionIdSafe && "is-active"
+                    )}
                     onClick={() => handleActivateSession(session.id)}
                     label={session.label}
                     labelClassName="text-xs font-medium"
+                    trailing={
+                      hasSessionList ? (
+                        <IconButton
+                          aria-label={`Close ${session.label}`}
+                          size="icon-compact"
+                          className={cn(
+                            "text-muted-foreground hover:text-foreground h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                          )}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleRemoveSession(session.id);
+                          }}
+                        >
+                          <X className="size-3" />
+                        </IconButton>
+                      ) : null
+                    }
                   />
                 ))}
               </div>
@@ -129,10 +165,9 @@ function TerminalSessionView({ sessionId, isActive }: TerminalSessionViewProps) 
 interface TerminalSession {
   id: string;
   label: string;
-  index: number;
 }
 
 function createTerminalSession(index: number): TerminalSession {
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `terminal-${index}`;
-  return { id, label: `Terminal ${index}`, index };
+  return { id, label: `Terminal ${index}` };
 }
