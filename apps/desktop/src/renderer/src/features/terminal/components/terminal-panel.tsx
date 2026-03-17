@@ -108,27 +108,27 @@ export function TerminalPanel() {
           <ResizablePanel
             id="terminal-list"
             defaultSize={hasSessionList ? "22%" : "0%"}
-            minSize="0%"
+            minSize={hasSessionList ? "14%" : "0%"}
             maxSize="40%"
-            collapsible
+            collapsible={!hasSessionList}
             collapsedSize="0%"
           >
-            <ScrollArea className="terminal-panel__list h-full">
-              <div className="terminal-panel__list-inner">
-                {sessions.map((session) => (
-                  <ListRow
-                    key={session.id}
-                    selected={session.id === activeSessionIdSafe}
-                    muted={session.id !== activeSessionIdSafe}
-                    className={cn(
-                      "terminal-panel__list-item h-8 px-2 py-1.5",
-                      session.id === activeSessionIdSafe && "is-active"
-                    )}
-                    onClick={() => handleActivateSession(session.id)}
-                    label={session.label}
-                    labelClassName="text-xs font-medium"
-                    trailing={
-                      hasSessionList ? (
+            {hasSessionList ? (
+              <ScrollArea className="terminal-panel__list h-full">
+                <div className="terminal-panel__list-inner">
+                  {sessions.map((session) => (
+                    <ListRow
+                      key={session.id}
+                      selected={session.id === activeSessionIdSafe}
+                      muted={session.id !== activeSessionIdSafe}
+                      className={cn(
+                        "terminal-panel__list-item h-8 px-2 py-1.5",
+                        session.id === activeSessionIdSafe && "is-active"
+                      )}
+                      onClick={() => handleActivateSession(session.id)}
+                      label={session.label}
+                      labelClassName="text-xs font-medium"
+                      trailing={
                         <div className="flex items-center gap-0.5">
                           <IconButton
                             aria-label={`Rename ${session.label}`}
@@ -157,12 +157,12 @@ export function TerminalPanel() {
                             <X className="size-3" />
                           </IconButton>
                         </div>
-                      ) : null
-                    }
-                  />
-                ))}
-              </div>
-            </ScrollArea>
+                      }
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : null}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
