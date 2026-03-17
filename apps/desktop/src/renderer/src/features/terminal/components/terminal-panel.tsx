@@ -134,7 +134,7 @@ export function TerminalPanel() {
                             aria-label={`Rename ${session.label}`}
                             size="icon-compact"
                             className={cn(
-                              "text-muted-foreground hover:text-foreground h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                              "text-muted-foreground hover:text-foreground h-5 w-5 bg-transparent opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-transparent dark:hover:bg-transparent aria-expanded:bg-transparent"
                             )}
                             onClick={(event) => {
                               event.stopPropagation();
@@ -147,7 +147,7 @@ export function TerminalPanel() {
                             aria-label={`Close ${session.label}`}
                             size="icon-compact"
                             className={cn(
-                              "text-muted-foreground hover:text-foreground h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                              "text-muted-foreground hover:text-foreground h-5 w-5 bg-transparent opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-transparent dark:hover:bg-transparent aria-expanded:bg-transparent"
                             )}
                             onClick={(event) => {
                               event.stopPropagation();
