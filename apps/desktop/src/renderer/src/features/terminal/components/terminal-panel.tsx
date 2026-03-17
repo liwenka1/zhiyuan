@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { ListRow } from "@/components/app/list-row";
+import { InputDialog } from "@/components/input-dialog";
 import { IconButton } from "@/components/ui/button";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup, useGroupRef } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -15,12 +16,17 @@ export function TerminalPanel() {
   const nextIndexRef = useRef(2);
   const [sessions, setSessions] = useState(() => [createTerminalSession(1)]);
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id ?? "");
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
   const hasSessionList = sessions.length >= 2;
 
   const activeSessionIdSafe = useMemo(() => {
     if (sessions.length === 0) return "";
     return sessions.some((session) => session.id === activeSessionId) ? activeSessionId : (sessions[0]?.id ?? "");
   }, [activeSessionId, sessions]);
+  const renamingSession = useMemo(
+    () => sessions.find((session) => session.id === renamingSessionId) ?? null,
+    [renamingSessionId, sessions]
+  );
 
   const handleAddTerminal = useCallback(() => {
     const index = nextIndexRef.current;
@@ -48,6 +54,12 @@ export function TerminalPanel() {
       });
       return nextSessions;
     });
+  }, []);
+
+  const handleRenameSession = useCallback((id: string, label: string) => {
+    const nextLabel = label.trim();
+    if (!nextLabel) return;
+    setSessions((prev) => prev.map((session) => (session.id === id ? { ...session, label: nextLabel } : session)));
   }, []);
 
   useEffect(() => {
@@ -117,19 +129,34 @@ export function TerminalPanel() {
                     labelClassName="text-xs font-medium"
                     trailing={
                       hasSessionList ? (
-                        <IconButton
-                          aria-label={`Close ${session.label}`}
-                          size="icon-compact"
-                          className={cn(
-                            "text-muted-foreground hover:text-foreground h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                          )}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleRemoveSession(session.id);
-                          }}
-                        >
-                          <X className="size-3" />
-                        </IconButton>
+                        <div className="flex items-center gap-0.5">
+                          <IconButton
+                            aria-label={`Rename ${session.label}`}
+                            size="icon-compact"
+                            className={cn(
+                              "text-muted-foreground hover:text-foreground h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                            )}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setRenamingSessionId(session.id);
+                            }}
+                          >
+                            <Pencil className="size-3" />
+                          </IconButton>
+                          <IconButton
+                            aria-label={`Close ${session.label}`}
+                            size="icon-compact"
+                            className={cn(
+                              "text-muted-foreground hover:text-foreground h-5 w-5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                            )}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleRemoveSession(session.id);
+                            }}
+                          >
+                            <X className="size-3" />
+                          </IconButton>
+                        </div>
                       ) : null
                     }
                   />
@@ -139,6 +166,20 @@ export function TerminalPanel() {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+      <InputDialog
+        open={Boolean(renamingSession)}
+        onOpenChange={(open) => {
+          if (!open) setRenamingSessionId(null);
+        }}
+        title="Rename terminal"
+        placeholder="Terminal name"
+        defaultValue={renamingSession?.label ?? ""}
+        onConfirm={(value) => {
+          if (!renamingSession) return;
+          handleRenameSession(renamingSession.id, value);
+          setRenamingSessionId(null);
+        }}
+      />
     </section>
   );
 }
