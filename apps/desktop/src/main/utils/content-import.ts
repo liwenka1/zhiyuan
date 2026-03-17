@@ -13,31 +13,17 @@ export function formatDate(dateValue?: string): string | null {
   return `${year}-${month}-${day}`;
 }
 
-export function escapeYamlValue(value: string): string {
-  return value.replace(/"/g, '\\"');
+type MetadataValue = string | number | boolean | null | undefined;
+
+function escapeCommentValue(value: string): string {
+  return value.replace(/\r?\n/g, " ").replace(/-->/g, "--\\>");
 }
 
-export function buildFrontmatter(data: {
-  title?: string;
-  link?: string;
-  guid?: string;
-  published?: string;
-  source?: string;
-  url?: string;
-  fetchedAt?: string;
-  hidden?: boolean;
-}): string {
-  const lines: string[] = ["---"];
+export function buildCommentMetadata(data: Record<string, MetadataValue>): string {
+  const lines = Object.entries(data)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => `<!-- ${key}: ${escapeCommentValue(String(value))} -->`);
 
-  if (data.hidden) lines.push("hidden: true");
-  if (data.title) lines.push(`title: "${escapeYamlValue(data.title)}"`);
-  if (data.link) lines.push(`link: "${escapeYamlValue(data.link)}"`);
-  if (data.guid) lines.push(`guid: "${escapeYamlValue(data.guid)}"`);
-  if (data.published) lines.push(`published: "${data.published}"`);
-  if (data.source) lines.push(`source: "${escapeYamlValue(data.source)}"`);
-  if (data.url) lines.push(`url: "${escapeYamlValue(data.url)}"`);
-  if (data.fetchedAt) lines.push(`fetched: "${data.fetchedAt}"`);
-
-  lines.push("---", "");
-  return lines.join("\n");
+  if (lines.length === 0) return "";
+  return `${lines.join("\n")}\n\n`;
 }

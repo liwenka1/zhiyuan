@@ -1,6 +1,7 @@
 import { dialog, BrowserWindow } from "electron";
 import fs from "fs";
 import path from "path";
+import { parseGitHubMetadata } from "@shared";
 import { configManager } from "../config";
 import { fileSystem } from "../file-system";
 
@@ -24,20 +25,6 @@ export interface NoteInfo {
   github?: {
     issueNumber?: number;
     issueUrl?: string;
-  };
-}
-
-const ISSUE_NUMBER_REGEX = /<!--\s*github-issue-number:\s*(\d+)\s*-->/i;
-const ISSUE_URL_REGEX = /<!--\s*github-issue-url:\s*([^\s]+)\s*-->/i;
-
-function parseGitHubMetadata(markdown: string): { issueNumber?: number; issueUrl?: string } {
-  const issueNumberMatch = markdown.match(ISSUE_NUMBER_REGEX);
-  const issueUrlMatch = markdown.match(ISSUE_URL_REGEX);
-  const issueNumber = issueNumberMatch ? Number(issueNumberMatch[1]) : undefined;
-  const issueUrl = issueUrlMatch ? issueUrlMatch[1] : undefined;
-  return {
-    issueNumber: Number.isFinite(issueNumber) ? issueNumber : undefined,
-    issueUrl: issueUrl || undefined
   };
 }
 

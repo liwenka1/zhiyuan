@@ -31,7 +31,7 @@ type RssItem = Parser.Item & {
   [key: string]: unknown;
 };
 
-import { sanitizeName, formatDate, buildFrontmatter } from "../utils/content-import";
+import { sanitizeName, formatDate, buildCommentMetadata } from "../utils/content-import";
 
 async function getAvailableFolderName(workspacePath: string, baseName: string): Promise<string> {
   const normalizedBase = sanitizeName(baseName) || "RSS";
@@ -210,18 +210,17 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
     const link = item.link?.trim();
     const guid = item.guid?.trim() || item.id?.trim();
 
-    const frontmatter = buildFrontmatter({
-      hidden: true,
-      title,
-      link,
-      guid,
-      published,
-      source: feedTitle
+    const metadata = buildCommentMetadata({
+      "rss-title": title,
+      "rss-link": link,
+      "rss-guid": guid,
+      "rss-published": published,
+      "rss-source": feedTitle
     });
     const mediaBlock = buildMediaBlock(getMediaEntries(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
-    const markdown = `${frontmatter}${heading}${mediaBlock}${content}`;
+    const markdown = `${metadata}${heading}${mediaBlock}${content}`;
 
     await fileSystem.createFile(filePath, markdown);
 
@@ -285,18 +284,17 @@ export async function updateRss(folderPath: string): Promise<{
     const fileName = await getAvailableFileName(folderPath, fileBaseName);
     const filePath = path.join(folderPath, fileName);
 
-    const frontmatter = buildFrontmatter({
-      hidden: true,
-      title,
-      link,
-      guid,
-      published,
-      source: feedTitle
+    const metadata = buildCommentMetadata({
+      "rss-title": title,
+      "rss-link": link,
+      "rss-guid": guid,
+      "rss-published": published,
+      "rss-source": feedTitle
     });
     const mediaBlock = buildMediaBlock(getMediaEntries(item));
     const content = pickItemContent(item);
     const heading = `# ${title}\n\n`;
-    const markdown = `${frontmatter}${heading}${mediaBlock}${content}`;
+    const markdown = `${metadata}${heading}${mediaBlock}${content}`;
 
     await fileSystem.createFile(filePath, markdown);
 

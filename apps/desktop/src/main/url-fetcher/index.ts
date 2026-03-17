@@ -6,7 +6,7 @@
 import path from "path";
 import { fileSystem } from "../file-system";
 import { fetchArticleFromUrl } from "./fetcher";
-import { sanitizeName, formatDate, buildFrontmatter } from "../utils/content-import";
+import { sanitizeName, formatDate, buildCommentMetadata } from "../utils/content-import";
 
 export interface UrlFetchResult {
   noteId: string;
@@ -48,15 +48,15 @@ export async function createNoteFromUrl(
   // 2. 构建笔记内容（和 RSS 一样，直接保存 HTML）
   const title = article.title;
   const fetchedAt = new Date().toISOString();
-  const frontmatter = buildFrontmatter({
-    title,
-    url,
-    fetchedAt
+  const metadata = buildCommentMetadata({
+    "web-title": title,
+    "web-url": url,
+    "web-fetched-at": fetchedAt
   });
 
   const heading = `# ${title}\n\n`;
   const content = article.content; // HTML 内容，不转换
-  const markdown = `${frontmatter}${heading}${content}`;
+  const markdown = `${metadata}${heading}${content}`;
 
   // 3. 确定保存路径
   const targetFolder = folderId ? path.join(workspacePath, folderId) : workspacePath;

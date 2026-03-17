@@ -19,7 +19,6 @@ import mermaid from "mermaid";
 import type { Root, Element } from "hast";
 import { visit } from "unist-util-visit";
 import { iconButtonVariants } from "@/components/ui/button";
-import { stripHiddenFrontmatter } from "./frontmatter";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
 import { normalizeMarkdownPaths, resolveResourcePath, isRelativePath } from "@shared";
 
@@ -243,10 +242,10 @@ export async function markdownToHTML(markdown: string, options?: MarkdownToHTMLO
   // 兼容旧版 API：第二个参数可以是字符串（notePath）或对象
   const opts: MarkdownToHTMLOptions = typeof options === "string" ? { notePath: options } : (options ?? {});
   const { notePath, isDarkTheme, enableCopyButton = true } = opts;
-  // 预处理：移除隐藏的 frontmatter + 规范化本地路径
+  // 预处理：规范化本地路径
   // normalizeMarkdownPaths 会将本地绝对路径（/Users/...）转换为 local-resource:// 协议
   // 这样导出和预览的行为才能保持一致
-  const normalized = normalizeMarkdownPaths(stripHiddenFrontmatter(markdown));
+  const normalized = normalizeMarkdownPaths(markdown);
   const buildProcessor = (usePrettyCode: boolean) => {
     const processor = unified()
       .use(remarkParse) // 解析 Markdown
