@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import "katex/dist/katex.min.css";
 import { decodeLocalResourceUrl } from "@shared";
-import { stripHiddenFrontmatter } from "@/lib/frontmatter";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -46,7 +45,6 @@ export function MarkdownRenderer({
   const theme = useThemeStore((state) => state.theme);
   const isDark = theme === "dark";
   const [htmlContent, setHtmlContent] = useState("");
-  const contentForEmpty = useMemo(() => stripHiddenFrontmatter(content), [content]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -119,7 +117,7 @@ export function MarkdownRenderer({
   }, [noteId, htmlContent]);
 
   // 空内容处理
-  if (!contentForEmpty.trim() && showEmptyState) {
+  if (!content.trim() && showEmptyState) {
     return (
       <div className={cn("prose dark:prose-invert", className)}>
         <div className="text-muted-foreground mt-8 text-center">{emptyStateMessage || t("previewEmpty")}</div>
