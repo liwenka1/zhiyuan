@@ -445,7 +445,7 @@ export function NoteList({
                     event.stopPropagation();
                     handleSearchToggle();
                   }}
-                  className="bg-muted/50 h-8 border-none pr-8 pl-8 text-sm focus-visible:ring-1 [&::-webkit-search-cancel-button]:hidden"
+                  className="bg-muted/50 h-8 pr-8 pl-8 text-sm [&::-webkit-search-cancel-button]:hidden"
                 />
                 <Button
                   variant="ghost"

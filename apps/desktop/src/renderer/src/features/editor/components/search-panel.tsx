@@ -53,7 +53,7 @@ export function SearchPanel({ search }: SearchPanelProps) {
       <div className="flex items-center gap-1.5">
         <Input
           ref={searchInputRef}
-          className="h-8 w-48 focus-visible:ring-1"
+          className="h-8 w-48"
           placeholder={t("search.placeholder")}
           value={state.searchText}
           onChange={(e) => setSearchText(e.target.value)}
@@ -92,7 +92,7 @@ export function SearchPanel({ search }: SearchPanelProps) {
       {state.showReplace && (
         <div className="mt-2 flex items-center gap-1.5">
           <Input
-            className="h-8 w-48 focus-visible:ring-1"
+            className="h-8 w-48"
             placeholder={t("search.replacePlaceholder")}
             value={state.replaceText}
             onChange={(e) => setReplaceText(e.target.value)}

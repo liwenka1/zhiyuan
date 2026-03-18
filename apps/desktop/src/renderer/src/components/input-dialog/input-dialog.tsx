@@ -64,7 +64,6 @@ function InputDialogContent({
       </DialogHeader>
       <div className="grid gap-4 py-4">
         <Input
-          className="focus-visible:ring-1"
           placeholder={actualPlaceholder}
           value={value}
           onChange={(e) => setValue(e.target.value)}
