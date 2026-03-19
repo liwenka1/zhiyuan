@@ -118,6 +118,7 @@
     "shortcutsConfirm": "Confirm",
     "shortcutsDialogCurrent": "Current shortcut",
     "shortcutsDialogPending": "Pending shortcut",
+    "shortcutsConflict": "This shortcut is already assigned to {{action}}",
     "exportThemeSaveFailed": "Failed to save theme, reverted to previous",
     "about": "About",
     "version": "Version"

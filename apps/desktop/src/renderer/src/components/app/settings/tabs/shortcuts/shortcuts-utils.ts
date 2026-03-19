@@ -1,4 +1,4 @@
-import type { ShortcutBinding, ShortcutId } from "@shared";
+import { normalizeShortcutBinding, type ShortcutBinding, type ShortcutId } from "@shared";
 
 type ModKey = "ctrl" | "shift" | "alt" | "meta";
 
@@ -45,20 +45,9 @@ function labelForCode(code: string) {
   return code;
 }
 
-function normalizeMacBinding(binding: ShortcutBinding, id?: ShortcutId) {
-  if (!id) return binding;
-  if (id === "toggleTerminal") return binding;
-  if (!binding.ctrl) return binding;
-  return {
-    ...binding,
-    ctrl: false,
-    meta: true
-  };
-}
-
 export function buildBindingParts(binding: ShortcutBinding, isMac: boolean, id?: ShortcutId) {
   const items: string[] = [];
-  const normalized = isMac ? normalizeMacBinding(binding, id) : binding;
+  const normalized = isMac && id ? normalizeShortcutBinding(binding, id, "mac") : binding;
   MOD_ORDER.forEach((key) => {
     if (!normalized[key]) return;
     if (isMac) {

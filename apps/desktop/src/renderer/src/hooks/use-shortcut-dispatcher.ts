@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { useShortcutsStore } from "@/stores";
-import type { ShortcutId, ShortcutConfig } from "@shared";
+import { normalizeShortcutBinding, type ShortcutId, type ShortcutConfig } from "@shared";
 import { createShortcutActions, type ShortcutActionContext } from "@/actions/shortcut-actions";
 
 interface ShortcutDispatcherOptions {
@@ -45,8 +45,7 @@ export function useShortcutDispatcher({ context, enabled = true }: ShortcutDispa
       const entries = Object.entries(shortcuts) as [ShortcutId, ShortcutConfig[ShortcutId]][];
       const isMac = navigator.userAgent.toLowerCase().includes("mac");
       for (const [id, binding] of entries) {
-        const normalized =
-          isMac && id !== "toggleTerminal" && binding.ctrl ? { ...binding, ctrl: false, meta: true } : binding;
+        const normalized = isMac ? normalizeShortcutBinding(binding, id, "mac") : binding;
         if (
           event.code === normalized.code &&
           event.ctrlKey === normalized.ctrl &&
