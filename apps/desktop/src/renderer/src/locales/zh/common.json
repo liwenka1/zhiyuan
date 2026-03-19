@@ -118,6 +118,7 @@
     "shortcutsConfirm": "确认",
     "shortcutsDialogCurrent": "当前快捷键",
     "shortcutsDialogPending": "待应用快捷键",
+    "shortcutsConflict": "该快捷键已分配给 {{action}}",
     "exportThemeSaveFailed": "主题保存失败，已恢复上一个主题",
     "about": "关于",
     "version": "版本"

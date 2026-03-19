@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { ShortcutRecorderDialog } from "./shortcuts-dialog";
 import { buildBindingParts } from "./shortcuts-utils";
-import type { ShortcutBinding } from "@shared";
-import { shortcutsMeta, shortcutGroups } from "@/lib/shortcuts-meta";
+import { findShortcutConflict, type ShortcutBinding } from "@shared";
+import { shortcutsMeta, shortcutGroups, shortcutsMetaById } from "@/lib/shortcuts-meta";
 
 export function ShortcutsTab() {
   const { t } = useTranslation("common");
@@ -40,6 +40,16 @@ export function ShortcutsTab() {
     () => buildBindingParts(currentBinding, isMac, activeShortcutId),
     [activeShortcutId, currentBinding, isMac]
   );
+  const shortcutPlatform = isMac ? "mac" : "default";
+  const conflictShortcutId = useMemo(() => {
+    if (!pendingBinding || !pendingShortcutId) return null;
+    return findShortcutConflict(shortcuts, pendingShortcutId, pendingBinding, shortcutPlatform);
+  }, [pendingBinding, pendingShortcutId, shortcutPlatform, shortcuts]);
+  const conflictMessage = conflictShortcutId
+    ? t("settings.shortcutsConflict", {
+        action: t(shortcutsMetaById.get(conflictShortcutId)?.labelKey ?? conflictShortcutId)
+      })
+    : null;
   const grouped = useMemo(
     () =>
       shortcutGroups.map((group) => ({
@@ -199,6 +209,7 @@ export function ShortcutsTab() {
         isRecording={isRecording}
         pendingBinding={pendingBinding}
         parts={pendingParts}
+        errorText={conflictMessage}
       />
     </div>
   );

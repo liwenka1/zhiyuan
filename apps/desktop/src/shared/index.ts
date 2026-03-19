@@ -7,8 +7,14 @@ export type { Theme, ThemeMode } from "./theme";
 export { ThemeColors } from "./theme";
 export type { ExportLayoutConfig } from "./export-layout";
 export { DEFAULT_EXPORT_LAYOUT_CONFIG, normalizeExportLayoutConfig } from "./export-layout";
-export type { ShortcutId, ShortcutBinding, ShortcutConfig } from "./shortcuts";
-export { DEFAULT_SHORTCUTS } from "./shortcuts";
+export type { ShortcutId, ShortcutBinding, ShortcutConfig, ShortcutPlatform, ShortcutConflict } from "./shortcuts";
+export {
+  DEFAULT_SHORTCUTS,
+  normalizeShortcutBinding,
+  getShortcutBindingKey,
+  findShortcutConflict,
+  findShortcutConflicts
+} from "./shortcuts";
 
 export type { IpcError, IpcResultDTO } from "./ipc";
 export type { GitHubConfig, GitHubProjectConfigMap, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";

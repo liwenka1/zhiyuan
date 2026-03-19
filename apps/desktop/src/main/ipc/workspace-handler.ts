@@ -11,6 +11,7 @@ import { validatePathInWorkspace } from "../security/path-validator";
 import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "./ipc-result";
 import {
   normalizeExportLayoutConfig,
+  findShortcutConflicts,
   type ExportLayoutConfig,
   type IpcResultDTO,
   type ShortcutConfig,
@@ -459,7 +460,13 @@ export function registerWorkspaceHandlers(): void {
   // 设置快捷键配置（全量覆盖）
   ipcMain.handle("config:setShortcuts", (_, next: ShortcutConfig): IpcResultDTO<void> => {
     try {
-      configManager.setShortcuts({ ...DEFAULT_SHORTCUTS, ...next });
+      const normalized = { ...DEFAULT_SHORTCUTS, ...next };
+      const conflicts = findShortcutConflicts(normalized, process.platform === "darwin" ? "mac" : "default");
+      if (conflicts.length > 0) {
+        const ids = conflicts[0].ids.join(", ");
+        return ipcErr(`Shortcut conflict detected: ${ids}`, "CONFIG_SET_SHORTCUTS_CONFLICT");
+      }
+      configManager.setShortcuts(normalized);
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

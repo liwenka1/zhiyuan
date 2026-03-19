@@ -33,6 +33,7 @@ export function ShortcutRecorderDialog({
   isRecording,
   pendingBinding,
   parts,
+  errorText,
   onOpenChange,
   onKeyDown,
   onStart,
@@ -52,6 +53,7 @@ export function ShortcutRecorderDialog({
   isRecording: boolean;
   pendingBinding: ShortcutBinding | null;
   parts: string[];
+  errorText?: string | null;
   onOpenChange: (open: boolean) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   onStart: () => void;
@@ -76,14 +78,17 @@ export function ShortcutRecorderDialog({
           {isRecording ? listeningText : idleText}
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs">{pendingBinding ? pendingLabel : currentLabel}</span>
+          <div className="flex min-h-4 items-center justify-between gap-3" aria-live="polite">
+            <span className="text-muted-foreground text-xs">{pendingBinding ? pendingLabel : currentLabel}</span>
+            <span className="text-destructive min-w-0 truncate text-right text-xs leading-4">{errorText ?? ""}</span>
+          </div>
           <ShortcutKeys parts={parts} />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             {cancelLabel}
           </Button>
-          <Button onClick={onConfirm} disabled={!pendingBinding}>
+          <Button onClick={onConfirm} disabled={!pendingBinding || !!errorText}>
             {confirmLabel}
           </Button>
         </DialogFooter>
