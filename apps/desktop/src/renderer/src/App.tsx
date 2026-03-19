@@ -141,7 +141,7 @@ function App(): React.JSX.Element {
     };
   }, [handleMenuOpenFolder, handleMenuOpenFile, handleExternalOpen]);
 
-  // Windows/Linux: Ctrl+O 打开文件夹
+  // Windows/Linux: Ctrl+O 打开文件
   useEffect(() => {
     const isMac = navigator.userAgent.toLowerCase().includes("mac");
     if (isMac) return;
@@ -149,12 +149,12 @@ function App(): React.JSX.Element {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === "o") {
         e.preventDefault();
-        handleMenuOpenFolder();
+        handleMenuOpenFile();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleMenuOpenFolder]);
+  }, [handleMenuOpenFile]);
 
   useShortcutDispatcher({
     context: {
