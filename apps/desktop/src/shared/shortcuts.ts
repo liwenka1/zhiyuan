@@ -32,6 +32,11 @@ export interface ShortcutConflict {
 
 const MODIFIER_ORDER: Array<keyof Omit<ShortcutBinding, "code">> = ["ctrl", "shift", "alt", "meta"];
 
+export function buildShortcutBindingKey(binding: ShortcutBinding): string {
+  const modifiers = MODIFIER_ORDER.map((key) => (binding[key] ? "1" : "0")).join("");
+  return `${modifiers}:${binding.code}`;
+}
+
 export function normalizeShortcutBinding(
   binding: ShortcutBinding,
   id: ShortcutId,
@@ -53,8 +58,7 @@ export function getShortcutBindingKey(
   platform: ShortcutPlatform = "default"
 ): string {
   const normalized = normalizeShortcutBinding(binding, id, platform);
-  const modifiers = MODIFIER_ORDER.map((key) => (normalized[key] ? "1" : "0")).join("");
-  return `${modifiers}:${normalized.code}`;
+  return buildShortcutBindingKey(normalized);
 }
 
 export function findShortcutConflict(

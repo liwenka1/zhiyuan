@@ -12,6 +12,8 @@ import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "./ipc-re
 import {
   normalizeExportLayoutConfig,
   findShortcutConflicts,
+  getReservedMenuShortcuts,
+  getShortcutBindingKey,
   type ExportLayoutConfig,
   type IpcResultDTO,
   type ShortcutConfig,
@@ -461,11 +463,26 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle("config:setShortcuts", (_, next: ShortcutConfig): IpcResultDTO<void> => {
     try {
       const normalized = { ...DEFAULT_SHORTCUTS, ...next };
-      const conflicts = findShortcutConflicts(normalized, process.platform === "darwin" ? "mac" : "default");
+      const shortcutPlatform = process.platform === "darwin" ? "mac" : "default";
+      const menuShortcutPlatform = process.platform === "darwin" ? "mac" : "win";
+      const conflicts = findShortcutConflicts(normalized, shortcutPlatform);
       if (conflicts.length > 0) {
         const ids = conflicts[0].ids.join(", ");
         return ipcErr(`Shortcut conflict detected: ${ids}`, "CONFIG_SET_SHORTCUTS_CONFLICT");
       }
+
+      const reservedMenuShortcuts = getReservedMenuShortcuts(menuShortcutPlatform);
+      for (const [id, binding] of Object.entries(normalized) as [keyof ShortcutConfig, ShortcutConfig[keyof ShortcutConfig]][]) {
+        const key = getShortcutBindingKey(binding, id, shortcutPlatform);
+        const reservedConflict = reservedMenuShortcuts.find((item) => item.key === key);
+        if (reservedConflict) {
+          return ipcErr(
+            `Shortcut conflicts with menu action: ${reservedConflict.action}`,
+            "CONFIG_SET_SHORTCUTS_RESERVED_CONFLICT"
+          );
+        }
+      }
+
       configManager.setShortcuts(normalized);
       return ipcOk(undefined);
     } catch (error) {

@@ -7,11 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { ShortcutRecorderDialog } from "./shortcuts-dialog";
 import { buildBindingParts } from "./shortcuts-utils";
-import { findShortcutConflict, type ShortcutBinding } from "@shared";
+import {
+  findShortcutConflict,
+  getReservedMenuShortcuts,
+  getShortcutBindingKey,
+  resolveLabel,
+  type ShortcutBinding,
+  type MenuLocale
+} from "@shared";
 import { shortcutsMeta, shortcutGroups, shortcutsMetaById } from "@/lib/shortcuts-meta";
 
 export function ShortcutsTab() {
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const load = useShortcutsStore((state) => state.load);
   const setShortcut = useShortcutsStore((state) => state.setShortcut);
@@ -41,15 +48,26 @@ export function ShortcutsTab() {
     [activeShortcutId, currentBinding, isMac]
   );
   const shortcutPlatform = isMac ? "mac" : "default";
+  const menuShortcutPlatform = isMac ? "mac" : "win";
+  const menuLocale: MenuLocale = i18n.language.startsWith("zh") ? "zh" : "en";
   const conflictShortcutId = useMemo(() => {
     if (!pendingBinding || !pendingShortcutId) return null;
     return findShortcutConflict(shortcuts, pendingShortcutId, pendingBinding, shortcutPlatform);
   }, [pendingBinding, pendingShortcutId, shortcutPlatform, shortcuts]);
+  const reservedMenuConflict = useMemo(() => {
+    if (!pendingBinding || !pendingShortcutId) return null;
+    const targetKey = getShortcutBindingKey(pendingBinding, pendingShortcutId, shortcutPlatform);
+    return getReservedMenuShortcuts(menuShortcutPlatform).find((item) => item.key === targetKey) ?? null;
+  }, [menuShortcutPlatform, pendingBinding, pendingShortcutId, shortcutPlatform]);
   const conflictMessage = conflictShortcutId
     ? t("settings.shortcutsConflict", {
         action: t(shortcutsMetaById.get(conflictShortcutId)?.labelKey ?? conflictShortcutId)
       })
-    : null;
+    : reservedMenuConflict
+      ? t("settings.shortcutsReservedConflict", {
+          action: resolveLabel(reservedMenuConflict.label, menuLocale)
+        })
+      : null;
   const grouped = useMemo(
     () =>
       shortcutGroups.map((group) => ({

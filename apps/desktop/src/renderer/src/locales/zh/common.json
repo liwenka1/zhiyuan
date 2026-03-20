@@ -119,6 +119,7 @@
     "shortcutsDialogCurrent": "当前快捷键",
     "shortcutsDialogPending": "待应用快捷键",
     "shortcutsConflict": "该快捷键已分配给 {{action}}",
+    "shortcutsReservedConflict": "与菜单“{{action}}”冲突",
     "exportThemeSaveFailed": "主题保存失败，已恢复上一个主题",
     "about": "关于",
     "version": "版本"
