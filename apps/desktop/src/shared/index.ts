@@ -10,6 +10,7 @@ export { DEFAULT_EXPORT_LAYOUT_CONFIG, normalizeExportLayoutConfig } from "./exp
 export type { ShortcutId, ShortcutBinding, ShortcutConfig, ShortcutPlatform, ShortcutConflict } from "./shortcuts";
 export {
   DEFAULT_SHORTCUTS,
+  buildShortcutBindingKey,
   normalizeShortcutBinding,
   getShortcutBindingKey,
   findShortcutConflict,
@@ -34,12 +35,21 @@ export {
 
 export type {
   MenuLocale,
+  MenuShortcutPlatform,
   MenuAction,
   MenuShortcut,
   MenuLabel,
   MenuItemDef,
+  ReservedMenuShortcut,
   MenuSeparatorDef,
   MenuEntryDef,
   MenuGroupDef
 } from "./menu";
-export { menuSchema, resolveLabel, toElectronAccelerator, isMenuItem } from "./menu";
+export {
+  menuSchema,
+  resolveLabel,
+  toElectronAccelerator,
+  isMenuItem,
+  parseMenuShortcutBinding,
+  getReservedMenuShortcuts
+} from "./menu";
