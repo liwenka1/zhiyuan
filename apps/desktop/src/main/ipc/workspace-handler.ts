@@ -472,7 +472,10 @@ export function registerWorkspaceHandlers(): void {
       }
 
       const reservedMenuShortcuts = getReservedMenuShortcuts(menuShortcutPlatform);
-      for (const [id, binding] of Object.entries(normalized) as [keyof ShortcutConfig, ShortcutConfig[keyof ShortcutConfig]][]) {
+      for (const [id, binding] of Object.entries(normalized) as [
+        keyof ShortcutConfig,
+        ShortcutConfig[keyof ShortcutConfig]
+      ][]) {
         const key = getShortcutBindingKey(binding, id, shortcutPlatform);
         const reservedConflict = reservedMenuShortcuts.find((item) => item.key === key);
         if (reservedConflict) {
