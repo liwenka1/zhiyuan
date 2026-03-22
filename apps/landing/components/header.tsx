@@ -1,10 +1,13 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
-import { useLanguage } from "@/lib/use-language";
+import type { Language, TranslationKey } from "@/lib/i18n";
 
-export function Header() {
-  const { t } = useLanguage();
+interface HeaderProps {
+  language: Language;
+  t: TranslationKey;
+}
 
+export function Header({ language, t }: HeaderProps) {
   return (
     <header className="bg-background/95 supports-backdrop-filter:bg-background/60 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -23,7 +26,7 @@ export function Header() {
           </a>
         </nav>
         <div className="flex items-center gap-2">
-          <LanguageToggle />
+          <LanguageToggle language={language} />
           <ThemeToggle />
         </div>
       </div>

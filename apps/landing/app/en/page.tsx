@@ -6,8 +6,8 @@ import { CTA } from "@/components/cta";
 import { Footer } from "@/components/footer";
 import { getTranslations } from "@/lib/i18n";
 
-export default function Home() {
-  const language = "zh" as const;
+export default function EnglishHome() {
+  const language = "en" as const;
   const t = getTranslations(language);
 
   return (
