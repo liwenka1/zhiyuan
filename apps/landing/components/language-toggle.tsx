@@ -11,7 +11,7 @@ export function LanguageToggle({ language }: LanguageToggleProps) {
   const href = nextLanguage === "en" ? "/en" : "/";
 
   return (
-    <Link href={href} className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="切换语言">
+    <Link href={href} className={buttonVariants({ variant: "ghost", size: "icon-sm" })} aria-label="切换语言">
       <span className="text-sm font-medium">{language === "zh" ? "中" : "EN"}</span>
       <span className="sr-only">切换语言</span>
     </Link>

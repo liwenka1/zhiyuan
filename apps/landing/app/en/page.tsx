@@ -1,5 +1,9 @@
 import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
+import { ProofStrip } from "@/components/proof-strip";
+import { TrustStrip } from "@/components/trust-strip";
+import { ProductPreview } from "@/components/product-preview";
+import { ShowcaseSections } from "@/components/showcase-sections";
 import { Features } from "@/components/features";
 import { UseCase } from "@/components/usecase";
 import { CTA } from "@/components/cta";
@@ -15,6 +19,10 @@ export default function EnglishHome() {
       <Header language={language} t={t} />
       <main>
         <Hero t={t.hero} />
+        <TrustStrip t={t.trust} />
+        <ProofStrip t={t.proof} />
+        <ProductPreview t={t.preview} />
+        <ShowcaseSections t={t.showcase} />
         <Features t={t.features} />
         <UseCase t={t.usecase} />
         <CTA t={t.cta} />
