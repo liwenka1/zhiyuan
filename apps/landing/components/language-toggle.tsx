@@ -1,13 +1,19 @@
-import { Button } from "@/components/ui/button";
-import { useLanguage } from "@/lib/use-language";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import type { Language } from "@/lib/i18n";
 
-export function LanguageToggle() {
-  const { language, toggleLanguage } = useLanguage();
+interface LanguageToggleProps {
+  language: Language;
+}
+
+export function LanguageToggle({ language }: LanguageToggleProps) {
+  const nextLanguage = language === "zh" ? "en" : "zh";
+  const href = nextLanguage === "en" ? "/en" : "/";
 
   return (
-    <Button variant="ghost" size="icon" onClick={toggleLanguage}>
+    <Link href={href} className={buttonVariants({ variant: "ghost", size: "icon" })} aria-label="切换语言">
       <span className="text-sm font-medium">{language === "zh" ? "中" : "EN"}</span>
       <span className="sr-only">切换语言</span>
-    </Button>
+    </Link>
   );
 }

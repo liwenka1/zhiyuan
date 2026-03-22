@@ -159,3 +159,7 @@ export const translations = {
 
 export type Language = keyof typeof translations;
 export type TranslationKey = (typeof translations)[Language];
+
+export function getTranslations(language: Language): TranslationKey {
+  return translations[language] as TranslationKey;
+}
