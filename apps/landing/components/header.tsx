@@ -1,5 +1,8 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
+import { HeaderShell } from "@/components/header-shell";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import type { Language, TranslationKey } from "@/lib/i18n";
 
 interface HeaderProps {
@@ -9,27 +12,26 @@ interface HeaderProps {
 
 export function Header({ language, t }: HeaderProps) {
   return (
-    <header className="bg-background/95 supports-backdrop-filter:bg-background/60 fixed top-0 right-0 left-0 z-50 border-b backdrop-blur">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl font-bold">{t.hero.title}</span>
+    <HeaderShell>
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
+        <div className="min-w-0 flex items-center gap-3">
+          <Link href={language === "en" ? "/en" : "/"} className="flex items-center gap-3">
+            <span className="text-lg font-semibold tracking-tight md:text-xl">{t.brand.name}</span>
+          </Link>
         </div>
-        <nav className="hidden items-center gap-6 md:flex">
-          <a href="#features" className="hover:text-primary text-sm font-medium transition-colors">
-            {t.header.features}
-          </a>
-          <a href="#usecase" className="hover:text-primary text-sm font-medium transition-colors">
-            {t.header.usecase}
-          </a>
-          <a href="#download" className="hover:text-primary text-sm font-medium transition-colors">
+        <div className="flex items-center gap-1.5 md:gap-2">
+          <a
+            href={t.brand.githubUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+          >
             {t.header.download}
           </a>
-        </nav>
-        <div className="flex items-center gap-2">
           <LanguageToggle language={language} />
           <ThemeToggle />
         </div>
       </div>
-    </header>
+    </HeaderShell>
   );
 }
