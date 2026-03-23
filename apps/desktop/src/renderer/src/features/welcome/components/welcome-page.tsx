@@ -96,7 +96,7 @@ export function WelcomePage() {
 
   return (
     <div
-      className="bg-background flex h-screen w-full flex-col"
+      className="flex h-screen w-full flex-col bg-background"
       style={{
         paddingTop: isMac
           ? "var(--titlebar-height-mac)"
@@ -107,7 +107,7 @@ export function WelcomePage() {
     >
       <TitleBar />
 
-      {isWindows && <div className="border-border border-t" />}
+      {isWindows && <div className="border-t border-border" />}
 
       <div className="flex flex-1 items-center justify-center select-none">
         <div className="flex w-full max-w-sm flex-col items-center">
@@ -117,12 +117,12 @@ export function WelcomePage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
-            <Logo className="text-foreground h-16 w-16 opacity-[0.12]" />
+            <Logo className="h-16 w-16 text-foreground opacity-[0.12]" />
           </motion.div>
 
           {/* App 名称 */}
           <motion.h1
-            className="text-foreground mt-5 text-2xl font-light tracking-wide"
+            className="mt-5 text-2xl font-light tracking-wide text-foreground"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.08 }}
@@ -132,7 +132,7 @@ export function WelcomePage() {
 
           {/* 副标题 */}
           <motion.p
-            className="text-muted-foreground/60 mt-2 text-sm"
+            className="mt-2 text-sm text-muted-foreground/60"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, delay: 0.14 }}
@@ -154,8 +154,8 @@ export function WelcomePage() {
               onClick={handleOpenFolder}
               className="h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5"
             >
-              <FolderOpen className="text-muted-foreground h-4 w-4" />
-              <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFolder")}</span>
+              <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground/90">{t("welcome.openFolder")}</span>
             </Button>
 
             <Button
@@ -165,8 +165,8 @@ export function WelcomePage() {
               onClick={handleOpenFile}
               className="h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5"
             >
-              <FileText className="text-muted-foreground h-4 w-4" />
-              <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFile")}</span>
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground/90">{t("welcome.openFile")}</span>
             </Button>
           </motion.div>
 
@@ -189,12 +189,12 @@ export function WelcomePage() {
                       onClick={() => handleOpenRecent(workspace)}
                       className="group h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left"
                     >
-                      <FolderOpen className="text-muted-foreground/30 group-hover:text-muted-foreground/60 h-4 w-4 shrink-0 transition-colors" />
+                      <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-colors group-hover:text-muted-foreground/60" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-foreground/70 group-hover:text-foreground truncate text-sm transition-colors">
+                        <div className="truncate text-sm text-foreground/70 transition-colors group-hover:text-foreground">
                           {getFolderName(workspace)}
                         </div>
-                        <div className="text-muted-foreground/40 truncate text-xs">{workspace}</div>
+                        <div className="truncate text-xs text-muted-foreground/40">{workspace}</div>
                       </div>
                     </Button>
                   ))}

@@ -56,13 +56,13 @@ const ListRow = React.forwardRef<HTMLButtonElement, ListRowProps>(function ListR
       {layoutId ? (
         <motion.div
           layoutId={layoutId}
-          className="bg-accent absolute inset-0 rounded-md"
+          className="absolute inset-0 rounded-md bg-accent"
           initial={false}
           animate={{ opacity: hovered ? 1 : 0 }}
           transition={{ type: "spring", stiffness: 1200, damping: 40, mass: 0.3 }}
         />
       ) : hovered ? (
-        <div className="bg-accent absolute inset-0 rounded-md" />
+        <div className="absolute inset-0 rounded-md bg-accent" />
       ) : null}
       <div className={cn("bg-accent absolute inset-0 rounded-md", selected ? "opacity-100" : "opacity-0")} />
 

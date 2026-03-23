@@ -432,7 +432,7 @@ export function NoteList({
                   transition: { duration: 0.08 }
                 }}
               >
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   ref={inputRef}
                   type="text"
@@ -445,7 +445,7 @@ export function NoteList({
                     event.stopPropagation();
                     handleSearchToggle();
                   }}
-                  className="bg-muted/50 h-8 pr-8 pl-8 text-sm [&::-webkit-search-cancel-button]:hidden"
+                  className="h-8 bg-muted/50 pr-8 pl-8 text-sm [&::-webkit-search-cancel-button]:hidden"
                 />
                 <Button
                   variant="ghost"
@@ -523,14 +523,14 @@ export function NoteList({
         )}
       >
         {isImportingExternal && (
-          <div className="text-muted-foreground border-divider bg-background/80 absolute top-2 right-2 left-2 z-10 rounded-md border px-2 py-1 text-center text-xs backdrop-blur-sm">
+          <div className="absolute top-2 right-2 left-2 z-10 rounded-md border border-divider bg-background/80 px-2 py-1 text-center text-xs text-muted-foreground backdrop-blur-sm">
             {t("externalDrop.importingHint")}
           </div>
         )}
         <ScrollArea className="h-full overflow-hidden" viewportRef={parentRef}>
           {notes.length === 0 ? (
             <motion.div
-              className="text-muted-foreground flex flex-col items-center justify-center p-6 text-center select-none"
+              className="flex flex-col items-center justify-center p-6 text-center text-muted-foreground select-none"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.3 }}
@@ -539,7 +539,7 @@ export function NoteList({
               <p className="text-sm font-medium">
                 {searchKeyword ? t("emptyState.noResults") : t("emptyState.noNotes")}
               </p>
-              <p className="text-tertiary-foreground mt-1 text-xs">
+              <p className="mt-1 text-xs text-tertiary-foreground">
                 {searchKeyword ? t("emptyState.tryOtherKeywords") : t("emptyState.createOrSelect")}
               </p>
             </motion.div>
@@ -578,7 +578,7 @@ export function NoteList({
                           onContextMenu={() => handleNoteContextMenu(note)}
                           leading={
                             playingNoteIds.includes(note.id) ? (
-                              <Volume2 className="text-primary mt-0.5 h-3.5 w-3.5 shrink-0" />
+                              <Volume2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
                             ) : (
                               <FileText
                                 className={cn(

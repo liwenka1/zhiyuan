@@ -20,7 +20,7 @@ export function SettingRow({
     <Item
       variant="muted"
       size="sm"
-      className={`bg-muted/30 flex-nowrap gap-4 rounded-md ${hasDescription ? "items-start" : "items-center"}`}
+      className={`flex-nowrap gap-4 rounded-md bg-muted/30 ${hasDescription ? "items-start" : "items-center"}`}
     >
       <ItemContent className={`min-w-0 ${hasDescription ? "" : "gap-0"}`}>
         <ItemTitle className="text-foreground">{label}</ItemTitle>

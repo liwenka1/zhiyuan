@@ -1,8 +1,14 @@
 import js from "@eslint/js";
+import { fileURLToPath } from "node:url";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import tailwindcss from "eslint-plugin-tailwindcss";
 import tseslint from "typescript-eslint";
 import react from "eslint-plugin-react";
+
+// desktop 使用 Tailwind CSS v4，这里需配合 eslint-plugin-tailwindcss beta 版，
+// 并显式指向 CSS 入口文件，否则插件无法正确解析设计令牌。
+const tailwindEntryPath = fileURLToPath(new URL("./src/renderer/src/assets/main.css", import.meta.url));
 
 export default tseslint.config(
   {
@@ -17,6 +23,14 @@ export default tseslint.config(
       "*.config.ts",
       "*.config.mjs"
     ]
+  },
+  ...tailwindcss.configs["flat/recommended"],
+  {
+    settings: {
+      tailwindcss: {
+        config: tailwindEntryPath
+      }
+    }
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
