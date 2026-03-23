@@ -163,7 +163,7 @@ export function MainLayout({
   return (
     <div
       ref={outerContainerRef}
-      className="bg-background relative flex h-screen w-full overflow-hidden"
+      className="relative flex h-screen w-full overflow-hidden bg-background"
       style={outerStyle}
     >
       {/* 自定义标题栏（Windows 拖拽区域） */}
@@ -226,7 +226,7 @@ export function MainLayout({
               }
             }
           }}
-          className="bg-background overflow-hidden"
+          className="overflow-hidden bg-background"
         >
           <aside className="no-select h-full">{leftSidebar}</aside>
         </ResizablePanel>
@@ -246,7 +246,7 @@ export function MainLayout({
             noteListSizeRef.current = size.asPercentage;
             syncRightSidebarMaskRect();
           }}
-          className="bg-background overflow-visible"
+          className="overflow-visible bg-background"
         >
           <aside className="no-select h-full">{rightSidebar}</aside>
         </ResizablePanel>

@@ -49,7 +49,7 @@ export function PresentationView() {
     <AnimatePresence>
       {isPresentationMode && (
         <motion.div
-          className="bg-background fixed inset-0 z-50 flex flex-col"
+          className="fixed inset-0 z-50 flex flex-col bg-background"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
@@ -64,7 +64,7 @@ export function PresentationView() {
             <Button
               variant="ghost"
               size="sm"
-              className="bg-background/80 hover:bg-background h-10 w-10 rounded-full p-0 backdrop-blur-sm"
+              className="h-10 w-10 rounded-full bg-background/80 p-0 backdrop-blur-sm hover:bg-background"
               onClick={exitPresentationMode}
             >
               <X className="h-5 w-5" />

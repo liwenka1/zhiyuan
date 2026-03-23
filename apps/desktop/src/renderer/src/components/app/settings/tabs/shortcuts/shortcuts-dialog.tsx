@@ -73,14 +73,14 @@ export function ShortcutRecorderDialog({
           tabIndex={0}
           onKeyDown={onKeyDown}
           onClick={onStart}
-          className="border-border bg-muted/40 text-foreground focus-visible:ring-ring/50 flex min-h-24 items-center justify-center rounded-lg border text-sm outline-none focus-visible:ring-[3px]"
+          className="flex min-h-24 items-center justify-center rounded-lg border border-border bg-muted/40 text-sm text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {isRecording ? listeningText : idleText}
         </div>
         <div className="flex flex-col gap-1">
           <div className="flex min-h-4 items-center justify-between gap-3" aria-live="polite">
-            <span className="text-muted-foreground text-xs">{pendingBinding ? pendingLabel : currentLabel}</span>
-            <span className="text-destructive min-w-0 truncate text-right text-xs leading-4">{errorText ?? ""}</span>
+            <span className="text-xs text-muted-foreground">{pendingBinding ? pendingLabel : currentLabel}</span>
+            <span className="min-w-0 truncate text-right text-xs leading-4 text-destructive">{errorText ?? ""}</span>
           </div>
           <ShortcutKeys parts={parts} />
         </div>

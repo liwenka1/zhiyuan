@@ -31,7 +31,7 @@ export function TableOfContents({ content, noteId }: TableOfContentsProps) {
   const { tocItemRefs, handleClick } = useTocScroll(activeId, setActiveId, skipNextUpdate, noteId);
 
   if (headings.length === 0) {
-    return <div className="text-muted-foreground py-4 text-center text-sm">{t("toc.empty")}</div>;
+    return <div className="py-4 text-center text-sm text-muted-foreground">{t("toc.empty")}</div>;
   }
 
   return (
