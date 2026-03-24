@@ -124,12 +124,11 @@
     "selectedCount": "{{count}} notes"
   },
   "externalDrop": {
-    "hoverHint": "Release to import Markdown files",
     "importingHint": "Importing...",
     "onlyMarkdown": "Only .md files are supported",
+    "dropFailed": "Failed to handle dropped files, please try again",
     "importSuccess": "Imported {{count}} file(s)",
-    "importSuccessWithSkipped": "Imported {{importedCount}}, skipped {{skippedCount}}",
-    "importFailed": "Import failed, please try again"
+    "importSuccessWithSkipped": "Imported {{importedCount}}, skipped {{skippedCount}}"
   },
   "github": {
     "pushSuccess": "Push succeeded: {{url}}",

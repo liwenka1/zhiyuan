@@ -1,15 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FolderOpen, FileText } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { TitleBar, SettingsPopover } from "@/components/app";
+import { DropHoverMask, TitleBar, SettingsPopover } from "@/components/app";
 import { Logo } from "@/components/icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
-import { usePlatform } from "@/hooks";
+import { useMarkdownFileDrop, usePlatform } from "@/hooks";
 import { workspaceIpc } from "@/ipc";
+
+function getFileName(filePath: string): string {
+  return filePath.split(/[/\\]/).pop() || "";
+}
+
+function getParentDir(filePath: string): string {
+  const normalizedPath = filePath.replaceAll("\\", "/");
+  const lastSlashIndex = normalizedPath.lastIndexOf("/");
+  if (lastSlashIndex <= 0) {
+    return normalizedPath;
+  }
+  return normalizedPath.slice(0, lastSlashIndex);
+}
 
 export function WelcomePage() {
   const { t } = useTranslation("common");
@@ -27,6 +40,36 @@ export function WelcomePage() {
       .then(setRecentWorkspaces)
       .catch(() => {});
   }, []);
+
+  const openResolvedFile = useCallback(
+    async ({ filePath, workspacePath }: { filePath: string; workspacePath: string }) => {
+      const data = await workspaceIpc.scan(workspacePath);
+      if (!data) return;
+
+      setWorkspacePath(workspacePath);
+      setFolders(data.folders);
+      loadFromFileSystem(data);
+
+      const fileName = getFileName(filePath);
+      const targetNote = data.notes.find((note) => note.fileName === fileName);
+      if (targetNote) {
+        setTimeout(() => selectNote(targetNote.id), 0);
+      }
+    },
+    [loadFromFileSystem, selectNote, setFolders, setWorkspacePath]
+  );
+
+  const { isFileDropHover, dragHandlers } = useMarkdownFileDrop({
+    onDropMarkdownFiles: async (sourcePaths) => {
+      const filePath = sourcePaths[0];
+      if (!filePath) return;
+
+      await openResolvedFile({
+        filePath,
+        workspacePath: getParentDir(filePath)
+      });
+    }
+  });
 
   const handleOpenFolder = async () => {
     try {
@@ -59,18 +102,7 @@ export function WelcomePage() {
       // null = 用户取消或已跳转到已有窗口
       if (!result) return;
 
-      const data = await workspaceIpc.scan(result.workspacePath);
-      if (!data) return; // 已跳转到已有窗口
-
-      setWorkspacePath(result.workspacePath);
-      setFolders(data.folders);
-      loadFromFileSystem(data);
-
-      const fileName = result.filePath.split("/").pop() || "";
-      const targetNote = data.notes.find((n) => n.fileName === fileName);
-      if (targetNote) {
-        setTimeout(() => selectNote(targetNote.id), 0);
-      }
+      await openResolvedFile(result);
     } catch {
       toast.error(t("welcome.openFileFailed"));
     }
@@ -96,7 +128,11 @@ export function WelcomePage() {
 
   return (
     <div
-      className="flex h-screen w-full flex-col bg-background"
+      className="relative flex h-screen w-full flex-col bg-background"
+      onDragEnter={dragHandlers.onDragEnter}
+      onDragOver={dragHandlers.onDragOver}
+      onDragLeave={dragHandlers.onDragLeave}
+      onDrop={dragHandlers.onDrop}
       style={{
         paddingTop: isMac
           ? "var(--titlebar-height-mac)"
@@ -106,11 +142,17 @@ export function WelcomePage() {
       }}
     >
       <TitleBar />
+      <DropHoverMask visible={isFileDropHover} bottomGapPx={0} />
 
       {isWindows && <div className="border-t border-border" />}
 
       <div className="flex flex-1 items-center justify-center select-none">
-        <div className="flex w-full max-w-sm flex-col items-center">
+        <div className="relative flex w-full max-w-sm flex-col items-center">
+          {isFileDropHover && (
+            <div className="pointer-events-none absolute inset-x-0 -top-6 z-10 rounded-lg border border-primary/30 bg-background/85 px-3 py-2 text-center text-sm text-primary backdrop-blur-sm">
+              {t("welcome.openFile")}
+            </div>
+          )}
           {/* Logo */}
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
