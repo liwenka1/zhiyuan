@@ -46,7 +46,7 @@ export function SearchPanel({ search }: SearchPanelProps) {
 
   return (
     <div
-      className="absolute top-2 right-4 z-50 rounded-lg border bg-background p-2 shadow-md"
+      className="bg-background absolute top-2 right-4 z-50 rounded-lg border p-2 shadow-md"
       onKeyDown={handleKeyDown}
     >
       {/* 搜索行 */}
@@ -63,7 +63,7 @@ export function SearchPanel({ search }: SearchPanelProps) {
             e.target.setSelectionRange(len, len);
           }}
         />
-        <span className="min-w-14 text-center text-xs text-muted-foreground">
+        <span className="text-muted-foreground min-w-14 text-center text-xs">
           {state.searchText ? `${state.currentMatch}/${state.matchCount}` : ""}
         </span>
         <IconButton

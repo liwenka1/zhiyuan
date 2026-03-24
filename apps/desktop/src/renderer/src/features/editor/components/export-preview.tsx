@@ -105,7 +105,7 @@ export function ExportPreview({ content, notePath, noteTitle }: ExportPreviewPro
           scrolling="no"
         />
         {isRendering && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/80 text-xs text-muted-foreground">
+          <div className="bg-background/80 text-muted-foreground absolute inset-0 flex items-center justify-center text-xs">
             {t("toolbar.exportPreviewOpening")}
           </div>
         )}

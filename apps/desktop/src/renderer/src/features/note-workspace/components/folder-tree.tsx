@@ -179,7 +179,7 @@ export function FolderTree({
             muted={!isAllSelected}
             leading={<FileStack className="h-4 w-4 shrink-0" />}
             label={t("allNotes")}
-            trailing={<span className="text-xs text-tertiary-foreground tabular-nums">{totalNoteCount}</span>}
+            trailing={<span className="text-tertiary-foreground text-xs tabular-nums">{totalNoteCount}</span>}
             onMouseEnter={() => setHoveredId(ALL_NOTES_FOLDER_ID)}
             onMouseLeave={() => setHoveredId(null)}
             onClick={() => onSelectFolder?.(null)}
@@ -206,7 +206,7 @@ export function FolderTree({
                       label={folder.name}
                       trailing={
                         folder.noteCount !== undefined ? (
-                          <span className="text-xs text-tertiary-foreground tabular-nums">{folder.noteCount}</span>
+                          <span className="text-tertiary-foreground text-xs tabular-nums">{folder.noteCount}</span>
                         ) : null
                       }
                     />
@@ -248,7 +248,7 @@ export function FolderTree({
       </ScrollArea>
 
       {/* 底部设置 */}
-      <div className="flex h-12 shrink-0 items-center justify-center border-t border-divider px-3">
+      <div className="border-divider flex h-12 shrink-0 items-center justify-center border-t px-3">
         <SettingsPopover />
       </div>
     </div>

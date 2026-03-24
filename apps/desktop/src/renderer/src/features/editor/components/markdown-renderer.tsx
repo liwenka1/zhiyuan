@@ -120,7 +120,7 @@ export function MarkdownRenderer({
   if (!content.trim() && showEmptyState) {
     return (
       <div className={cn("prose dark:prose-invert", className)}>
-        <div className="mt-8 text-center text-muted-foreground">{emptyStateMessage || t("previewEmpty")}</div>
+        <div className="text-muted-foreground mt-8 text-center">{emptyStateMessage || t("previewEmpty")}</div>
       </div>
     );
   }

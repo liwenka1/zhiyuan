@@ -27,23 +27,23 @@ function getActionHandler(action: MenuAction): () => void {
 function MenuDropdown({ items, locale, onClose }: { items: MenuEntryDef[]; locale: MenuLocale; onClose: () => void }) {
   return (
     <div
-      className="absolute top-full left-0 z-50 min-w-50 rounded-md bg-popover p-1 shadow-md ring-1 ring-foreground/10"
+      className="bg-popover ring-foreground/10 absolute top-full left-0 z-50 min-w-50 rounded-md p-1 shadow-md ring-1"
       style={{ WebkitAppRegion: "no-drag" } as ElectronCSSProperties}
     >
       {items.map((entry, i) =>
         !isMenuItem(entry) ? (
-          <div key={i} className="my-1 h-px bg-border" />
+          <div key={i} className="bg-border my-1 h-px" />
         ) : (
           <button
             key={entry.id}
-            className="flex w-full cursor-pointer items-center justify-between rounded-sm px-3 py-1.5 text-sm transition-colors hover:bg-muted/60"
+            className="hover:bg-muted/60 flex w-full cursor-pointer items-center justify-between rounded-sm px-3 py-1.5 text-sm transition-colors"
             onClick={() => {
               getActionHandler(entry.id)();
               onClose();
             }}
           >
             <span>{resolveLabel(entry.label, locale)}</span>
-            {entry.shortcut && <span className="ml-8 text-xs text-muted-foreground">{entry.shortcut.win}</span>}
+            {entry.shortcut && <span className="text-muted-foreground ml-8 text-xs">{entry.shortcut.win}</span>}
           </button>
         )
       )}
@@ -128,7 +128,7 @@ export function AppMenuBar() {
     <div
       ref={barRef}
       data-titlebar
-      className="fixed inset-x-0 top-0 z-9999 flex items-center bg-background"
+      className="bg-background fixed inset-x-0 top-0 z-9999 flex items-center"
       style={barStyle}
     >
       {/* App Name */}
@@ -136,7 +136,7 @@ export function AppMenuBar() {
         className="flex h-full shrink-0 items-center px-3"
         style={{ WebkitAppRegion: "no-drag" } as ElectronCSSProperties}
       >
-        <span className="text-sm font-medium text-foreground">{tEditor("appName")}</span>
+        <span className="text-foreground text-sm font-medium">{tEditor("appName")}</span>
       </div>
 
       {/* 菜单按钮（从共享 schema 生成） */}

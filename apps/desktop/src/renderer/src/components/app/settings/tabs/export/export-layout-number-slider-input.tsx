@@ -67,7 +67,7 @@ export function ExportLayoutNumberSliderInput({
             onChange(raw);
           }
         }}
-        className="flex-1 **:data-[slot=slider-range]:bg-primary **:data-[slot=slider-thumb]:border-primary **:data-[slot=slider-thumb]:bg-background **:data-[slot=slider-track]:bg-muted/80"
+        className="**:data-[slot=slider-range]:bg-primary **:data-[slot=slider-thumb]:border-primary **:data-[slot=slider-thumb]:bg-background **:data-[slot=slider-track]:bg-muted/80 flex-1"
         aria-label={ariaLabel}
       />
 
@@ -85,7 +85,7 @@ export function ExportLayoutNumberSliderInput({
           }}
           className="h-9 w-20 text-center text-sm"
         />
-        {unit ? <Label className="w-6 text-xs font-normal text-muted-foreground">{unit}</Label> : null}
+        {unit ? <Label className="text-muted-foreground w-6 text-xs font-normal">{unit}</Label> : null}
       </div>
     </div>
   );
