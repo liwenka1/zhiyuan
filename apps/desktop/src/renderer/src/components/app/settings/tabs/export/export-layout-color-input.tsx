@@ -16,7 +16,7 @@ export function ExportLayoutColorInput({ value, onChange }: ExportLayoutColorInp
         type="color"
         value={toColorInputValue(value)}
         onChange={(e) => onChange(e.currentTarget.value)}
-        className="h-9 w-11 cursor-pointer rounded-md border border-input bg-background p-1 shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className="border-input bg-background focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-11 cursor-pointer rounded-md border p-1 shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px]"
       />
       <Input
         type="text"

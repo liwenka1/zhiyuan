@@ -62,7 +62,7 @@ export function ExportTab() {
         }
       >
         <Alert className="mb-3">
-          <Info className="mt-0.5 h-4 w-4 text-muted-foreground" />
+          <Info className="text-muted-foreground mt-0.5 h-4 w-4" />
           <AlertTitle>{t("settings.wechatLayoutNoticeTitle")}</AlertTitle>
           <AlertDescription>{exportPreviewHint}</AlertDescription>
         </Alert>

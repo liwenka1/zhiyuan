@@ -72,8 +72,8 @@ export function TerminalPanel() {
   }, [hasSessionList, splitGroupRef]);
 
   return (
-    <section className="terminal-panel flex h-full min-h-0 flex-col bg-background">
-      <div className="flex items-center justify-between bg-background px-3 py-1 text-xs text-muted-foreground">
+    <section className="terminal-panel bg-background flex h-full min-h-0 flex-col">
+      <div className="bg-background text-muted-foreground flex items-center justify-between px-3 py-1 text-xs">
         <div className="flex flex-1 items-center justify-end gap-1">
           <IconButton aria-label="New terminal" size="icon-compact" onClick={handleAddTerminal}>
             <Plus className="size-3.5" />
@@ -100,7 +100,7 @@ export function TerminalPanel() {
           <ResizableHandle
             className={
               sessions.length >= 2
-                ? "w-px bg-border transition-colors hover:bg-primary"
+                ? "bg-border hover:bg-primary w-px transition-colors"
                 : "pointer-events-none w-0 border-0 bg-transparent p-0 opacity-0"
             }
           />

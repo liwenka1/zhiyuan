@@ -23,7 +23,7 @@ function ThemeSegmentedControl() {
   ];
 
   return (
-    <div className="inline-flex rounded-lg bg-muted/50 p-1">
+    <div className="bg-muted/50 inline-flex rounded-lg p-1">
       {options.map((option) => (
         <button
           key={option.value}

@@ -59,7 +59,7 @@ export function SettingsPopover() {
         <DialogTitle className="sr-only">{t("settings.title")}</DialogTitle>
 
         {/* 左侧导航 */}
-        <nav className="flex w-50 shrink-0 flex-col gap-0.5 border-r border-border px-3 py-4">
+        <nav className="border-border flex w-50 shrink-0 flex-col gap-0.5 border-r px-3 py-4">
           {tabs.map((item) => (
             <ListRow
               key={item.id}
@@ -80,11 +80,11 @@ export function SettingsPopover() {
         {/* 右侧内容 */}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {/* 内容区标题 */}
-          <div className="flex shrink-0 items-center gap-2.5 border-b border-border px-8 py-5">
+          <div className="border-border flex shrink-0 items-center gap-2.5 border-b px-8 py-5">
             {activeTab && (
               <>
                 <span className="text-muted-foreground">{activeTab.icon}</span>
-                <h2 className="text-base font-medium text-foreground">{activeTab.label}</h2>
+                <h2 className="text-foreground text-base font-medium">{activeTab.label}</h2>
               </>
             )}
           </div>

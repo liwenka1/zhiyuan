@@ -194,7 +194,7 @@ export function EditorArea({
           <ResizableHandle
             className={
               isTerminalOpen
-                ? "h-px bg-border transition-colors hover:bg-primary"
+                ? "bg-border hover:bg-primary h-px transition-colors"
                 : "pointer-events-none h-0 border-0 bg-transparent p-0 opacity-0"
             }
           />
@@ -354,7 +354,7 @@ const OpenNotePanels = memo(
           <ResizableHandle
             className={
               isSplit
-                ? "w-px bg-border transition-colors hover:bg-primary"
+                ? "bg-border hover:bg-primary w-px transition-colors"
                 : "pointer-events-none w-0 border-0 bg-transparent p-0 opacity-0"
             }
             onPointerDown={() => {

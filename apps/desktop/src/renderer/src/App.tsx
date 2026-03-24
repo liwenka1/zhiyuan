@@ -203,7 +203,7 @@ function App(): React.JSX.Element {
 
   // 初始化完成前不渲染（避免闪烁）
   if (!isInitialized) {
-    return <div className="h-screen w-full bg-background" />;
+    return <div className="bg-background h-screen w-full" />;
   }
 
   // 没有工作区时显示欢迎页

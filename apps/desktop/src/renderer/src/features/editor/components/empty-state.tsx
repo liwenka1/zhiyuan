@@ -7,7 +7,7 @@ export function EmptyEditor() {
 
   return (
     <motion.div
-      className="flex h-full flex-col items-center justify-center text-muted-foreground select-none"
+      className="text-muted-foreground flex h-full flex-col items-center justify-center select-none"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: "easeOut" }}

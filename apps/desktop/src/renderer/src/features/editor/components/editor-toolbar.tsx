@@ -298,7 +298,7 @@ export function EditorToolbar({
                 <FolderOpen className="size-4" />
                 <span>{t("toolbar.showInExplorer")}</span>
               </Button>
-              <div className="my-1 h-px bg-border" />
+              <div className="bg-border my-1 h-px" />
               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2" onClick={handleRenameNote}>
                 <Pencil className="size-4" />
                 <span>{t("toolbar.rename")}</span>
@@ -316,14 +316,14 @@ export function EditorToolbar({
                 <Github className="size-4" />
                 <span>{t("toolbar.pushToGitHub")}</span>
               </Button>
-              <div className="my-1 h-px bg-border" />
+              <div className="bg-border my-1 h-px" />
               <div onMouseEnter={() => setExportOpen(true)} onMouseLeave={() => setExportOpen(false)}>
                 <Popover open={exportOpen} onOpenChange={setExportOpen}>
                   <PopoverTrigger asChild>
                     <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2">
                       <Download className="size-4" />
                       <span>{t("toolbar.export")}</span>
-                      <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+                      <ChevronRight className="text-muted-foreground ml-auto size-4" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="start" side="right" className="w-48 p-1">
@@ -372,11 +372,11 @@ export function EditorToolbar({
                   </PopoverContent>
                 </Popover>
               </div>
-              <div className="my-1 h-px bg-border" />
+              <div className="bg-border my-1 h-px" />
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-full justify-start gap-2 text-destructive hover:text-destructive"
+                className="text-destructive hover:text-destructive h-8 w-full justify-start gap-2"
                 onClick={handleDeleteNote}
               >
                 <Trash2 className="size-4" />

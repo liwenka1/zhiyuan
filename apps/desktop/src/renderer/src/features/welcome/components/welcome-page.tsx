@@ -128,7 +128,7 @@ export function WelcomePage() {
 
   return (
     <div
-      className="relative flex h-screen w-full flex-col bg-background"
+      className="bg-background relative flex h-screen w-full flex-col"
       onDragEnter={dragHandlers.onDragEnter}
       onDragOver={dragHandlers.onDragOver}
       onDragLeave={dragHandlers.onDragLeave}
@@ -144,12 +144,12 @@ export function WelcomePage() {
       <TitleBar />
       <DropHoverMask visible={isFileDropHover} bottomGapPx={0} />
 
-      {isWindows && <div className="border-t border-border" />}
+      {isWindows && <div className="border-border border-t" />}
 
       <div className="flex flex-1 items-center justify-center select-none">
         <div className="relative flex w-full max-w-sm flex-col items-center">
           {isFileDropHover && (
-            <div className="pointer-events-none absolute inset-x-0 -top-6 z-10 rounded-lg border border-primary/30 bg-background/85 px-3 py-2 text-center text-sm text-primary backdrop-blur-sm">
+            <div className="border-primary/30 bg-background/85 text-primary pointer-events-none absolute inset-x-0 -top-6 z-10 rounded-lg border px-3 py-2 text-center text-sm backdrop-blur-sm">
               {t("welcome.openFile")}
             </div>
           )}
@@ -159,12 +159,12 @@ export function WelcomePage() {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
           >
-            <Logo className="h-16 w-16 text-foreground opacity-[0.12]" />
+            <Logo className="text-foreground h-16 w-16 opacity-[0.12]" />
           </motion.div>
 
           {/* App 名称 */}
           <motion.h1
-            className="mt-5 text-2xl font-light tracking-wide text-foreground"
+            className="text-foreground mt-5 text-2xl font-light tracking-wide"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, delay: 0.08 }}
@@ -174,7 +174,7 @@ export function WelcomePage() {
 
           {/* 副标题 */}
           <motion.p
-            className="mt-2 text-sm text-muted-foreground/60"
+            className="text-muted-foreground/60 mt-2 text-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, delay: 0.14 }}
@@ -196,8 +196,8 @@ export function WelcomePage() {
               onClick={handleOpenFolder}
               className="h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5"
             >
-              <FolderOpen className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground/90">{t("welcome.openFolder")}</span>
+              <FolderOpen className="text-muted-foreground h-4 w-4" />
+              <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFolder")}</span>
             </Button>
 
             <Button
@@ -207,8 +207,8 @@ export function WelcomePage() {
               onClick={handleOpenFile}
               className="h-auto w-full justify-center gap-2 rounded-lg px-5 py-2.5"
             >
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium text-foreground/90">{t("welcome.openFile")}</span>
+              <FileText className="text-muted-foreground h-4 w-4" />
+              <span className="text-foreground/90 text-sm font-medium">{t("welcome.openFile")}</span>
             </Button>
           </motion.div>
 
@@ -231,12 +231,12 @@ export function WelcomePage() {
                       onClick={() => handleOpenRecent(workspace)}
                       className="group h-auto w-full justify-start gap-3 rounded-lg px-3 py-2 text-left"
                     >
-                      <FolderOpen className="h-4 w-4 shrink-0 text-muted-foreground/30 transition-colors group-hover:text-muted-foreground/60" />
+                      <FolderOpen className="text-muted-foreground/30 group-hover:text-muted-foreground/60 h-4 w-4 shrink-0 transition-colors" />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-sm text-foreground/70 transition-colors group-hover:text-foreground">
+                        <div className="text-foreground/70 group-hover:text-foreground truncate text-sm transition-colors">
                           {getFolderName(workspace)}
                         </div>
-                        <div className="truncate text-xs text-muted-foreground/40">{workspace}</div>
+                        <div className="text-muted-foreground/40 truncate text-xs">{workspace}</div>
                       </div>
                     </Button>
                   ))}

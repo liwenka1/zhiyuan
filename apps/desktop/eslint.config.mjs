@@ -50,6 +50,8 @@ export default tseslint.config(
       "react-refresh": reactRefresh
     },
     rules: {
+      // 类名顺序统一交给 prettier-plugin-tailwindcss，避免与 ESLint 自动修复结果冲突。
+      "tailwindcss/classnames-order": "off",
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": "off",
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
