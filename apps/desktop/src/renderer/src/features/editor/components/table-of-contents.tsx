@@ -35,7 +35,7 @@ export function TableOfContents({ content, noteId }: TableOfContentsProps) {
   }
 
   return (
-    <ScrollArea className="h-[400px]">
+    <ScrollArea className="h-100">
       <nav className="space-y-0.5 pr-3">
         {headings.map((heading, index) => {
           const isActive = activeId === heading.id;

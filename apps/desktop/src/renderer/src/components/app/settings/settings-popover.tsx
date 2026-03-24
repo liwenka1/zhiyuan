@@ -55,11 +55,11 @@ export function SettingsPopover() {
       >
         <Settings className="h-4 w-4" />
       </DialogTrigger>
-      <DialogContent className="flex h-[78vh] max-h-[720px] min-h-[520px] gap-0 overflow-hidden p-0 sm:max-w-[860px]">
+      <DialogContent className="flex h-[78vh] max-h-180 min-h-130 gap-0 overflow-hidden p-0 sm:max-w-215">
         <DialogTitle className="sr-only">{t("settings.title")}</DialogTitle>
 
         {/* 左侧导航 */}
-        <nav className="flex w-[200px] shrink-0 flex-col gap-0.5 border-r border-border px-3 py-4">
+        <nav className="flex w-50 shrink-0 flex-col gap-0.5 border-r border-border px-3 py-4">
           {tabs.map((item) => (
             <ListRow
               key={item.id}
