@@ -124,12 +124,11 @@
     "selectedCount": "{{count}} 个笔记"
   },
   "externalDrop": {
-    "hoverHint": "松开导入 Markdown 文件",
     "importingHint": "正在导入...",
     "onlyMarkdown": "仅支持导入 .md 文件",
+    "dropFailed": "处理拖入文件失败，请重试",
     "importSuccess": "已导入 {{count}} 个文件",
-    "importSuccessWithSkipped": "已导入 {{importedCount}} 个，跳过 {{skippedCount}} 个",
-    "importFailed": "导入失败，请重试"
+    "importSuccessWithSkipped": "已导入 {{importedCount}} 个，跳过 {{skippedCount}} 个"
   },
   "github": {
     "pushSuccess": "推送成功：{{url}}",
