@@ -1,14 +1,12 @@
 import { create } from "zustand";
 import { configIpc } from "@/ipc";
 import type { GitHubConfig, GitHubProjectConfigMap } from "@shared";
-import { DEFAULT_GITHUB_PROJECT_KEY } from "@shared";
 
 const EMPTY_GITHUB_CONFIG: GitHubConfig = { owner: "", repo: "", token: "" };
 
 interface GitHubSettingsState extends GitHubConfig {
   projectConfigs: GitHubProjectConfigMap;
   activeProjectKey: string;
-  defaultProjectKey: string;
   isLoaded: boolean;
   load: (preferredProjectKey?: string) => Promise<void>;
   setActiveProject: (projectKey: string) => Promise<void>;
@@ -24,14 +22,14 @@ function resolveActiveConfig(state: Pick<GitHubSettingsState, "projectConfigs" |
 function pickActiveProjectKey(params: {
   projectConfigs: GitHubProjectConfigMap;
   preferredProjectKey?: string;
-  defaultProjectKey?: string;
+  activeProjectKey?: string;
 }): string {
   const keys = Object.keys(params.projectConfigs);
   const preferred = String(params.preferredProjectKey || "").trim();
-  const fallbackDefault = String(params.defaultProjectKey || "").trim() || DEFAULT_GITHUB_PROJECT_KEY;
-  if (preferred && (params.projectConfigs[preferred] || keys.length === 0)) return preferred;
-  if (params.projectConfigs[fallbackDefault]) return fallbackDefault;
-  return keys[0] || preferred || fallbackDefault;
+  const active = String(params.activeProjectKey || "").trim();
+  if (preferred && params.projectConfigs[preferred]) return preferred;
+  if (active && params.projectConfigs[active]) return active;
+  return keys[0] || "";
 }
 
 export const useGitHubSettingsStore = create<GitHubSettingsState>((set, get) => ({
@@ -39,23 +37,21 @@ export const useGitHubSettingsStore = create<GitHubSettingsState>((set, get) => 
   repo: "",
   token: "",
   projectConfigs: {},
-  activeProjectKey: DEFAULT_GITHUB_PROJECT_KEY,
-  defaultProjectKey: DEFAULT_GITHUB_PROJECT_KEY,
+  activeProjectKey: "",
   isLoaded: false,
 
   load: async (preferredProjectKey) => {
     const payload = await configIpc
       .getGitHubProjectConfigs()
-      .catch(() => ({ projectConfigs: {}, defaultProjectKey: DEFAULT_GITHUB_PROJECT_KEY }));
+      .catch(() => ({ projectConfigs: {}, activeProjectKey: "" }));
     const activeProjectKey = pickActiveProjectKey({
       projectConfigs: payload.projectConfigs,
       preferredProjectKey,
-      defaultProjectKey: payload.defaultProjectKey
+      activeProjectKey: payload.activeProjectKey
     });
     const activeConfig = payload.projectConfigs[activeProjectKey] ?? EMPTY_GITHUB_CONFIG;
     set({
       projectConfigs: payload.projectConfigs,
-      defaultProjectKey: payload.defaultProjectKey || DEFAULT_GITHUB_PROJECT_KEY,
       activeProjectKey,
       owner: activeConfig.owner,
       repo: activeConfig.repo,
@@ -69,16 +65,12 @@ export const useGitHubSettingsStore = create<GitHubSettingsState>((set, get) => 
     if (!normalizedKey) return;
     const current = get();
     const projectConfigs = { ...current.projectConfigs };
-    if (!projectConfigs[normalizedKey]) {
-      projectConfigs[normalizedKey] = { ...EMPTY_GITHUB_CONFIG };
-      await configIpc.setGitHubConfig(EMPTY_GITHUB_CONFIG, normalizedKey).catch(() => {});
-    }
-    await configIpc.setGitHubDefaultProjectKey(normalizedKey).catch(() => {});
+    if (!projectConfigs[normalizedKey]) return;
+    await configIpc.setGitHubActiveProjectKey(normalizedKey).catch(() => {});
     const activeConfig = projectConfigs[normalizedKey];
     set({
       projectConfigs,
       activeProjectKey: normalizedKey,
-      defaultProjectKey: normalizedKey,
       owner: activeConfig.owner,
       repo: activeConfig.repo,
       token: activeConfig.token
@@ -94,6 +86,7 @@ export const useGitHubSettingsStore = create<GitHubSettingsState>((set, get) => 
     }
 
     await configIpc.setGitHubConfig(EMPTY_GITHUB_CONFIG, normalizedKey).catch(() => {});
+    await configIpc.setGitHubActiveProjectKey(normalizedKey).catch(() => {});
     const projectConfigs = { ...get().projectConfigs, [normalizedKey]: { ...EMPTY_GITHUB_CONFIG } };
     set({
       projectConfigs,
@@ -115,21 +108,14 @@ export const useGitHubSettingsStore = create<GitHubSettingsState>((set, get) => 
     delete projectConfigs[normalizedKey];
     await configIpc.removeGitHubProjectConfig(normalizedKey).catch(() => {});
 
-    let defaultProjectKey = get().defaultProjectKey;
-    if (defaultProjectKey === normalizedKey) {
-      defaultProjectKey = Object.keys(projectConfigs)[0] || DEFAULT_GITHUB_PROJECT_KEY;
-      await configIpc.setGitHubDefaultProjectKey(defaultProjectKey).catch(() => {});
-    }
-
     const activeProjectKey = pickActiveProjectKey({
       projectConfigs,
-      defaultProjectKey,
-      preferredProjectKey: get().activeProjectKey === normalizedKey ? defaultProjectKey : get().activeProjectKey
+      activeProjectKey: get().activeProjectKey === normalizedKey ? "" : get().activeProjectKey
     });
+    await configIpc.setGitHubActiveProjectKey(activeProjectKey).catch(() => {});
     const activeConfig = projectConfigs[activeProjectKey] ?? EMPTY_GITHUB_CONFIG;
     set({
       projectConfigs,
-      defaultProjectKey,
       activeProjectKey,
       owner: activeConfig.owner,
       repo: activeConfig.repo,
@@ -139,6 +125,7 @@ export const useGitHubSettingsStore = create<GitHubSettingsState>((set, get) => 
 
   update: async (patch) => {
     const current = get();
+    if (!current.activeProjectKey) return;
     const next = { ...resolveActiveConfig(current), ...patch };
     const projectConfigs = { ...current.projectConfigs, [current.activeProjectKey]: next };
     set({ ...next, projectConfigs });

@@ -240,7 +240,7 @@ export interface ConfigAPI {
   getGitHubProjectConfigs: () => Promise<
     IpcResultDTO<{
       projectConfigs: GitHubProjectConfigMap;
-      defaultProjectKey: string;
+      activeProjectKey: string;
     }>
   >;
 
@@ -255,9 +255,9 @@ export interface ConfigAPI {
   setGitHubConfig: (config: GitHubConfig, projectKey?: string) => Promise<IpcResultDTO<void>>;
 
   /**
-   * 设置 GitHub 默认项目键
+   * 设置 GitHub 当前选中的项目键
    */
-  setGitHubDefaultProjectKey: (projectKey: string) => Promise<IpcResultDTO<void>>;
+  setGitHubActiveProjectKey: (projectKey: string) => Promise<IpcResultDTO<void>>;
 
   /**
    * 删除 GitHub 项目配置

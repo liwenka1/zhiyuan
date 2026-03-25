@@ -25,7 +25,8 @@ import {
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { useGitHubSettingsStore } from "@/stores";
-import { DEFAULT_GITHUB_PROJECT_KEY } from "@shared";
+
+const EMPTY_GITHUB_CONFIG = { owner: "", repo: "", token: "" };
 
 export function GitHubTab() {
   const { t } = useTranslation("common");
@@ -51,10 +52,9 @@ export function GitHubTab() {
     }
   }, [isLoaded, load]);
 
-  const projectKeys = Array.from(
-    new Set([...Object.keys(projectConfigs), activeProjectKey, DEFAULT_GITHUB_PROJECT_KEY])
-  );
-  const activeDraft = drafts[activeProjectKey] ?? { owner, repo, token };
+  const projectKeys = Object.keys(projectConfigs);
+  const hasActiveProject = Boolean(activeProjectKey && projectConfigs[activeProjectKey]);
+  const activeDraft = hasActiveProject ? (drafts[activeProjectKey] ?? { owner, repo, token }) : EMPTY_GITHUB_CONFIG;
 
   const handleReset = () => {
     setDrafts((prev) => ({
@@ -83,7 +83,6 @@ export function GitHubTab() {
     const ownerText = config?.owner?.trim();
     const repoText = config?.repo?.trim();
     if (ownerText && repoText) return `${ownerText}/${repoText}`;
-    if (projectKey === DEFAULT_GITHUB_PROJECT_KEY) return t("settings.githubProjectDefault");
     return `${t("settings.githubProjectCurrent")} ${index + 1}`;
   };
   const activeProjectIndex = projectKeys.findIndex((key) => key === activeProjectKey);
@@ -107,7 +106,7 @@ export function GitHubTab() {
     await setActiveProject(projectKey);
   };
 
-  const canRemoveCurrent = activeProjectKey !== DEFAULT_GITHUB_PROJECT_KEY && projectKeys.length > 1;
+  const canRemoveCurrent = hasActiveProject;
 
   return (
     <div>
@@ -115,14 +114,17 @@ export function GitHubTab() {
         <SettingRow label={t("settings.githubProject")} description={t("settings.githubProjectSelectDesc")}>
           <div className="flex w-full items-center justify-end">
             <Select
-              value={activeProjectKey}
+              value={hasActiveProject ? activeProjectKey : undefined}
               onValueChange={(value) => {
                 if (!value) return;
                 void handleSwitchProject(value);
               }}
+              disabled={projectKeys.length === 0}
             >
               <SelectTrigger className="w-full" aria-label={t("settings.githubProject")}>
-                <SelectValue>{activeProjectLabel}</SelectValue>
+                <SelectValue placeholder={t("settings.githubProjectEmpty")}>
+                  {hasActiveProject ? activeProjectLabel : undefined}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent align="start" alignItemWithTrigger={false} className="min-w-0">
                 <SelectGroup>
@@ -138,24 +140,30 @@ export function GitHubTab() {
           </div>
         </SettingRow>
         <SettingRow label={t("settings.githubProjectAdd")} description={t("settings.githubProjectAddDesc")}>
-          <div className="flex w-full items-center justify-end gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={handleCreateProject}>
-              {t("settings.githubProjectCreate")}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              disabled={!canRemoveCurrent}
-              onClick={() => setRemoveDialogOpen(true)}
-            >
-              {t("settings.githubProjectRemoveAction")}
-            </Button>
+          <div className="flex w-full flex-col items-end gap-2">
+            {projectKeys.length === 0 ? (
+              <p className="text-muted-foreground w-full text-sm">{t("settings.githubProjectEmptyDesc")}</p>
+            ) : null}
+            <div className="flex w-full justify-end gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={handleCreateProject}>
+                {t("settings.githubProjectCreate")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                disabled={!canRemoveCurrent}
+                onClick={() => setRemoveDialogOpen(true)}
+              >
+                {t("settings.githubProjectRemoveAction")}
+              </Button>
+            </div>
           </div>
         </SettingRow>
         <SettingRow label={t("settings.githubOwner")}>
           <Input
             value={activeDraft.owner}
+            disabled={!hasActiveProject}
             onChange={(event) =>
               setDrafts((prev) => ({
                 ...prev,
@@ -174,6 +182,7 @@ export function GitHubTab() {
         <SettingRow label={t("settings.githubRepo")}>
           <Input
             value={activeDraft.repo}
+            disabled={!hasActiveProject}
             onChange={(event) =>
               setDrafts((prev) => ({
                 ...prev,
@@ -193,6 +202,7 @@ export function GitHubTab() {
           <Input
             type="password"
             value={activeDraft.token}
+            disabled={!hasActiveProject}
             onChange={(event) =>
               setDrafts((prev) => ({
                 ...prev,
