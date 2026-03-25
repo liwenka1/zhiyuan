@@ -51,7 +51,7 @@ export const configApi = {
    * 获取 GitHub 配置
    */
   getGitHubProjectConfigs: (): Promise<
-    IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; defaultProjectKey: string }>
+    IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; activeProjectKey: string }>
   > => ipcRenderer.invoke("config:getGitHubProjectConfigs"),
 
   getGitHubConfig: (projectKey?: string): Promise<IpcResultDTO<GitHubConfig>> =>
@@ -64,10 +64,10 @@ export const configApi = {
     ipcRenderer.invoke("config:setGitHubConfig", config, projectKey),
 
   /**
-   * 设置 GitHub 默认项目键
+   * 设置 GitHub 当前选中的项目键
    */
-  setGitHubDefaultProjectKey: (projectKey: string): Promise<IpcResultDTO<void>> =>
-    ipcRenderer.invoke("config:setGitHubDefaultProjectKey", projectKey),
+  setGitHubActiveProjectKey: (projectKey: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("config:setGitHubActiveProjectKey", projectKey),
 
   /**
    * 删除 GitHub 项目配置

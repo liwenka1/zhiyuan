@@ -497,11 +497,11 @@ export function registerWorkspaceHandlers(): void {
   // 获取全部 GitHub 项目配置
   ipcMain.handle(
     "config:getGitHubProjectConfigs",
-    (): IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; defaultProjectKey: string }> => {
+    (): IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; activeProjectKey: string }> => {
       try {
         return ipcOk({
           projectConfigs: configManager.getGitHubProjectConfigs(),
-          defaultProjectKey: configManager.getGitHubDefaultProjectKey()
+          activeProjectKey: configManager.getGitHubActiveProjectKey()
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -534,18 +534,14 @@ export function registerWorkspaceHandlers(): void {
     }
   });
 
-  // 设置 GitHub 默认项目键
-  ipcMain.handle("config:setGitHubDefaultProjectKey", (_, projectKey: string): IpcResultDTO<void> => {
+  // 设置 GitHub 当前选中的项目键
+  ipcMain.handle("config:setGitHubActiveProjectKey", (_, projectKey: string): IpcResultDTO<void> => {
     try {
-      const normalizedKey = String(projectKey || "").trim();
-      if (!normalizedKey) {
-        return ipcErr("Invalid GitHub project key", "CONFIG_SET_GITHUB_DEFAULT_INVALID");
-      }
-      configManager.setGitHubDefaultProjectKey(normalizedKey);
+      configManager.setGitHubActiveProjectKey(projectKey);
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return ipcErr(message, "CONFIG_SET_GITHUB_DEFAULT_FAILED");
+      return ipcErr(message, "CONFIG_SET_GITHUB_ACTIVE_FAILED");
     }
   });
 

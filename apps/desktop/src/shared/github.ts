@@ -4,8 +4,6 @@ export interface GitHubConfig {
   token: string;
 }
 
-export const DEFAULT_GITHUB_PROJECT_KEY = "__default__";
-
 export type GitHubProjectConfigMap = Record<string, GitHubConfig>;
 
 export interface GitHubIssuePushRequest {

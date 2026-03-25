@@ -25,7 +25,7 @@ export const configIpc = {
 
   setShortcuts: async (shortcuts: ShortcutConfig) => unwrapIpcResult(await window.api.config.setShortcuts(shortcuts)),
 
-  getGitHubProjectConfigs: async (): Promise<{ projectConfigs: GitHubProjectConfigMap; defaultProjectKey: string }> =>
+  getGitHubProjectConfigs: async (): Promise<{ projectConfigs: GitHubProjectConfigMap; activeProjectKey: string }> =>
     unwrapIpcResult(await window.api.config.getGitHubProjectConfigs()),
 
   getGitHubConfig: async (projectKey?: string): Promise<GitHubConfig> =>
@@ -34,8 +34,8 @@ export const configIpc = {
   setGitHubConfig: async (config: GitHubConfig, projectKey?: string) =>
     unwrapIpcResult(await window.api.config.setGitHubConfig(config, projectKey)),
 
-  setGitHubDefaultProjectKey: async (projectKey: string) =>
-    unwrapIpcResult(await window.api.config.setGitHubDefaultProjectKey(projectKey)),
+  setGitHubActiveProjectKey: async (projectKey: string) =>
+    unwrapIpcResult(await window.api.config.setGitHubActiveProjectKey(projectKey)),
 
   removeGitHubProjectConfig: async (projectKey: string) =>
     unwrapIpcResult(await window.api.config.removeGitHubProjectConfig(projectKey))
