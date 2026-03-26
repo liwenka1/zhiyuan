@@ -133,6 +133,7 @@ interface NoteListProps {
   onDeleteNotes?: (noteIds: string[]) => void | Promise<void>;
   onRenameNote?: (note: Note) => void;
   onDuplicateNote?: (note: Note) => void;
+  onDuplicateNotes?: (noteIds: string[]) => void | Promise<void>;
   onTogglePinNote?: (note: Note) => void;
   onPinNotes?: (noteIds: string[]) => void | Promise<void>;
   onExportNote?: (note: Note, format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages") => void;
@@ -157,6 +158,7 @@ export function NoteList({
   onDeleteNotes,
   onRenameNote,
   onDuplicateNote,
+  onDuplicateNotes,
   onTogglePinNote,
   onPinNotes,
   onExportNote,
@@ -620,6 +622,11 @@ export function NoteList({
                               <ContextMenuSeparator />
                             </>
                           ) : null}
+                          <ContextMenuItem onClick={() => void onDuplicateNotes?.(contextSelectedIds)}>
+                            <Copy className="h-4 w-4" />
+                            <span>{t("contextMenu.duplicateSelected", { count: contextSelectedCount })}</span>
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
                           <ContextMenuItem onClick={() => void onDeleteNotes?.(contextSelectedIds)}>
                             <Trash2 className="h-4 w-4" />
                             <span>{t("contextMenu.deleteSelected", { count: contextSelectedCount })}</span>

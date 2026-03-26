@@ -20,6 +20,7 @@
     "unpin": "取消置顶",
     "rename": "重命名",
     "duplicate": "创建副本",
+    "duplicateSelected": "创建 {{count}} 个副本",
     "pushToGitHub": "推送到 GitHub Issue",
     "export": "导出",
     "exportAsHTML": "导出为 HTML",
