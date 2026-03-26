@@ -227,6 +227,22 @@ export function NoteWorkspace() {
     },
     [noteHandlers, notes]
   );
+  const handleDuplicateSelectedNotes = useCallback(
+    async (noteIds: string[]) => {
+      const uniqueNoteIds = Array.from(new Set(noteIds));
+      for (const noteId of uniqueNoteIds) {
+        const target = notes.find((note) => note.id === noteId);
+        if (!target) continue;
+        await noteHandlers.handleDuplicateNote({
+          id: target.id,
+          title: target.title,
+          updatedAt: target.updatedAt,
+          isPinned: target.isPinned
+        });
+      }
+    },
+    [noteHandlers, notes]
+  );
   const cursorOverlayModifier: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
     if (!activeNodeRect || !activatorEvent) return transform;
 
@@ -313,6 +329,7 @@ export function NoteWorkspace() {
             onDeleteNotes={handleDeleteSelectedNotes}
             onRenameNote={noteHandlers.handleRenameNote}
             onDuplicateNote={noteHandlers.handleDuplicateNote}
+            onDuplicateNotes={handleDuplicateSelectedNotes}
             onTogglePinNote={noteHandlers.handleTogglePinNote}
             onPinNotes={handlePinSelectedNotes}
             onExportNote={noteHandlers.handleExportNote}

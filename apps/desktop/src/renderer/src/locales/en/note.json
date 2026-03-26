@@ -20,6 +20,7 @@
     "unpin": "Unpin Note",
     "rename": "Rename",
     "duplicate": "Duplicate",
+    "duplicateSelected": "Duplicate {{count}} Notes",
     "pushToGitHub": "Push to GitHub Issue",
     "export": "Export",
     "exportAsHTML": "Export as HTML",
