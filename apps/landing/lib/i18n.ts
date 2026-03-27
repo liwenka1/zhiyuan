@@ -43,7 +43,8 @@ export const translations = {
     preview: {
       eyebrow: "工作流预览",
       title: "从信息采集到 Markdown 整理，一页完成",
-      description: "参考 AFFiNE 的产品展示方式，但聚焦在纸鸢真正擅长的 Markdown 工作流。后续你只需要改配置，就能继续扩展新的卖点。",
+      description:
+        "参考 AFFiNE 的产品展示方式，但聚焦在纸鸢真正擅长的 Markdown 工作流。后续你只需要改配置，就能继续扩展新的卖点。",
       bullets: [
         {
           title: "RSS 订阅",
@@ -132,7 +133,8 @@ export const translations = {
     },
     cta: {
       title: "从 GitHub 开始体验纸鸢",
-      description: "当前下载和源码入口统一放在 GitHub。后续你可以直接在配置里替换成 Release、官网下载页或单独的平台链接。",
+      description:
+        "当前下载和源码入口统一放在 GitHub。后续你可以直接在配置里替换成 Release、官网下载页或单独的平台链接。",
       links: [
         {
           label: "GitHub 仓库",
@@ -175,7 +177,8 @@ export const translations = {
     hero: {
       eyebrow: "Markdown Editor",
       title: "A focused desktop workspace for Markdown lovers and note takers",
-      description: "Collect RSS feeds, turn URLs into Markdown, and keep writing inside one calmer workflow built around Markdown-first thinking.",
+      description:
+        "Collect RSS feeds, turn URLs into Markdown, and keep writing inside one calmer workflow built around Markdown-first thinking.",
       download: "Open GitHub",
       learnMore: "Explore Features",
       highlights: ["RSS Feeds", "URL to Markdown", "Local First", "Light & Dark"]
@@ -184,15 +187,18 @@ export const translations = {
       items: [
         {
           title: "Markdown-first",
-          description: "Collection, organization, writing and export all stay centered around Markdown instead of extra workflow layers."
+          description:
+            "Collection, organization, writing and export all stay centered around Markdown instead of extra workflow layers."
         },
         {
           title: "Open Source",
-          description: "Source code and release flow live on GitHub, which fits users who like transparent tools they can follow over time."
+          description:
+            "Source code and release flow live on GitHub, which fits users who like transparent tools they can follow over time."
         },
         {
           title: "Desktop focus",
-          description: "Built for people who prefer local files, keyboard-oriented workflows and a calmer writing interface."
+          description:
+            "Built for people who prefer local files, keyboard-oriented workflows and a calmer writing interface."
         }
       ]
     },
@@ -203,7 +209,8 @@ export const translations = {
     preview: {
       eyebrow: "Workflow Preview",
       title: "Capture, organize and write in one Markdown flow",
-      description: "The layout is inspired by modern tool landing pages like AFFiNE, but the story stays focused on Zhiyuan's actual Markdown workflow.",
+      description:
+        "The layout is inspired by modern tool landing pages like AFFiNE, but the story stays focused on Zhiyuan's actual Markdown workflow.",
       bullets: [
         {
           title: "RSS subscription",
@@ -224,17 +231,20 @@ export const translations = {
         {
           eyebrow: "Capture",
           title: "Bring RSS feeds and saved pages into one entry point",
-          description: "Subscriptions and saved URLs enter the same Markdown-oriented collection flow instead of living in disconnected apps."
+          description:
+            "Subscriptions and saved URLs enter the same Markdown-oriented collection flow instead of living in disconnected apps."
         },
         {
           eyebrow: "Transform",
           title: "Turn captured content into editable Markdown drafts",
-          description: "A saved page becomes a cleaner Markdown draft you can keep editing, restructuring and archiving."
+          description:
+            "A saved page becomes a cleaner Markdown draft you can keep editing, restructuring and archiving."
         },
         {
           eyebrow: "Ship",
           title: "Keep writing, previewing and exporting in one workspace",
-          description: "Draft, preview and export without jumping across separate tools for every stage of the workflow."
+          description:
+            "Draft, preview and export without jumping across separate tools for every stage of the workflow."
         }
       ]
     },
@@ -270,7 +280,8 @@ export const translations = {
     },
     usecase: {
       title: "Use Cases",
-      description: "Not everything-for-everyone software, but a cleaner workflow for people who genuinely like Markdown.",
+      description:
+        "Not everything-for-everyone software, but a cleaner workflow for people who genuinely like Markdown.",
       items: [
         {
           title: "Reading and collecting",
@@ -292,7 +303,8 @@ export const translations = {
     },
     cta: {
       title: "Start with Zhiyuan on GitHub",
-      description: "The download and source entry points currently live on GitHub. You can later replace these links with dedicated releases or a standalone download page.",
+      description:
+        "The download and source entry points currently live on GitHub. You can later replace these links with dedicated releases or a standalone download page.",
       links: [
         {
           label: "GitHub Repository",

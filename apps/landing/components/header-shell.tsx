@@ -27,7 +27,7 @@ export function HeaderShell({ children }: HeaderShellProps) {
     <header
       className={cn(
         "sticky top-0 z-40 transition-[background-color,border-color] duration-200",
-        scrolled ? "border-b border-border/65 bg-background" : "border-b border-transparent bg-background"
+        scrolled ? "border-border/65 bg-background border-b" : "bg-background border-b border-transparent"
       )}
     >
       {children}

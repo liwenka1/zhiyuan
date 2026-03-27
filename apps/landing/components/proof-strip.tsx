@@ -18,7 +18,7 @@ export function ProofStrip({ t }: ProofStripProps) {
           return (
             <Card key={item.title} className="border-border/60 bg-background shadow-none">
               <CardContent className="flex items-start gap-4 pt-6">
-                <div className="bg-muted text-foreground flex size-11 shrink-0 items-center justify-center rounded-2xl border border-border/60">
+                <div className="bg-muted text-foreground border-border/60 flex size-11 shrink-0 items-center justify-center rounded-2xl border">
                   <Icon className="size-5" />
                 </div>
                 <div>

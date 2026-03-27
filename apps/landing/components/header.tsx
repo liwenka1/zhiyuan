@@ -14,7 +14,7 @@ export function Header({ language, t }: HeaderProps) {
   return (
     <HeaderShell>
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-6">
-        <div className="min-w-0 flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Link href={language === "en" ? "/en" : "/"} className="flex items-center gap-3">
             <span className="text-lg font-semibold tracking-tight md:text-xl">{t.brand.name}</span>
           </Link>

@@ -1,4 +1,5 @@
 import { AppWindowMock } from "@/components/app-window-mock";
+import { Reveal } from "@/components/reveal";
 import type { TranslationKey } from "@/lib/i18n";
 
 interface ShowcaseSectionsProps {
@@ -14,16 +15,21 @@ export function ShowcaseSections({ t }: ShowcaseSectionsProps) {
           const mode = index === 0 ? "capture" : index === 1 ? "writer" : "reader";
 
           return (
-            <div key={item.title} className={`grid items-center gap-10 lg:grid-cols-2 ${reverse ? "" : ""}`}>
-              <div className={reverse ? "lg:order-2" : ""}>
-                <div className="bg-muted text-muted-foreground mb-4 inline-flex rounded-full px-3 py-1 text-xs font-medium tracking-[0.18em] uppercase">
-                  {item.eyebrow}
-                </div>
-                <h3 className="max-w-xl text-3xl font-semibold tracking-tight md:text-5xl">{item.title}</h3>
-                <p className="text-muted-foreground mt-5 max-w-xl text-lg leading-8">{item.description}</p>
-              </div>
-              <div className={reverse ? "lg:order-1" : ""}>
-                <AppWindowMock mode={mode} className="shadow-lg shadow-primary/5" />
+            <div key={item.title} className="border-border/60 border-t pt-10">
+              <div className="grid items-center gap-10 lg:grid-cols-[0.92fr_1.08fr]">
+                <Reveal className={reverse ? "lg:order-2" : ""}>
+                  <div className="text-primary mb-3 text-xs font-semibold tracking-[0.16em] uppercase">
+                    0{index + 1}
+                  </div>
+                  <div className="text-muted-foreground mb-4 text-xs font-medium tracking-[0.18em] uppercase">
+                    {item.eyebrow}
+                  </div>
+                  <h3 className="max-w-xl text-3xl font-semibold tracking-tight md:text-5xl">{item.title}</h3>
+                  <p className="text-muted-foreground mt-5 max-w-xl text-lg leading-8">{item.description}</p>
+                </Reveal>
+                <Reveal className={reverse ? "lg:order-1" : ""} delay={100}>
+                  <AppWindowMock mode={mode} />
+                </Reveal>
               </div>
             </div>
           );
