@@ -1,13 +1,4 @@
-import {
-  Eye,
-  FilePenLine,
-  Link2,
-  List,
-  PanelRightOpen,
-  Search,
-  TerminalSquare,
-  WandSparkles
-} from "lucide-react";
+import { Eye, FilePenLine, Link2, List, PanelRightOpen, Search, TerminalSquare, WandSparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AppWindowMockProps {
@@ -25,19 +16,14 @@ const noteItems = [
 
 export function AppWindowMock({ className, mode = "reader" }: AppWindowMockProps) {
   return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-[1.75rem] bg-[#1a1a1b] text-white",
-        className
-      )}
-    >
+    <div className={cn("overflow-hidden rounded-[1.75rem] bg-[#1a1a1b] text-white", className)}>
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
           <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
           <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
           <span className="h-3 w-3 rounded-full bg-[#28c840]" />
         </div>
-        <div className="text-[11px] font-medium tracking-[0.18em] uppercase text-white/50">Zhiyuan Desktop</div>
+        <div className="text-[11px] font-medium tracking-[0.18em] text-white/50 uppercase">Zhiyuan Desktop</div>
         <div className="flex items-center gap-3 text-white/55">
           <Eye className="size-4" />
           <PanelRightOpen className="size-4" />
@@ -109,7 +95,7 @@ function CaptureLayout() {
   return (
     <div className="grid min-h-88 grid-cols-[220px_1fr]">
       <aside className="bg-[#1d1d1e] px-4 py-5">
-        <div className="text-[11px] tracking-[0.18em] uppercase text-white/45">Sources</div>
+        <div className="text-[11px] tracking-[0.18em] text-white/45 uppercase">Sources</div>
         <div className="mt-4 space-y-2 text-sm text-white/65">
           <div className="rounded-xl bg-white/5 px-3 py-2.5">RSS / design feeds</div>
           <div className="rounded-xl bg-white/3 px-3 py-2.5">Saved URL</div>
@@ -143,7 +129,7 @@ function WriterLayout() {
   return (
     <div className="grid min-h-88 grid-cols-[1.25fr_0.75fr]">
       <main className="bg-[#1a1a1b] px-5 py-5">
-        <div className="text-[11px] tracking-[0.18em] uppercase text-white/45">Editor</div>
+        <div className="text-[11px] tracking-[0.18em] text-white/45 uppercase">Editor</div>
         <div className="mt-4 h-6 w-2/3 rounded bg-white/14" />
         <div className="mt-5 space-y-3">
           <div className="h-3 w-full rounded bg-white/10" />
@@ -154,7 +140,7 @@ function WriterLayout() {
         </div>
       </main>
       <aside className="bg-[#1d1d1e] px-5 py-5">
-        <div className="text-[11px] tracking-[0.18em] uppercase text-white/45">Panels</div>
+        <div className="text-[11px] tracking-[0.18em] text-white/45 uppercase">Panels</div>
         <div className="mt-4 space-y-3">
           <div className="rounded-2xl bg-white/2 p-4">
             <div className="text-sm font-medium text-white/88">Live Preview</div>
