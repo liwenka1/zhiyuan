@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
-import { AppWindowMock } from "@/components/app-window-mock";
 import { Reveal } from "@/components/reveal";
+import { ThemeScreenshot } from "@/components/theme-screenshot";
 import { buttonVariants } from "@/components/ui/button";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -35,7 +35,7 @@ export function Hero({ t }: HeroProps) {
           </div>
         </Reveal>
         <Reveal className="relative mx-auto mt-12 max-w-6xl" delay={120}>
-          <AppWindowMock mode="reader" className="relative" />
+          <ThemeScreenshot alt="Zhiyuan desktop screenshot" priority />
         </Reveal>
       </div>
     </section>

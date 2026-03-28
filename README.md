@@ -60,11 +60,11 @@
 
 ### 深色主题
 
-<img src="assets/screenshot-dark.png" alt="深色主题">
+<img src="apps/landing/public/screenshot-dark.png" alt="深色主题">
 
 ### 浅色主题
 
-<img src="assets/screenshot-light.png" alt="浅色主题">
+<img src="apps/landing/public/screenshot-light.png" alt="浅色主题">
 
 ## 下载安装
 
