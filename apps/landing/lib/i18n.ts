@@ -14,8 +14,8 @@ export const translations = {
     },
     hero: {
       eyebrow: "Markdown 编辑器",
-      title: "为 Markdown 爱好者和笔记爱好者准备的桌面工作台",
-      description: "用更克制的界面收集 RSS、抓取网页并整理 Markdown 笔记，把阅读、记录和输出放回同一条工作流。",
+      title: "优雅的 Markdown 编辑器",
+      description: "用更克制的界面收集 RSS、抓取网页并整理 Markdown 笔记，把阅读、记录与输出放回同一条工作流。",
       download: "前往 GitHub",
       learnMore: "查看功能",
       highlights: ["RSS 订阅", "URL 转 Markdown", "本地优先", "深浅主题"]
@@ -43,8 +43,7 @@ export const translations = {
     preview: {
       eyebrow: "工作流预览",
       title: "从信息采集到 Markdown 整理，一页完成",
-      description:
-        "参考 AFFiNE 的产品展示方式，但聚焦在纸鸢真正擅长的 Markdown 工作流。后续你只需要改配置，就能继续扩展新的卖点。",
+      description: "纸鸢的重点不是堆叠更多功能，而是把采集、整理和输出放回一条连续的 Markdown 工作流。",
       bullets: [
         {
           title: "RSS 订阅",
@@ -81,7 +80,7 @@ export const translations = {
     },
     features: {
       title: "核心功能",
-      description: "这里的功能点已经做成配置项，后续你可以继续补充或替换。",
+      description: "围绕真实写作与整理场景打磨，而不是把编辑器做成另一套复杂系统。",
       items: [
         {
           title: "RSS 订阅",
@@ -133,8 +132,7 @@ export const translations = {
     },
     cta: {
       title: "从 GitHub 开始体验纸鸢",
-      description:
-        "当前下载和源码入口统一放在 GitHub。后续你可以直接在配置里替换成 Release、官网下载页或单独的平台链接。",
+      description: "当前下载与源码入口统一放在 GitHub，你可以直接查看仓库、下载版本或继续关注后续迭代。",
       links: [
         {
           label: "GitHub 仓库",
@@ -176,9 +174,8 @@ export const translations = {
     },
     hero: {
       eyebrow: "Markdown Editor",
-      title: "A focused desktop workspace for Markdown lovers and note takers",
-      description:
-        "Collect RSS feeds, turn URLs into Markdown, and keep writing inside one calmer workflow built around Markdown-first thinking.",
+      title: "An elegant Markdown editor",
+      description: "Collect RSS feeds, turn web pages into Markdown, and keep reading, writing, and exporting inside one calmer workflow.",
       download: "Open GitHub",
       learnMore: "Explore Features",
       highlights: ["RSS Feeds", "URL to Markdown", "Local First", "Light & Dark"]
@@ -209,8 +206,7 @@ export const translations = {
     preview: {
       eyebrow: "Workflow Preview",
       title: "Capture, organize and write in one Markdown flow",
-      description:
-        "The layout is inspired by modern tool landing pages like AFFiNE, but the story stays focused on Zhiyuan's actual Markdown workflow.",
+      description: "Zhiyuan is not about stacking more surface features. It keeps capture, organization, and output inside one continuous Markdown workflow.",
       bullets: [
         {
           title: "RSS subscription",
@@ -250,7 +246,7 @@ export const translations = {
     },
     features: {
       title: "Core Features",
-      description: "These selling points are intentionally configuration-driven so you can keep expanding them later.",
+      description: "Built around real writing and collection habits instead of turning the editor into another overloaded system.",
       items: [
         {
           title: "RSS subscription",
@@ -303,8 +299,7 @@ export const translations = {
     },
     cta: {
       title: "Start with Zhiyuan on GitHub",
-      description:
-        "The download and source entry points currently live on GitHub. You can later replace these links with dedicated releases or a standalone download page.",
+      description: "The download and source entry points currently live on GitHub, so you can explore the project, grab a release, and follow future updates in one place.",
       links: [
         {
           label: "GitHub Repository",

@@ -1,4 +1,3 @@
-import { AppWindowMock } from "@/components/app-window-mock";
 import { Reveal } from "@/components/reveal";
 import type { TranslationKey } from "@/lib/i18n";
 
@@ -17,10 +16,15 @@ export function ProductPreview({ t }: ProductPreviewProps) {
           <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{t.title}</h2>
           <p className="text-muted-foreground mt-5 text-lg leading-8">{t.description}</p>
         </Reveal>
-        <Reveal className="mx-auto mt-10 max-w-6xl" delay={80}>
-          <AppWindowMock mode="capture" />
-        </Reveal>
-        <div className="border-border/60 mx-auto mt-10 grid max-w-6xl gap-8 border-t pt-8 md:grid-cols-3">
+        <div className="border-border/60 mx-auto mt-12 max-w-6xl border-t pt-8">
+          <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-14">
+            <Reveal className="max-w-md" delay={80}>
+              <div className="text-primary text-xs font-semibold tracking-[0.16em] uppercase">Workflow</div>
+              <p className="text-muted-foreground mt-4 text-base leading-7 md:text-lg md:leading-8">
+                纸鸢的重点不是把更多功能堆进页面，而是把采集、整理和输出三件事放回一条连续的 Markdown 工作流。
+              </p>
+            </Reveal>
+            <div className="grid gap-8 md:grid-cols-3">
           {t.bullets.map((bullet, index) => (
             <Reveal
               key={bullet.title}
@@ -32,6 +36,8 @@ export function ProductPreview({ t }: ProductPreviewProps) {
               <p className="text-muted-foreground mt-3 leading-7">{bullet.description}</p>
             </Reveal>
           ))}
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -1,0 +1,31 @@
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+
+interface ThemeScreenshotProps {
+  alt: string;
+  className?: string;
+  priority?: boolean;
+}
+
+export function ThemeScreenshot({ alt, className, priority = false }: ThemeScreenshotProps) {
+  return (
+    <div className={cn("overflow-hidden rounded-[1.75rem] border border-border/60 bg-background", className)}>
+      <Image
+        src="/screenshot-light.png"
+        alt={alt}
+        width={2880}
+        height={1800}
+        priority={priority}
+        className="h-auto w-full dark:hidden"
+      />
+      <Image
+        src="/screenshot-dark.png"
+        alt={alt}
+        width={2880}
+        height={1800}
+        priority={priority}
+        className="hidden h-auto w-full dark:block"
+      />
+    </div>
+  );
+}

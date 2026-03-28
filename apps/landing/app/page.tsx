@@ -2,7 +2,6 @@ import { Header } from "@/components/header";
 import { Hero } from "@/components/hero";
 import { TrustStrip } from "@/components/trust-strip";
 import { ProductPreview } from "@/components/product-preview";
-import { ShowcaseSections } from "@/components/showcase-sections";
 import { Features } from "@/components/features";
 import { UseCase } from "@/components/usecase";
 import { CTA } from "@/components/cta";
@@ -20,7 +19,6 @@ export default function Home() {
         <Hero t={t.hero} />
         <TrustStrip t={t.trust} />
         <ProductPreview t={t.preview} />
-        <ShowcaseSections t={t.showcase} />
         <Features t={t.features} />
         <UseCase t={t.usecase} />
         <CTA t={t.cta} />
