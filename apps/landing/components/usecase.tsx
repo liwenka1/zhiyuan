@@ -8,16 +8,23 @@ interface UseCaseProps {
 export function UseCase({ t }: UseCaseProps) {
   return (
     <section id="usecase" className="px-4 py-20">
-      <div className="container mx-auto">
+      <div className="container mx-auto max-w-6xl">
         <Reveal className="mx-auto max-w-3xl text-center">
+          <div className="text-primary mb-4 inline-flex text-xs font-semibold tracking-[0.18em] uppercase">
+            {t.eyebrow}
+          </div>
           <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{t.title}</h2>
           <p className="text-muted-foreground mt-4 mb-14 text-lg leading-8">{t.description}</p>
         </Reveal>
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-x-8 md:grid-cols-2">
+        <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 md:grid-cols-2">
           {t.items.map((usecase, index) => (
-            <Reveal key={usecase.title} delay={index * 70} className="border-border/60 border-t py-6">
+            <Reveal
+              key={usecase.title}
+              delay={index * 70}
+              className="rounded-[1.5rem] border border-border/60 bg-card/45 p-6 md:p-7"
+            >
               <div className="text-primary text-xs font-semibold tracking-[0.18em] uppercase">
-                Use case 0{index + 1}
+                {t.label} 0{index + 1}
               </div>
               <h3 className="mt-3 text-2xl font-semibold tracking-tight">{usecase.title}</h3>
               <p className="text-muted-foreground mt-3 leading-7">{usecase.description}</p>
