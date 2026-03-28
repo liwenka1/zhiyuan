@@ -13,26 +13,29 @@ export const translations = {
       download: "GitHub"
     },
     hero: {
-      eyebrow: "Markdown 编辑器",
-      title: "优雅的 Markdown 编辑器",
-      description: "用更克制的界面收集 RSS、抓取网页并整理 Markdown 笔记，把阅读、记录与输出放回同一条工作流。",
+      eyebrow: "Local-first Markdown Workspace",
+      title: "本地优先的 Markdown 工作台",
+      description: "把 RSS、网页抓取、本地 Markdown、工作区终端、导出和 GitHub 发布收进同一条桌面工作流。",
       download: "前往 GitHub",
       learnMore: "查看功能",
-      highlights: ["RSS 订阅", "URL 转 Markdown", "本地优先", "深浅主题"]
+      highlights: ["RSS 订阅", "URL 转 Markdown", "工作区终端", "多窗口", "PDF / HTML / 长图导出", "发布到 GitHub"]
     },
     proof: {
+      eyebrow: "Why Zhiyuan",
+      title: "它不是另一款在线文档，而是一条更完整的本地内容链路",
+      description: "纸鸢更接近一款 Markdown-first 的桌面工作台：它同时处理内容输入、编辑整理与最终输出。",
       items: [
         {
           title: "Markdown-first",
-          description: "围绕 Markdown 展开采集、整理、写作与导出，而不是再套一层复杂工作流。"
+          description: "采集、编辑、预览和导出都围绕原生 Markdown 文件展开。"
         },
         {
-          title: "Open Source",
-          description: "源码和迭代入口都在 GitHub，适合愿意长期折腾和持续改进的用户。"
+          title: "内容工作流完整",
+          description: "RSS、网页、笔记、终端和导出被组织成同一条从输入到输出的链路。"
         },
         {
           title: "桌面专注流",
-          description: "更适合喜欢本地文件、键盘流和安静界面的笔记爱好者。"
+          description: "更适合喜欢本地文件、键盘流、多窗口和内嵌终端的写作者。"
         }
       ]
     },
@@ -41,21 +44,24 @@ export const translations = {
       items: ["RSS", "Markdown", "GitHub", "Local Files", "Export", "Reader"]
     },
     preview: {
-      eyebrow: "工作流预览",
-      title: "从信息采集到 Markdown 整理，一页完成",
-      description: "纸鸢的重点不是堆叠更多功能，而是把采集、整理和输出放回一条连续的 Markdown 工作流。",
+      eyebrow: "Workflow",
+      title: "从采集到写作，再到导出发布，始终留在同一条 Markdown 流里",
+      description: "真正重要的不是模块数量，而是它们之间的连接方式。",
+      sideLabel: "How it works",
+      sideTitle: "把原本分散在阅读器、剪藏工具、编辑器和导出工具里的动作，收拢到一个桌面工作区里。",
+      sideDescription: "先采集，再编辑与预览，最后导出或发布，不必在每个阶段都切换工具和格式。",
       bullets: [
         {
-          title: "RSS 订阅",
-          description: "把关注的信息源持续拉进你的阅读区，再筛选成真正值得保存的笔记。"
+          title: "Collect",
+          description: "订阅 RSS，或把网页直接抓取成 Markdown 草稿，让外部内容先进入本地工作区。"
         },
         {
-          title: "Get URL to Markdown",
-          description: "将网页内容抓取并整理为可继续编辑的 Markdown，减少复制粘贴和格式清理。"
+          title: "Write & run",
+          description: "在同一个界面里继续写、改、预览、演示和打开终端，减少来回切换工具。"
         },
         {
-          title: "写作与导出",
-          description: "在同一个界面里编辑、预览和导出，适合写博客、做笔记和整理知识库。"
+          title: "Ship",
+          description: "需要输出时，直接导出 PDF、HTML、长图，或推送到 GitHub Issue。"
         }
       ]
     },
@@ -79,60 +85,95 @@ export const translations = {
       ]
     },
     features: {
-      title: "核心功能",
-      description: "围绕真实写作与整理场景打磨，而不是把编辑器做成另一套复杂系统。",
+      eyebrow: "Capabilities",
+      title: "围绕 Markdown 工作流打磨的核心能力",
+      description: "这些能力协同工作，而不是彼此孤立。",
       items: [
         {
-          title: "RSS 订阅",
-          description: "把订阅内容汇总进笔记工作区，适合持续阅读和内容归档。"
+          title: "RSS 订阅与归档",
+          description: "把关注的信息源持续拉进本地工作区，方便阅读、筛选和沉淀。"
         },
         {
-          title: "URL 转 Markdown",
-          description: "从网页抓取正文，快速转换成可继续编辑的 Markdown 内容。"
+          title: "网页转 Markdown",
+          description: "抓取正文并清理网页结构，把外部文章快速变成可继续编辑的 Markdown。"
         },
         {
-          title: "实时预览",
-          description: "编辑和预览同时进行，让你更快确认排版、结构和内容。"
+          title: "工作区终端",
+          description: "终端直接嵌在编辑区里，并跟随当前工作区启动，适合边写边处理命令行任务。"
         },
         {
-          title: "本地优先",
-          description: "文件和工作区在本地组织，适合注重数据可控性的用户。"
+          title: "预览与演示模式",
+          description: "编辑、预览、分栏和演示模式切换清晰，覆盖写作、阅读和展示场景。"
+        },
+        {
+          title: "多窗口与本地工作区",
+          description: "支持围绕不同工作区打开多个窗口，让文件组织和桌面习惯保持一致。"
         },
         {
           title: "多格式导出",
-          description: "支持导出为适合分享和发布的格式，减少二次整理。"
+          description: "支持 HTML、PDF、长图等导出路径，减少内容写完之后的二次整理。"
         },
         {
-          title: "快捷操作",
-          description: "保留键盘流体验，让写作、整理和切换操作更连贯。"
+          title: "GitHub 发布",
+          description: "可将笔记推送为 GitHub Issue，并处理本地资源上传，让写作直接接上发布入口。"
+        },
+        {
+          title: "快捷键与桌面操作",
+          description: "工作区、文件拖放、快捷键和终端切换都服务于真实的桌面键盘流。"
+        }
+      ]
+    },
+    desktopDetails: {
+      eyebrow: "Desktop-native Details",
+      title: "这些细节让它更像真正的桌面工作台",
+      description: "除了主流程能力，纸鸢也补齐了许多真正属于桌面应用的交互细节。",
+      items: [
+        {
+          title: "Markdown 拖入与拖出",
+          description: "支持把外部 Markdown 文件拖入工作区，也支持把工作区内的笔记直接拖出到系统中继续使用。"
+        },
+        {
+          title: "直接从系统打开 Markdown",
+          description: "可以从操作系统直接打开 .md 文件或文件夹，并自动定位到对应工作区和内容。"
+        },
+        {
+          title: "可配置快捷键",
+          description: "终端切换、导入 RSS、创建笔记和切换模式都接进了快捷键系统。"
+        },
+        {
+          title: "围绕工作区组织内容",
+          description: "最近打开、工作区绑定窗口、本地文件结构和多窗口行为都围绕桌面目录组织方式展开。"
         }
       ]
     },
     usecase: {
-      title: "使用场景",
-      description: "不是面向所有人的一切工具，而是更适合 Markdown 爱好者的专注工作流。",
+      eyebrow: "Use Cases",
+      label: "场景",
+      title: "更适合这些真正以 Markdown 为中心的人",
+      description: "它不是所有人的万能工具，但对这几类用户会更顺手。",
       items: [
         {
-          title: "订阅读书",
-          description: "把 RSS 和网页收藏沉淀为自己的 Markdown 笔记，而不是散落在各个稍后读工具里。"
+          title: "持续阅读与摘录",
+          description: "如果你会长期看 RSS、收藏文章、做摘录，纸鸢能把阅读和沉淀都放回本地 Markdown。"
         },
         {
           title: "技术写作",
-          description: "适合整理技术博客草稿、产品方案和开发文档。"
+          description: "适合写博客草稿、产品方案、开发文档和结构化长文，不必再搬运到发布工具。"
         },
         {
-          title: "知识归档",
-          description: "把零散网页、灵感和阅读记录统一整理到自己的 Markdown 工作区。"
+          title: "个人知识归档",
+          description: "网页、灵感、订阅文章和零碎笔记可以统一回收到同一个本地工作区。"
         },
         {
-          title: "日常笔记",
-          description: "保持轻量、安静和可持续积累，适合长期写作习惯。"
+          title: "本地优先写作者",
+          description: "如果你在意文件可控性、目录结构、键盘流、多窗口和内嵌终端，这套工作流会更接近你的习惯。"
         }
       ]
     },
     cta: {
-      title: "从 GitHub 开始体验纸鸢",
-      description: "当前下载与源码入口统一放在 GitHub，你可以直接查看仓库、下载版本或继续关注后续迭代。",
+      eyebrow: "Get Started",
+      title: "现在就从 GitHub 开始体验纸鸢",
+      description: "源码、Release 和后续迭代都已经在 GitHub 上，你可以先下载使用，也可以继续关注项目演进。",
       links: [
         {
           label: "GitHub 仓库",
@@ -146,6 +187,7 @@ export const translations = {
       platforms: ["Windows", "macOS", "Linux"]
     },
     footer: {
+      tagline: "本地优先的 Markdown 内容工作台",
       copyright: "© 2025 纸鸢笔记. All rights reserved.",
       links: [
         {
@@ -173,29 +215,31 @@ export const translations = {
       download: "GitHub"
     },
     hero: {
-      eyebrow: "Markdown Editor",
-      title: "An elegant Markdown editor",
-      description: "Collect RSS feeds, turn web pages into Markdown, and keep reading, writing, and exporting inside one calmer workflow.",
+      eyebrow: "Local-first Markdown Workspace",
+      title: "A local-first Markdown workspace",
+      description:
+        "Bring RSS, web capture, local Markdown files, a workspace terminal, export and GitHub publishing into one desktop workflow.",
       download: "Open GitHub",
       learnMore: "Explore Features",
-      highlights: ["RSS Feeds", "URL to Markdown", "Local First", "Light & Dark"]
+      highlights: ["RSS feeds", "URL to Markdown", "Workspace terminal", "Multi-window", "PDF / HTML / image export", "Publish to GitHub"]
     },
     proof: {
+      eyebrow: "Why Zhiyuan",
+      title: "Not another online document tool, but a fuller local-first content flow",
+      description:
+        "Zhiyuan works more like a Markdown-first desktop workspace. It covers content input, refinement and output in one place.",
       items: [
         {
           title: "Markdown-first",
-          description:
-            "Collection, organization, writing and export all stay centered around Markdown instead of extra workflow layers."
+          description: "Collection, editing, preview and export stay centered around native Markdown files."
         },
         {
-          title: "Open Source",
-          description:
-            "Source code and release flow live on GitHub, which fits users who like transparent tools they can follow over time."
+          title: "Connected workflow",
+          description: "RSS, web capture, notes, terminal work and export form one continuous chain."
         },
         {
           title: "Desktop focus",
-          description:
-            "Built for people who prefer local files, keyboard-oriented workflows and a calmer writing interface."
+          description: "Built for people who prefer local files, keyboard-driven habits, multi-window setups and an embedded terminal."
         }
       ]
     },
@@ -204,21 +248,25 @@ export const translations = {
       items: ["RSS", "Markdown", "GitHub", "Local Files", "Export", "Reader"]
     },
     preview: {
-      eyebrow: "Workflow Preview",
-      title: "Capture, organize and write in one Markdown flow",
-      description: "Zhiyuan is not about stacking more surface features. It keeps capture, organization, and output inside one continuous Markdown workflow.",
+      eyebrow: "Workflow",
+      title: "Keep capture, writing and output inside one Markdown flow",
+      description: "The real value is not feature count, but how the pieces stay connected.",
+      sideLabel: "How it works",
+      sideTitle: "Pull actions that usually live across multiple tools back into one desktop workspace.",
+      sideDescription:
+        "Capture first, then write and preview, and export or publish last without switching tools at every stage.",
       bullets: [
         {
-          title: "RSS subscription",
-          description: "Bring ongoing reading sources into your workspace and turn them into notes worth keeping."
+          title: "Collect",
+          description: "Subscribe to RSS or capture a web page into Markdown so outside content enters your local workspace first."
         },
         {
-          title: "Get URL to Markdown",
-          description: "Fetch article content from the web and turn it into editable Markdown with less cleanup."
+          title: "Write & run",
+          description: "Keep writing, editing, previewing, presenting and opening a terminal in the same interface."
         },
         {
-          title: "Write and export",
-          description: "Edit, preview and export inside one interface built for writing-oriented workflows."
+          title: "Ship",
+          description: "Export to PDF, HTML or long image, or push the note to GitHub Issue when it is ready."
         }
       ]
     },
@@ -245,61 +293,95 @@ export const translations = {
       ]
     },
     features: {
-      title: "Core Features",
-      description: "Built around real writing and collection habits instead of turning the editor into another overloaded system.",
+      eyebrow: "Capabilities",
+      title: "Core capabilities shaped around a Markdown workflow",
+      description: "These capabilities are more useful together than alone.",
       items: [
         {
-          title: "RSS subscription",
-          description: "Bring feed content into your Markdown workspace for continuous reading and archiving."
+          title: "RSS subscription and archiving",
+          description: "Bring ongoing reading sources into your local workspace so they can be filtered, read and archived over time."
         },
         {
-          title: "URL to Markdown",
-          description: "Capture web content and convert it into editable Markdown with less manual cleanup."
+          title: "Web page to Markdown",
+          description: "Capture article content and turn it into editable Markdown with less cleanup."
         },
         {
-          title: "Live preview",
-          description: "Write and preview side by side so structure and formatting stay obvious."
+          title: "Workspace terminal",
+          description: "Keep a terminal inside the editor area and start it in the current workspace for command-line tasks."
         },
         {
-          title: "Local first",
-          description: "Keep files and workspaces under your control instead of hiding them behind a cloud silo."
+          title: "Preview and presentation modes",
+          description: "Switch between editing, preview, split view and presentation depending on what the content needs."
+        },
+        {
+          title: "Multi-window and local workspaces",
+          description: "Open different workspaces in separate windows so local file organization still matches how you work on desktop."
         },
         {
           title: "Multi-format export",
-          description: "Prepare content for sharing and publishing without rebuilding the document elsewhere."
+          description: "Export to HTML, PDF and long images without rebuilding the document elsewhere."
         },
         {
-          title: "Quick actions",
-          description: "Stay in a keyboard-friendly flow when writing, collecting and organizing notes."
+          title: "GitHub publishing",
+          description: "Push notes to GitHub Issues and handle local asset uploads from the same workflow."
+        },
+        {
+          title: "Shortcuts and desktop actions",
+          description: "Shortcuts, file drag-and-drop, workspace operations and terminal toggles support a real desktop-first keyboard flow."
+        }
+      ]
+    },
+    desktopDetails: {
+      eyebrow: "Desktop-native Details",
+      title: "The details that make it feel like a real desktop workspace",
+      description: "Beyond the main workflow, Zhiyuan also covers the smaller interactions that matter in everyday desktop use.",
+      items: [
+        {
+          title: "Drag Markdown in and out",
+          description: "Bring external Markdown files into the workspace, or drag notes back out to the system when needed."
+        },
+        {
+          title: "Open Markdown directly from the OS",
+          description: "Open a .md file or folder from the operating system and jump into the right workspace automatically."
+        },
+        {
+          title: "Configurable shortcuts",
+          description: "Terminal toggle, RSS import, note creation and mode switching all connect to a configurable shortcut system."
+        },
+        {
+          title: "Workspace-based organization",
+          description: "Recent workspaces, window binding, local file structure and multi-window behavior all follow how desktop users organize projects."
         }
       ]
     },
     usecase: {
-      title: "Use Cases",
-      description:
-        "Not everything-for-everyone software, but a cleaner workflow for people who genuinely like Markdown.",
+      eyebrow: "Use Cases",
+      label: "Case",
+      title: "Built for people who genuinely work in Markdown",
+      description: "It is not everything-for-everyone software, but it fits these users especially well.",
       items: [
         {
-          title: "Reading and collecting",
-          description: "Turn RSS and saved web pages into structured Markdown notes instead of scattered bookmarks."
+          title: "Continuous reading and clipping",
+          description: "If you read RSS, save articles and keep excerpts, Zhiyuan helps move that material back into local Markdown."
         },
         {
           title: "Technical writing",
-          description: "Draft blog posts, product docs and developer notes inside a focused editing setup."
+          description: "Draft blog posts, product documents and developer notes without rebuilding the same content in separate publishing tools."
         },
         {
-          title: "Knowledge archiving",
-          description: "Keep pages, snippets and ideas together in one Markdown-centered workspace."
+          title: "Personal knowledge archiving",
+          description: "Keep web pages, snippets, ideas and notes inside one Markdown-centered workspace."
         },
         {
-          title: "Daily notes",
-          description: "Use a calmer interface for long-term note taking without constant visual noise."
+          title: "Local-first writers",
+          description: "If you care about file control, folder structure, keyboard flow, multi-window behavior and an embedded terminal, this workflow will feel more natural."
         }
       ]
     },
     cta: {
+      eyebrow: "Get Started",
       title: "Start with Zhiyuan on GitHub",
-      description: "The download and source entry points currently live on GitHub, so you can explore the project, grab a release, and follow future updates in one place.",
+      description: "Source, releases and future iterations already live on GitHub, so you can try the app first and follow the project in one place.",
       links: [
         {
           label: "GitHub Repository",
@@ -313,6 +395,7 @@ export const translations = {
       platforms: ["Windows", "macOS", "Linux"]
     },
     footer: {
+      tagline: "A local-first Markdown content workspace",
       copyright: "© 2025 Zhiyuan Note. All rights reserved.",
       links: [
         {

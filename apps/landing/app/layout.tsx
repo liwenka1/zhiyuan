@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "纸鸢笔记",
-  description: "优雅的 Markdown 编辑器，让写作更专注"
+  description: "本地优先的 Markdown 内容工作台，支持采集、写作、导出与发布。"
 };
 
 export default function RootLayout({

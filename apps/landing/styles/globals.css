@@ -97,7 +97,10 @@
   body {
     @apply bg-background text-foreground;
     min-height: 100vh;
-    background-image: none;
+    background-image:
+      radial-gradient(circle at top, color-mix(in srgb, var(--ring) 8%, transparent), transparent 34%),
+      linear-gradient(to bottom, color-mix(in srgb, var(--background) 96%, transparent), var(--background));
+    background-attachment: fixed;
     font-family:
       -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui,
       sans-serif;
