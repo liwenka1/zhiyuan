@@ -17,19 +17,21 @@ export function ProductPreview({ t }: ProductPreviewProps) {
           <p className="text-muted-foreground mt-5 text-lg leading-8">{t.description}</p>
         </Reveal>
         <div className="mt-12 grid gap-6 lg:grid-cols-[0.78fr_1.22fr] lg:gap-10">
-          <Reveal className="rounded-[1.75rem] border border-border/60 bg-card/55 p-7 md:p-8" delay={80}>
+          <Reveal className="border-border/60 bg-card/55 rounded-[1.75rem] border p-7 md:p-8" delay={80}>
             <div className="text-primary text-xs font-semibold tracking-[0.16em] uppercase">{t.sideLabel}</div>
             <p className="mt-5 text-2xl leading-tight font-semibold tracking-tight md:text-3xl">{t.sideTitle}</p>
-            <p className="text-muted-foreground mt-5 text-base leading-7 md:text-lg md:leading-8">{t.sideDescription}</p>
+            <p className="text-muted-foreground mt-5 text-base leading-7 md:text-lg md:leading-8">
+              {t.sideDescription}
+            </p>
           </Reveal>
           <div className="grid gap-4">
             {t.bullets.map((bullet, index) => (
               <Reveal
                 key={bullet.title}
                 delay={140 + index * 80}
-                className="grid gap-5 rounded-[1.5rem] border border-border/60 bg-background p-6 md:grid-cols-[auto_1fr] md:items-start"
+                className="border-border/60 bg-background grid gap-5 rounded-[1.5rem] border p-6 md:grid-cols-[auto_1fr] md:items-start"
               >
-                <div className="text-primary flex size-12 items-center justify-center rounded-2xl bg-muted text-sm font-semibold">
+                <div className="text-primary bg-muted flex size-12 items-center justify-center rounded-2xl text-sm font-semibold">
                   0{index + 1}
                 </div>
                 <div>

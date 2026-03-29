@@ -24,7 +24,7 @@ export function Features({ t }: FeaturesProps) {
             <Reveal
               key={feature.title}
               delay={index * 50}
-              className="rounded-3xl border border-border/60 bg-card/50 p-6"
+              className="border-border/60 bg-card/50 rounded-3xl border p-6"
             >
               <div className="bg-muted text-foreground flex size-11 items-center justify-center rounded-2xl">
                 {(() => {
