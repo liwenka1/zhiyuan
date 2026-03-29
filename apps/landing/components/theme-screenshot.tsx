@@ -9,7 +9,7 @@ interface ThemeScreenshotProps {
 
 export function ThemeScreenshot({ alt, className, priority = false }: ThemeScreenshotProps) {
   return (
-    <div className={cn("overflow-hidden rounded-[1.75rem] border border-border/60 bg-background", className)}>
+    <div className={cn("border-border/60 bg-background overflow-hidden rounded-[1.75rem] border", className)}>
       <Image
         src="/screenshot-light.png"
         alt={alt}

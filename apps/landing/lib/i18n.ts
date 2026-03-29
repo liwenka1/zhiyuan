@@ -221,7 +221,14 @@ export const translations = {
         "Bring RSS, web capture, local Markdown files, a workspace terminal, export and GitHub publishing into one desktop workflow.",
       download: "Open GitHub",
       learnMore: "Explore Features",
-      highlights: ["RSS feeds", "URL to Markdown", "Workspace terminal", "Multi-window", "PDF / HTML / image export", "Publish to GitHub"]
+      highlights: [
+        "RSS feeds",
+        "URL to Markdown",
+        "Workspace terminal",
+        "Multi-window",
+        "PDF / HTML / image export",
+        "Publish to GitHub"
+      ]
     },
     proof: {
       eyebrow: "Why Zhiyuan",
@@ -239,7 +246,8 @@ export const translations = {
         },
         {
           title: "Desktop focus",
-          description: "Built for people who prefer local files, keyboard-driven habits, multi-window setups and an embedded terminal."
+          description:
+            "Built for people who prefer local files, keyboard-driven habits, multi-window setups and an embedded terminal."
         }
       ]
     },
@@ -258,7 +266,8 @@ export const translations = {
       bullets: [
         {
           title: "Collect",
-          description: "Subscribe to RSS or capture a web page into Markdown so outside content enters your local workspace first."
+          description:
+            "Subscribe to RSS or capture a web page into Markdown so outside content enters your local workspace first."
         },
         {
           title: "Write & run",
@@ -299,7 +308,8 @@ export const translations = {
       items: [
         {
           title: "RSS subscription and archiving",
-          description: "Bring ongoing reading sources into your local workspace so they can be filtered, read and archived over time."
+          description:
+            "Bring ongoing reading sources into your local workspace so they can be filtered, read and archived over time."
         },
         {
           title: "Web page to Markdown",
@@ -307,15 +317,18 @@ export const translations = {
         },
         {
           title: "Workspace terminal",
-          description: "Keep a terminal inside the editor area and start it in the current workspace for command-line tasks."
+          description:
+            "Keep a terminal inside the editor area and start it in the current workspace for command-line tasks."
         },
         {
           title: "Preview and presentation modes",
-          description: "Switch between editing, preview, split view and presentation depending on what the content needs."
+          description:
+            "Switch between editing, preview, split view and presentation depending on what the content needs."
         },
         {
           title: "Multi-window and local workspaces",
-          description: "Open different workspaces in separate windows so local file organization still matches how you work on desktop."
+          description:
+            "Open different workspaces in separate windows so local file organization still matches how you work on desktop."
         },
         {
           title: "Multi-format export",
@@ -327,30 +340,36 @@ export const translations = {
         },
         {
           title: "Shortcuts and desktop actions",
-          description: "Shortcuts, file drag-and-drop, workspace operations and terminal toggles support a real desktop-first keyboard flow."
+          description:
+            "Shortcuts, file drag-and-drop, workspace operations and terminal toggles support a real desktop-first keyboard flow."
         }
       ]
     },
     desktopDetails: {
       eyebrow: "Desktop-native Details",
       title: "The details that make it feel like a real desktop workspace",
-      description: "Beyond the main workflow, Zhiyuan also covers the smaller interactions that matter in everyday desktop use.",
+      description:
+        "Beyond the main workflow, Zhiyuan also covers the smaller interactions that matter in everyday desktop use.",
       items: [
         {
           title: "Drag Markdown in and out",
-          description: "Bring external Markdown files into the workspace, or drag notes back out to the system when needed."
+          description:
+            "Bring external Markdown files into the workspace, or drag notes back out to the system when needed."
         },
         {
           title: "Open Markdown directly from the OS",
-          description: "Open a .md file or folder from the operating system and jump into the right workspace automatically."
+          description:
+            "Open a .md file or folder from the operating system and jump into the right workspace automatically."
         },
         {
           title: "Configurable shortcuts",
-          description: "Terminal toggle, RSS import, note creation and mode switching all connect to a configurable shortcut system."
+          description:
+            "Terminal toggle, RSS import, note creation and mode switching all connect to a configurable shortcut system."
         },
         {
           title: "Workspace-based organization",
-          description: "Recent workspaces, window binding, local file structure and multi-window behavior all follow how desktop users organize projects."
+          description:
+            "Recent workspaces, window binding, local file structure and multi-window behavior all follow how desktop users organize projects."
         }
       ]
     },
@@ -362,11 +381,13 @@ export const translations = {
       items: [
         {
           title: "Continuous reading and clipping",
-          description: "If you read RSS, save articles and keep excerpts, Zhiyuan helps move that material back into local Markdown."
+          description:
+            "If you read RSS, save articles and keep excerpts, Zhiyuan helps move that material back into local Markdown."
         },
         {
           title: "Technical writing",
-          description: "Draft blog posts, product documents and developer notes without rebuilding the same content in separate publishing tools."
+          description:
+            "Draft blog posts, product documents and developer notes without rebuilding the same content in separate publishing tools."
         },
         {
           title: "Personal knowledge archiving",
@@ -374,14 +395,16 @@ export const translations = {
         },
         {
           title: "Local-first writers",
-          description: "If you care about file control, folder structure, keyboard flow, multi-window behavior and an embedded terminal, this workflow will feel more natural."
+          description:
+            "If you care about file control, folder structure, keyboard flow, multi-window behavior and an embedded terminal, this workflow will feel more natural."
         }
       ]
     },
     cta: {
       eyebrow: "Get Started",
       title: "Start with Zhiyuan on GitHub",
-      description: "Source, releases and future iterations already live on GitHub, so you can try the app first and follow the project in one place.",
+      description:
+        "Source, releases and future iterations already live on GitHub, so you can try the app first and follow the project in one place.",
       links: [
         {
           label: "GitHub Repository",

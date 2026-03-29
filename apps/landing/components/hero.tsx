@@ -14,7 +14,7 @@ export function Hero({ t }: HeroProps) {
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_top,rgba(0,115,230,0.08),transparent_60%)] dark:bg-[radial-gradient(circle_at_top,rgba(0,140,255,0.12),transparent_60%)]" />
       <div className="relative container mx-auto max-w-6xl">
         <Reveal className="mx-auto max-w-5xl text-center">
-          <div className="text-primary inline-flex rounded-full border border-border/70 bg-background/85 px-4 py-1.5 text-xs font-semibold tracking-[0.2em] uppercase backdrop-blur-sm">
+          <div className="text-primary border-border/70 bg-background/85 inline-flex rounded-full border px-4 py-1.5 text-xs font-semibold tracking-[0.2em] uppercase backdrop-blur-sm">
             {t.eyebrow}
           </div>
           <h1 className="mx-auto mt-6 max-w-5xl text-[clamp(3.2rem,8vw,6.4rem)] leading-[0.94] font-semibold tracking-tight">
@@ -27,7 +27,7 @@ export function Hero({ t }: HeroProps) {
             {t.highlights.map((item) => (
               <span
                 key={item}
-                className="rounded-full border border-border/70 bg-background/80 px-3.5 py-1.5 text-sm text-foreground/85 backdrop-blur-sm"
+                className="border-border/70 bg-background/80 text-foreground/85 rounded-full border px-3.5 py-1.5 text-sm backdrop-blur-sm"
               >
                 {item}
               </span>
@@ -49,7 +49,7 @@ export function Hero({ t }: HeroProps) {
           </div>
         </Reveal>
         <Reveal className="relative mx-auto mt-12 max-w-6xl" delay={120}>
-          <div className="rounded-[2rem] border border-border/60 bg-card/35 p-3 shadow-[0_24px_120px_-48px_rgba(17,24,39,0.35)] backdrop-blur-sm md:p-4">
+          <div className="border-border/60 bg-card/35 rounded-[2rem] border p-3 shadow-[0_24px_120px_-48px_rgba(17,24,39,0.35)] backdrop-blur-sm md:p-4">
             <ThemeScreenshot alt="Zhiyuan desktop screenshot" priority className="rounded-[1.5rem]" />
           </div>
         </Reveal>

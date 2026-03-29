@@ -28,7 +28,7 @@ export function DesktopDetails({ t }: DesktopDetailsProps) {
               <Reveal
                 key={item.title}
                 delay={index * 70}
-                className="rounded-3xl border border-border/60 bg-card/45 p-6 md:p-7"
+                className="border-border/60 bg-card/45 rounded-3xl border p-6 md:p-7"
               >
                 <div className="bg-muted text-foreground flex size-11 items-center justify-center rounded-2xl">
                   <Icon className="size-5" />

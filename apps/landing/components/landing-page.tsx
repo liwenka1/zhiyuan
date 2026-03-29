@@ -16,7 +16,7 @@ interface LandingPageProps {
 
 export function LandingPage({ language, t }: LandingPageProps) {
   return (
-    <div id="top" className="min-h-screen bg-background text-foreground">
+    <div id="top" className="bg-background text-foreground min-h-screen">
       <Header language={language} t={t} />
       <main>
         <Hero t={t.hero} />
