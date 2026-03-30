@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
 import "@/styles/globals.css";
@@ -13,18 +12,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"]
 });
 
-export const metadata: Metadata = {
-  title: "纸鸢笔记",
-  description: "本地优先的 Markdown 内容工作台，支持采集、写作、导出与发布。"
-};
-
-export default function RootLayout({
-  children
-}: Readonly<{
+interface RootLayoutShellProps {
   children: React.ReactNode;
-}>) {
+  lang: "zh-CN" | "en";
+}
+
+export function RootLayoutShell({ children, lang }: RootLayoutShellProps) {
   return (
-    <html lang="zh-CN" suppressHydrationWarning>
+    <html lang={lang} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}
