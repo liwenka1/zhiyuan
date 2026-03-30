@@ -16,7 +16,7 @@ export function ThemeScreenshot({ alt, className, priority = false }: ThemeScree
         width={2880}
         height={1800}
         priority={priority}
-        className="h-auto w-full dark:hidden"
+        className="-mb-2.5 block h-auto w-full dark:hidden"
       />
       <Image
         src="/screenshot-dark.png"
@@ -24,7 +24,7 @@ export function ThemeScreenshot({ alt, className, priority = false }: ThemeScree
         width={2880}
         height={1800}
         priority={priority}
-        className="hidden h-auto w-full dark:block"
+        className="-mb-2.5 hidden h-auto w-full dark:block"
       />
     </div>
   );

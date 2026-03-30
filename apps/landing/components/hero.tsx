@@ -49,9 +49,7 @@ export function Hero({ t }: HeroProps) {
           </div>
         </Reveal>
         <Reveal className="relative mx-auto mt-12 max-w-6xl" delay={120}>
-          <div className="border-border/60 bg-card/35 rounded-[2rem] border p-3 shadow-[0_24px_120px_-48px_rgba(17,24,39,0.35)] backdrop-blur-sm md:p-4">
-            <ThemeScreenshot alt="Zhiyuan desktop screenshot" priority className="rounded-[1.5rem]" />
-          </div>
+          <ThemeScreenshot alt="Zhiyuan desktop screenshot" priority className="rounded-4xl" />
         </Reveal>
       </div>
     </section>
