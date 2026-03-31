@@ -187,18 +187,14 @@ export const translations = {
       platforms: ["Windows", "macOS", "Linux"]
     },
     footer: {
-      tagline: "本地优先的 Markdown 内容工作台",
-      copyright: "© 2025 纸鸢笔记. All rights reserved.",
-      links: [
-        {
-          label: "GitHub",
-          href: "https://github.com/liwenka1/zhiyuan"
-        },
-        {
-          label: "反馈",
-          href: "https://github.com/liwenka1/zhiyuan/issues"
-        }
-      ]
+      tagline: "本地优先的 Markdown 工作台",
+      maintainer: {
+        prefix: "由",
+        name: "liwenka1",
+        suffix: "维护",
+        href: "https://github.com/liwenka1"
+      },
+      copyright: "© 2025 纸鸢笔记"
     }
   },
   en: {
@@ -418,18 +414,14 @@ export const translations = {
       platforms: ["Windows", "macOS", "Linux"]
     },
     footer: {
-      tagline: "A local-first Markdown content workspace",
-      copyright: "© 2025 Zhiyuan Note. All rights reserved.",
-      links: [
-        {
-          label: "GitHub",
-          href: "https://github.com/liwenka1/zhiyuan"
-        },
-        {
-          label: "Feedback",
-          href: "https://github.com/liwenka1/zhiyuan/issues"
-        }
-      ]
+      tagline: "A local-first Markdown workspace",
+      maintainer: {
+        prefix: "Maintained by",
+        name: "liwenka1",
+        suffix: "",
+        href: "https://github.com/liwenka1"
+      },
+      copyright: "© 2025 Zhiyuan Note"
     }
   }
 } as const;
