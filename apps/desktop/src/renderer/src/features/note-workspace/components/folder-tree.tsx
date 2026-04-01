@@ -1,4 +1,16 @@
-import { Folder, FolderPlus, FileStack, FolderOpen, Trash2, Pencil, Rss, RefreshCw, Unlink } from "lucide-react";
+import {
+  Folder,
+  FolderPlus,
+  FileStack,
+  FolderOpen,
+  Trash2,
+  Pencil,
+  Rss,
+  RefreshCw,
+  Unlink,
+  HardDrive,
+  ListTree
+} from "lucide-react";
 
 import { useDroppable } from "@dnd-kit/core";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -91,6 +103,7 @@ function DroppableFolderRow({
 interface FolderItem {
   id: string;
   name: string;
+  path?: string;
   noteCount?: number;
   isRss?: boolean;
 }
@@ -105,6 +118,8 @@ interface FolderTreeProps {
   onUpdateRss?: (folder: FolderItem) => void;
   onUnsubscribeRss?: (folder: FolderItem) => void;
   onShowFolderInExplorer?: (folder: FolderItem) => void;
+  onCopyFolderRelativePath?: (folder: FolderItem) => void | Promise<void>;
+  onCopyFolderAbsolutePath?: (folder: FolderItem) => void | Promise<void>;
   onDeleteFolder?: (folder: FolderItem) => void;
   onRenameFolder?: (folder: FolderItem) => void;
 }
@@ -119,6 +134,8 @@ export function FolderTree({
   onUpdateRss,
   onUnsubscribeRss,
   onShowFolderInExplorer,
+  onCopyFolderRelativePath,
+  onCopyFolderAbsolutePath,
   onDeleteFolder,
   onRenameFolder
 }: FolderTreeProps) {
@@ -215,6 +232,15 @@ export function FolderTree({
                     <ContextMenuItem onClick={() => onShowFolderInExplorer?.(folder)}>
                       <FolderOpen className="h-4 w-4" />
                       <span>{t("contextMenu.showInExplorer")}</span>
+                    </ContextMenuItem>
+                    <ContextMenuSeparator />
+                    <ContextMenuItem onClick={() => void onCopyFolderRelativePath?.(folder)}>
+                      <ListTree className="h-4 w-4" />
+                      <span>{t("contextMenu.copyRelativePath")}</span>
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={() => void onCopyFolderAbsolutePath?.(folder)}>
+                      <HardDrive className="h-4 w-4" />
+                      <span>{t("contextMenu.copyAbsolutePath")}</span>
                     </ContextMenuItem>
                     {folder.isRss && (
                       <>

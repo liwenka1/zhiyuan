@@ -1,4 +1,5 @@
-import { useNoteStore, useFolderStore, useGitHubSettingsStore } from "@/stores";
+import { useNoteStore, useFolderStore, useGitHubSettingsStore, useWorkspaceStore } from "@/stores";
+import { resolveNoteAbsolutePath, resolveNoteRelativePath } from "@/lib/workspace-paths";
 import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -25,6 +26,20 @@ export interface NoteHandlers {
   ) => Promise<void>;
   handleCopyToWechat: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
   handlePushToGitHub: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
+  handleCopyNoteRelativePath: (note: {
+    id: string;
+    title: string;
+    updatedAt?: string;
+    isPinned?: boolean;
+  }) => Promise<void>;
+  handleCopyNoteAbsolutePath: (note: {
+    id: string;
+    title: string;
+    updatedAt?: string;
+    isPinned?: boolean;
+  }) => Promise<void>;
+  handleCopyNotesRelativePaths: (noteIds: string[]) => Promise<void>;
+  handleCopyNotesAbsolutePaths: (noteIds: string[]) => Promise<void>;
 }
 
 interface UseNoteHandlersProps {
@@ -38,6 +53,7 @@ interface UseNoteHandlersProps {
 export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): NoteHandlers {
   const { t } = useTranslation("note");
   const notes = useNoteStore((state) => state.notes);
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const updateNoteContentById = useNoteStore((state) => state.updateNoteContentById);
   const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const createNote = useNoteStore((state) => state.createNote);
@@ -110,6 +126,70 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     if (!fullNote) return;
 
     await exportNote(fullNote, format);
+  };
+
+  const writePathsToClipboard = async (lines: string[]) => {
+    const text = lines.join("\n");
+    if (!text) {
+      toast.error(t("errors.copyPathFailed"));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(lines.length > 1 ? t("pathCopied.multiple", { count: lines.length }) : t("pathCopied.single"));
+    } catch {
+      toast.error(t("errors.copyPathFailed"));
+    }
+  };
+
+  const handleCopyNoteRelativePath = async (note: {
+    id: string;
+    title: string;
+    updatedAt?: string;
+    isPinned?: boolean;
+  }) => {
+    const fullNote = notes.find((n) => n.id === note.id);
+    if (!fullNote) return;
+    const rel = resolveNoteRelativePath(fullNote, workspacePath);
+    if (rel === null) {
+      toast.error(t("errors.copyPathFailed"));
+      return;
+    }
+    await writePathsToClipboard([rel]);
+  };
+
+  const handleCopyNoteAbsolutePath = async (note: {
+    id: string;
+    title: string;
+    updatedAt?: string;
+    isPinned?: boolean;
+  }) => {
+    const fullNote = notes.find((n) => n.id === note.id);
+    if (!fullNote) return;
+    const abs = resolveNoteAbsolutePath(fullNote, workspacePath);
+    if (!abs) {
+      toast.error(t("errors.copyPathFailed"));
+      return;
+    }
+    await writePathsToClipboard([abs]);
+  };
+
+  const handleCopyNotesRelativePaths = async (noteIds: string[]) => {
+    const lines = noteIds
+      .map((id) => notes.find((n) => n.id === id))
+      .filter((n): n is NonNullable<typeof n> => !!n)
+      .map((n) => resolveNoteRelativePath(n, workspacePath))
+      .filter((line): line is string => line !== null);
+    await writePathsToClipboard(lines);
+  };
+
+  const handleCopyNotesAbsolutePaths = async (noteIds: string[]) => {
+    const lines = noteIds
+      .map((id) => notes.find((n) => n.id === id))
+      .filter((n): n is NonNullable<typeof n> => !!n)
+      .map((n) => resolveNoteAbsolutePath(n, workspacePath))
+      .filter((line): line is string => !!line);
+    await writePathsToClipboard(lines);
   };
 
   // 复制笔记到微信公众号
@@ -194,6 +274,10 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
     handleTogglePinNote,
     handleExportNote,
     handleCopyToWechat,
-    handlePushToGitHub
+    handlePushToGitHub,
+    handleCopyNoteRelativePath,
+    handleCopyNoteAbsolutePath,
+    handleCopyNotesRelativePaths,
+    handleCopyNotesAbsolutePaths
   };
 }
