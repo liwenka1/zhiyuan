@@ -13,7 +13,9 @@ import {
   FolderOpen,
   Volume2,
   Link,
-  Github
+  Github,
+  HardDrive,
+  ListTree
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
@@ -129,6 +131,10 @@ interface NoteListProps {
   onCreateFromUrl?: () => void;
   onSearchChange?: (keyword: string) => void;
   onShowNoteInExplorer?: (note: Note) => void;
+  onCopyNoteRelativePath?: (note: Note) => void | Promise<void>;
+  onCopyNoteAbsolutePath?: (note: Note) => void | Promise<void>;
+  onCopyNotesRelativePaths?: (noteIds: string[]) => void | Promise<void>;
+  onCopyNotesAbsolutePaths?: (noteIds: string[]) => void | Promise<void>;
   onDeleteNote?: (note: Note) => void;
   onDeleteNotes?: (noteIds: string[]) => void | Promise<void>;
   onRenameNote?: (note: Note) => void;
@@ -154,6 +160,10 @@ export function NoteList({
   onCreateFromUrl,
   onSearchChange,
   onShowNoteInExplorer,
+  onCopyNoteRelativePath,
+  onCopyNoteAbsolutePath,
+  onCopyNotesRelativePaths,
+  onCopyNotesAbsolutePaths,
   onDeleteNote,
   onDeleteNotes,
   onRenameNote,
@@ -627,6 +637,15 @@ export function NoteList({
                             <span>{t("contextMenu.duplicateSelected", { count: contextSelectedCount })}</span>
                           </ContextMenuItem>
                           <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => void onCopyNotesRelativePaths?.(contextSelectedIds)}>
+                            <ListTree className="h-4 w-4" />
+                            <span>{t("contextMenu.copyRelativePathSelected", { count: contextSelectedCount })}</span>
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => void onCopyNotesAbsolutePaths?.(contextSelectedIds)}>
+                            <HardDrive className="h-4 w-4" />
+                            <span>{t("contextMenu.copyAbsolutePathSelected", { count: contextSelectedCount })}</span>
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
                           <ContextMenuItem onClick={() => void onDeleteNotes?.(contextSelectedIds)}>
                             <Trash2 className="h-4 w-4" />
                             <span>{t("contextMenu.deleteSelected", { count: contextSelectedCount })}</span>
@@ -637,6 +656,15 @@ export function NoteList({
                           <ContextMenuItem onClick={() => onShowNoteInExplorer?.(note)}>
                             <FolderOpen className="h-4 w-4" />
                             <span>{t("contextMenu.showInExplorer")}</span>
+                          </ContextMenuItem>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => void onCopyNoteRelativePath?.(note)}>
+                            <ListTree className="h-4 w-4" />
+                            <span>{t("contextMenu.copyRelativePath")}</span>
+                          </ContextMenuItem>
+                          <ContextMenuItem onClick={() => void onCopyNoteAbsolutePath?.(note)}>
+                            <HardDrive className="h-4 w-4" />
+                            <span>{t("contextMenu.copyAbsolutePath")}</span>
                           </ContextMenuItem>
                           <ContextMenuSeparator />
                           <ContextMenuItem onClick={() => onTogglePinNote?.(note)}>

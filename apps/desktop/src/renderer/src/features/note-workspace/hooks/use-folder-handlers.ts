@@ -1,4 +1,5 @@
 import { useFolderStore, useWorkspaceStore, useNoteStore } from "@/stores";
+import { resolveFolderAbsolutePath, resolveFolderRelativePath } from "@/lib/workspace-paths";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { workspaceIpc, watcherIpc, folderIpc, shellIpc, rssIpc } from "@/ipc";
@@ -11,6 +12,20 @@ export interface FolderHandlers {
   handleShowFolderInExplorer: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleDeleteFolder: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
   handleRenameFolder: (folder: { id: string; name: string; noteCount?: number }) => void;
+  handleCopyFolderRelativePath: (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => Promise<void>;
+  handleCopyFolderAbsolutePath: (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => Promise<void>;
 }
 
 interface UseFolderHandlersProps {
@@ -96,6 +111,41 @@ export function useFolderHandlers({
     }
   };
 
+  const writePathToClipboard = async (text: string | null) => {
+    if (!text) {
+      toast.error(t("note:errors.copyPathFailed"));
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(t("note:pathCopied.single"));
+    } catch {
+      toast.error(t("note:errors.copyPathFailed"));
+    }
+  };
+
+  const handleCopyFolderRelativePath = async (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => {
+    const rel = resolveFolderRelativePath(folder, workspacePath);
+    await writePathToClipboard(rel);
+  };
+
+  const handleCopyFolderAbsolutePath = async (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => {
+    const abs = resolveFolderAbsolutePath(folder, workspacePath);
+    await writePathToClipboard(abs);
+  };
+
   // 在文件管理器中显示文件夹
   const handleShowFolderInExplorer = async (folder: { id: string; name: string; noteCount?: number }) => {
     if (!workspacePath) return;
@@ -137,6 +187,8 @@ export function useFolderHandlers({
     handleUnsubscribeRss,
     handleShowFolderInExplorer,
     handleDeleteFolder,
-    handleRenameFolder
+    handleRenameFolder,
+    handleCopyFolderRelativePath,
+    handleCopyFolderAbsolutePath
   };
 }

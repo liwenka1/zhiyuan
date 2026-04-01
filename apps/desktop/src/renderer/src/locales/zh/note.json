@@ -30,7 +30,15 @@
     "exportAsImagePages": "导出为图片（分页）",
     "copyToWechat": "复制到微信公众号",
     "delete": "删除笔记",
-    "deleteSelected": "删除 {{count}} 个笔记"
+    "deleteSelected": "删除 {{count}} 个笔记",
+    "copyRelativePath": "复制相对路径",
+    "copyAbsolutePath": "复制绝对路径",
+    "copyRelativePathSelected": "复制相对路径（{{count}} 条）",
+    "copyAbsolutePathSelected": "复制绝对路径（{{count}} 条）"
+  },
+  "pathCopied": {
+    "single": "路径已复制到剪贴板",
+    "multiple": "已复制 {{count}} 条路径到剪贴板"
   },
   "pin": {
     "pinSuccess": "已置顶笔记",
@@ -113,7 +121,8 @@
     "githubAssetsSkipped": "有 {{count}} 个资源未上传（可能过大或不存在）",
     "moveNoteFailed": "移动笔记失败",
     "moveNoteTargetExists": "目标文件夹中已存在同名笔记",
-    "dragOutFailed": "拖出文件失败"
+    "dragOutFailed": "拖出文件失败",
+    "copyPathFailed": "复制路径失败，请重试"
   },
   "moveNoteSuccess": "笔记已移动",
   "moveNoteRenamedSuccess": "笔记已移动（同名已自动重命名）",

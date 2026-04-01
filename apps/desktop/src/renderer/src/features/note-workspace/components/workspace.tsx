@@ -309,6 +309,8 @@ export function NoteWorkspace() {
             onUpdateRss={folderHandlers.handleUpdateRss}
             onUnsubscribeRss={folderHandlers.handleUnsubscribeRss}
             onShowFolderInExplorer={folderHandlers.handleShowFolderInExplorer}
+            onCopyFolderRelativePath={folderHandlers.handleCopyFolderRelativePath}
+            onCopyFolderAbsolutePath={folderHandlers.handleCopyFolderAbsolutePath}
             onDeleteFolder={folderHandlers.handleDeleteFolder}
             onRenameFolder={folderHandlers.handleRenameFolder}
           />
@@ -325,6 +327,10 @@ export function NoteWorkspace() {
             onCreateFromUrl={dialogState.openUrlCreateDialog}
             onSearchChange={setSearchKeyword}
             onShowNoteInExplorer={noteHandlers.handleShowNoteInExplorer}
+            onCopyNoteRelativePath={noteHandlers.handleCopyNoteRelativePath}
+            onCopyNoteAbsolutePath={noteHandlers.handleCopyNoteAbsolutePath}
+            onCopyNotesRelativePaths={noteHandlers.handleCopyNotesRelativePaths}
+            onCopyNotesAbsolutePaths={noteHandlers.handleCopyNotesAbsolutePaths}
             onDeleteNote={noteHandlers.handleDeleteNote}
             onDeleteNotes={handleDeleteSelectedNotes}
             onRenameNote={noteHandlers.handleRenameNote}

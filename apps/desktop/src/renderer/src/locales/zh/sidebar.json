@@ -7,6 +7,8 @@
     "updateRss": "更新订阅",
     "unsubscribeRss": "取消订阅",
     "showInExplorer": "在文件管理器中查看",
+    "copyRelativePath": "复制相对路径",
+    "copyAbsolutePath": "复制绝对路径",
     "rename": "重命名",
     "deleteFolder": "删除文件夹"
   },
