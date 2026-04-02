@@ -1,53 +1,31 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useExportLayoutStore, useExportThemeStore } from "@/stores";
-import { renderNoteExportPreviewHtml } from "@/features/export/lib";
 
 interface ExportPreviewProps {
-  content: string;
-  notePath?: string;
-  noteTitle?: string;
+  previewDoc: string;
+  isRendering: boolean;
+  isActive: boolean;
 }
 
 /**
  * 导出预览组件 - 使用 iframe 渲染完整的导出 HTML
  * 包含完整的导出样式、主题和布局配置
  */
-export function ExportPreview({ content, notePath, noteTitle }: ExportPreviewProps) {
+export function ExportPreview({ previewDoc, isRendering, isActive }: ExportPreviewProps) {
   const { t } = useTranslation("editor");
-  const exportThemeId = useExportThemeStore((state) => state.exportThemeId);
-  const exportLayout = useExportLayoutStore((state) => state.exportLayout);
-  const [previewDoc, setPreviewDoc] = useState<string>("");
-  const [isRendering, setIsRendering] = useState(false);
   const [iframeHeight, setIframeHeight] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [hasMeasured, setHasMeasured] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
 
-  // 生成导出预览 HTML
   useEffect(() => {
-    const timer = window.setTimeout(async () => {
-      setIsRendering(true);
-      setIsReady(false);
-      setHasMeasured(false);
-      setIframeHeight(0);
-      try {
-        const html = await renderNoteExportPreviewHtml({
-          title: noteTitle || t("toolbar.exportPreview"),
-          markdown: content,
-          themeId: exportThemeId,
-          layout: exportLayout,
-          notePath
-        });
-        setPreviewDoc(html);
-      } finally {
-        setIsRendering(false);
-      }
-    }, 120);
-
-    return () => window.clearTimeout(timer);
-  }, [content, exportLayout, exportThemeId, noteTitle, notePath, t]);
+    observerRef.current?.disconnect();
+    observerRef.current = null;
+    setIsReady(false);
+    setHasMeasured(false);
+    setIframeHeight(0);
+  }, [previewDoc]);
 
   // 清理 ResizeObserver
   useEffect(() => {
@@ -90,21 +68,23 @@ export function ExportPreview({ content, notePath, noteTitle }: ExportPreviewPro
   return (
     <div style={{ padding: "0 0 var(--editor-bottom-space) 0" }}>
       <div className="relative min-h-55 overflow-hidden">
-        <iframe
-          ref={iframeRef}
-          title="export-preview"
-          srcDoc={previewDoc}
-          onLoad={handleIframeLoad}
-          className="w-full border-0 bg-transparent"
-          style={{
-            height: `${iframeHeight}px`,
-            transition: hasMeasured ? "height 200ms ease-out" : "none",
-            visibility: isReady ? "visible" : "hidden"
-          }}
-          sandbox="allow-same-origin allow-scripts"
-          scrolling="no"
-        />
-        {isRendering && (
+        {previewDoc ? (
+          <iframe
+            ref={iframeRef}
+            title="export-preview"
+            srcDoc={previewDoc}
+            onLoad={handleIframeLoad}
+            className="w-full border-0 bg-transparent"
+            style={{
+              height: `${iframeHeight}px`,
+              transition: hasMeasured ? "height 200ms ease-out" : "none",
+              visibility: isReady ? "visible" : "hidden"
+            }}
+            sandbox="allow-same-origin allow-scripts"
+            scrolling="no"
+          />
+        ) : null}
+        {isActive && (isRendering || (previewDoc && !isReady)) && (
           <div className="bg-background/80 text-muted-foreground absolute inset-0 flex items-center justify-center text-xs">
             {t("toolbar.exportPreviewOpening")}
           </div>
