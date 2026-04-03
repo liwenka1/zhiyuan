@@ -4,10 +4,9 @@
   "compilerOptions": {
     "composite": true,
     "types": ["electron-vite/node"],
-    "baseUrl": ".",
     "paths": {
-      "@shared": ["src/shared/index"],
-      "@shared/*": ["src/shared/*"]
+      "@shared": ["./src/shared/index"],
+      "@shared/*": ["./src/shared/*"]
     }
   }
 }

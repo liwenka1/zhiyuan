@@ -9,8 +9,15 @@ type ImportResult = {
   importedNoteIds?: string[];
 };
 
+const noopDragHandlers: ReturnType<typeof useMarkdownFileDrop>["dragHandlers"] = {
+  onDragEnter: () => {},
+  onDragOver: () => {},
+  onDragLeave: () => {},
+  onDrop: async () => {}
+};
+
 interface UseExternalMarkdownDropOptions {
-  onImportExternalMarkdownFiles: (sourcePaths: string[]) => Promise<ImportResult>;
+  onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<ImportResult>;
   onHoverChange?: (hovering: boolean) => void;
   onImportCompleted?: (result: ImportResult) => void;
 }
@@ -21,8 +28,11 @@ export function useExternalMarkdownDrop({
   onImportCompleted
 }: UseExternalMarkdownDropOptions) {
   const { t } = useTranslation("note");
+  const hasImportHandler = typeof onImportExternalMarkdownFiles === "function";
   const { isFileDropHover, isDropping, dragHandlers } = useMarkdownFileDrop({
     onDropMarkdownFiles: async (sourcePaths) => {
+      if (!onImportExternalMarkdownFiles) return;
+
       const result = await onImportExternalMarkdownFiles(sourcePaths);
       if (result.importedCount > 0) {
         toast.success(
@@ -39,13 +49,13 @@ export function useExternalMarkdownDrop({
 
       throw new Error("No markdown files imported");
     },
-    onHoverChange,
+    onHoverChange: hasImportHandler ? onHoverChange : undefined,
     ignoreWorkspaceFiles: true
   });
 
   return {
-    isFileDropHover,
-    isImportingExternal: isDropping,
-    dragHandlers
+    isFileDropHover: hasImportHandler ? isFileDropHover : false,
+    isImportingExternal: hasImportHandler ? isDropping : false,
+    dragHandlers: hasImportHandler ? dragHandlers : noopDragHandlers
   };
 }
