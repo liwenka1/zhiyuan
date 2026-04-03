@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 interface ExportPreviewProps {
@@ -14,17 +14,24 @@ interface ExportPreviewProps {
 export function ExportPreview({ previewDoc, isRendering, isActive }: ExportPreviewProps) {
   const { t } = useTranslation("editor");
   const [iframeHeight, setIframeHeight] = useState(0);
-  const [isReady, setIsReady] = useState(false);
-  const [hasMeasured, setHasMeasured] = useState(false);
+  const previewSession = useMemo(() => Symbol(previewDoc ? "export-preview" : "empty-export-preview"), [previewDoc]);
+  const [readySession, setReadySession] = useState<symbol | null>(null);
+  const [measuredSession, setMeasuredSession] = useState<symbol | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const observerRef = useRef<ResizeObserver | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  const isReady = readySession === previewSession;
+  const hasMeasured = measuredSession === previewSession;
+  const currentIframeHeight = isReady ? iframeHeight : 0;
 
   useEffect(() => {
     observerRef.current?.disconnect();
     observerRef.current = null;
-    setIsReady(false);
-    setHasMeasured(false);
-    setIframeHeight(0);
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
   }, [previewDoc]);
 
   // 清理 ResizeObserver
@@ -32,6 +39,10 @@ export function ExportPreview({ previewDoc, isRendering, isActive }: ExportPrevi
     return () => {
       observerRef.current?.disconnect();
       observerRef.current = null;
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
     };
   }, []);
 
@@ -39,6 +50,7 @@ export function ExportPreview({ previewDoc, isRendering, isActive }: ExportPrevi
   const handleIframeLoad = () => {
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
+    const currentPreviewSession = previewSession;
 
     const syncHeight = () => {
       const shell = doc.querySelector(".export-layout-shell") as HTMLElement | null;
@@ -52,9 +64,17 @@ export function ExportPreview({ previewDoc, isRendering, isActive }: ExportPrevi
     };
 
     syncHeight();
-    if (!hasMeasured) {
-      setIsReady(true);
-      window.requestAnimationFrame(() => setHasMeasured(true));
+    if (readySession !== currentPreviewSession) {
+      setReadySession(currentPreviewSession);
+    }
+    if (measuredSession !== currentPreviewSession) {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+      }
+      animationFrameRef.current = window.requestAnimationFrame(() => {
+        setMeasuredSession(currentPreviewSession);
+        animationFrameRef.current = null;
+      });
     }
     observerRef.current?.disconnect();
     const nextObserver = new ResizeObserver(syncHeight);
@@ -76,7 +96,7 @@ export function ExportPreview({ previewDoc, isRendering, isActive }: ExportPrevi
             onLoad={handleIframeLoad}
             className="w-full border-0 bg-transparent"
             style={{
-              height: `${iframeHeight}px`,
+              height: `${currentIframeHeight}px`,
               transition: hasMeasured ? "height 200ms ease-out" : "none",
               visibility: isReady ? "visible" : "hidden"
             }}
