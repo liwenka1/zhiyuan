@@ -10,7 +10,8 @@ type LandingMetadataOptions = {
 function getMetadataBase() {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (siteUrl) {
-    return new URL(siteUrl);
+    const normalizedSiteUrl = /^https?:\/\//i.test(siteUrl) ? siteUrl : `https://${siteUrl}`;
+    return new URL(normalizedSiteUrl);
   }
 
   const vercelUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
