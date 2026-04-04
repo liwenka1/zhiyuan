@@ -10,22 +10,26 @@ interface ThemeScreenshotProps {
 export function ThemeScreenshot({ alt, className, priority = false }: ThemeScreenshotProps) {
   return (
     <div className={cn("border-border/60 bg-background overflow-hidden rounded-[1.75rem] border", className)}>
-      <Image
-        src="/screenshot-light.png"
-        alt={alt}
-        width={2880}
-        height={1800}
-        priority={priority}
-        className="-mb-2.5 block h-auto w-full dark:hidden"
-      />
-      <Image
-        src="/screenshot-dark.png"
-        alt={alt}
-        width={2880}
-        height={1800}
-        priority={priority}
-        className="-mb-2.5 hidden h-auto w-full dark:block"
-      />
+      <div className="aspect-2560/1053 w-full overflow-hidden">
+        <Image
+          src="/screenshot-light.png"
+          alt={alt}
+          width={2560}
+          height={1504}
+          priority={priority}
+          unoptimized
+          className="block h-auto w-full dark:hidden"
+        />
+        <Image
+          src="/screenshot-dark.png"
+          alt={alt}
+          width={2560}
+          height={1504}
+          priority={priority}
+          unoptimized
+          className="hidden h-auto w-full dark:block"
+        />
+      </div>
     </div>
   );
 }
