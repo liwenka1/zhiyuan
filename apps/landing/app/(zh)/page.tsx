@@ -4,7 +4,7 @@ import { getTranslations } from "@/lib/i18n";
 import { createLandingMetadata } from "@/lib/metadata";
 
 export const metadata: Metadata = createLandingMetadata({
-  title: "纸鸢笔记",
+  title: "纸鸢",
   description: "本地优先的 Markdown 内容工作台，支持采集、写作、导出与发布。",
   canonical: "/",
   locale: "zh_CN"
