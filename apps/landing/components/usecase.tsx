@@ -21,7 +21,7 @@ export function UseCase({ t }: UseCaseProps) {
             <Reveal
               key={usecase.title}
               delay={index * 70}
-              className="border-border/60 bg-card/45 rounded-[1.5rem] border p-6 md:p-7"
+              className="border-border/60 bg-card/45 rounded-3xl border p-6 md:p-7"
             >
               <div className="text-primary text-xs font-semibold tracking-[0.18em] uppercase">
                 {t.label} 0{index + 1}

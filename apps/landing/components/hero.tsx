@@ -11,7 +11,7 @@ interface HeroProps {
 export function Hero({ t }: HeroProps) {
   return (
     <section className="relative overflow-hidden px-4 pt-16 pb-12 md:pt-20 md:pb-18">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[28rem] bg-[radial-gradient(circle_at_top,rgba(0,115,230,0.08),transparent_60%)] dark:bg-[radial-gradient(circle_at_top,rgba(0,140,255,0.12),transparent_60%)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-112 bg-[radial-gradient(circle_at_top,rgba(0,115,230,0.08),transparent_60%)] dark:bg-[radial-gradient(circle_at_top,rgba(0,140,255,0.12),transparent_60%)]" />
       <div className="relative container mx-auto max-w-6xl">
         <Reveal className="mx-auto max-w-5xl text-center">
           <div className="text-primary border-border/70 bg-background/85 inline-flex rounded-full border px-4 py-1.5 text-xs font-semibold tracking-[0.2em] uppercase backdrop-blur-sm">
@@ -49,7 +49,7 @@ export function Hero({ t }: HeroProps) {
           </div>
         </Reveal>
         <Reveal className="relative mx-auto mt-12 max-w-6xl" delay={120}>
-          <ThemeScreenshot alt="Zhiyuan desktop screenshot" priority className="rounded-4xl" />
+          <ThemeScreenshot alt="Zhiyuan desktop screenshot" priority />
         </Reveal>
       </div>
     </section>
