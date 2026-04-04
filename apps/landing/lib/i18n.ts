@@ -194,7 +194,7 @@ export const translations = {
         suffix: "维护",
         href: "https://github.com/liwenka1"
       },
-      copyright: "© 2025 纸鸢笔记"
+      copyright: "© 2025 纸鸢"
     }
   },
   en: {
