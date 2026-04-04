@@ -29,7 +29,7 @@ export function ProductPreview({ t }: ProductPreviewProps) {
               <Reveal
                 key={bullet.title}
                 delay={140 + index * 80}
-                className="border-border/60 bg-background grid gap-5 rounded-[1.5rem] border p-6 md:grid-cols-[auto_1fr] md:items-start"
+                className="border-border/60 bg-background grid gap-5 rounded-3xl border p-6 md:grid-cols-[auto_1fr] md:items-start"
               >
                 <div className="text-primary bg-muted flex size-12 items-center justify-center rounded-2xl text-sm font-semibold">
                   0{index + 1}
