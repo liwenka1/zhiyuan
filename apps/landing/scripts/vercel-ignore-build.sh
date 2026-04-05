@@ -18,14 +18,11 @@ if ! git rev-parse --verify "$CURRENT_SHA" >/dev/null 2>&1 || ! git rev-parse --
   exit 1
 fi
 
-CHANGED_FILES="$(git diff --name-only "$PREVIOUS_SHA" "$CURRENT_SHA")"
-
-if [[ -z "$CHANGED_FILES" ]]; then
-  echo "No changed files detected, skipping build."
-  exit 0
-fi
-
-if echo "$CHANGED_FILES" | rg -q '^(apps/landing/|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$)'; then
+if ! git diff --quiet "$PREVIOUS_SHA" "$CURRENT_SHA" -- \
+  apps/landing \
+  package.json \
+  pnpm-lock.yaml \
+  pnpm-workspace.yaml; then
   echo "Landing-related files changed, proceeding with build."
   exit 1
 fi
