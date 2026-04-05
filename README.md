@@ -1,10 +1,10 @@
 <div align="center">
-  <img src="apps/desktop/resources/icon.png" alt="纸鸢 Logo" width="96" height="96">
-  <h1>纸鸢</h1>
+  <img src="apps/desktop/resources/icon.png" alt="Zhiyuan logo" width="96" height="96">
+  <h1>Zhiyuan</h1>
   <p>
-    <strong>优雅的 Markdown 桌面编辑器</strong>
+    <strong>A local-first Markdown workspace</strong>
     <br>
-    专注写作，本地优先，支持多窗口、RSS 订阅、网页抓取与多格式导出
+    Keep RSS, web capture, writing, preview, export and GitHub publishing inside one desktop workflow.
   </p>
   <p>
     <a href="https://github.com/liwenka1/zhiyuan/releases">
@@ -18,106 +18,123 @@
     <img src="https://img.shields.io/badge/-Linux-333?style=flat-square&logo=linux&logoColor=white" alt="Linux">
   </p>
   <p>
-    <a href="#功能特性">功能特性</a> •
-    <a href="#界面预览">界面预览</a> •
-    <a href="#下载安装">下载安装</a> •
-    <a href="#本地开发">本地开发</a>
+    <a href="https://zhiyuan.liwenkai.fun/">Website</a> •
+    <a href="https://github.com/liwenka1/zhiyuan/releases">Releases</a> •
+    <a href="README_zh.md">中文说明</a>
   </p>
 </div>
 
 ---
 
-## 简介
+## Overview
 
-**纸鸢**是一款轻量、美观的 Markdown 笔记应用，专为追求高效写作体验的用户设计。所有数据均存储在本地，以原生 `.md` 文件格式保存，你可以随时使用任何编辑器访问自己的笔记。
+**Zhiyuan** is a Markdown-first desktop workspace built around local files and connected writing workflows. Instead of splitting capture, editing, preview, export and publishing across different tools, it keeps those steps inside one app.
 
-- **本地优先** — 数据完全属于你，无需登录，无需联网
-- **文件即数据** — 标准 Markdown 格式，永不担心数据锁定
-- **专注写作** — 简洁的界面，沉浸式的编辑体验
+- **Local-first**: your notes stay in local folders as native `.md` files
+- **Markdown-centered**: collection, editing, preview and export all revolve around Markdown
+- **Desktop-oriented**: multi-window workflows, workspace terminal, drag-and-drop and keyboard shortcuts feel at home on desktop
 
-## 功能特性
+## Website
 
-| 功能                | 说明                                                   |
-| :------------------ | :----------------------------------------------------- |
-| **Markdown 编辑**   | 流畅的编辑体验，支持语法高亮和实时预览                 |
-| **分栏 / 预览模式** | 编辑、预览、分栏三种模式自由切换                       |
-| **演示模式**        | 全屏沉浸式展示笔记内容，适合阅读和分享                 |
-| **多窗口**          | 支持同时打开多个窗口，独立管理不同工作区               |
-| **URL 抓取**        | 输入网页链接，自动抓取内容生成 Markdown 笔记           |
-| **RSS 订阅**        | 导入 RSS 源，自动抓取文章并转换为 Markdown 笔记        |
-| **多格式导出**      | 支持导出 HTML、PDF、长图，支持分页导出                 |
-| **主题切换**        | 浅色 / 深色主题，适配系统偏好                          |
-| **多语言**          | 中文 / English 双语界面                                |
-| **代码高亮**        | 支持多种编程语言语法高亮                               |
-| **数学公式**        | 支持 LaTeX 数学公式渲染                                |
-| **Mermaid 图表**    | 支持流程图、时序图等图表绘制                           |
-| **目录导航**        | 自动提取标题生成可点击的目录                           |
-| **全局搜索**        | 快速检索笔记内容                                       |
-| **媒体内嵌**        | 支持音频、视频、图片直接内嵌                           |
-| **跨平台**          | 支持 Windows、macOS、Linux                             |
+- Landing page: [zhiyuan.liwenkai.fun](https://zhiyuan.liwenkai.fun/)
+- Releases: [GitHub Releases](https://github.com/liwenka1/zhiyuan/releases)
+- Repository: [liwenka1/zhiyuan](https://github.com/liwenka1/zhiyuan)
 
-## 界面预览
+## Highlights
 
-### 深色主题
+| Feature | Description |
+| :-- | :-- |
+| **RSS feeds and archiving** | Pull reading sources into the local workspace for filtering, reading and long-term notes. |
+| **Web page to Markdown** | Capture article content and convert it into editable Markdown drafts. |
+| **Workspace terminal** | Open a terminal directly inside the current workspace while writing. |
+| **Preview and presentation modes** | Switch between editing, preview, split view and presentation based on the task. |
+| **Multi-window workspaces** | Open separate workspaces in different windows without losing a desktop-first workflow. |
+| **Multi-format export** | Export to HTML, PDF and long images without rebuilding the document elsewhere. |
+| **GitHub publishing** | Publish notes to GitHub Issues and handle local asset uploads in the same flow. |
+| **Desktop-native interactions** | Support drag-and-drop, opening Markdown from the OS and configurable shortcuts. |
 
-<img src="apps/landing/public/screenshot-dark.png" alt="深色主题">
+## Workflow
 
-### 浅色主题
+Zhiyuan is designed around a simple content loop:
 
-<img src="apps/landing/public/screenshot-light.png" alt="浅色主题">
+1. **Collect**: subscribe to RSS or capture a web page into Markdown
+2. **Write & run**: edit, preview, present and use a terminal in the same workspace
+3. **Ship**: export to PDF, HTML or long image, or publish to GitHub
 
-## 下载安装
+## Screenshots
 
-前往 [Releases 页面](https://github.com/liwenka1/zhiyuan/releases) 下载最新版本：
+### Dark Theme
 
-| 平台        | 安装包               |
-| :---------- | :------------------- |
-| **macOS**   | `.dmg`               |
-| **Windows** | `.exe`               |
-| **Linux**   | `.AppImage` / `.deb` |
+<img src="apps/landing/public/screenshot-dark.png" alt="Zhiyuan dark theme screenshot">
 
-### macOS 用户注意事项
+### Light Theme
 
-由于应用未经过 Apple 签名认证，首次打开时可能会提示「已损坏」。
+<img src="apps/landing/public/screenshot-light.png" alt="Zhiyuan light theme screenshot">
 
-**解决方法：**
+## Download
+
+Download the latest build from [GitHub Releases](https://github.com/liwenka1/zhiyuan/releases).
+
+| Platform | Package |
+| :-- | :-- |
+| **macOS** | `.dmg` |
+| **Windows** | `.exe` |
+| **Linux** | `.AppImage` / `.deb` |
+
+### macOS note
+
+Because the app is currently unsigned, macOS may show a damaged-app warning on first launch.
 
 ```bash
 xattr -cr /Applications/纸鸢.app
 ```
 
-运行上述命令后，再次打开应用即可正常使用。
+Run the command above once, then open the app again.
 
-## 本地开发
+## Local Development
 
-### 环境要求
+### Requirements
 
 - Node.js >= 18
 - pnpm >= 8
 
-### 安装依赖
+### Install dependencies
 
 ```bash
 pnpm install
 ```
 
-### 启动开发服务
+### Start development
 
 ```bash
-# 启动桌面应用
+# Desktop app
 pnpm dev:desktop
+
+# Landing page
+pnpm dev:landing
 ```
 
-### 构建应用
+### Build
 
 ```bash
-# 构建当前平台
+# Desktop app for current platform
 pnpm build:desktop
 
-# 构建指定平台
-pnpm build:desktop:win    # Windows
-pnpm build:desktop:mac    # macOS
-pnpm build:desktop:linux  # Linux
+# Desktop app for a specific platform
+pnpm build:desktop:win
+pnpm build:desktop:mac
+pnpm build:desktop:linux
+
+# Landing page
+pnpm build:landing
+```
+
+### Useful checks
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm format:check
 ```
 
 ## License
