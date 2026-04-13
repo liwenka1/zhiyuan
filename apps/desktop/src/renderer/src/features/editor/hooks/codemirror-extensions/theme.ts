@@ -99,6 +99,7 @@ export function createCustomTheme(isDark: boolean): Extension {
       // 提示框
       ".cm-tooltip": {
         backgroundColor: "var(--popover)",
+        color: "var(--popover-foreground)",
         border: "1px solid var(--border)"
       },
       ".cm-tooltip .cm-tooltip-arrow:before": {
@@ -106,6 +107,59 @@ export function createCustomTheme(isDark: boolean): Extension {
       },
       ".cm-tooltip .cm-tooltip-arrow:after": {
         borderTopColor: "var(--popover)"
+      },
+      ".cm-tooltip.cm-tooltip-autocomplete": {
+        backgroundColor: "var(--popover)",
+        color: "var(--popover-foreground)",
+        border: "1px solid var(--border)",
+        borderRadius: "calc(var(--radius) + 2px)",
+        boxShadow: "0 12px 32px color-mix(in srgb, var(--foreground) 10%, transparent)",
+        padding: "0.25rem",
+        overflow: "hidden"
+      },
+      ".cm-tooltip-autocomplete > ul": {
+        fontFamily: "var(--editor-font)",
+        padding: "0",
+        maxHeight: "16rem"
+      },
+      ".cm-tooltip-autocomplete ul li": {
+        display: "flex",
+        alignItems: "center",
+        gap: "0.5rem",
+        margin: "0",
+        padding: "0.375rem 0.5rem",
+        borderRadius: "calc(var(--radius) - 2px)",
+        color: "var(--popover-foreground)"
+      },
+      ".cm-tooltip-autocomplete ul li[aria-selected]": {
+        backgroundColor: "var(--accent)",
+        color: "var(--accent-foreground)"
+      },
+      ".cm-tooltip-autocomplete ul li[aria-selected] .cm-completionDetail": {
+        color: "color-mix(in srgb, var(--accent-foreground) 70%, transparent)"
+      },
+      ".cm-tooltip-autocomplete ul li[aria-selected] .cm-completionIcon": {
+        color: "var(--accent-foreground)",
+        opacity: "0.9"
+      },
+      ".cm-completionLabel": {
+        color: "inherit"
+      },
+      ".cm-completionMatchedText": {
+        color: "var(--primary)",
+        fontWeight: "600",
+        textDecoration: "none"
+      },
+      ".cm-completionDetail": {
+        color: "var(--muted-foreground)",
+        fontStyle: "normal"
+      },
+      ".cm-completionIcon": {
+        color: "var(--muted-foreground)",
+        opacity: "0.8"
+      },
+      ".cm-completionIcon:after": {
+        color: "inherit"
       }
     },
     { dark: isDark }
