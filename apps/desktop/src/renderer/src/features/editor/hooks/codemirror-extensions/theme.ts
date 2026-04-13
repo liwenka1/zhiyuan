@@ -51,17 +51,6 @@ export function createCustomTheme(isDark: boolean): Extension {
           backgroundColor: "color-mix(in srgb, var(--primary) 40%, transparent)"
         },
 
-      // 搜索匹配 - 所有匹配项（包括代码块内）
-      ".cm-searchMatch": {
-        backgroundColor: "color-mix(in srgb, var(--warning) 30%, transparent) !important",
-        borderRadius: "2px"
-      },
-      // 搜索匹配 - 当前选中的匹配项
-      ".cm-searchMatch-selected": {
-        backgroundColor: "color-mix(in srgb, var(--warning) 60%, transparent) !important",
-        borderRadius: "2px"
-      },
-
       // 括号匹配
       ".cm-matchingBracket": {
         backgroundColor: "var(--muted)",
@@ -212,7 +201,7 @@ export function createCustomTheme(isDark: boolean): Extension {
     { tag: tags.string, color: "var(--editor-string)" },
 
     // 关键字
-    { tag: tags.keyword, color: "var(--editor-link)", fontWeight: "500" },
+    { tag: tags.keyword, color: "var(--editor-title)", fontWeight: "500" },
 
     // 注释和元信息
     { tag: tags.comment, color: "var(--editor-comment)", fontStyle: "italic" },
