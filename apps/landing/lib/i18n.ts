@@ -14,11 +14,10 @@ export const translations = {
     },
     hero: {
       eyebrow: "Local-first Markdown Workspace",
-      title: "本地优先的 Markdown 工作台",
-      description: "把 RSS、网页抓取、本地 Markdown、工作区终端、导出和 GitHub 发布收进同一条桌面工作流。",
-      download: "前往 GitHub",
-      learnMore: "查看功能",
-      highlights: ["RSS 订阅", "URL 转 Markdown", "工作区终端", "多窗口", "PDF / HTML / 长图导出", "发布到 GitHub"]
+      title: "心如止水 专注成文",
+      description: "让采集、写作、预览、导出与 GitHub 发布都围绕本地 Markdown 文件发生。",
+      download: "查看 GitHub",
+      learnMore: "查看工作流"
     },
     proof: {
       eyebrow: "Why Zhiyuan",
@@ -212,19 +211,10 @@ export const translations = {
     },
     hero: {
       eyebrow: "Local-first Markdown Workspace",
-      title: "A local-first Markdown workspace",
-      description:
-        "Bring RSS, web capture, local Markdown files, a workspace terminal, export and GitHub publishing into one desktop workflow.",
-      download: "Open GitHub",
-      learnMore: "Explore Features",
-      highlights: [
-        "RSS feeds",
-        "URL to Markdown",
-        "Workspace terminal",
-        "Multi-window",
-        "PDF / HTML / image export",
-        "Publish to GitHub"
-      ]
+      title: "Quiet mind. Focused writing.",
+      description: "Keep capture, writing, preview, export and GitHub publishing centered around local Markdown files.",
+      download: "View on GitHub",
+      learnMore: "See Workflow"
     },
     proof: {
       eyebrow: "Why Zhiyuan",
