@@ -27,14 +27,8 @@ class FileWatcherManager {
       return;
     }
 
-    // 创建新的 watcher
-    const watchPatterns = [
-      path.join(workspacePath, "*.md"),
-      path.join(workspacePath, "*/*.md"),
-      path.join(workspacePath, "*")
-    ];
-
-    const watcher = chokidar.watch(watchPatterns, {
+    // 直接监听工作区根目录，确保目录重命名时子文件的 add/unlink 也能被捕获
+    const watcher = chokidar.watch(workspacePath, {
       ignoreInitial: true,
       persistent: true,
       awaitWriteFinish: {
@@ -42,7 +36,7 @@ class FileWatcherManager {
         pollInterval: 50
       },
       ignored: /(^|[/\\])\../,
-      depth: 0
+      depth: 2
     });
 
     const entry: WatcherEntry = {

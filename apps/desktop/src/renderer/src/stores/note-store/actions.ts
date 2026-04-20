@@ -156,6 +156,13 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         pathParts[pathParts.length - 1] = newFileName;
         const newFilePath = pathParts.join("/");
 
+        if (get().selectedNoteId === noteId && get().editorContent) {
+          clearDebouncedSave(noteId);
+          await get().saveNoteToFileSystem(noteId, get().editorContent);
+        }
+
+        await watcherIpc.pause();
+
         await fileIpc.rename(note.filePath, newFilePath);
 
         const newNoteId = note.id.replace(oldFileName, newFileName);
@@ -174,13 +181,30 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
             state.openNoteIds[openIndex] = newNoteId;
           }
 
+          const playingIndex = state.playingNoteIds.indexOf(noteId);
+          if (playingIndex !== -1) {
+            state.playingNoteIds[playingIndex] = newNoteId;
+          }
+
           if (state.selectedNoteId === noteId) {
             state.selectedNoteId = newNoteId;
           }
+
+          if (state.savingNoteIds.has(noteId)) {
+            state.savingNoteIds.delete(noteId);
+            state.savingNoteIds.add(newNoteId);
+          }
         });
+
+        const allPinnedNotes = get()
+          .notes.filter((n) => n.isPinned)
+          .map((n) => n.id);
+        await configIpc.setPinnedNotes(workspacePath, allPinnedNotes);
       } catch (error) {
         toast.error(i18n.t("note:errors.renameNoteFailed"));
         throw error;
+      } finally {
+        await watcherIpc.resume();
       }
     },
 

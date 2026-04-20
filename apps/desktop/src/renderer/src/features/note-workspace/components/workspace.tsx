@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core";
 import { FileText } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useLayoutEffect, useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
 import { ListRow } from "@/components/app/list-row";
 import { FolderTree } from "./folder-tree";
@@ -80,6 +80,33 @@ export function NoteWorkspace() {
   const [isEditorNoteDragHover, setIsEditorNoteDragHover] = useState(false);
 
   const moveNote = useNoteStore((state) => state.moveNote);
+
+  useLayoutEffect(() => {
+    if (selectedNoteIds.length === 0) return;
+
+    const availableNoteIds = new Set(notes.map((note) => note.id));
+    const normalizedSelectedIds = selectedNoteIds.filter((id) => availableNoteIds.has(id));
+    const hasSelectedNote = selectedNoteId ? availableNoteIds.has(selectedNoteId) : false;
+
+    if (normalizedSelectedIds.length === selectedNoteIds.length) {
+      if (selectedNoteId && selectedNoteIds.length === 1 && hasSelectedNote && selectedNoteIds[0] !== selectedNoteId) {
+        setSelectedNoteIds([selectedNoteId]);
+      }
+      return;
+    }
+
+    if (normalizedSelectedIds.length > 0) {
+      setSelectedNoteIds(normalizedSelectedIds);
+      return;
+    }
+
+    if (selectedNoteId && hasSelectedNote) {
+      setSelectedNoteIds([selectedNoteId]);
+      return;
+    }
+
+    setSelectedNoteIds([]);
+  }, [notes, selectedNoteId, selectedNoteIds]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {

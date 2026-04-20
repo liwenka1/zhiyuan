@@ -2,9 +2,11 @@ import { create } from "zustand";
 import { produce } from "immer";
 import { Folder } from "@/types";
 import { useWorkspaceStore } from "./use-workspace-store";
-import { folderIpc } from "@/ipc";
+import { folderIpc, configIpc, watcherIpc } from "@/ipc";
 import { toast } from "sonner";
 import i18n from "@/lib/i18n";
+import { useNoteStore } from "./note-store";
+import { clearDebouncedSave } from "./note-store/persistence";
 
 interface FolderStore {
   // 状态
@@ -96,6 +98,21 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     try {
       // 构建新的文件夹路径
       const newFolderPath = `${workspacePath}/${newName}`;
+      const oldFolderPathPrefix = `${folder.path}/`;
+      const newFolderPathPrefix = `${newFolderPath}/`;
+      const oldNotePrefix = `${folderId}/`;
+      const newNotePrefix = `${newName}/`;
+      const noteStore = useNoteStore.getState();
+      const selectedNote = noteStore.selectedNoteId
+        ? noteStore.notes.find((n) => n.id === noteStore.selectedNoteId)
+        : null;
+
+      if (selectedNote?.folderId === folderId && noteStore.editorContent) {
+        clearDebouncedSave(selectedNote.id);
+        await noteStore.saveNoteToFileSystem(selectedNote.id, noteStore.editorContent);
+      }
+
+      await watcherIpc.pause();
 
       // 在文件系统中重命名文件夹
       await folderIpc.rename(folder.path, newFolderPath);
@@ -117,9 +134,42 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
           }
         })
       );
+
+      useNoteStore.setState((state) => {
+        const renameNoteId = (noteId: string) =>
+          noteId.startsWith(oldNotePrefix) ? `${newNotePrefix}${noteId.slice(oldNotePrefix.length)}` : noteId;
+
+        return {
+          notes: state.notes.map((note) => {
+            if (note.folderId !== folderId) return note;
+
+            return {
+              ...note,
+              id: renameNoteId(note.id),
+              filePath: note.filePath?.startsWith(oldFolderPathPrefix)
+                ? `${newFolderPathPrefix}${note.filePath.slice(oldFolderPathPrefix.length)}`
+                : note.filePath,
+              folderId: newName,
+              updatedAt: new Date().toISOString()
+            };
+          }),
+          openNoteIds: state.openNoteIds.map(renameNoteId),
+          playingNoteIds: state.playingNoteIds.map(renameNoteId),
+          selectedNoteId: state.selectedNoteId ? renameNoteId(state.selectedNoteId) : state.selectedNoteId,
+          savingNoteIds: new Set(Array.from(state.savingNoteIds).map(renameNoteId))
+        };
+      });
+
+      const pinnedNoteIds = useNoteStore
+        .getState()
+        .notes.filter((note) => note.isPinned)
+        .map((note) => note.id);
+      await configIpc.setPinnedNotes(workspacePath, pinnedNoteIds);
     } catch (error) {
       toast.error(i18n.t("note:errors.renameFolderFailed"));
       throw error;
+    } finally {
+      await watcherIpc.resume();
     }
   },
 
