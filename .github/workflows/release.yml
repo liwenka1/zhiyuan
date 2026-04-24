@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create or update release notes for"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -21,7 +27,12 @@ jobs:
 
       - name: Resolve tag
         id: vars
-        run: echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -33,12 +44,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ steps.vars.outputs.tag }}"
-
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release $TAG already exists, skip creating."
-          else
-            npx changelogithub --draft --name "$TAG"
-          fi
+          npx changelogithub@14 --draft --name "$TAG"
 
   build:
     needs: create-release
