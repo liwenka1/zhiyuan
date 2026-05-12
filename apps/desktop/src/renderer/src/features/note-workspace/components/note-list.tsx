@@ -21,6 +21,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ListRow } from "@/components/app/list-row";
+import { DropHoverMask } from "@/components/app";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -146,7 +147,6 @@ interface NoteListProps {
   onCopyToWechat?: (note: Note) => void;
   onPushToGitHub?: (note: Note) => void;
   onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
-  onExternalFileDragHoverChange?: (hovering: boolean) => void;
   onSelectedNoteIdsChange?: (noteIds: string[]) => void;
 }
 
@@ -175,7 +175,6 @@ export function NoteList({
   onCopyToWechat,
   onPushToGitHub,
   onImportExternalMarkdownFiles,
-  onExternalFileDragHoverChange,
   onSelectedNoteIdsChange
 }: NoteListProps) {
   const { t } = useTranslation("note");
@@ -193,9 +192,8 @@ export function NoteList({
   const inputRef = useRef<HTMLInputElement>(null);
   const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
   const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
-  const { isImportingExternal, dragHandlers } = useExternalMarkdownDrop({
-    onImportExternalMarkdownFiles,
-    onHoverChange: onExternalFileDragHoverChange
+  const { isFileDropHover, isImportingExternal, dragHandlers } = useExternalMarkdownDrop({
+    onImportExternalMarkdownFiles
   });
 
   const handleSearchToggle = useCallback(() => {
@@ -400,12 +398,16 @@ export function NoteList({
   return (
     <div
       ref={rootRef}
-      className="flex h-full flex-col"
+      className="relative flex h-full flex-col"
       onDragEnter={dragHandlers.onDragEnter}
       onDragOver={dragHandlers.onDragOver}
       onDragLeave={dragHandlers.onDragLeave}
       onDrop={dragHandlers.onDrop}
     >
+      {/* 外部文件拖入时的提示遮罩：作为面板内部子元素，
+          会自动跟随面板的位置 / 尺寸变化，无需手动同步坐标 */}
+      <DropHoverMask visible={isFileDropHover} bottomGapPx={8} />
+
       {/* 顶部搜索栏 */}
       <div className="flex h-12 shrink-0 items-center gap-2 overflow-hidden px-3">
         <AnimatePresence mode="wait" initial={false}>

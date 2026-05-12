@@ -9,7 +9,7 @@ import {
   useSensor,
   useSensors
 } from "@dnd-kit/core";
-import type { DragEndEvent, DragOverEvent, DragStartEvent } from "@dnd-kit/core";
+import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { FileText } from "lucide-react";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
@@ -75,9 +75,6 @@ export function NoteWorkspace() {
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
   const [draggingNoteIds, setDraggingNoteIds] = useState<string[]>([]);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
-  const [isNoteListExternalFileDropHover, setIsNoteListExternalFileDropHover] = useState(false);
-  const [isEditorExternalFileDropHover, setIsEditorExternalFileDropHover] = useState(false);
-  const [isEditorNoteDragHover, setIsEditorNoteDragHover] = useState(false);
 
   const moveNote = useNoteStore((state) => state.moveNote);
 
@@ -128,21 +125,12 @@ export function NoteWorkspace() {
     if (!isDraggingSelected) {
       setSelectedNoteIds([noteId]);
     }
-    setIsEditorNoteDragHover(false);
-  };
-
-  const handleDragOver = (event: DragOverEvent) => {
-    const activeId = String(event.active.id);
-    const overId = event.over?.id ? String(event.over.id) : "";
-    const isNoteDrag = activeId.startsWith(NOTE_DRAG_PREFIX);
-    setIsEditorNoteDragHover(isNoteDrag && overId === EDITOR_DROP_OPEN_ID);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setDraggingNoteId(null);
     setDraggingNoteIds([]);
-    setIsEditorNoteDragHover(false);
     if (!over?.id || typeof active.id !== "string" || typeof over.id !== "string") return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -314,17 +302,13 @@ export function NoteWorkspace() {
         }
       }}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={() => {
         setDraggingNoteId(null);
         setDraggingNoteIds([]);
-        setIsEditorNoteDragHover(false);
       }}
     >
       <MainLayout
-        showRightSidebarDropMask={isNoteListExternalFileDropHover}
-        showMainContentDropMask={isEditorExternalFileDropHover || isEditorNoteDragHover}
         leftSidebar={
           <FolderTree
             folders={foldersWithCount}
@@ -369,7 +353,6 @@ export function NoteWorkspace() {
             onCopyToWechat={noteHandlers.handleCopyToWechat}
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
-            onExternalFileDragHoverChange={setIsNoteListExternalFileDropHover}
             onSelectedNoteIdsChange={setSelectedNoteIds}
           />
         }
@@ -388,7 +371,6 @@ export function NoteWorkspace() {
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onDeleteNote={noteHandlers.handleDeleteNote}
             onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
-            onExternalFileDragHoverChange={setIsEditorExternalFileDropHover}
             onOpenImportedMarkdownNote={handleOpenImportedMarkdownNote}
             noteDropTargetId={EDITOR_DROP_OPEN_ID}
           />

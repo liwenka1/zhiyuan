@@ -4,11 +4,16 @@ import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
 import { PreviewContent } from "./preview-content";
 import { EmptyEditor } from "./empty-state";
+import { DropHoverMask } from "@/components/app";
 import { useViewStore, useNoteStore } from "@/stores";
 import { useExternalMarkdownDrop } from "@/hooks";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, useGroupRef } from "@/components/ui/resizable";
 import { TerminalPanel } from "@/features/terminal/components/terminal-panel";
 import type { Note } from "@/types";
+
+// 与 workspace.tsx 中的 NOTE_DRAG_PREFIX 保持一致，
+// 用于区分内部笔记拖拽与其他可能的 draggable。
+const NOTE_DRAG_PREFIX = "note-";
 
 interface EditorAreaProps {
   content?: string;
@@ -27,7 +32,6 @@ interface EditorAreaProps {
   onDeleteNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onPushToGitHub?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
-  onExternalFileDragHoverChange?: (hovering: boolean) => void;
   onOpenImportedMarkdownNote?: (noteId: string) => void;
   noteDropTargetId?: string;
 }
@@ -46,7 +50,6 @@ export function EditorArea({
   onDeleteNote,
   onPushToGitHub,
   onImportExternalMarkdownFiles,
-  onExternalFileDragHoverChange,
   onOpenImportedMarkdownNote,
   noteDropTargetId
 }: EditorAreaProps) {
@@ -62,12 +65,15 @@ export function EditorArea({
   const isOuterProgrammaticRef = useRef(false);
   const outerMainPanelId = "editor-area-main";
   const outerTerminalPanelId = "editor-area-terminal";
-  const { setNodeRef: setEditorDropNodeRef } = useDroppable({
+  const {
+    setNodeRef: setEditorDropNodeRef,
+    isOver: isEditorDropOver,
+    active: editorDropActive
+  } = useDroppable({
     id: noteDropTargetId ?? "editor-drop-open"
   });
-  const { dragHandlers } = useExternalMarkdownDrop({
+  const { isFileDropHover, dragHandlers } = useExternalMarkdownDrop({
     onImportExternalMarkdownFiles,
-    onHoverChange: onExternalFileDragHoverChange,
     onImportCompleted: (result) => {
       const importedNoteIds = result.importedNoteIds ?? [];
       if (importedNoteIds.length === 0) return;
@@ -77,6 +83,12 @@ export function EditorArea({
       }
     }
   });
+
+  // 内部 note 被拖到编辑区上方时，也要显示遮罩；
+  // 直接消费 dnd-kit 的 isOver + active.id，避免把"hover 状态"在组件外维护。
+  const isNoteDragHover =
+    isEditorDropOver && !!editorDropActive && String(editorDropActive.id).startsWith(NOTE_DRAG_PREFIX);
+  const isDropMaskVisible = isFileDropHover || isNoteDragHover;
 
   const openNotes = useMemo(
     () => openNoteIds.map((id) => notes.find((note) => note.id === id)).filter(Boolean) as Note[],
@@ -165,12 +177,16 @@ export function EditorArea({
   return (
     <div
       ref={setEditorDropNodeRef}
-      className="flex h-full flex-col"
+      className="relative flex h-full flex-col"
       onDragEnter={dragHandlers.onDragEnter}
       onDragOver={dragHandlers.onDragOver}
       onDragLeave={dragHandlers.onDragLeave}
       onDrop={dragHandlers.onDrop}
     >
+      {/* 外部文件 / 内部笔记拖到编辑区时的提示遮罩：
+          作为编辑区根节点的子元素，自动跟随面板位置和尺寸。 */}
+      <DropHoverMask visible={isDropMaskVisible} bottomGapPx={0} />
+
       <EditorToolbar
         content={content}
         onShowNoteInExplorer={onShowNoteInExplorer}
