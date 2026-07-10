@@ -1,4 +1,4 @@
-import { useNoteStore, useFolderStore, useGitHubSettingsStore, useWorkspaceStore } from "@/stores";
+import { useNoteStore, useGitHubSettingsStore, useWorkspaceStore } from "@/stores";
 import { resolveNoteAbsolutePath, resolveNoteRelativePath } from "@/lib/workspace-paths";
 import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
@@ -44,19 +44,18 @@ export interface NoteHandlers {
 
 interface UseNoteHandlersProps {
   onOpenRenameDialog: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onOpenCreateNoteDialog: () => void;
 }
 
 /**
  * 笔记操作 Hook
  * 处理所有笔记相关的操作
  */
-export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): NoteHandlers {
+export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: UseNoteHandlersProps): NoteHandlers {
   const { t } = useTranslation("note");
   const notes = useNoteStore((state) => state.notes);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const updateNoteContentById = useNoteStore((state) => state.updateNoteContentById);
-  const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
-  const createNote = useNoteStore((state) => state.createNote);
   const deleteNote = useNoteStore((state) => state.deleteNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const togglePinNote = useNoteStore((state) => state.togglePinNote);
@@ -65,9 +64,9 @@ export function useNoteHandlers({ onOpenRenameDialog }: UseNoteHandlersProps): N
   // 使用导出 hook
   const { exportNote, copyToWechat } = useNoteExport();
 
-  // 处理新建笔记
-  const handleCreateNote = async () => {
-    await createNote(selectedFolderId || undefined);
+  // 处理新建笔记 - 打开对话框
+  const handleCreateNote = () => {
+    onOpenCreateNoteDialog();
   };
 
   // 在文件管理器中显示笔记

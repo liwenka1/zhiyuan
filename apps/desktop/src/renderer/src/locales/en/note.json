@@ -4,6 +4,7 @@
   "createFromUrl": "Create from URL",
   "toggleFolderSidebar": "Toggle Folder List",
   "defaultTitle": "Untitled Note",
+  "defaultFolderName": "New Folder",
   "defaultContent": "Start writing...",
   "pagesSuffix": "Pages",
   "copySuffix": "Copy",
@@ -57,8 +58,8 @@
   "dialog": {
     "createFolder": {
       "title": "New Folder",
-      "description": "Enter folder name",
-      "placeholder": "e.g., Work, Study, Life..."
+      "description": "Enter folder name, or leave blank for default name",
+      "placeholder": "Folder name (optional)"
     },
     "renameFolder": {
       "title": "Rename Folder",
@@ -94,6 +95,16 @@
       "title": "Create Note from URL",
       "description": "Enter a webpage URL to extract content",
       "placeholder": "https://example.com/article"
+    },
+    "createNote": {
+      "title": "New Note",
+      "description": "Enter note title, or leave blank for default name",
+      "placeholder": "Note title (optional)"
+    },
+    "createNote": {
+      "title": "New Note",
+      "description": "Enter note title, or leave blank for default name",
+      "placeholder": "Note title (optional)"
     }
   },
   "fileTypes": {
@@ -108,6 +119,7 @@
     "createNoteFailed": "Failed to create note, please try again",
     "formatNoteFailed": "Failed to format note, please try again",
     "createFolderFailed": "Failed to create folder, please try again",
+    "folderAlreadyExists": "A folder with this name already exists",
     "showInExplorerFailed": "Failed to open in file manager, please try again",
     "deleteFolderFailed": "Failed to delete folder, please try again",
     "deleteNoteFailed": "Failed to delete note, please try again",

@@ -60,7 +60,8 @@ export function NoteWorkspace() {
 
   // 笔记操作 handlers
   const noteHandlers = useNoteHandlers({
-    onOpenRenameDialog: dialogState.openRenameNoteDialog
+    onOpenRenameDialog: dialogState.openRenameNoteDialog,
+    onOpenCreateNoteDialog: dialogState.openCreateNoteDialog
   });
 
   // 文件夹操作 handlers
@@ -380,6 +381,8 @@ export function NoteWorkspace() {
       <NoteDialogs
         showCreateFolderDialog={dialogState.showCreateFolderDialog}
         onCloseCreateFolderDialog={dialogState.closeCreateFolderDialog}
+        showCreateNoteDialog={dialogState.showCreateNoteDialog}
+        onCloseCreateNoteDialog={dialogState.closeCreateNoteDialog}
         showRssImportDialog={dialogState.showRssImportDialog}
         onCloseRssImportDialog={dialogState.closeRssImportDialog}
         showUrlCreateDialog={dialogState.showUrlCreateDialog}

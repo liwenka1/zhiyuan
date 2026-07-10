@@ -48,15 +48,42 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       return;
     }
 
+    // 如果名称为空，使用默认名称
+    let folderName = name.trim();
+    if (!folderName) {
+      const defaultFolderName = i18n.t("note:defaultFolderName");
+      const existingFolders = get().folders;
+      let maxNum = 0;
+      const defaultPattern = new RegExp(
+        `^${defaultFolderName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (\\d+)$`
+      );
+      for (const f of existingFolders) {
+        const match = f.name.match(defaultPattern);
+        if (match) {
+          maxNum = Math.max(maxNum, parseInt(match[1], 10));
+        }
+      }
+      folderName = `${defaultFolderName} ${maxNum + 1}`;
+    }
+
+    // 检查是否已存在同名文件夹
+    const existing = get().folders.find(
+      (f) => f.id === folderName || f.name === folderName
+    );
+    if (existing) {
+      toast.error(i18n.t("note:errors.folderAlreadyExists"));
+      return;
+    }
+
     try {
-      const folderPath = `${workspacePath}/${name}`;
+      const folderPath = `${workspacePath}/${folderName}`;
 
       // 在文件系统中创建文件夹
       await folderIpc.create(folderPath);
 
       const newFolder: Folder = {
-        id: name, // 使用文件夹名作为 ID
-        name,
+        id: folderName, // 使用文件夹名作为 ID
+        name: folderName,
         path: folderPath,
         noteCount: 0,
         isRss: false,

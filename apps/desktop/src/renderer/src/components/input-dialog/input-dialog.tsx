@@ -18,6 +18,8 @@ interface InputDialogProps {
   description?: string;
   placeholder?: string;
   defaultValue?: string;
+  /** 是否允许空值提交，默认 false。为 true 时确认按钮始终可用，空值也会触发 onConfirm */
+  allowEmpty?: boolean;
   onConfirm: (value: string) => void;
 }
 
@@ -27,6 +29,7 @@ function InputDialogContent({
   description,
   placeholder,
   defaultValue = "",
+  allowEmpty = false,
   onConfirm,
   onOpenChange
 }: Omit<InputDialogProps, "open">) {
@@ -37,8 +40,9 @@ function InputDialogContent({
   const actualPlaceholder = placeholder || t("dialog.placeholder");
 
   const handleConfirm = () => {
-    if (value.trim()) {
-      onConfirm(value.trim());
+    const trimmed = value.trim();
+    if (trimmed || allowEmpty) {
+      onConfirm(trimmed);
       setValue("");
       onOpenChange(false);
     }
@@ -75,7 +79,7 @@ function InputDialogContent({
         <Button variant="outline" onClick={handleCancel}>
           {t("dialog.cancel")}
         </Button>
-        <Button onClick={handleConfirm} disabled={!value.trim()}>
+        <Button onClick={handleConfirm} disabled={!allowEmpty && !value.trim()}>
           {t("dialog.confirm")}
         </Button>
       </DialogFooter>
@@ -90,6 +94,7 @@ export function InputDialog({
   description,
   placeholder,
   defaultValue = "",
+  allowEmpty = false,
   onConfirm
 }: InputDialogProps) {
   return (
@@ -103,6 +108,7 @@ export function InputDialog({
             description={description}
             placeholder={placeholder}
             defaultValue={defaultValue}
+            allowEmpty={allowEmpty}
             onConfirm={onConfirm}
             onOpenChange={onOpenChange}
           />

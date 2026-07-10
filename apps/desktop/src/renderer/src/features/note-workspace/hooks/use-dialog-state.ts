@@ -5,6 +5,7 @@ import { useState } from "react";
  */
 export function useDialogState() {
   const [showCreateFolderDialog, setShowCreateFolderDialog] = useState(false);
+  const [showCreateNoteDialog, setShowCreateNoteDialog] = useState(false);
   const [showRssImportDialog, setShowRssImportDialog] = useState(false);
   const [showUrlCreateDialog, setShowUrlCreateDialog] = useState(false);
   const [showRenameNoteDialog, setShowRenameNoteDialog] = useState(false);
@@ -26,6 +27,11 @@ export function useDialogState() {
     showCreateFolderDialog,
     openCreateFolderDialog: () => setShowCreateFolderDialog(true),
     closeCreateFolderDialog: () => setShowCreateFolderDialog(false),
+
+    // 创建笔记对话框
+    showCreateNoteDialog,
+    openCreateNoteDialog: () => setShowCreateNoteDialog(true),
+    closeCreateNoteDialog: () => setShowCreateNoteDialog(false),
 
     // RSS 导入对话框
     showRssImportDialog,

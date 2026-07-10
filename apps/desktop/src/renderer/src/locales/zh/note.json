@@ -4,6 +4,7 @@
   "createFromUrl": "从 URL 新建",
   "toggleFolderSidebar": "切换文件夹列表",
   "defaultTitle": "无标题笔记",
+  "defaultFolderName": "新建文件夹",
   "defaultContent": "开始写作...",
   "pagesSuffix": "分页",
   "copySuffix": "Copy",
@@ -57,8 +58,8 @@
   "dialog": {
     "createFolder": {
       "title": "新建文件夹",
-      "description": "请输入文件夹名称",
-      "placeholder": "例如：工作、学习、生活..."
+      "description": "请输入文件夹名称，留空则使用默认名称",
+      "placeholder": "文件夹名称（可选）"
     },
     "renameFolder": {
       "title": "重命名文件夹",
@@ -94,6 +95,11 @@
       "title": "从 URL 新建笔记",
       "description": "输入网页链接，自动提取内容",
       "placeholder": "https://example.com/article"
+    },
+    "createNote": {
+      "title": "新建笔记",
+      "description": "输入笔记标题，留空则使用默认名称",
+      "placeholder": "笔记标题（可选）"
     }
   },
   "fileTypes": {
@@ -108,6 +114,7 @@
     "createNoteFailed": "创建笔记失败，请重试",
     "formatNoteFailed": "格式化笔记失败，请重试",
     "createFolderFailed": "创建文件夹失败，请重试",
+    "folderAlreadyExists": "已存在同名文件夹",
     "showInExplorerFailed": "在文件管理器中打开失败，请重试",
     "deleteFolderFailed": "删除文件夹失败，请重试",
     "deleteNoteFailed": "删除笔记失败，请重试",

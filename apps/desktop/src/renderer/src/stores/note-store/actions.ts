@@ -46,7 +46,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
     setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
 
-    createNote: async (folderId?: string) => {
+    createNote: async (folderId?: string, customTitle?: string) => {
       const workspacePath = useWorkspaceStore.getState().workspacePath;
 
       if (!workspacePath) {
@@ -57,18 +57,25 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       try {
         const targetFolderId = folderId || useFolderStore.getState().selectedFolderId || null;
 
-        const allNotes = get().notes;
-        const defaultTitle = i18n.t("note:defaultTitle");
-        const untitledPattern = new RegExp(`^${defaultTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (\\d+)$`);
-        const existingNumbers = allNotes
-          .map((n) => {
-            const match = n.title.match(untitledPattern);
-            return match ? parseInt(match[1], 10) : 0;
-          })
-          .filter((num) => num > 0);
+        let title: string;
+        if (customTitle) {
+          // 使用用户提供的标题
+          title = customTitle;
+        } else {
+          // 自动生成默认标题
+          const allNotes = get().notes;
+          const defaultTitle = i18n.t("note:defaultTitle");
+          const untitledPattern = new RegExp(`^${defaultTitle.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (\\d+)$`);
+          const existingNumbers = allNotes
+            .map((n) => {
+              const match = n.title.match(untitledPattern);
+              return match ? parseInt(match[1], 10) : 0;
+            })
+            .filter((num) => num > 0);
 
-        const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
-        const title = `${defaultTitle} ${nextNumber}`;
+          const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
+          title = `${defaultTitle} ${nextNumber}`;
+        }
         const fileName = `${title}.md`;
         const content = `# ${title}\n\n${i18n.t("note:defaultContent")}`;
 

@@ -9,6 +9,10 @@ interface NoteDialogsProps {
   showCreateFolderDialog: boolean;
   onCloseCreateFolderDialog: () => void;
 
+  // 创建笔记
+  showCreateNoteDialog: boolean;
+  onCloseCreateNoteDialog: () => void;
+
   // RSS 导入
   showRssImportDialog: boolean;
   onCloseRssImportDialog: () => void;
@@ -30,11 +34,13 @@ interface NoteDialogsProps {
 
 /**
  * 笔记对话框组件
- * 包含：创建文件夹、重命名文件夹、重命名笔记
+ * 包含：创建文件夹、创建笔记、重命名文件夹、重命名笔记
  */
 export function NoteDialogs({
   showCreateFolderDialog,
   onCloseCreateFolderDialog,
+  showCreateNoteDialog,
+  onCloseCreateNoteDialog,
   showRssImportDialog,
   onCloseRssImportDialog,
   showUrlCreateDialog,
@@ -49,6 +55,8 @@ export function NoteDialogs({
   const { t } = useTranslation("note");
   const createFolder = useFolderStore((state) => state.createFolder);
   const setFolders = useFolderStore((state) => state.setFolders);
+  const createNote = useNoteStore((state) => state.createNote);
+  const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const renameNote = useNoteStore((state) => state.renameNote);
   const renameFolder = useFolderStore((state) => state.renameFolder);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
@@ -57,6 +65,11 @@ export function NoteDialogs({
   // 确认创建文件夹
   const handleConfirmCreateFolder = async (folderName: string) => {
     await createFolder(folderName);
+  };
+
+  // 确认创建笔记
+  const handleConfirmCreateNote = async (noteTitle: string) => {
+    await createNote(selectedFolderId || undefined, noteTitle || undefined);
   };
 
   const handleConfirmRssImport = async (url: string) => {
@@ -133,7 +146,19 @@ export function NoteDialogs({
         title={t("dialog.createFolder.title")}
         description={t("dialog.createFolder.description")}
         placeholder={t("dialog.createFolder.placeholder")}
+        allowEmpty
         onConfirm={handleConfirmCreateFolder}
+      />
+
+      {/* 新建笔记对话框 */}
+      <InputDialog
+        open={showCreateNoteDialog}
+        onOpenChange={onCloseCreateNoteDialog}
+        title={t("dialog.createNote.title")}
+        description={t("dialog.createNote.description")}
+        placeholder={t("dialog.createNote.placeholder")}
+        allowEmpty
+        onConfirm={handleConfirmCreateNote}
       />
 
       {/* RSS 导入对话框 */}

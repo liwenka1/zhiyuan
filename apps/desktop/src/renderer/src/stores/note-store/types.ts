@@ -25,7 +25,7 @@ export interface MoveNoteResult {
 export interface NoteStore extends NoteStoreState {
   setNotes: (notes: Note[]) => void;
   selectNote: (noteId: string) => void;
-  createNote: (folderId?: string) => Promise<void>;
+  createNote: (folderId?: string, title?: string) => Promise<void>;
   updateNoteContent: (content: string) => void;
   updateNoteContentById: (noteId: string, content: string) => void;
   formatCurrentNote: () => Promise<void>;
