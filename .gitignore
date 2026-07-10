@@ -51,3 +51,6 @@ next-env.d.ts
 # Lock files (keep pnpm-lock.yaml only)
 package-lock.json
 yarn.lock
+
+.deep-code
+
