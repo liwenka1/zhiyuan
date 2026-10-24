@@ -9,7 +9,7 @@ import { collectLocalMarkdownAssets, replaceMarkdownAssetUrls } from "@/lib/mark
 import { uploadMarkdownAssets } from "@/lib/github-assets";
 
 export interface NoteHandlers {
-  handleCreateNote: () => Promise<void>;
+  handleCreateNote: () => void;
   handleShowNoteInExplorer: (note: {
     id: string;
     title: string;
