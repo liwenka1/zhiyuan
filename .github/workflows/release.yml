@@ -6,33 +6,99 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Tag to create or update release notes for"
+      version:
+        description: "Version to release, without the leading v (e.g. 0.0.7 or 0.0.7-beta)"
         required: true
         type: string
 
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
-  create-release:
+  # 解析版本号；手动触发时把版本写进 apps/desktop/package.json，提交并打 tag。
+  # 用 GITHUB_TOKEN 推送的 commit/tag 不会再次触发 workflow，所以这里不会递归执行。
+  prepare:
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.vars.outputs.tag }}
+      version: ${{ steps.vars.outputs.version }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Resolve tag
+      - name: Resolve tag and version
         id: vars
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            RAW="$INPUT_VERSION"
           else
-            echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+            RAW="$GITHUB_REF_NAME"
           fi
+
+          VERSION="${RAW#v}"
+
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::Invalid version '$RAW', expected x.y.z or x.y.z-suffix"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Bump desktop version, commit and push tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ steps.vars.outputs.version }}
+          TAG: ${{ steps.vars.outputs.tag }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists on origin, pick a new version or delete the tag first"
+            exit 1
+          fi
+
+          node -e "
+          const fs = require('fs');
+          const file = 'apps/desktop/package.json';
+          const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+          pkg.version = process.env.VERSION;
+          fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
+          "
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add apps/desktop/package.json
+          if git diff --cached --quiet; then
+            echo "apps/desktop/package.json already at $VERSION, nothing to commit"
+          else
+            git commit -m "release: $TAG"
+            git push origin "HEAD:$DEFAULT_BRANCH"
+          fi
+
+          git tag "$TAG"
+          git push origin "$TAG"
+
+  create-release:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -42,17 +108,18 @@ jobs:
       - name: Generate changelog and create draft release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG="${{ steps.vars.outputs.tag }}"
-          npx changelogithub@14 --draft --name "$TAG"
+          TAG: ${{ needs.prepare.outputs.tag }}
+        run: npx changelogithub@14 --draft --to "$TAG" --name "$TAG"
 
   build:
-    needs: create-release
+    needs: [prepare, create-release]
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -78,7 +145,7 @@ jobs:
           path: apps/desktop/out/
 
   publish:
-    needs: [create-release, build]
+    needs: [prepare, build]
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -94,6 +161,8 @@ jobs:
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
