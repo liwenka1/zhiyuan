@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to release, without the leading v (e.g. 0.0.7 or 0.0.7-beta)"
+        description: "Version to release, without the leading v (e.g. 0.0.7). Re-dispatching the same version re-releases it (tag is moved to the latest commit)."
         required: true
         type: string
 
@@ -63,10 +63,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null 2>&1; then
-            echo "::error::Tag $TAG already exists on origin, pick a new version or delete the tag first"
-            exit 1
-          fi
+          PACKAGE_JSON="apps/desktop/package.json"
+
+          # 允许同版本重发，但不允许把默认分支上的版本号改小
+          node -e "
+          const pkg = require('./apps/desktop/package.json');
+          const parse = (v) => v.split('-')[0].split('.').map(Number);
+          const current = parse(pkg.version);
+          const next = parse(process.env.VERSION);
+          for (let i = 0; i < 3; i++) {
+            if (next[i] < current[i]) {
+              console.log('::error::' + process.env.VERSION + ' is lower than the current version ' + pkg.version);
+              process.exit(1);
+            }
+            if (next[i] > current[i]) break;
+          }
+          "
 
           node -e "
           const fs = require('fs');
@@ -79,16 +91,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add apps/desktop/package.json
+          git add "$PACKAGE_JSON"
           if git diff --cached --quiet; then
-            echo "apps/desktop/package.json already at $VERSION, nothing to commit"
+            echo "$PACKAGE_JSON already at $VERSION, skipping version commit"
           else
             git commit -m "release: $TAG"
             git push origin "HEAD:$DEFAULT_BRANCH"
           fi
 
-          git tag "$TAG"
-          git push origin "$TAG"
+          # 同版本重发：tag 已存在时直接指向当前提交。
+          # changelogithub 会 PATCH 已存在的同 tag release，electron-builder 也会覆盖同名 asset。
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null 2>&1; then
+            echo "::notice::Tag $TAG already exists on origin, moving it to the current commit"
+            git tag -f "$TAG"
+            git push --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          else
+            git tag "$TAG"
+            git push origin "refs/tags/$TAG:refs/tags/$TAG"
+          fi
 
   create-release:
     needs: prepare
