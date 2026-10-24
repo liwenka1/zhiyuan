@@ -1,6 +1,8 @@
 packages:
   - apps/*
 
-ignoredBuiltDependencies:
+# 允许执行安装脚本的依赖（node-pty 需要它来放置预编译产物 / 在 Linux 上编译）
+onlyBuiltDependencies:
   - electron
   - esbuild
+  - node-pty
