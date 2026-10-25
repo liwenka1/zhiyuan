@@ -6,10 +6,14 @@ on:
       - "v*"
   workflow_dispatch:
     inputs:
+      # >>> release-input:begin
+      # 由 scripts/sync-release-input.mjs 在每次正式发布后自动维护，请勿手改
       version:
-        description: "Version to release, without the leading v (e.g. 0.0.7). Re-dispatching the same version re-releases it (tag is moved to the latest commit)."
+        description: "Version to release, without the leading v. Last released: 0.0.7"
+        default: "0.0.8"
         required: true
         type: string
+      # <<< release-input:end
 
 permissions:
   contents: write
@@ -53,6 +57,28 @@ jobs:
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Reset existing release to draft
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          set -euo pipefail
+
+          # 重发一个已经发布过的版本时先转回草稿：
+          # electron-builder 对「已发布的同名 release」会以
+          # "existing type not compatible with publishing type" 静默跳过上传。
+          state=$(gh api "repos/$REPO/releases/tags/$TAG" \
+            --jq 'if .draft then "draft" else "published" end' 2>/dev/null || echo "missing")
+
+          if [ "$state" = "published" ]; then
+            echo "::notice::Release $TAG 已发布，重发前先转回草稿"
+            gh release edit "$TAG" --draft
+          else
+            echo "Release $TAG 当前状态：$state，无需处理"
+          fi
 
       - name: Bump desktop version, commit and push tag
         if: github.event_name == 'workflow_dispatch'
@@ -210,3 +236,66 @@ jobs:
           npx electron-builder ${{ matrix.build_flag }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 三平台资产全部上传完成后，把草稿转正；转正成功后再同步发版入口的提示版本。
+  # 任一平台失败时本 job 不会执行，release 保持草稿 —— 对外不可见，可重跑同一版本。
+  finalize:
+    needs: [prepare, publish]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          # 先转正（draft=false），这一步成功就意味着 release 对外可见了
+          gh release edit "$TAG" --draft=false
+
+          # 预发布版本不参与 latest 标记；设置失败也不影响发布结果
+          if printf '%s' "$VERSION" | grep -q -- '-'; then
+            echo "预发布版本，跳过 latest 标记"
+          elif ! gh release edit "$TAG" --latest; then
+            echo "::warning::设置 latest 失败，GitHub 通常会自动把最新的正式版标为 latest"
+          fi
+
+          echo "release $TAG 已发布为正式版"
+
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Sync release input hint
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+
+          node scripts/sync-release-input.mjs "$VERSION"
+
+          if [ -z "$(git status --porcelain .github/workflows/release.yml)" ]; then
+            echo "发版入口提示已是最新，跳过提交"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/release.yml
+          git commit -m "chore(release): 同步发版入口提示（$TAG）"
+
+          # 此时 release 已经发布成功，提示提交只是锦上添花，失败不阻塞流水线
+          if ! git push origin "HEAD:$DEFAULT_BRANCH"; then
+            echo "::warning::发版入口提示推送失败（$DEFAULT_BRANCH 可能已前进），下次发版会自动覆盖"
+          fi
