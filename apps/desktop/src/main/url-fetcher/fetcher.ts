@@ -5,12 +5,58 @@
 
 import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
+import { assertSafeRemoteHttpUrl, fetchSafeRemoteHttp } from "../security/remote-url";
 
 export interface ArticleContent {
   title: string;
   content: string;
   textContent: string;
   excerpt: string;
+}
+
+const MAX_HTML_BYTES = 15 * 1024 * 1024;
+
+async function fetchHtml(url: URL): Promise<{ response: Response; finalUrl: URL }> {
+  return fetchSafeRemoteHttp(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+  });
+}
+
+async function readLimitedBody(response: Response, maxBytes: number): Promise<Uint8Array> {
+  if (!response.body) {
+    const body = new Uint8Array(await response.arrayBuffer());
+    if (body.byteLength > maxBytes) throw new Error("Web page is too large");
+    return body;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error("Web page is too large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return result;
 }
 
 /**
@@ -178,24 +224,28 @@ export async function fetchArticleFromUrl(url: string): Promise<ArticleContent> 
     throw new Error("Invalid URL format");
   }
 
+  await assertSafeRemoteHttpUrl(urlObj);
+
   // 2. 抓取网页内容
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    },
-    // 设置超时
-    signal: AbortSignal.timeout(30000) // 30 秒超时
-  });
+  const { response, finalUrl } = await fetchHtml(urlObj);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
   }
 
-  const html = await response.text();
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength > MAX_HTML_BYTES) {
+    throw new Error("Web page is too large");
+  }
+  const contentType = response.headers.get("content-type")?.toLowerCase() || "";
+  if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
+    throw new Error("URL does not point to an HTML page");
+  }
+
+  const html = new TextDecoder().decode(await readLimitedBody(response, MAX_HTML_BYTES));
 
   // 3. 使用 Readability 提取正文
-  const dom = new JSDOM(html, { url });
+  const dom = new JSDOM(html, { url: finalUrl.toString() });
   const reader = new Readability(dom.window.document);
   const article = reader.parse();
 
@@ -208,7 +258,7 @@ export async function fetchArticleFromUrl(url: string): Promise<ArticleContent> 
 
   // 5. 返回提取的内容
   return {
-    title: article.title || urlObj.hostname,
+    title: article.title || finalUrl.hostname,
     content: cleanedContent,
     textContent: article.textContent || "",
     excerpt: article.excerpt || ""

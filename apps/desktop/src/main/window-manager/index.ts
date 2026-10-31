@@ -1,5 +1,6 @@
 import { BrowserWindow, shell, screen, app } from "electron";
-import { join, basename } from "path";
+import { join, basename, resolve } from "path";
+import fs from "fs";
 import { is } from "@electron-toolkit/utils";
 import icon from "../../../resources/icon.png?asset";
 import { themeManager } from "../theme";
@@ -19,6 +20,14 @@ interface WindowEntry {
  */
 class WindowManager {
   private windows: Map<number, WindowEntry> = new Map();
+
+  private normalizeWorkspacePath(workspacePath: string): string {
+    try {
+      return fs.realpathSync(workspacePath);
+    } catch {
+      return resolve(workspacePath);
+    }
+  }
 
   /**
    * 生成窗口标题：
@@ -48,6 +57,7 @@ class WindowManager {
    * 创建新窗口
    */
   createWindow(workspacePath?: string): BrowserWindow {
+    const normalizedWorkspacePath = workspacePath ? this.normalizeWorkspacePath(workspacePath) : null;
     const getBackgroundColor = (): string => {
       const theme = themeManager.getTheme();
       return getThemeBackgroundColor(theme);
@@ -101,10 +111,10 @@ class WindowManager {
     });
 
     // 注册到管理器
-    this.applyWorkspaceIdentity(win, workspacePath ?? null);
+    this.applyWorkspaceIdentity(win, normalizedWorkspacePath);
     this.windows.set(win.id, {
       window: win,
-      workspacePath: workspacePath ?? null
+      workspacePath: normalizedWorkspacePath
     });
 
     win.on("ready-to-show", () => {
@@ -116,6 +126,10 @@ class WindowManager {
         shell.openExternal(details.url);
       }
       return { action: "deny" };
+    });
+
+    win.webContents.on("will-navigate", (event) => {
+      event.preventDefault();
     });
 
     // 监听主题变化，动态更新窗口背景色和标题栏
@@ -171,12 +185,13 @@ class WindowManager {
   setWorkspacePath(windowId: number, workspacePath: string | null): void {
     const entry = this.windows.get(windowId);
     if (entry) {
+      const normalizedWorkspacePath = workspacePath ? this.normalizeWorkspacePath(workspacePath) : null;
       // 如果之前有工作区，先解绑文件监听
-      if (entry.workspacePath && entry.workspacePath !== workspacePath) {
+      if (entry.workspacePath && entry.workspacePath !== normalizedWorkspacePath) {
         fileWatcherManager.stopWatching(entry.workspacePath, windowId);
       }
-      entry.workspacePath = workspacePath;
-      this.applyWorkspaceIdentity(entry.window, workspacePath);
+      entry.workspacePath = normalizedWorkspacePath;
+      this.applyWorkspaceIdentity(entry.window, normalizedWorkspacePath);
     }
   }
 
@@ -186,8 +201,9 @@ class WindowManager {
    * @param excludeWindowId 排除的窗口 ID（通常是调用方自身）
    */
   focusExistingWindow(workspacePath: string, excludeWindowId: number): boolean {
+    const normalizedWorkspacePath = this.normalizeWorkspacePath(workspacePath);
     for (const [id, entry] of this.windows) {
-      if (id !== excludeWindowId && entry.workspacePath === workspacePath && !entry.window.isDestroyed()) {
+      if (id !== excludeWindowId && entry.workspacePath === normalizedWorkspacePath && !entry.window.isDestroyed()) {
         // 聚焦已有窗口
         if (entry.window.isMinimized()) {
           entry.window.restore();
@@ -203,9 +219,10 @@ class WindowManager {
    * 获取绑定了指定工作区的所有窗口
    */
   getWindowsForWorkspace(workspacePath: string): BrowserWindow[] {
+    const normalizedWorkspacePath = this.normalizeWorkspacePath(workspacePath);
     const result: BrowserWindow[] = [];
     for (const entry of this.windows.values()) {
-      if (entry.workspacePath === workspacePath && !entry.window.isDestroyed()) {
+      if (entry.workspacePath === normalizedWorkspacePath && !entry.window.isDestroyed()) {
         result.push(entry.window);
       }
     }

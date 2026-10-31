@@ -16,7 +16,10 @@ export interface NoteHandlers {
     updatedAt?: string;
     isPinned?: boolean;
   }) => Promise<void>;
-  handleDeleteNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
+  handleDeleteNote: (
+    note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
+    options?: { skipConfirm?: boolean }
+  ) => Promise<void>;
   handleRenameNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   handleDuplicateNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
   handleTogglePinNote: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
@@ -88,9 +91,13 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
   };
 
   // 删除笔记 - 直接删除
-  const handleDeleteNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+  const handleDeleteNote = async (
+    note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
+    options?: { skipConfirm?: boolean }
+  ) => {
     const fullNote = notes.find((n) => n.id === note.id);
     if (!fullNote?.filePath) return;
+    if (!options?.skipConfirm && !window.confirm(t("confirmDeleteNote", { title: note.title }))) return;
 
     try {
       await fileIpc.delete(fullNote.filePath);
@@ -209,9 +216,9 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       await githubState.load();
     }
 
-    const { owner, repo, token } = githubStore.getState();
-    const currentConfig = { owner, repo, token };
-    if (!currentConfig.owner || !currentConfig.repo || !currentConfig.token) {
+    const { owner, repo, activeProjectKey } = githubStore.getState();
+    const currentConfig = { owner, repo, projectKey: activeProjectKey };
+    if (!currentConfig.projectKey || !currentConfig.owner || !currentConfig.repo) {
       toast.error(t("errors.githubConfigMissing"));
       return;
     }
@@ -224,11 +231,11 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       if (assets.length > 0) {
         const { replacements, skipped, uploaded } = await uploadMarkdownAssets({
           assets,
+          projectKey: currentConfig.projectKey,
           owner: currentConfig.owner,
           repo: currentConfig.repo,
-          token: currentConfig.token,
-          noteId: fullNote.id,
-          branch: "main"
+          token: "",
+          noteId: fullNote.id
         });
         body = replaceMarkdownAssetUrls(body, replacements);
         if (uploaded.length > 0) {
@@ -236,13 +243,15 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
         }
         if (skipped.length > 0) {
           toast.error(t("errors.githubAssetsSkipped", { count: skipped.length }));
+          return;
         }
       }
 
       const result = await githubIpc.pushIssue({
+        projectKey: currentConfig.projectKey,
         owner: currentConfig.owner,
         repo: currentConfig.repo,
-        token: currentConfig.token,
+        token: "",
         title,
         body,
         issueNumber: fullNote.github?.issueNumber

@@ -4,6 +4,7 @@ import path from "path";
 import { parseGitHubMetadata } from "@shared";
 import { configManager } from "../config";
 import { fileSystem } from "../file-system";
+import { isIgnoredWorkspaceDirectory, MAX_WORKSPACE_DEPTH } from "./policy";
 
 export interface FolderInfo {
   id: string;
@@ -97,11 +98,15 @@ export const workspaceManager = {
     const notes: NoteInfo[] = [];
 
     try {
+      const rootStat = await fs.promises.stat(workspacePath);
+      if (!rootStat.isDirectory()) {
+        throw new Error("Workspace path is not a directory");
+      }
       const entries = await fs.promises.readdir(workspacePath, { withFileTypes: true });
 
       // 第一遍：收集所有文件夹
       for (const entry of entries) {
-        if (entry.isDirectory()) {
+        if (entry.isDirectory() && !isIgnoredWorkspaceDirectory(entry.name)) {
           const folderPath = path.join(workspacePath, entry.name);
           const rssConfigPath = path.join(folderPath, ".rss.json");
           const isRss = await fileSystem.exists(rssConfigPath);
@@ -115,40 +120,49 @@ export const workspaceManager = {
         }
       }
 
-      // 第二遍：收集所有 markdown 文件
-      // 1. 根目录的 .md 文件
-      for (const entry of entries) {
-        if (entry.isFile() && entry.name.endsWith(".md")) {
-          const filePath = path.join(workspacePath, entry.name);
-          const note = await this.loadNote(filePath, null, workspacePath);
-          if (note) {
-            notes.push(note);
-          }
-        }
-      }
-
-      // 2. 各个文件夹内的 .md 文件
-      for (const folder of folders) {
-        const folderEntries = await fs.promises.readdir(folder.path, { withFileTypes: true });
+      const collectMarkdownNotes = async (
+        directoryPath: string,
+        folderId: string | null,
+        depth: number
+      ): Promise<number> => {
+        const directoryEntries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
         let noteCount = 0;
 
-        for (const entry of folderEntries) {
-          if (entry.isFile() && entry.name.endsWith(".md")) {
-            const filePath = path.join(folder.path, entry.name);
-            const note = await this.loadNote(filePath, folder.id, workspacePath);
-            if (note) {
-              notes.push(note);
-              noteCount++;
-            }
+        for (const entry of directoryEntries) {
+          if (entry.name.startsWith(".")) continue;
+          const entryPath = path.join(directoryPath, entry.name);
+          if (entry.isDirectory()) {
+            if (depth >= MAX_WORKSPACE_DEPTH || isIgnoredWorkspaceDirectory(entry.name)) continue;
+            noteCount += await collectMarkdownNotes(entryPath, folderId, depth + 1);
+            continue;
+          }
+          if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) continue;
+
+          const note = await this.loadNote(entryPath, folderId, workspacePath);
+          if (note) {
+            notes.push(note);
+            noteCount += 1;
           }
         }
 
-        folder.noteCount = noteCount;
+        return noteCount;
+      };
+
+      // 根目录笔记和每个顶层文件夹中的任意深度 Markdown 文件都会被收集。
+      for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) continue;
+        const note = await this.loadNote(path.join(workspacePath, entry.name), null, workspacePath);
+        if (note) {
+          notes.push(note);
+        }
+      }
+      for (const folder of folders) {
+        folder.noteCount = await collectMarkdownNotes(folder.path, folder.id, 1);
       }
 
       return { folders, notes };
-    } catch {
-      return { folders: [], notes: [] };
+    } catch (error) {
+      throw error instanceof Error ? error : new Error(String(error));
     }
   },
 
@@ -162,10 +176,10 @@ export const workspaceManager = {
       const fileName = path.basename(filePath);
 
       // 直接使用文件名作为标题（去掉 .md 后缀）
-      const title = fileName.replace(".md", "");
+      const title = fileName.replace(/\.md$/i, "");
 
       // 生成相对路径作为 ID
-      const relativePath = path.relative(workspacePath, filePath);
+      const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
 
       const githubMetadata = parseGitHubMetadata(content);
       return {

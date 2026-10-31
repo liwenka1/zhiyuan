@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
-import { clearAllDebouncedSaves } from "@/stores";
+import { flushAllDebouncedSaves } from "@/stores/note-store/persistence";
 import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
 
 /**
@@ -26,7 +26,7 @@ export function useWorkspaceInit() {
       try {
         const data = await workspaceIpc.scan(workspacePath);
         setFolders(data.folders);
-        loadFromFileSystem(data);
+        await loadFromFileSystem(data);
       } catch {
         toast.error(t("errors.initWorkspaceFailed"));
       }
@@ -81,14 +81,11 @@ export function useWorkspaceInit() {
     const handleBeforeUnload = () => {
       const { selectedNoteId, editorContent } = useNoteStore.getState();
 
-      if (selectedNoteId && editorContent) {
-        // 清除所有防抖定时器
-        clearAllDebouncedSaves();
-
-        // 立即保存当前笔记
-        const note = useNoteStore.getState().notes.find((n) => n.id === selectedNoteId);
-        if (note?.filePath) {
-          useNoteStore.getState().saveNoteToFileSystem(selectedNoteId, editorContent);
+      if (selectedNoteId) {
+        // flush 会保存当前笔记及其他仍在 debounce 队列中的笔记，避免关闭窗口时只保存当前 tab。
+        void flushAllDebouncedSaves(useNoteStore.getState);
+        if (editorContent !== undefined) {
+          void useNoteStore.getState().saveNoteToFileSystem(selectedNoteId, editorContent);
         }
       }
     };

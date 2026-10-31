@@ -26,7 +26,7 @@ function createTerminalTheme(): ITheme {
 }
 
 export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
-  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isActiveRef = useRef(isActive);
   const applyResizeRef = useRef<(() => void) | null>(null);
   const hasStableLayoutRef = useRef(false);

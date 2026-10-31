@@ -40,6 +40,15 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+
+      - name: Core security tests
+        run: pnpm test:core
+
       - name: Build desktop app
         run: pnpm --filter zhiyuan build
 

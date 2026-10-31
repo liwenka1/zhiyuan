@@ -7,7 +7,8 @@ import { toast } from "sonner";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
 import { fileIpc, configIpc, watcherIpc } from "@/ipc";
-import { clearDebouncedSave } from "./persistence";
+import { clearDebouncedSave, setLastSavedContent } from "./persistence";
+import { isValidFileNameSegment } from "@shared";
 
 export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
   return {
@@ -20,7 +21,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     selectNote: (noteId: string) => {
       const { selectedNoteId, editorContent } = get();
 
-      if (selectedNoteId && editorContent) {
+      if (selectedNoteId) {
         const currentNote = get().notes.find((n) => n.id === selectedNoteId);
         if (currentNote?.filePath) {
           clearDebouncedSave(selectedNoteId);
@@ -60,7 +61,11 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         let title: string;
         if (customTitle) {
           // 使用用户提供的标题
-          title = customTitle;
+          title = customTitle.trim();
+          if (!isValidFileNameSegment(title)) {
+            toast.error(i18n.t("note:errors.invalidName"));
+            return;
+          }
         } else {
           // 自动生成默认标题
           const allNotes = get().notes;
@@ -80,21 +85,27 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const content = `# ${title}\n\n${i18n.t("note:defaultContent")}`;
 
         let filePath: string;
+        const pathSeparator = workspacePath.includes("\\") ? "\\" : "/";
         if (targetFolderId) {
           const folder = useFolderStore.getState().folders.find((f) => f.id === targetFolderId);
           if (folder?.path) {
-            filePath = `${folder.path}/${fileName}`;
+            filePath = `${folder.path}${pathSeparator}${fileName}`;
           } else {
-            filePath = `${workspacePath}/${targetFolderId}/${fileName}`;
+            filePath = `${workspacePath}${pathSeparator}${targetFolderId}${pathSeparator}${fileName}`;
           }
         } else {
-          filePath = `${workspacePath}/${fileName}`;
+          filePath = `${workspacePath}${pathSeparator}${fileName}`;
         }
 
-        await fileIpc.create(filePath, content);
+        await watcherIpc.pause();
+        try {
+          await fileIpc.create(filePath, content);
+        } finally {
+          await watcherIpc.resume();
+        }
 
         const newNote: Note = {
-          id: filePath.replace(workspacePath + "/", ""),
+          id: filePath.replace(`${workspacePath}${pathSeparator}`, "").replaceAll("\\", "/"),
           title,
           content,
           fileName,
@@ -117,6 +128,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           state.selectedNoteId = newNote.id;
           state.editorContent = newNote.content;
         });
+        setLastSavedContent(newNote.id, newNote.content);
       } catch {
         toast.error(i18n.t("note:errors.createNoteFailed"));
       }
@@ -157,13 +169,18 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       }
 
       try {
-        const pathParts = note.filePath.split("/");
+        if (!isValidFileNameSegment(newTitle)) {
+          toast.error(i18n.t("note:errors.invalidName"));
+          return;
+        }
+        const separator = note.filePath.includes("\\") ? "\\" : "/";
+        const pathParts = note.filePath.split(/[\\/]/);
         const oldFileName = pathParts[pathParts.length - 1];
         const newFileName = `${newTitle}.md`;
         pathParts[pathParts.length - 1] = newFileName;
-        const newFilePath = pathParts.join("/");
+        const newFilePath = pathParts.join(separator);
 
-        if (get().selectedNoteId === noteId && get().editorContent) {
+        if (get().selectedNoteId === noteId) {
           clearDebouncedSave(noteId);
           await get().saveNoteToFileSystem(noteId, get().editorContent);
         }
@@ -172,7 +189,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
         await fileIpc.rename(note.filePath, newFilePath);
 
-        const newNoteId = note.id.replace(oldFileName, newFileName);
+        const newNoteId = note.id.endsWith(oldFileName)
+          ? `${note.id.slice(0, -oldFileName.length)}${newFileName}`
+          : newFileName;
         set((state) => {
           const targetNote = state.notes.find((n) => n.id === noteId);
           if (targetNote) {
@@ -202,6 +221,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
             state.savingNoteIds.add(newNoteId);
           }
         });
+
+        const renamedNote = get().notes.find((item) => item.id === newNoteId);
+        if (renamedNote) setLastSavedContent(newNoteId, renamedNote.content);
 
         const allPinnedNotes = get()
           .notes.filter((n) => n.isPinned)
@@ -239,13 +261,19 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const newTitle = `${note.title} ${copySuffix} ${nextCopyNumber}`;
         const newFileName = `${newTitle}.md`;
 
-        const pathParts = note.filePath.split("/");
+        if (get().selectedNoteId === noteId) {
+          clearDebouncedSave(noteId);
+          await get().saveNoteToFileSystem(noteId, get().editorContent);
+        }
+
+        const separator = note.filePath.includes("\\") ? "\\" : "/";
+        const pathParts = note.filePath.split(/[\\/]/);
         pathParts[pathParts.length - 1] = newFileName;
-        const newFilePath = pathParts.join("/");
+        const newFilePath = pathParts.join(separator);
 
-        await fileIpc.copy(note.filePath, newFilePath);
-
-        const newNoteId = note.id.replace(note.fileName, newFileName);
+        const newNoteId = note.id.endsWith(note.fileName)
+          ? `${note.id.slice(0, -note.fileName.length)}${newFileName}`
+          : newFileName;
         const newNote: Note = {
           ...note,
           id: newNoteId,
@@ -256,9 +284,16 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           updatedAt: new Date().toISOString()
         };
 
-        set((state) => {
-          state.notes.push(newNote);
-        });
+        await watcherIpc.pause();
+        try {
+          await fileIpc.copy(note.filePath, newFilePath);
+          set((state) => {
+            state.notes.push(newNote);
+          });
+          setLastSavedContent(newNote.id, newNote.content);
+        } finally {
+          await watcherIpc.resume();
+        }
       } catch (error) {
         toast.error(i18n.t("note:errors.duplicateNoteFailed"));
         throw error;
@@ -327,16 +362,21 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       const baseName = parsedName?.[1] ?? note.fileName;
       const extension = parsedName?.[2] ?? ".md";
       let resolvedFileName = `${baseName}${extension}`;
-      let resolvedFilePath = `${targetFolder.path}/${resolvedFileName}`;
+      const pathSeparator = targetFolder.path.includes("\\") ? "\\" : "/";
+      let resolvedFilePath = `${targetFolder.path}${pathSeparator}${resolvedFileName}`;
       let renamed = false;
 
       try {
+        if (get().selectedNoteId === noteId) {
+          clearDebouncedSave(noteId);
+          await get().saveNoteToFileSystem(noteId, get().editorContent);
+        }
         await watcherIpc.pause();
         let index = 1;
         while (await fileIpc.exists(resolvedFilePath)) {
           renamed = true;
           resolvedFileName = `${baseName} (${index})${extension}`;
-          resolvedFilePath = `${targetFolder.path}/${resolvedFileName}`;
+          resolvedFilePath = `${targetFolder.path}${pathSeparator}${resolvedFileName}`;
           index += 1;
         }
         await fileIpc.rename(note.filePath, resolvedFilePath);
@@ -375,6 +415,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           state.selectedNoteId = newNoteId;
         }
       });
+
+      const movedNote = get().notes.find((item) => item.id === newNoteId);
+      if (movedNote) setLastSavedContent(newNoteId, movedNote.content);
 
       const folderStore = useFolderStore.getState();
       folderStore.setFolders(

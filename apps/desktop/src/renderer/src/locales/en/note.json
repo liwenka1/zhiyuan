@@ -37,6 +37,9 @@
     "copyRelativePathSelected": "Copy Relative Paths ({{count}})",
     "copyAbsolutePathSelected": "Copy Absolute Paths ({{count}})"
   },
+  "confirmDeleteNote": "Delete “{{title}}”? The file will be moved to the system trash.",
+  "confirmDeleteNotes": "Delete {{count}} notes? The files will be moved to the system trash.",
+  "confirmDeleteFolder": "Delete folder “{{name}}”? Its contents will be moved to the system trash.",
   "pathCopied": {
     "single": "Path copied to clipboard",
     "multiple": "Copied {{count}} paths to clipboard"
@@ -116,6 +119,7 @@
   },
   "errors": {
     "noWorkspace": "No workspace selected, please choose or create one",
+    "invalidName": "The name contains invalid characters or cannot be used as a file name",
     "createNoteFailed": "Failed to create note, please try again",
     "formatNoteFailed": "Failed to format note, please try again",
     "createFolderFailed": "Failed to create folder, please try again",
@@ -127,6 +131,7 @@
     "renameNoteFailed": "Failed to rename note, please try again",
     "duplicateNoteFailed": "Failed to duplicate note, please try again",
     "saveNoteFailed": "Failed to save note, please check disk space and permissions",
+    "externalChangeConflict": "This note changed outside the app while you were editing it",
     "initWorkspaceFailed": "Failed to initialize workspace, please check file system permissions or restart the app",
     "githubConfigMissing": "Please configure GitHub settings first",
     "githubPushFailed": "Push failed: {{message}}",

@@ -11,7 +11,7 @@ import {
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { FileText } from "lucide-react";
-import { useCallback, useLayoutEffect, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
 import { ListRow } from "@/components/app/list-row";
 import { FolderTree } from "./folder-tree";
@@ -79,31 +79,13 @@ export function NoteWorkspace() {
 
   const moveNote = useNoteStore((state) => state.moveNote);
 
-  useLayoutEffect(() => {
-    if (selectedNoteIds.length === 0) return;
-
+  const effectiveSelectedNoteIds = useMemo(() => {
     const availableNoteIds = new Set(notes.map((note) => note.id));
     const normalizedSelectedIds = selectedNoteIds.filter((id) => availableNoteIds.has(id));
-    const hasSelectedNote = selectedNoteId ? availableNoteIds.has(selectedNoteId) : false;
-
-    if (normalizedSelectedIds.length === selectedNoteIds.length) {
-      if (selectedNoteId && selectedNoteIds.length === 1 && hasSelectedNote && selectedNoteIds[0] !== selectedNoteId) {
-        setSelectedNoteIds([selectedNoteId]);
-      }
-      return;
+    if (selectedNoteId && availableNoteIds.has(selectedNoteId) && normalizedSelectedIds.length === 1) {
+      return [selectedNoteId];
     }
-
-    if (normalizedSelectedIds.length > 0) {
-      setSelectedNoteIds(normalizedSelectedIds);
-      return;
-    }
-
-    if (selectedNoteId && hasSelectedNote) {
-      setSelectedNoteIds([selectedNoteId]);
-      return;
-    }
-
-    setSelectedNoteIds([]);
+    return normalizedSelectedIds;
   }, [notes, selectedNoteId, selectedNoteIds]);
 
   const sensors = useSensors(
@@ -116,9 +98,9 @@ export function NoteWorkspace() {
     const activeId = String(event.active.id);
     if (!activeId.startsWith(NOTE_DRAG_PREFIX)) return;
     const noteId = activeId.slice(NOTE_DRAG_PREFIX.length);
-    const isDraggingSelected = selectedNoteIds.includes(noteId);
+    const isDraggingSelected = effectiveSelectedNoteIds.includes(noteId);
     const visibleNoteIdSet = new Set(formattedNotes.map((note) => note.id));
-    const visibleSelectedNoteIds = selectedNoteIds.filter((id) => visibleNoteIdSet.has(id));
+    const visibleSelectedNoteIds = effectiveSelectedNoteIds.filter((id) => visibleNoteIdSet.has(id));
     const currentDraggingIds =
       isDraggingSelected && visibleSelectedNoteIds.length > 0 ? visibleSelectedNoteIds : [noteId];
     setDraggingNoteId(noteId);
@@ -210,22 +192,28 @@ export function NoteWorkspace() {
   const handleDeleteSelectedNotes = useCallback(
     async (noteIds: string[]) => {
       const uniqueNoteIds = Array.from(new Set(noteIds));
+      if (uniqueNoteIds.length > 1 && !window.confirm(t("confirmDeleteNotes", { count: uniqueNoteIds.length }))) {
+        return;
+      }
       const deletingSet = new Set(uniqueNoteIds);
 
       for (const noteId of uniqueNoteIds) {
         const target = notes.find((note) => note.id === noteId);
         if (!target) continue;
-        await noteHandlers.handleDeleteNote({
-          id: target.id,
-          title: target.title,
-          updatedAt: target.updatedAt,
-          isPinned: target.isPinned
-        });
+        await noteHandlers.handleDeleteNote(
+          {
+            id: target.id,
+            title: target.title,
+            updatedAt: target.updatedAt,
+            isPinned: target.isPinned
+          },
+          { skipConfirm: uniqueNoteIds.length > 1 }
+        );
       }
 
       setSelectedNoteIds((prev) => prev.filter((id) => !deletingSet.has(id)));
     },
-    [noteHandlers, notes]
+    [noteHandlers, notes, t]
   );
   const handlePinSelectedNotes = useCallback(
     async (noteIds: string[]) => {
@@ -332,7 +320,7 @@ export function NoteWorkspace() {
             key={selectedFolderId ?? "__all__"}
             notes={formattedNotes}
             selectedNoteId={selectedNoteId ?? undefined}
-            selectedNoteIds={selectedNoteIds}
+            selectedNoteIds={effectiveSelectedNoteIds}
             searchKeyword={searchKeyword}
             onSelectNote={selectNote}
             onCreateNote={noteHandlers.handleCreateNote}

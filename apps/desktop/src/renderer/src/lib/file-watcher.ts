@@ -20,7 +20,8 @@ export async function handleFileAdded(
     const { content } = await fileIpc.read(fullPath);
 
     // 解析文件路径，确定所属文件夹
-    const pathParts = filePath.split("/");
+    const normalizedFilePath = filePath.replaceAll("\\", "/");
+    const pathParts = normalizedFilePath.split("/");
     let folderId: string | null = null;
 
     if (pathParts.length > 1) {
@@ -34,8 +35,8 @@ export async function handleFileAdded(
     // 创建新笔记对象
     const githubMetadata = parseGitHubMetadata(content);
     const newNote: Note = {
-      id: filePath,
-      title: fileName.replace(".md", ""),
+      id: normalizedFilePath,
+      title: fileName.replace(/\.md$/i, ""),
       content,
       fileName,
       filePath: fullPath,

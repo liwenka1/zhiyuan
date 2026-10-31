@@ -160,6 +160,7 @@ export function useFolderHandlers({
   // 删除文件夹 - 直接删除
   const handleDeleteFolder = async (folder: { id: string; name: string; noteCount?: number }) => {
     if (!workspacePath) return;
+    if (!window.confirm(t("note:confirmDeleteFolder", { name: folder.name }))) return;
     const folderPath = `${workspacePath}/${folder.name}`;
 
     try {

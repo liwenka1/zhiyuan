@@ -6,12 +6,7 @@
 /**
  * 安全的 URL 协议白名单
  */
-const SAFE_PROTOCOLS = new Set([
-  "https:",
-  "http:",
-  "mailto:",
-  "local-resource:" // 自定义协议，用于加载本地资源
-]);
+const SAFE_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
 
 /**
  * 检查 URL 是否使用安全的协议

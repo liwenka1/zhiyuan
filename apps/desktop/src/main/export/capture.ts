@@ -59,7 +59,12 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: st
   });
 }
 
-export async function captureHtmlAsImage(htmlContent: string, notePath?: string, width = 800): Promise<NativeImage> {
+export async function captureHtmlAsImage(
+  htmlContent: string,
+  notePath?: string,
+  width = 800,
+  workspacePath?: string
+): Promise<NativeImage> {
   let window: BrowserWindow | null = null;
   let tempHtmlPath: string | null = null;
 
@@ -68,7 +73,7 @@ export async function captureHtmlAsImage(htmlContent: string, notePath?: string,
   const CAPTURE_TIMEOUT = 30000;
 
   try {
-    const processedHtml = await embedLocalImages(htmlContent, notePath);
+    const processedHtml = await embedLocalImages(htmlContent, notePath, workspacePath);
 
     tempHtmlPath = path.join(tmpdir(), `export-${Date.now()}.html`);
     await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");

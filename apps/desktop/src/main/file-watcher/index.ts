@@ -1,11 +1,13 @@
 import chokidar, { FSWatcher } from "chokidar";
 import { BrowserWindow } from "electron";
 import path from "path";
+import fs from "fs";
+import { isIgnoredWorkspaceDirectory, MAX_WORKSPACE_DEPTH } from "../workspace/policy";
 
 interface WatcherEntry {
   watcher: FSWatcher;
   windowIds: Set<number>;
-  isPaused: boolean;
+  pauseCount: number;
 }
 
 /**
@@ -15,11 +17,20 @@ interface WatcherEntry {
 class FileWatcherManager {
   private watchers: Map<string, WatcherEntry> = new Map();
 
+  private normalizeWorkspacePath(workspacePath: string): string {
+    try {
+      return fs.realpathSync(workspacePath);
+    } catch {
+      return path.resolve(workspacePath);
+    }
+  }
+
   /**
    * 开始监听工作区（为指定窗口注册）
    * 相同工作区只创建一个 chokidar watcher，引用计数追踪窗口
    */
   startWatching(workspacePath: string, windowId: number): void {
+    workspacePath = this.normalizeWorkspacePath(workspacePath);
     const existing = this.watchers.get(workspacePath);
     if (existing) {
       // 工作区已有 watcher，只添加窗口引用
@@ -28,6 +39,17 @@ class FileWatcherManager {
     }
 
     // 直接监听工作区根目录，确保目录重命名时子文件的 add/unlink 也能被捕获
+    const shouldIgnore = (candidatePath: string, stats?: fs.Stats): boolean => {
+      const relativePath = path.relative(workspacePath, candidatePath);
+      if (!relativePath || relativePath === ".") return false;
+      const segments = relativePath.split(path.sep).filter(Boolean);
+      if (segments.some((segment) => segment.startsWith("."))) return true;
+      if (segments.slice(0, -1).some((segment) => isIgnoredWorkspaceDirectory(segment))) return true;
+      const lastSegment = segments.at(-1) || "";
+      if (isIgnoredWorkspaceDirectory(lastSegment) && !stats?.isFile()) return true;
+      return segments.length > MAX_WORKSPACE_DEPTH;
+    };
+
     const watcher = chokidar.watch(workspacePath, {
       ignoreInitial: true,
       persistent: true,
@@ -35,22 +57,27 @@ class FileWatcherManager {
         stabilityThreshold: 100,
         pollInterval: 50
       },
-      ignored: /(^|[/\\])\../,
-      depth: 2
+      ignored: shouldIgnore,
+      depth: MAX_WORKSPACE_DEPTH
     });
 
     const entry: WatcherEntry = {
       watcher,
       windowIds: new Set([windowId]),
-      isPaused: false
+      pauseCount: 0
     };
+
+    watcher.on("error", () => {
+      // watcher 错误不应冒泡成未处理的 EventEmitter error 导致主进程退出。
+      // 后续文件操作仍由显式扫描兜底。
+    });
 
     // 文件修改事件
     watcher.on("change", (filePath: string) => {
-      if (entry.isPaused) return;
-      if (!filePath.endsWith(".md")) return;
+      if (entry.pauseCount > 0) return;
+      if (!filePath.toLowerCase().endsWith(".md")) return;
 
-      const relativePath = path.relative(workspacePath, filePath);
+      const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
       this.broadcastToWorkspace(workspacePath, "file:changed", {
         filePath: relativePath,
         fullPath: filePath
@@ -59,10 +86,10 @@ class FileWatcherManager {
 
     // 文件添加事件
     watcher.on("add", (filePath: string) => {
-      if (entry.isPaused) return;
-      if (!filePath.endsWith(".md")) return;
+      if (entry.pauseCount > 0) return;
+      if (!filePath.toLowerCase().endsWith(".md")) return;
 
-      const relativePath = path.relative(workspacePath, filePath);
+      const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
       this.broadcastToWorkspace(workspacePath, "file:added", {
         filePath: relativePath,
         fullPath: filePath
@@ -71,10 +98,10 @@ class FileWatcherManager {
 
     // 文件删除事件
     watcher.on("unlink", (filePath: string) => {
-      if (entry.isPaused) return;
-      if (!filePath.endsWith(".md")) return;
+      if (entry.pauseCount > 0) return;
+      if (!filePath.toLowerCase().endsWith(".md")) return;
 
-      const relativePath = path.relative(workspacePath, filePath);
+      const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
       this.broadcastToWorkspace(workspacePath, "file:deleted", {
         filePath: relativePath,
         fullPath: filePath
@@ -83,10 +110,11 @@ class FileWatcherManager {
 
     // 文件夹添加事件
     watcher.on("addDir", (dirPath: string) => {
-      if (entry.isPaused) return;
+      if (entry.pauseCount > 0) return;
 
-      const relativePath = path.relative(workspacePath, dirPath);
+      const relativePath = path.relative(workspacePath, dirPath).split(path.sep).join("/");
       if (!relativePath || relativePath === ".") return;
+      if (relativePath.includes("/")) return;
 
       this.broadcastToWorkspace(workspacePath, "folder:added", {
         folderPath: relativePath,
@@ -96,10 +124,11 @@ class FileWatcherManager {
 
     // 文件夹删除事件
     watcher.on("unlinkDir", (dirPath: string) => {
-      if (entry.isPaused) return;
+      if (entry.pauseCount > 0) return;
 
-      const relativePath = path.relative(workspacePath, dirPath);
+      const relativePath = path.relative(workspacePath, dirPath).split(path.sep).join("/");
       if (!relativePath || relativePath === ".") return;
+      if (relativePath.includes("/")) return;
 
       this.broadcastToWorkspace(workspacePath, "folder:deleted", {
         folderPath: relativePath,
@@ -115,6 +144,7 @@ class FileWatcherManager {
    * 引用为 0 时销毁 watcher
    */
   stopWatching(workspacePath: string, windowId: number): void {
+    workspacePath = this.normalizeWorkspacePath(workspacePath);
     const entry = this.watchers.get(workspacePath);
     if (!entry) return;
 
@@ -131,9 +161,10 @@ class FileWatcherManager {
    * 暂停指定工作区的文件监听
    */
   pauseWatching(workspacePath: string): void {
+    workspacePath = this.normalizeWorkspacePath(workspacePath);
     const entry = this.watchers.get(workspacePath);
     if (entry) {
-      entry.isPaused = true;
+      entry.pauseCount += 1;
     }
   }
 
@@ -141,9 +172,10 @@ class FileWatcherManager {
    * 恢复指定工作区的文件监听
    */
   resumeWatching(workspacePath: string): void {
+    workspacePath = this.normalizeWorkspacePath(workspacePath);
     const entry = this.watchers.get(workspacePath);
     if (entry) {
-      entry.isPaused = false;
+      entry.pauseCount = Math.max(0, entry.pauseCount - 1);
     }
   }
 

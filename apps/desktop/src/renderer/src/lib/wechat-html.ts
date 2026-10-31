@@ -7,6 +7,19 @@
 import { buildWechatStyleBundle } from "@/features/export/lib/styles";
 import type { ExportLayoutConfig } from "@shared";
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (char) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "'": "&#39;",
+      '"': "&quot;"
+    };
+    return entities[char];
+  });
+}
+
 /**
  * 生成适配微信公众号的 HTML 文档
  * 所有样式将被内联到 HTML 标签中
@@ -27,7 +40,7 @@ export function generateWechatHTMLDocument(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
 ${styles}
   </style>

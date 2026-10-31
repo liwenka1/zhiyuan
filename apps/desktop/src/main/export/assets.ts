@@ -1,6 +1,7 @@
 import * as fs from "fs/promises";
 import * as path from "path";
 import { isRelativePath, decodeLocalResourceUrl } from "@shared";
+import { validatePathInWorkspace } from "../security/path-validator";
 
 /**
  * 获取图片的 MIME 类型
@@ -23,7 +24,11 @@ export function getImageMimeType(ext: string): string {
  * 将 HTML 中的本地图片转换为 Base64 内嵌
  * 支持相对路径和 local-resource:// 协议
  */
-export async function embedLocalImages(htmlContent: string, notePath?: string): Promise<string> {
+export async function embedLocalImages(
+  htmlContent: string,
+  notePath?: string,
+  workspacePath?: string
+): Promise<string> {
   if (!notePath) return htmlContent;
 
   const noteDir = path.dirname(notePath);
@@ -52,6 +57,10 @@ export async function embedLocalImages(htmlContent: string, notePath?: string): 
       continue;
     }
 
+    if (!workspacePath || !validatePathInWorkspace(workspacePath, imagePath).isValid) {
+      continue;
+    }
+
     const imageBuffer = await fs.readFile(imagePath).catch(() => null);
     if (!imageBuffer) continue;
 
@@ -74,7 +83,8 @@ export async function collectAndCopyAssets(
   html: string,
   notePath: string,
   assetsDir: string,
-  assetsFolderName: string
+  assetsFolderName: string,
+  workspacePath?: string
 ): Promise<{ processedHtml: string; copiedFiles: string[] }> {
   const noteDir = path.dirname(notePath);
   const copiedFiles: string[] = [];
@@ -105,6 +115,10 @@ export async function collectAndCopyAssets(
     try {
       await fs.access(sourcePath);
     } catch {
+      return;
+    }
+
+    if (!workspacePath || !validatePathInWorkspace(workspacePath, sourcePath).isValid) {
       return;
     }
 

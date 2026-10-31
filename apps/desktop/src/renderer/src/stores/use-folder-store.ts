@@ -6,7 +6,8 @@ import { folderIpc, configIpc, watcherIpc } from "@/ipc";
 import { toast } from "sonner";
 import i18n from "@/lib/i18n";
 import { useNoteStore } from "./note-store";
-import { clearDebouncedSave } from "./note-store/persistence";
+import { clearDebouncedSave, setLastSavedContent } from "./note-store/persistence";
+import { isValidFileNameSegment } from "@shared";
 
 interface FolderStore {
   // 状态
@@ -31,7 +32,14 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
   selectedFolderId: null,
 
   // 操作方法
-  setFolders: (folders) => set({ folders }),
+  setFolders: (folders) =>
+    set((state) => ({
+      folders,
+      selectedFolderId:
+        state.selectedFolderId && folders.some((folder) => folder.id === state.selectedFolderId)
+          ? state.selectedFolderId
+          : null
+    })),
 
   selectFolder: (folderId) => {
     set({
@@ -54,9 +62,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       const defaultFolderName = i18n.t("note:defaultFolderName");
       const existingFolders = get().folders;
       let maxNum = 0;
-      const defaultPattern = new RegExp(
-        `^${defaultFolderName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (\\d+)$`
-      );
+      const defaultPattern = new RegExp(`^${defaultFolderName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} (\\d+)$`);
       for (const f of existingFolders) {
         const match = f.name.match(defaultPattern);
         if (match) {
@@ -66,20 +72,29 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       folderName = `${defaultFolderName} ${maxNum + 1}`;
     }
 
+    if (!isValidFileNameSegment(folderName)) {
+      toast.error(i18n.t("note:errors.invalidName"));
+      return;
+    }
+
     // 检查是否已存在同名文件夹
-    const existing = get().folders.find(
-      (f) => f.id === folderName || f.name === folderName
-    );
+    const existing = get().folders.find((f) => f.id === folderName || f.name === folderName);
     if (existing) {
       toast.error(i18n.t("note:errors.folderAlreadyExists"));
       return;
     }
 
     try {
-      const folderPath = `${workspacePath}/${folderName}`;
+      const folderSeparator = workspacePath.includes("\\") ? "\\" : "/";
+      const folderPath = `${workspacePath}${folderSeparator}${folderName}`;
 
-      // 在文件系统中创建文件夹
-      await folderIpc.create(folderPath);
+      await watcherIpc.pause();
+      try {
+        // 在文件系统中创建文件夹
+        await folderIpc.create(folderPath);
+      } finally {
+        await watcherIpc.resume();
+      }
 
       const newFolder: Folder = {
         id: folderName, // 使用文件夹名作为 ID
@@ -123,10 +138,19 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     }
 
     try {
+      if (!isValidFileNameSegment(newName)) {
+        toast.error(i18n.t("note:errors.invalidName"));
+        return;
+      }
+      if (get().folders.some((item) => item.id !== folderId && item.name === newName)) {
+        toast.error(i18n.t("note:errors.folderAlreadyExists"));
+        return;
+      }
       // 构建新的文件夹路径
-      const newFolderPath = `${workspacePath}/${newName}`;
-      const oldFolderPathPrefix = `${folder.path}/`;
-      const newFolderPathPrefix = `${newFolderPath}/`;
+      const separator = workspacePath.includes("\\") ? "\\" : "/";
+      const newFolderPath = `${workspacePath}${separator}${newName}`;
+      const oldFolderPathPrefix = `${folder.path}${separator}`;
+      const newFolderPathPrefix = `${newFolderPath}${separator}`;
       const oldNotePrefix = `${folderId}/`;
       const newNotePrefix = `${newName}/`;
       const noteStore = useNoteStore.getState();
@@ -134,7 +158,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         ? noteStore.notes.find((n) => n.id === noteStore.selectedNoteId)
         : null;
 
-      if (selectedNote?.folderId === folderId && noteStore.editorContent) {
+      if (selectedNote?.folderId === folderId) {
         clearDebouncedSave(selectedNote.id);
         await noteStore.saveNoteToFileSystem(selectedNote.id, noteStore.editorContent);
       }
@@ -185,6 +209,12 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
           selectedNoteId: state.selectedNoteId ? renameNoteId(state.selectedNoteId) : state.selectedNoteId,
           savingNoteIds: new Set(Array.from(state.savingNoteIds).map(renameNoteId))
         };
+      });
+
+      useNoteStore.getState().notes.forEach((note) => {
+        if (note.folderId === newName) {
+          setLastSavedContent(note.id, note.content);
+        }
       });
 
       const pinnedNoteIds = useNoteStore

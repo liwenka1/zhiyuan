@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { spawn, type IPty } from "node-pty";
 import { ipcErr, ipcOk } from "./ipc-result";
 import type { IpcResultDTO } from "@shared";
+import { getCallerWorkspace } from "../security/window-context";
 
 interface TerminalSession {
   id: string;
@@ -99,9 +100,10 @@ function disposeSenderSessions(senderId: number): void {
 }
 
 export function registerTerminalHandlers(): void {
-  ipcMain.handle("terminal:create", (event, workspacePath?: string): IpcResultDTO<{ id: string }> => {
+  ipcMain.handle("terminal:create", (event, _workspacePath?: string): IpcResultDTO<{ id: string }> => {
     try {
       const { shell, args } = getPlatformShellCommand();
+      const workspacePath = getCallerWorkspace(event);
       const pty = spawn(shell, args, {
         name: "xterm-256color",
         cols: 80,
@@ -133,10 +135,10 @@ export function registerTerminalHandlers(): void {
     }
   });
 
-  ipcMain.handle("terminal:input", (_, id: string, data: string): IpcResultDTO<void> => {
+  ipcMain.handle("terminal:input", (event, id: string, data: string): IpcResultDTO<void> => {
     try {
       const session = sessions.get(id);
-      if (!session) {
+      if (!session || session.senderId !== event.sender.id) {
         return ipcErr("Terminal session not found", "TERMINAL_SESSION_NOT_FOUND");
       }
       session.pty.write(data);
@@ -147,10 +149,10 @@ export function registerTerminalHandlers(): void {
     }
   });
 
-  ipcMain.handle("terminal:resize", (_, id: string, cols: number, rows: number): IpcResultDTO<void> => {
+  ipcMain.handle("terminal:resize", (event, id: string, cols: number, rows: number): IpcResultDTO<void> => {
     try {
       const session = sessions.get(id);
-      if (!session) {
+      if (!session || session.senderId !== event.sender.id) {
         return ipcErr("Terminal session not found", "TERMINAL_SESSION_NOT_FOUND");
       }
       const safeCols = Math.max(2, Math.floor(cols));
@@ -163,8 +165,12 @@ export function registerTerminalHandlers(): void {
     }
   });
 
-  ipcMain.handle("terminal:dispose", (_, id: string): IpcResultDTO<void> => {
+  ipcMain.handle("terminal:dispose", (event, id: string): IpcResultDTO<void> => {
     try {
+      const session = sessions.get(id);
+      if (session && session.senderId !== event.sender.id) {
+        return ipcErr("Terminal session not found", "TERMINAL_SESSION_NOT_FOUND");
+      }
       safeDisposeSession(id);
       return ipcOk(undefined);
     } catch (error) {
