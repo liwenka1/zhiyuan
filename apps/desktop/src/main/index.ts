@@ -19,6 +19,7 @@ import fs from "fs";
 import path from "path";
 import { ipcOk, ipcErr } from "./ipc/ipc-result";
 import type { IpcResultDTO } from "@shared";
+import { validatePathInWorkspace } from "./security/path-validator";
 
 type ExternalOpenPayload = {
   workspacePath: string;
@@ -52,6 +53,8 @@ function sendExternalOpen(win: BrowserWindow, payload: ExternalOpenPayload): voi
 function handleExternalOpenPath(targetPath: string): boolean {
   const payload = resolveExternalOpenTarget(targetPath);
   if (!payload) return false;
+
+  configManager.addRecentWorkspace(payload.workspacePath);
 
   if (!app.isReady()) {
     pendingExternalOpens.push(payload);
@@ -98,12 +101,6 @@ app.on("open-file", (event, filePath) => {
   handleExternalOpenPath(filePath);
 });
 
-app.on("activate", function () {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    windowManager.createWindow();
-  }
-});
-
 // 注册自定义协议用于加载本地资源（支持中文路径）
 // 必须在 app.whenReady() 之前调用
 protocol.registerSchemesAsPrivileged([
@@ -117,6 +114,20 @@ protocol.registerSchemesAsPrivileged([
     }
   }
 ]);
+
+function isAllowedLocalResource(filePath: string): boolean {
+  if (!existsSync(filePath)) return false;
+  try {
+    if (!fs.statSync(filePath).isFile()) return false;
+  } catch {
+    return false;
+  }
+
+  return windowManager.getAllEntries().some((entry) => {
+    const workspacePath = entry.workspacePath;
+    return Boolean(workspacePath && validatePathInWorkspace(workspacePath, filePath).isValid);
+  });
+}
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
@@ -146,6 +157,10 @@ app.whenReady().then(() => {
         }
       }
 
+      if (!isAllowedLocalResource(filePath)) {
+        return new Response("File not found", { status: 404 });
+      }
+
       const fileUrl = pathToFileURL(filePath).href;
       return net.fetch(fileUrl);
     } catch {
@@ -154,7 +169,7 @@ app.whenReady().then(() => {
   });
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId("com.electron");
+  electronApp.setAppUserModelId("com.zhiyuan.note");
 
   // macOS: 设置 Dock 图标（开发模式下测试新图标）
   if (process.platform === "darwin" && app.dock) {

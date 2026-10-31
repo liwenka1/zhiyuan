@@ -15,6 +15,9 @@ export const workspaceIpc = {
 
   scan: async (workspacePath: string) => unwrapIpcResult(await window.api.workspace.scan(workspacePath)),
 
+  approveDroppedFile: async (filePath: string) =>
+    unwrapIpcResult(await window.api.workspace.approveDroppedFile(filePath)),
+
   getRecent: async () => unwrapIpcResult(await window.api.workspace.getRecent()),
 
   importMarkdownFiles: async (sourcePaths: string[], targetDir: string) =>

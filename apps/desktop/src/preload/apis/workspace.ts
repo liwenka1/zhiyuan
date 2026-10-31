@@ -35,6 +35,12 @@ export const workspaceApi = {
   > => ipcRenderer.invoke("workspace:scan", workspacePath),
 
   /**
+   * 验证并批准从系统拖入的 Markdown 文件所在目录
+   */
+  approveDroppedFile: (filePath: string): Promise<IpcResultDTO<{ filePath: string; workspacePath: string }>> =>
+    ipcRenderer.invoke("workspace:approveDroppedFile", filePath),
+
+  /**
    * 打开文件对话框，选择 .md 文件
    */
   openFile: (options?: {

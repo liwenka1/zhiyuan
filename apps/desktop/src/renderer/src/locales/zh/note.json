@@ -37,6 +37,9 @@
     "copyRelativePathSelected": "复制相对路径（{{count}} 条）",
     "copyAbsolutePathSelected": "复制绝对路径（{{count}} 条）"
   },
+  "confirmDeleteNote": "确定要删除“{{title}}”吗？文件会移到系统回收站。",
+  "confirmDeleteNotes": "确定要删除 {{count}} 个笔记吗？文件会移到系统回收站。",
+  "confirmDeleteFolder": "确定要删除文件夹“{{name}}”吗？其中的内容会移到系统回收站。",
   "pathCopied": {
     "single": "路径已复制到剪贴板",
     "multiple": "已复制 {{count}} 条路径到剪贴板"
@@ -111,6 +114,7 @@
   },
   "errors": {
     "noWorkspace": "未选择工作区，请先选择或创建工作区",
+    "invalidName": "名称包含非法字符或不能作为文件名",
     "createNoteFailed": "创建笔记失败，请重试",
     "formatNoteFailed": "格式化笔记失败，请重试",
     "createFolderFailed": "创建文件夹失败，请重试",
@@ -122,6 +126,7 @@
     "renameNoteFailed": "重命名笔记失败，请重试",
     "duplicateNoteFailed": "复制笔记失败，请重试",
     "saveNoteFailed": "保存笔记失败，请检查磁盘空间和权限",
+    "externalChangeConflict": "当前笔记在外部发生了修改，请先处理本地编辑内容",
     "initWorkspaceFailed": "初始化工作区失败，请检查文件系统权限或重启应用",
     "githubConfigMissing": "请先在设置中配置 GitHub 信息",
     "githubPushFailed": "推送失败：{{message}}",

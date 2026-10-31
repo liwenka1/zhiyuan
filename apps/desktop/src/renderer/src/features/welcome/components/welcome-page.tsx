@@ -15,15 +15,6 @@ function getFileName(filePath: string): string {
   return filePath.split(/[/\\]/).pop() || "";
 }
 
-function getParentDir(filePath: string): string {
-  const normalizedPath = filePath.replaceAll("\\", "/");
-  const lastSlashIndex = normalizedPath.lastIndexOf("/");
-  if (lastSlashIndex <= 0) {
-    return normalizedPath;
-  }
-  return normalizedPath.slice(0, lastSlashIndex);
-}
-
 export function WelcomePage() {
   const { t } = useTranslation("common");
   const { t: tEditor } = useTranslation("editor");
@@ -48,7 +39,7 @@ export function WelcomePage() {
 
       setWorkspacePath(workspacePath);
       setFolders(data.folders);
-      loadFromFileSystem(data);
+      await loadFromFileSystem(data);
 
       const fileName = getFileName(filePath);
       const targetNote = data.notes.find((note) => note.fileName === fileName);
@@ -64,10 +55,8 @@ export function WelcomePage() {
       const filePath = sourcePaths[0];
       if (!filePath) return;
 
-      await openResolvedFile({
-        filePath,
-        workspacePath: getParentDir(filePath)
-      });
+      const approved = await workspaceIpc.approveDroppedFile(filePath);
+      await openResolvedFile(approved);
     }
   });
 
@@ -86,7 +75,7 @@ export function WelcomePage() {
 
       setWorkspacePath(selectedPath);
       setFolders(data.folders);
-      loadFromFileSystem(data);
+      await loadFromFileSystem(data);
     } catch {
       toast.error(t("welcome.openFolderFailed"));
     }
@@ -116,7 +105,7 @@ export function WelcomePage() {
 
       setWorkspacePath(workspacePath);
       setFolders(data.folders);
-      loadFromFileSystem(data);
+      await loadFromFileSystem(data);
     } catch {
       toast.error(t("welcome.openFolderFailed"));
     }

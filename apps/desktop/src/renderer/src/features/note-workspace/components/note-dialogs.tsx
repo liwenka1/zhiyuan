@@ -55,12 +55,14 @@ export function NoteDialogs({
   const { t } = useTranslation("note");
   const createFolder = useFolderStore((state) => state.createFolder);
   const setFolders = useFolderStore((state) => state.setFolders);
+  const selectFolder = useFolderStore((state) => state.selectFolder);
   const createNote = useNoteStore((state) => state.createNote);
   const selectedFolderId = useFolderStore((state) => state.selectedFolderId);
   const renameNote = useNoteStore((state) => state.renameNote);
   const renameFolder = useFolderStore((state) => state.renameFolder);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
+  const selectNote = useNoteStore((state) => state.selectNote);
 
   // 确认创建文件夹
   const handleConfirmCreateFolder = async (folderName: string) => {
@@ -83,10 +85,13 @@ export function NoteDialogs({
 
     try {
       await watcherIpc.pause();
-      await rssIpc.import(url, workspacePath);
+      const result = await rssIpc.import(url, workspacePath);
       const data = await workspaceIpc.scan(workspacePath);
       setFolders(data.folders);
+      selectFolder(result.folderName);
       await loadFromFileSystem(data);
+      const firstImportedNote = data.notes.find((note) => note.folderId === result.folderName);
+      if (firstImportedNote) selectNote(firstImportedNote.id);
       toast.success(t("rss.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -109,9 +114,14 @@ export function NoteDialogs({
     try {
       await watcherIpc.pause();
       const selectedFolderId = useFolderStore.getState().selectedFolderId;
-      await urlIpc.createNote(url, workspacePath, selectedFolderId || undefined);
+      const result = await urlIpc.createNote(url, workspacePath, selectedFolderId || undefined);
       const data = await workspaceIpc.scan(workspacePath);
+      setFolders(data.folders);
       await loadFromFileSystem(data);
+      const importedNote = data.notes.find(
+        (note) => note.id === result.noteId || note.id.replace(/\.md$/i, "") === result.noteId
+      );
+      if (importedNote) selectNote(importedNote.id);
       toast.success(t("url.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

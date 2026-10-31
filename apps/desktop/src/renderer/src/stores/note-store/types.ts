@@ -37,7 +37,7 @@ export interface NoteStore extends NoteStoreState {
 
   setSearchKeyword: (keyword: string) => void;
 
-  loadFromFileSystem: (data: { notes: Note[] }) => void;
+  loadFromFileSystem: (data: { notes: Note[] }) => Promise<void>;
   saveNoteToFileSystem: (noteId: string, content: string) => Promise<void>;
 
   setNotePlaying: (noteId: string, isPlaying: boolean) => void;

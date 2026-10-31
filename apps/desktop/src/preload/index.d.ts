@@ -1,4 +1,3 @@
-import { ElectronAPI } from "@electron-toolkit/preload";
 import type {
   ExportLayoutConfig,
   Theme,
@@ -62,6 +61,7 @@ export interface WorkspaceAPI {
       }>;
     }>
   >;
+  approveDroppedFile: (filePath: string) => Promise<IpcResultDTO<{ filePath: string; workspacePath: string }>>;
   getRecent: () => Promise<IpcResultDTO<string[]>>;
   importMarkdownFiles: (
     sourcePaths: string[],
@@ -332,7 +332,6 @@ export interface API {
 
 declare global {
   interface Window {
-    electron: ElectronAPI;
     api: API;
   }
 }

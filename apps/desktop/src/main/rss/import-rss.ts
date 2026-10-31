@@ -1,6 +1,7 @@
 import path from "path";
 import Parser from "rss-parser";
 import { fileSystem } from "../file-system";
+import { assertSafeRemoteHttpUrl, fetchSafeRemoteHttp } from "../security/remote-url";
 
 interface RssImportResult {
   folderName: string;
@@ -21,6 +22,42 @@ interface RssMetadata {
   title: string;
   lastFetched: string;
   items: RssMetadataItem[];
+}
+
+const MAX_RSS_BYTES = 10 * 1024 * 1024;
+
+async function readLimitedBody(response: Response, maxBytes: number): Promise<Uint8Array> {
+  if (!response.body) {
+    const body = new Uint8Array(await response.arrayBuffer());
+    if (body.byteLength > maxBytes) throw new Error("RSS feed is too large");
+    return body;
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        throw new Error("RSS feed is too large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const result = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return result;
 }
 
 type RssItem = Parser.Item & {
@@ -59,9 +96,10 @@ async function getAvailableFileName(folderPath: string, baseName: string): Promi
   return candidate;
 }
 
-function buildItemKey(item: { guid?: string; link?: string }): string | null {
+function buildItemKey(item: { guid?: string; link?: string; title?: string; published?: string }): string | null {
   if (item.guid) return `guid:${item.guid}`;
   if (item.link) return `link:${item.link}`;
+  if (item.title || item.published) return `fallback:${item.title || ""}|${(item.published || "").slice(0, 10)}`;
   return null;
 }
 
@@ -185,13 +223,27 @@ function getFeedTitle(feed: Parser.Output<RssItem>, url: string): string {
   }
 }
 
+async function parseFeed(parser: Parser<RssItem>, url: string): Promise<Parser.Output<RssItem>> {
+  const { response } = await fetchSafeRemoteHttp(url, {
+    headers: { "User-Agent": "zhiyuan-rss/1.0" }
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch RSS feed: ${response.status} ${response.statusText}`);
+  }
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength > MAX_RSS_BYTES) throw new Error("RSS feed is too large");
+  const body = await readLimitedBody(response, MAX_RSS_BYTES);
+  return (await parser.parseString(new TextDecoder().decode(body))) as Parser.Output<RssItem>;
+}
+
 export async function importRss(url: string, workspacePath: string): Promise<RssImportResult> {
+  await assertSafeRemoteHttpUrl(url);
   const parser: Parser<RssItem> = new Parser({
     customFields: {
       item: ["itunes:image", "media:thumbnail", "media:content", "image"]
     }
   });
-  const feed = await parser.parseURL(url);
+  const feed = await parseFeed(parser, url);
   const feedTitle = getFeedTitle(feed, url);
 
   const folderName = await getAvailableFolderName(workspacePath, feedTitle);
@@ -208,7 +260,9 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
     const fileName = await getAvailableFileName(folderPath, fileBaseName);
     const filePath = path.join(folderPath, fileName);
     const link = item.link?.trim();
-    const guid = item.guid?.trim() || item.id?.trim();
+    const guidValue = typeof item.guid === "string" ? item.guid : undefined;
+    const idValue = typeof item.id === "string" ? item.id : undefined;
+    const guid = guidValue?.trim() || idValue?.trim();
 
     const metadata = buildCommentMetadata({
       "rss-title": title,
@@ -253,12 +307,13 @@ export async function updateRss(folderPath: string): Promise<{
   addedCount: number;
 }> {
   const metadata = await loadRssMetadata(folderPath);
+  await assertSafeRemoteHttpUrl(metadata.url);
   const parser: Parser<RssItem> = new Parser({
     customFields: {
       item: ["itunes:image", "media:thumbnail", "media:content", "image"]
     }
   });
-  const feed = await parser.parseURL(metadata.url);
+  const feed = await parseFeed(parser, metadata.url);
   const feedTitle = getFeedTitle(feed, metadata.url);
 
   const existingKeys = new Set(
@@ -272,8 +327,10 @@ export async function updateRss(folderPath: string): Promise<{
     const title = item.title?.trim() || "Untitled";
     const published = formatDate(item.isoDate || item.pubDate) || undefined;
     const link = item.link?.trim();
-    const guid = item.guid?.trim() || item.id?.trim();
-    const key = buildItemKey({ guid, link });
+    const guidValue = typeof item.guid === "string" ? item.guid : undefined;
+    const idValue = typeof item.id === "string" ? item.id : undefined;
+    const guid = guidValue?.trim() || idValue?.trim();
+    const key = buildItemKey({ guid, link, title, published });
 
     if (key && existingKeys.has(key)) {
       continue;

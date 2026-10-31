@@ -1,4 +1,6 @@
 import Store from "electron-store";
+import { safeStorage } from "electron";
+import fs from "fs";
 import {
   DEFAULT_EXPORT_LAYOUT_CONFIG,
   normalizeExportLayoutConfig,
@@ -33,8 +35,32 @@ function normalizeGitHubConfig(config?: Partial<GitHubConfig> | null): GitHubCon
   return {
     owner: String(config?.owner || "").trim(),
     repo: String(config?.repo || "").trim(),
-    token: String(config?.token || "").trim()
+    token: decryptGitHubToken(String(config?.token || "").trim())
   };
+}
+
+function encryptGitHubToken(token: string): string {
+  if (!token || token.startsWith("enc:v1:")) return token;
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return token;
+    return `enc:v1:${safeStorage.encryptString(token).toString("base64")}`;
+  } catch {
+    return token;
+  }
+}
+
+function decryptGitHubToken(token: string): string {
+  if (!token.startsWith("enc:v1:")) return token;
+  try {
+    if (!safeStorage.isEncryptionAvailable()) return "";
+    return safeStorage.decryptString(Buffer.from(token.slice("enc:v1:".length), "base64"));
+  } catch {
+    return "";
+  }
+}
+
+function serializeGitHubConfig(config: GitHubConfig): GitHubConfig {
+  return { ...config, token: encryptGitHubToken(config.token) };
 }
 
 function hasGitHubConfig(config: GitHubConfig): boolean {
@@ -71,7 +97,18 @@ export const configManager = {
    * 获取最近打开的工作区列表
    */
   getRecentWorkspaces(): string[] {
-    return store.get("recentWorkspaces");
+    const recent = store.get("recentWorkspaces");
+    const valid = recent.filter((workspacePath) => {
+      try {
+        return fs.statSync(workspacePath).isDirectory();
+      } catch {
+        return false;
+      }
+    });
+    if (valid.length !== recent.length) {
+      store.set("recentWorkspaces", valid);
+    }
+    return valid;
   },
 
   /**
@@ -194,15 +231,32 @@ export const configManager = {
     // 兼容旧版本：单个 github 配置自动迁移到一个真实的项目键
     const legacy = normalizeGitHubConfig(store.get("github"));
     if (hasGitHubConfig(legacy)) {
-      const migrated: GitHubProjectConfigMap = { [LEGACY_DEFAULT_GITHUB_PROJECT_KEY]: legacy };
+      const migrated: GitHubProjectConfigMap = {
+        [LEGACY_DEFAULT_GITHUB_PROJECT_KEY]: serializeGitHubConfig(legacy)
+      };
       store.set("githubProjects", migrated);
+      store.set("github", {
+        owner: legacy.owner,
+        repo: legacy.repo,
+        token: encryptGitHubToken(legacy.token)
+      });
       if (!String(store.get("githubActiveProjectKey") || "").trim()) {
         store.set("githubActiveProjectKey", LEGACY_DEFAULT_GITHUB_PROJECT_KEY);
       }
-      return migrated;
+      // 内存中的配置保持解密状态；只有写入 electron-store 时才使用密文。
+      return { [LEGACY_DEFAULT_GITHUB_PROJECT_KEY]: legacy };
     }
 
     return {};
+  },
+
+  getPublicGitHubProjectConfigs(): GitHubProjectConfigMap {
+    const configs = this.getGitHubProjectConfigs();
+    const publicConfigs: GitHubProjectConfigMap = {};
+    for (const [key, config] of Object.entries(configs)) {
+      publicConfigs[key] = { owner: config.owner, repo: config.repo, token: "" };
+    }
+    return publicConfigs;
   },
 
   /**
@@ -250,6 +304,16 @@ export const configManager = {
     return (activeKey && allConfigs[activeKey]) || { owner: "", repo: "", token: "" };
   },
 
+  findGitHubConfig(owner: string, repo: string): GitHubConfig {
+    const normalizedOwner = String(owner || "").trim();
+    const normalizedRepo = String(repo || "").trim();
+    const configs = this.getGitHubProjectConfigs();
+    const match = Object.values(configs).find(
+      (config) => config.owner === normalizedOwner && config.repo === normalizedRepo && Boolean(config.token)
+    );
+    return match ?? { owner: normalizedOwner, repo: normalizedRepo, token: "" };
+  },
+
   /**
    * 设置 GitHub 配置
    */
@@ -260,14 +324,21 @@ export const configManager = {
       throw new Error("No GitHub config selected");
     }
     const nextConfig = normalizeGitHubConfig(config);
+    if (!nextConfig.token && allConfigs[targetKey]?.token) {
+      nextConfig.token = allConfigs[targetKey].token;
+    }
     allConfigs[targetKey] = nextConfig;
 
-    store.set("githubProjects", allConfigs);
+    const persistedConfigs: GitHubProjectConfigMap = {};
+    for (const [key, value] of Object.entries(allConfigs)) {
+      persistedConfigs[key] = serializeGitHubConfig(value);
+    }
+    store.set("githubProjects", persistedConfigs);
     store.set("githubActiveProjectKey", targetKey);
     store.set("github", {
       owner: nextConfig.owner,
       repo: nextConfig.repo,
-      token: nextConfig.token
+      token: encryptGitHubToken(nextConfig.token)
     });
   },
 
@@ -281,12 +352,22 @@ export const configManager = {
     if (!(targetKey in allConfigs)) return;
 
     delete allConfigs[targetKey];
-    store.set("githubProjects", allConfigs);
+    const persistedConfigs: GitHubProjectConfigMap = {};
+    for (const [key, value] of Object.entries(allConfigs)) {
+      persistedConfigs[key] = serializeGitHubConfig(value);
+    }
+    store.set("githubProjects", persistedConfigs);
 
     const activeKey = this.getGitHubActiveProjectKey();
     if (activeKey === targetKey) {
       const fallbackKey = Object.keys(allConfigs)[0] || "";
       store.set("githubActiveProjectKey", fallbackKey);
+      const fallback = fallbackKey ? allConfigs[fallbackKey] : undefined;
+      store.set("github", {
+        owner: fallback?.owner || "",
+        repo: fallback?.repo || "",
+        token: encryptGitHubToken(fallback?.token || "")
+      });
     }
   }
 };

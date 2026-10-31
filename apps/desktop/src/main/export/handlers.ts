@@ -2,20 +2,41 @@ import { ipcMain, dialog, app, clipboard } from "electron";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { PDFDocument } from "pdf-lib";
-import { wrapIpcHandler, ipcOk, ipcErr } from "../ipc/ipc-result";
-import type { IpcResultDTO } from "@shared";
+import { wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "../ipc/ipc-result";
+import { isValidFileNameSegment, normalizeFileNameSegment, type IpcResultDTO } from "@shared";
 import { captureHtmlAsImage } from "./capture";
 import { collectAndCopyAssets } from "./assets";
+import { getCallerWorkspace, getCallerWindowId } from "../security/window-context";
+import { validatePathInWorkspace } from "../security/path-validator";
+
+const approvedExportPaths = new Map<number, Set<string>>();
+
+function approveExportPath(event: Electron.IpcMainInvokeEvent, filePath: string): void {
+  const windowId = getCallerWindowId(event);
+  const paths = approvedExportPaths.get(windowId) ?? new Set<string>();
+  paths.add(path.resolve(filePath));
+  approvedExportPaths.set(windowId, paths);
+}
+
+function assertApprovedExportPath(event: Electron.IpcMainInvokeEvent, filePath: string): void {
+  const approved = approvedExportPaths.get(getCallerWindowId(event));
+  if (!approved?.has(path.resolve(filePath))) {
+    throw new Error("Export path was not selected by the application");
+  }
+}
 
 export function registerExportHandlers(): void {
   ipcMain.handle(
     "export:show-save-dialog",
-    wrapIpcHandler(
-      async (options: {
-        title: string;
-        defaultPath: string;
-        filters: Array<{ name: string; extensions: string[] }>;
-      }) => {
+    wrapIpcHandlerWithEvent(
+      async (
+        event,
+        options: {
+          title: string;
+          defaultPath: string;
+          filters: Array<{ name: string; extensions: string[] }>;
+        }
+      ) => {
         const result = await dialog.showSaveDialog({
           title: options.title,
           defaultPath: options.defaultPath,
@@ -23,7 +44,9 @@ export function registerExportHandlers(): void {
           properties: ["createDirectory", "showOverwriteConfirmation"]
         });
 
-        return result.canceled ? null : result.filePath;
+        if (result.canceled || !result.filePath) return null;
+        approveExportPath(event, result.filePath);
+        return result.filePath;
       },
       "EXPORT_SHOW_SAVE_DIALOG_FAILED"
     )
@@ -31,7 +54,8 @@ export function registerExportHandlers(): void {
 
   ipcMain.handle(
     "export:save-html-file",
-    wrapIpcHandler(async (filePath: string, htmlContent: string) => {
+    wrapIpcHandlerWithEvent(async (event, filePath: string, htmlContent: string) => {
+      assertApprovedExportPath(event, filePath);
       await fs.writeFile(filePath, htmlContent, "utf-8");
     }, "EXPORT_SAVE_HTML_FAILED")
   );
@@ -47,8 +71,13 @@ export function registerExportHandlers(): void {
 
   ipcMain.handle(
     "export:export-as-pdf",
-    wrapIpcHandler(async (htmlContent: string, filePath: string, notePath?: string) => {
-      const image = await captureHtmlAsImage(htmlContent, notePath);
+    wrapIpcHandlerWithEvent(async (event, htmlContent: string, filePath: string, notePath?: string) => {
+      const workspacePath = getCallerWorkspace(event);
+      assertApprovedExportPath(event, filePath);
+      if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+        throw new Error("Note path is outside workspace");
+      }
+      const image = await captureHtmlAsImage(htmlContent, notePath, 800, workspacePath);
       const pngData = image.toPNG();
 
       const pdfDoc = await PDFDocument.create();
@@ -70,21 +99,29 @@ export function registerExportHandlers(): void {
 
   ipcMain.handle(
     "export:export-as-image",
-    wrapIpcHandler(async (htmlContent: string, filePath: string, notePath?: string, options?: { width?: number }) => {
-      const width = options?.width || 800;
-      const image = await captureHtmlAsImage(htmlContent, notePath, width);
+    wrapIpcHandlerWithEvent(
+      async (event, htmlContent: string, filePath: string, notePath?: string, options?: { width?: number }) => {
+        const workspacePath = getCallerWorkspace(event);
+        assertApprovedExportPath(event, filePath);
+        if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+          throw new Error("Note path is outside workspace");
+        }
+        const width = options?.width || 800;
+        const image = await captureHtmlAsImage(htmlContent, notePath, width, workspacePath);
 
-      const ext = path.extname(filePath).toLowerCase();
-      let imageData: Buffer;
+        const ext = path.extname(filePath).toLowerCase();
+        let imageData: Buffer;
 
-      if (ext === ".jpg" || ext === ".jpeg") {
-        imageData = image.toJPEG(90);
-      } else {
-        imageData = image.toPNG();
-      }
+        if (ext === ".jpg" || ext === ".jpeg") {
+          imageData = image.toJPEG(90);
+        } else {
+          imageData = image.toPNG();
+        }
 
-      await fs.writeFile(filePath, imageData);
-    }, "EXPORT_IMAGE_FAILED")
+        await fs.writeFile(filePath, imageData);
+      },
+      "EXPORT_IMAGE_FAILED"
+    )
   );
 
   ipcMain.handle("export:copy-html-to-clipboard", (_, htmlContent: string): IpcResultDTO<void> => {
@@ -99,8 +136,22 @@ export function registerExportHandlers(): void {
 
   ipcMain.handle(
     "export:export-html-package",
-    wrapIpcHandler(
-      async (htmlContent: string, outputPath: string, notePath: string | undefined, assetsFolder = "assets") => {
+    wrapIpcHandlerWithEvent(
+      async (
+        event: Electron.IpcMainInvokeEvent,
+        htmlContent: string,
+        outputPath: string,
+        notePath: string | undefined,
+        assetsFolder = "assets"
+      ) => {
+        const workspacePath = getCallerWorkspace(event);
+        assertApprovedExportPath(event, outputPath);
+        if (!isValidFileNameSegment(assetsFolder)) {
+          throw new Error("Invalid assets folder");
+        }
+        if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+          throw new Error("Note path is outside workspace");
+        }
         await fs.mkdir(outputPath, { recursive: true });
         const assetsDir = path.join(outputPath, assetsFolder);
         await fs.mkdir(assetsDir, { recursive: true });
@@ -114,7 +165,8 @@ export function registerExportHandlers(): void {
           htmlContent,
           notePath,
           assetsDir,
-          assetsFolder
+          assetsFolder,
+          workspacePath
         );
 
         await fs.writeFile(path.join(outputPath, "index.html"), processedHtml, "utf-8");
@@ -130,11 +182,16 @@ export function registerExportHandlers(): void {
 
   ipcMain.handle(
     "export:export-as-pdf-pages",
-    wrapIpcHandler(async (htmlContents: string[], filePath: string, notePath?: string) => {
+    wrapIpcHandlerWithEvent(async (event, htmlContents: string[], filePath: string, notePath?: string) => {
+      const workspacePath = getCallerWorkspace(event);
+      assertApprovedExportPath(event, filePath);
+      if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+        throw new Error("Note path is outside workspace");
+      }
       const pdfDoc = await PDFDocument.create();
 
       for (let i = 0; i < htmlContents.length; i++) {
-        const image = await captureHtmlAsImage(htmlContents[i], notePath);
+        const image = await captureHtmlAsImage(htmlContents[i], notePath, 800, workspacePath);
         const pngData = image.toPNG();
         const pngImage = await pdfDoc.embedPng(pngData);
 
@@ -156,24 +213,31 @@ export function registerExportHandlers(): void {
 
   ipcMain.handle(
     "export:export-as-image-pages",
-    wrapIpcHandler(
+    wrapIpcHandlerWithEvent(
       async (
+        event: Electron.IpcMainInvokeEvent,
         htmlContents: string[],
         folderPath: string,
         baseFileName: string,
         notePath?: string,
         options?: { width?: number }
       ) => {
+        const workspacePath = getCallerWorkspace(event);
+        assertApprovedExportPath(event, folderPath);
+        if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+          throw new Error("Note path is outside workspace");
+        }
         await fs.mkdir(folderPath, { recursive: true });
 
         const width = options?.width || 800;
         const filePaths: string[] = [];
+        const safeBaseFileName = normalizeFileNameSegment(baseFileName) || "export";
 
         for (let i = 0; i < htmlContents.length; i++) {
-          const fileName = `${baseFileName}-${i + 1}.png`;
+          const fileName = `${safeBaseFileName}-${i + 1}.png`;
           const filePath = path.join(folderPath, fileName);
 
-          const image = await captureHtmlAsImage(htmlContents[i], notePath, width);
+          const image = await captureHtmlAsImage(htmlContents[i], notePath, width, workspacePath);
           const imageData = image.toPNG();
 
           await fs.writeFile(filePath, imageData);

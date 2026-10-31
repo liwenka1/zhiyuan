@@ -42,16 +42,16 @@
 
 ## Highlights
 
-| Feature | Description |
-| :-- | :-- |
-| **RSS feeds and archiving** | Pull reading sources into the local workspace for filtering, reading and long-term notes. |
-| **Web page to Markdown** | Capture article content and convert it into editable Markdown drafts. |
-| **Workspace terminal** | Open a terminal directly inside the current workspace while writing. |
-| **Preview and presentation modes** | Switch between editing, preview, split view and presentation based on the task. |
-| **Multi-window workspaces** | Open separate workspaces in different windows without losing a desktop-first workflow. |
-| **Multi-format export** | Export to HTML, PDF and long images without rebuilding the document elsewhere. |
-| **GitHub publishing** | Publish notes to GitHub Issues and handle local asset uploads in the same flow. |
-| **Desktop-native interactions** | Support drag-and-drop, opening Markdown from the OS and configurable shortcuts. |
+| Feature                            | Description                                                                               |
+| :--------------------------------- | :---------------------------------------------------------------------------------------- |
+| **RSS feeds and archiving**        | Pull reading sources into the local workspace for filtering, reading and long-term notes. |
+| **Web page to Markdown**           | Capture article content and convert it into editable Markdown drafts.                     |
+| **Workspace terminal**             | Open a terminal directly inside the current workspace while writing.                      |
+| **Preview and presentation modes** | Switch between editing, preview, split view and presentation based on the task.           |
+| **Multi-window workspaces**        | Open separate workspaces in different windows without losing a desktop-first workflow.    |
+| **Multi-format export**            | Export to HTML, PDF and long images without rebuilding the document elsewhere.            |
+| **GitHub publishing**              | Publish notes to GitHub Issues and handle local asset uploads in the same flow.           |
+| **Desktop-native interactions**    | Support drag-and-drop, opening Markdown from the OS and configurable shortcuts.           |
 
 ## Workflow
 
@@ -75,11 +75,11 @@ Zhiyuan is designed around a simple content loop:
 
 Download the latest build from [GitHub Releases](https://github.com/liwenka1/zhiyuan/releases).
 
-| Platform | Package |
-| :-- | :-- |
-| **macOS** | `.dmg` |
-| **Windows** | `.exe` |
-| **Linux** | `.AppImage` / `.deb` |
+| Platform    | Package              |
+| :---------- | :------------------- |
+| **macOS**   | `.dmg`               |
+| **Windows** | `.exe`               |
+| **Linux**   | `.AppImage` / `.deb` |
 
 ### macOS note
 

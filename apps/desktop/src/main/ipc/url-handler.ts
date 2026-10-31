@@ -5,7 +5,10 @@
 
 import { ipcMain } from "electron";
 import { createNoteFromUrl } from "../url-fetcher";
-import { wrapIpcHandler } from "./ipc-result";
+import { wrapIpcHandlerWithEvent } from "./ipc-result";
+import { getCallerWorkspace } from "../security/window-context";
+import path from "path";
+import { validatePathInWorkspace } from "../security/path-validator";
 
 /**
  * 注册 URL 相关的 IPC handlers
@@ -16,7 +19,11 @@ export function registerUrlHandlers(): void {
    */
   ipcMain.handle(
     "url:createNote",
-    wrapIpcHandler(async (url: string, workspacePath: string, folderId?: string) => {
+    wrapIpcHandlerWithEvent(async (event, url: string, _workspacePath: string, folderId?: string) => {
+      const workspacePath = getCallerWorkspace(event);
+      if (folderId && !validatePathInWorkspace(workspacePath, path.join(workspacePath, folderId)).isValid) {
+        throw new Error("Target folder is outside workspace");
+      }
       return await createNoteFromUrl(url, workspacePath, folderId);
     }, "URL_CREATE_NOTE_FAILED")
   );

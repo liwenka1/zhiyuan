@@ -1,4 +1,5 @@
 export interface GitHubAssetUploadRequest {
+  projectKey?: string;
   owner: string;
   repo: string;
   token: string;

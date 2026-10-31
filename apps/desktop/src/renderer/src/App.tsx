@@ -40,7 +40,7 @@ function App(): React.JSX.Element {
 
       setWorkspacePath(selectedPath);
       setFolders(data.folders);
-      loadFromFileSystem(data);
+      await loadFromFileSystem(data);
     } catch {
       /* 静默处理 */
     }
@@ -57,7 +57,7 @@ function App(): React.JSX.Element {
 
       setWorkspacePath(result.workspacePath);
       setFolders(data.folders);
-      loadFromFileSystem(data);
+      await loadFromFileSystem(data);
 
       const fileName = result.filePath.split("/").pop() || "";
       const targetNote = data.notes.find((n) => n.fileName === fileName);
@@ -77,7 +77,7 @@ function App(): React.JSX.Element {
 
         setWorkspacePath(payload.workspacePath);
         setFolders(data.folders);
-        loadFromFileSystem(data);
+        await loadFromFileSystem(data);
 
         if (payload.filePath) {
           const relativePath = payload.filePath.replace(payload.workspacePath + "/", "");

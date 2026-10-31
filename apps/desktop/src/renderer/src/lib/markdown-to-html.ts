@@ -21,6 +21,19 @@ export interface HTMLDocumentOptions {
   fonts?: never;
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (char) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "'": "&#39;",
+      '"': "&quot;"
+    };
+    return entities[char];
+  });
+}
+
 /**
  * 生成完整的 HTML 文档
  * @param title 笔记标题
@@ -37,7 +50,7 @@ export function generateHTMLDocument(title: string, htmlContent: string, options
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="generator" content="zhiyuan">
-  <title>${title}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
 ${proseStyles}
 ${katexStyles}

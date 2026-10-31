@@ -12,6 +12,7 @@ export interface UploadAssetsResult {
 
 export async function uploadMarkdownAssets(params: {
   assets: MarkdownAsset[];
+  projectKey?: string;
   owner: string;
   repo: string;
   token: string;
@@ -36,6 +37,7 @@ export async function uploadMarkdownAssets(params: {
       }
 
       const result = await githubIpc.uploadAsset({
+        projectKey: params.projectKey,
         owner: params.owner,
         repo: params.repo,
         token: params.token,

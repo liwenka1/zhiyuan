@@ -23,7 +23,7 @@ export const useNoteStore = create<NoteStore>()(
     ...createNoteActions(set, get),
     ...applyPersistence(set, get),
     ...createFileEventHandlers(set, get),
-    ...createLoaders(set),
+    ...createLoaders(set, get),
     ...createSelectors(get)
   }))
 );

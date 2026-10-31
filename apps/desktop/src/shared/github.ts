@@ -7,6 +7,7 @@ export interface GitHubConfig {
 export type GitHubProjectConfigMap = Record<string, GitHubConfig>;
 
 export interface GitHubIssuePushRequest {
+  projectKey?: string;
   owner: string;
   repo: string;
   token: string;

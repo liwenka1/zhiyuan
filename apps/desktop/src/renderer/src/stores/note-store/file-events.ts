@@ -4,6 +4,9 @@ import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
 import { wasRecentlySaved } from "./persistence";
 import { parseGitHubMetadata } from "@/lib/github-metadata";
+import { toast } from "sonner";
+import i18n from "@/lib/i18n";
+import { getLastSavedContent, setLastSavedContent } from "./persistence";
 
 export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
   return {
@@ -17,6 +20,7 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       set((state) => {
         state.notes.push(newNote);
       });
+      setLastSavedContent(newNote.id, newNote.content);
 
       if (newNote.folderId) {
         const folderStore = useFolderStore.getState();
@@ -62,7 +66,12 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       const { selectedNoteId, savingNoteIds } = get();
 
       if (selectedNoteId === filePath) {
-        return;
+        const selectedNote = get().notes.find((item) => item.id === filePath);
+        const lastSavedContent = getLastSavedContent(filePath) ?? selectedNote?.content;
+        if (selectedNote && lastSavedContent !== get().editorContent) {
+          toast.warning(i18n.t("note:errors.externalChangeConflict"));
+          return;
+        }
       }
 
       if (savingNoteIds.has(filePath)) {
@@ -82,6 +91,10 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
           targetNote.content = content;
           targetNote.updatedAt = new Date().toISOString();
           targetNote.github = parseGitHubMetadata(content);
+          if (state.selectedNoteId === filePath) {
+            state.editorContent = content;
+          }
+          setLastSavedContent(filePath, content);
         }
       });
     }

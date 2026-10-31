@@ -8,6 +8,7 @@ import { windowManager } from "../window-manager";
 import { configManager } from "../config";
 import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
 import { validatePathInWorkspace } from "../security/path-validator";
+import { getCallerWorkspace } from "../security/window-context";
 import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "./ipc-result";
 import {
   normalizeExportLayoutConfig,
@@ -48,6 +49,23 @@ function getCallerWindow(event: Electron.IpcMainInvokeEvent): BrowserWindow {
     throw new Error("Cannot resolve caller window");
   }
   return win;
+}
+
+function isApprovedWorkspacePath(workspacePath: string): boolean {
+  const normalize = (candidate: string) => {
+    try {
+      return fs.realpathSync(candidate);
+    } catch {
+      return path.resolve(candidate);
+    }
+  };
+  const normalized = normalize(workspacePath);
+  if (configManager.getRecentWorkspaces().some((recent) => normalize(recent) === normalized)) {
+    return true;
+  }
+  return windowManager
+    .getAllEntries()
+    .some((entry) => entry.workspacePath && normalize(entry.workspacePath) === normalized);
 }
 
 async function resolveAvailableMarkdownPath(
@@ -111,15 +129,39 @@ export function registerWorkspaceHandlers(): void {
     "workspace:scan",
     wrapIpcHandlerWithEvent(async (event, workspacePath: string) => {
       const win = getCallerWindow(event);
+      if (typeof workspacePath !== "string" || !workspacePath.trim()) {
+        throw new Error("Invalid workspace path");
+      }
+      if (!isApprovedWorkspacePath(workspacePath)) {
+        throw new Error("Workspace path was not selected by the application");
+      }
       // 如果其他窗口已打开该工作区，聚焦过去，当前窗口返回 null
       if (windowManager.focusExistingWindow(workspacePath, win.id)) {
         return null;
       }
-      // 绑定工作区到当前窗口，并启动文件监听
+      const data = await workspaceManager.scanWorkspace(workspacePath);
+      // 只有扫描成功后才绑定工作区并启动文件监听。
       windowManager.setWorkspacePath(win.id, workspacePath);
       fileWatcherManager.startWatching(workspacePath, win.id);
-      return await workspaceManager.scanWorkspace(workspacePath);
+      return data;
     }, "WORKSPACE_SCAN_FAILED")
+  );
+
+  // 欢迎页拖入 Markdown 时，文件夹尚未进入“最近工作区”，先由主进程验证并批准该目录。
+  ipcMain.handle(
+    "workspace:approveDroppedFile",
+    wrapIpcHandlerWithEvent(async (_event, filePath: string) => {
+      if (typeof filePath !== "string" || !filePath.toLowerCase().endsWith(".md")) {
+        throw new Error("Only markdown files can be opened");
+      }
+      const stat = await fs.promises.stat(filePath);
+      if (!stat.isFile()) {
+        throw new Error("Invalid markdown file");
+      }
+      const workspacePath = path.dirname(filePath);
+      configManager.addRecentWorkspace(workspacePath);
+      return { filePath, workspacePath };
+    }, "WORKSPACE_APPROVE_DROPPED_FILE_FAILED")
   );
 
   // 暂停文件监听
@@ -208,7 +250,7 @@ export function registerWorkspaceHandlers(): void {
 
           const fileName = path.basename(sourcePath);
           const targetPath = await resolveAvailableMarkdownPath(event, targetDir, fileName);
-          await fs.promises.copyFile(sourcePath, targetPath);
+          await fs.promises.copyFile(sourcePath, targetPath, fs.constants.COPYFILE_EXCL);
           importedPaths.push(targetPath);
         } catch {
           skippedCount += 1;
@@ -338,8 +380,9 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 在文件管理器中显示文件
-  ipcMain.handle("shell:showItemInFolder", (_, fullPath: string): IpcResultDTO<void> => {
+  ipcMain.handle("shell:showItemInFolder", (event, fullPath: string): IpcResultDTO<void> => {
     try {
+      assertPathInWorkspace(event, fullPath, "shell:showItemInFolder");
       shell.showItemInFolder(fullPath);
       return ipcOk(undefined);
     } catch (error) {
@@ -351,7 +394,8 @@ export function registerWorkspaceHandlers(): void {
   // 在文件管理器中打开文件夹
   ipcMain.handle(
     "shell:openPath",
-    wrapIpcHandler(async (fullPath: string) => {
+    wrapIpcHandlerWithEvent(async (event, fullPath: string) => {
+      assertPathInWorkspace(event, fullPath, "shell:openPath");
       const errorMessage = await shell.openPath(fullPath);
       if (errorMessage) {
         throw new Error(errorMessage);
@@ -372,9 +416,9 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 获取工作区的置顶笔记
-  ipcMain.handle("config:getPinnedNotes", (_, workspacePath: string): IpcResultDTO<string[]> => {
+  ipcMain.handle("config:getPinnedNotes", (event, _workspacePath: string): IpcResultDTO<string[]> => {
     try {
-      const pinnedNotes = configManager.getPinnedNotes(workspacePath);
+      const pinnedNotes = configManager.getPinnedNotes(getCallerWorkspace(event));
       return ipcOk(pinnedNotes);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -383,9 +427,9 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 设置工作区的置顶笔记
-  ipcMain.handle("config:setPinnedNotes", (_, workspacePath: string, noteIds: string[]): IpcResultDTO<void> => {
+  ipcMain.handle("config:setPinnedNotes", (event, _workspacePath: string, noteIds: string[]): IpcResultDTO<void> => {
     try {
-      configManager.setPinnedNotes(workspacePath, noteIds);
+      configManager.setPinnedNotes(getCallerWorkspace(event), noteIds);
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -500,7 +544,7 @@ export function registerWorkspaceHandlers(): void {
     (): IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; activeProjectKey: string }> => {
       try {
         return ipcOk({
-          projectConfigs: configManager.getGitHubProjectConfigs(),
+          projectConfigs: configManager.getPublicGitHubProjectConfigs(),
           activeProjectKey: configManager.getGitHubActiveProjectKey()
         });
       } catch (error) {
@@ -513,7 +557,7 @@ export function registerWorkspaceHandlers(): void {
   // 获取 GitHub 配置
   ipcMain.handle("config:getGitHubConfig", (_, projectKey?: string): IpcResultDTO<GitHubConfig> => {
     try {
-      return ipcOk(configManager.getGitHubConfig(projectKey));
+      return ipcOk({ ...configManager.getGitHubConfig(projectKey), token: "" });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return ipcErr(message, "CONFIG_GET_GITHUB_FAILED");

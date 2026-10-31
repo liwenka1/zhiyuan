@@ -1,26 +1,37 @@
 import { ipcMain } from "electron";
 import { importRss, updateRss, unsubscribeRss } from "../rss";
-import { wrapIpcHandler } from "./ipc-result";
+import { wrapIpcHandlerWithEvent } from "./ipc-result";
+import { getCallerWorkspace } from "../security/window-context";
+import { validatePathInWorkspace } from "../security/path-validator";
+import path from "path";
 
 export function registerRssHandlers(): void {
   ipcMain.handle(
     "rss:import",
-    wrapIpcHandler(async (url: string, workspacePath: string) => {
-      return await importRss(url, workspacePath);
+    wrapIpcHandlerWithEvent(async (event, url: string, _workspacePath: string) => {
+      return await importRss(url, getCallerWorkspace(event));
     }, "RSS_IMPORT_FAILED")
   );
 
   ipcMain.handle(
     "rss:update",
-    wrapIpcHandler(async (folderPath: string) => {
-      return await updateRss(folderPath);
+    wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
+      const workspacePath = getCallerWorkspace(event);
+      if (!validatePathInWorkspace(workspacePath, folderPath).isValid) {
+        throw new Error("RSS folder is outside workspace");
+      }
+      return await updateRss(path.resolve(folderPath));
     }, "RSS_UPDATE_FAILED")
   );
 
   ipcMain.handle(
     "rss:unsubscribe",
-    wrapIpcHandler(async (folderPath: string) => {
-      await unsubscribeRss(folderPath);
+    wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
+      const workspacePath = getCallerWorkspace(event);
+      if (!validatePathInWorkspace(workspacePath, folderPath).isValid) {
+        throw new Error("RSS folder is outside workspace");
+      }
+      await unsubscribeRss(path.resolve(folderPath));
     }, "RSS_UNSUBSCRIBE_FAILED")
   );
 }
