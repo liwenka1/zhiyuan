@@ -51,6 +51,17 @@ export function useWorkspaceInit() {
         ) {
           return;
         }
+        if (!data) {
+          setPendingFilePath(null);
+          if (previousWorkspacePath && previousWorkspacePath !== workspacePath) {
+            previousWorkspacePathRef.current = previousWorkspacePath;
+            setWorkspacePath(previousWorkspacePath);
+          } else {
+            previousWorkspacePathRef.current = null;
+            setWorkspacePath(null);
+          }
+          return;
+        }
         setFolders(data.folders);
         await loadFromFileSystem(data, workspacePath);
       } catch (error) {

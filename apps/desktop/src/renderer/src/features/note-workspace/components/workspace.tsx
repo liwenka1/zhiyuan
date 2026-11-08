@@ -182,7 +182,7 @@ export function NoteWorkspace() {
       );
       if (refreshed) {
         setFolders(refreshed.folders);
-        await loadFromFileSystem(refreshed);
+        await loadFromFileSystem(refreshed, workspacePath);
       }
       return { ...result, importedNoteIds };
     },

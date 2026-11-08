@@ -94,8 +94,9 @@ export function useFolderHandlers({
       await watcherIpc.pause();
       const result = await rssIpc.update(folderPath);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
-      await loadFromFileSystem(data);
+      await loadFromFileSystem(data, workspacePath);
       const pinnedNoteIds = useNoteStore
         .getState()
         .notes.filter((note) => note.isPinned)
@@ -209,8 +210,9 @@ export function useFolderHandlers({
       await watcherIpc.pause();
       await folderIpc.delete(folderPath);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
-      await loadFromFileSystem(data);
+      await loadFromFileSystem(data, workspacePath);
       const pinnedNoteIds = useNoteStore
         .getState()
         .notes.filter((note) => note.isPinned)

@@ -25,6 +25,12 @@ import {
 } from "@shared";
 import { isIgnoredWorkspaceDirectory } from "../workspace/policy";
 
+const pendingWorkspaceScans = new Map<number, symbol>();
+
+function cancelWorkspaceScan(windowId: number): void {
+  pendingWorkspaceScans.delete(windowId);
+}
+
 /**
  * 校验文件路径是否在当前窗口的工作区内
  * 通过 event.sender 获取窗口绑定的工作区路径
@@ -149,9 +155,6 @@ export function registerWorkspaceHandlers(): void {
         if (windowManager.focusExistingWindow(workspacePath, win.id)) {
           return null;
         }
-        // 绑定工作区到当前窗口，并启动文件监听
-        windowManager.setWorkspacePath(win.id, workspacePath);
-        fileWatcherManager.startWatching(workspacePath, win.id);
       }
       return workspacePath;
     }, "WORKSPACE_SELECT_FAILED")
@@ -179,15 +182,25 @@ export function registerWorkspaceHandlers(): void {
       if (!isApprovedWorkspacePath(workspacePath)) {
         throw new Error("Workspace path was not selected by the application");
       }
+      cancelWorkspaceScan(win.id);
       // 如果其他窗口已打开该工作区，聚焦过去，当前窗口返回 null
       if (windowManager.focusExistingWindow(workspacePath, win.id)) {
         return null;
       }
-      const data = await workspaceManager.scanWorkspace(workspacePath);
-      // 只有扫描成功后才绑定工作区并启动文件监听。
-      windowManager.setWorkspacePath(win.id, workspacePath);
-      fileWatcherManager.startWatching(workspacePath, win.id);
-      return data;
+      const scanToken = Symbol("workspace-scan");
+      pendingWorkspaceScans.set(win.id, scanToken);
+      try {
+        const data = await workspaceManager.scanWorkspace(workspacePath);
+        if (pendingWorkspaceScans.get(win.id) !== scanToken || win.isDestroyed()) return null;
+        // 只有扫描成功后才绑定工作区并启动文件监听。
+        windowManager.setWorkspacePath(win.id, workspacePath);
+        fileWatcherManager.startWatching(workspacePath, win.id);
+        return data;
+      } finally {
+        if (pendingWorkspaceScans.get(win.id) === scanToken) {
+          pendingWorkspaceScans.delete(win.id);
+        }
+      }
     }, "WORKSPACE_SCAN_FAILED")
   );
 
@@ -249,9 +262,6 @@ export function registerWorkspaceHandlers(): void {
         if (windowManager.focusExistingWindow(result.workspacePath, win.id)) {
           return null;
         }
-        // 绑定工作区到当前窗口，并启动文件监听
-        windowManager.setWorkspacePath(win.id, result.workspacePath);
-        fileWatcherManager.startWatching(result.workspacePath, win.id);
       }
       return result;
     }, "WORKSPACE_OPEN_FILE_FAILED")

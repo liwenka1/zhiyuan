@@ -31,7 +31,7 @@ export const workspaceApi = {
         createdAt: string;
         updatedAt: string;
       }>;
-    }>
+    } | null>
   > => ipcRenderer.invoke("workspace:scan", workspacePath),
 
   /**

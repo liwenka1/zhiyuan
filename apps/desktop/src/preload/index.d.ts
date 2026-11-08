@@ -59,7 +59,7 @@ export interface WorkspaceAPI {
         createdAt: string;
         updatedAt: string;
       }>;
-    }>
+    } | null>
   >;
   approveDroppedFile: (filePath: string) => Promise<IpcResultDTO<{ filePath: string; workspacePath: string }>>;
   getRecent: () => Promise<IpcResultDTO<string[]>>;

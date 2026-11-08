@@ -87,9 +87,10 @@ export function NoteDialogs({
       await watcherIpc.pause();
       const result = await rssIpc.import(url, workspacePath);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
       selectFolder(result.folderName);
-      await loadFromFileSystem(data);
+      await loadFromFileSystem(data, workspacePath);
       const firstImportedNote = data.notes.find((note) => note.folderId === result.folderName);
       if (firstImportedNote) selectNote(firstImportedNote.id);
       toast.success(t("rss.success"), { id: toastId });
@@ -116,8 +117,9 @@ export function NoteDialogs({
       const selectedFolderId = useFolderStore.getState().selectedFolderId;
       const result = await urlIpc.createNote(url, workspacePath, selectedFolderId || undefined);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
-      await loadFromFileSystem(data);
+      await loadFromFileSystem(data, workspacePath);
       const importedNote = data.notes.find(
         (note) => note.id === result.noteId || note.id.replace(/\.md$/i, "") === result.noteId
       );
