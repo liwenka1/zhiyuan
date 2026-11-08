@@ -184,6 +184,9 @@ jobs:
       - name: Build desktop app
         run: pnpm --filter zhiyuan build
 
+      - name: Verify desktop build output
+        run: pnpm verify:desktop-build
+
       - name: Upload build output
         uses: actions/upload-artifact@v4
         with:
