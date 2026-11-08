@@ -52,6 +52,7 @@ export interface NoteInfo {
 interface CachedNoteData {
   mtimeMs: number;
   size: number;
+  cacheBytes: number;
   content: string;
   fileName: string;
   createdAt: string;
@@ -64,6 +65,24 @@ interface CachedNoteData {
 
 const noteContentCache = new Map<string, CachedNoteData>();
 const MAX_NOTE_CACHE_ENTRIES = 20_000;
+const MAX_NOTE_CACHE_ENTRY_BYTES = 256 * 1024;
+const MAX_NOTE_CACHE_BYTES = 64 * 1024 * 1024;
+let noteContentCacheBytes = 0;
+
+function removeCachedNote(cacheKey: string): void {
+  const cached = noteContentCache.get(cacheKey);
+  if (!cached) return;
+  noteContentCache.delete(cacheKey);
+  noteContentCacheBytes = Math.max(0, noteContentCacheBytes - cached.cacheBytes);
+}
+
+function evictNoteCacheIfNeeded(): void {
+  while (noteContentCache.size > MAX_NOTE_CACHE_ENTRIES || noteContentCacheBytes > MAX_NOTE_CACHE_BYTES) {
+    const oldestKey = noteContentCache.keys().next().value;
+    if (!oldestKey) return;
+    removeCachedNote(oldestKey);
+  }
+}
 
 /**
  * 工作区管理器
@@ -199,6 +218,9 @@ export const workspaceManager = {
       const cacheKey = path.resolve(filePath);
       const cached = noteContentCache.get(cacheKey);
       if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) {
+        // 命中后移到队尾，淘汰时优先清理长期未访问的笔记。
+        noteContentCache.delete(cacheKey);
+        noteContentCache.set(cacheKey, cached);
         return {
           id: path.relative(workspacePath, filePath).split(path.sep).join("/"),
           title: fileName.replace(/\.md$/i, ""),
@@ -221,20 +243,21 @@ export const workspaceManager = {
       const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
 
       const githubMetadata = parseGitHubMetadata(content);
-      noteContentCache.delete(cacheKey);
-      noteContentCache.set(cacheKey, {
-        mtimeMs: stats.mtimeMs,
-        size: stats.size,
-        content,
-        fileName,
-        createdAt: stats.birthtime.toISOString(),
-        updatedAt: stats.mtime.toISOString(),
-        github: githubMetadata
-      });
-      while (noteContentCache.size > MAX_NOTE_CACHE_ENTRIES) {
-        const oldestKey = noteContentCache.keys().next().value;
-        if (!oldestKey) break;
-        noteContentCache.delete(oldestKey);
+      removeCachedNote(cacheKey);
+      const cacheBytes = Buffer.byteLength(content, "utf8");
+      if (cacheBytes <= MAX_NOTE_CACHE_ENTRY_BYTES) {
+        noteContentCache.set(cacheKey, {
+          mtimeMs: stats.mtimeMs,
+          size: stats.size,
+          cacheBytes,
+          content,
+          fileName,
+          createdAt: stats.birthtime.toISOString(),
+          updatedAt: stats.mtime.toISOString(),
+          github: githubMetadata
+        });
+        noteContentCacheBytes += cacheBytes;
+        evictNoteCacheIfNeeded();
       }
       return {
         id: relativePath,
