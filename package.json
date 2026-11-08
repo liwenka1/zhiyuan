@@ -20,6 +20,7 @@
     "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,md}\"",
     "typecheck": "pnpm --filter \"./apps/*\" typecheck",
     "test:core": "node scripts/test-core.mjs",
+    "test:unit": "vitest run",
     "typecheck:desktop": "pnpm --filter zhiyuan typecheck",
     "typecheck:landing": "pnpm --filter landing typecheck",
     "release:desktop": "pnpm --filter zhiyuan release"
@@ -43,7 +44,8 @@
   "devDependencies": {
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
-    "turbo": "^2.3.3"
+    "turbo": "^2.3.3",
+    "vitest": "^3.2.7"
   },
   "engines": {
     "node": ">=18.0.0",

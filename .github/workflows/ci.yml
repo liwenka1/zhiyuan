@@ -49,6 +49,9 @@ jobs:
       - name: Core security tests
         run: pnpm test:core
 
+      - name: Unit tests
+        run: pnpm test:unit
+
       - name: Build desktop app
         run: pnpm --filter zhiyuan build
 
