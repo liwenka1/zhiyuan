@@ -6,6 +6,26 @@ import { configManager } from "../config";
 import { fileSystem } from "../file-system";
 import { isIgnoredWorkspaceDirectory, MAX_WORKSPACE_DEPTH } from "./policy";
 
+const NOTE_READ_CONCURRENCY = 8;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const worker = async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      results[index] = await mapper(items[index]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()));
+  return results;
+}
+
 export interface FolderInfo {
   id: string;
   name: string;
@@ -28,6 +48,22 @@ export interface NoteInfo {
     issueUrl?: string;
   };
 }
+
+interface CachedNoteData {
+  mtimeMs: number;
+  size: number;
+  content: string;
+  fileName: string;
+  createdAt: string;
+  updatedAt: string;
+  github?: {
+    issueNumber?: number;
+    issueUrl?: string;
+  };
+}
+
+const noteContentCache = new Map<string, CachedNoteData>();
+const MAX_NOTE_CACHE_ENTRIES = 20_000;
 
 /**
  * 工作区管理器
@@ -110,32 +146,35 @@ export const workspaceManager = {
         const directoryEntries = await fs.promises.readdir(directoryPath, { withFileTypes: true });
         let noteCount = 0;
 
-        for (const entry of directoryEntries) {
-          if (entry.name.startsWith(".")) continue;
-          const entryPath = path.join(directoryPath, entry.name);
-          if (entry.isDirectory()) {
-            if (depth >= MAX_WORKSPACE_DEPTH || isIgnoredWorkspaceDirectory(entry.name)) continue;
-            const childFolderId = path.relative(workspacePath, entryPath).split(path.sep).join("/");
-            const rssConfigPath = path.join(entryPath, ".rss.json");
-            const isRss = await fileSystem.exists(rssConfigPath);
-            const folder: FolderInfo = {
-              id: childFolderId,
-              name: childFolderId,
-              path: entryPath,
-              noteCount: 0,
-              isRss
-            };
-            folders.push(folder);
-            folder.noteCount = await collectDirectory(entryPath, childFolderId, depth + 1);
-            continue;
-          }
-          if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) continue;
-
-          const note = await this.loadNote(entryPath, folderId, workspacePath);
+        const markdownEntries = directoryEntries.filter(
+          (entry) => !entry.name.startsWith(".") && entry.isFile() && entry.name.toLowerCase().endsWith(".md")
+        );
+        const loadedNotes = await mapWithConcurrency(markdownEntries, NOTE_READ_CONCURRENCY, (entry) =>
+          this.loadNote(path.join(directoryPath, entry.name), folderId, workspacePath)
+        );
+        for (const note of loadedNotes) {
           if (note) {
             notes.push(note);
             noteCount += 1;
           }
+        }
+
+        for (const entry of directoryEntries) {
+          if (entry.name.startsWith(".") || !entry.isDirectory()) continue;
+          if (depth >= MAX_WORKSPACE_DEPTH || isIgnoredWorkspaceDirectory(entry.name)) continue;
+          const entryPath = path.join(directoryPath, entry.name);
+          const childFolderId = path.relative(workspacePath, entryPath).split(path.sep).join("/");
+          const rssConfigPath = path.join(entryPath, ".rss.json");
+          const isRss = await fileSystem.exists(rssConfigPath);
+          const folder: FolderInfo = {
+            id: childFolderId,
+            name: childFolderId,
+            path: entryPath,
+            noteCount: 0,
+            isRss
+          };
+          folders.push(folder);
+          folder.noteCount = await collectDirectory(entryPath, childFolderId, depth + 1);
         }
 
         return noteCount;
@@ -155,9 +194,25 @@ export const workspaceManager = {
    */
   async loadNote(filePath: string, folderId: string | null, workspacePath: string): Promise<NoteInfo | null> {
     try {
-      const content = await fs.promises.readFile(filePath, "utf-8");
       const stats = await fs.promises.stat(filePath);
       const fileName = path.basename(filePath);
+      const cacheKey = path.resolve(filePath);
+      const cached = noteContentCache.get(cacheKey);
+      if (cached && cached.mtimeMs === stats.mtimeMs && cached.size === stats.size) {
+        return {
+          id: path.relative(workspacePath, filePath).split(path.sep).join("/"),
+          title: fileName.replace(/\.md$/i, ""),
+          content: cached.content,
+          fileName: cached.fileName,
+          filePath,
+          folderId,
+          createdAt: cached.createdAt,
+          updatedAt: cached.updatedAt,
+          github: cached.github
+        };
+      }
+
+      const content = await fs.promises.readFile(filePath, "utf-8");
 
       // 直接使用文件名作为标题（去掉 .md 后缀）
       const title = fileName.replace(/\.md$/i, "");
@@ -166,6 +221,21 @@ export const workspaceManager = {
       const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
 
       const githubMetadata = parseGitHubMetadata(content);
+      noteContentCache.delete(cacheKey);
+      noteContentCache.set(cacheKey, {
+        mtimeMs: stats.mtimeMs,
+        size: stats.size,
+        content,
+        fileName,
+        createdAt: stats.birthtime.toISOString(),
+        updatedAt: stats.mtime.toISOString(),
+        github: githubMetadata
+      });
+      while (noteContentCache.size > MAX_NOTE_CACHE_ENTRIES) {
+        const oldestKey = noteContentCache.keys().next().value;
+        if (!oldestKey) break;
+        noteContentCache.delete(oldestKey);
+      }
       return {
         id: relativePath,
         title,
