@@ -64,11 +64,16 @@ export function useNoteData() {
       }));
   }, [filteredNotes]);
 
-  // 计算每个文件夹的真实笔记数量
+  // 单次遍历建立计数，避免每个文件夹都重新扫描全部笔记（O(F*N)）。
   const foldersWithCount = useMemo(() => {
+    const noteCounts = new Map<string, number>();
+    for (const note of notes) {
+      if (note.folderId) noteCounts.set(note.folderId, (noteCounts.get(note.folderId) ?? 0) + 1);
+    }
+
     return folders.map((folder) => ({
       ...folder,
-      noteCount: notes.filter((note) => note.folderId === folder.id).length
+      noteCount: noteCounts.get(folder.id) ?? 0
     }));
   }, [folders, notes]);
 

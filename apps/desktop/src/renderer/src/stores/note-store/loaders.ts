@@ -15,9 +15,10 @@ export function createLoaders(set: NoteStoreSet, get: NoteStoreGet) {
         pinnedNoteIds = await configIpc.getPinnedNotes(workspacePath).catch(() => [] as string[]);
       }
 
+      const pinnedNoteIdSet = new Set(pinnedNoteIds);
       const notesWithPinState = data.notes.map((note) => ({
         ...note,
-        isPinned: pinnedNoteIds.includes(note.id),
+        isPinned: pinnedNoteIdSet.has(note.id),
         github: parseGitHubMetadata(note.content)
       }));
       notesWithPinState.forEach((note) => setLastSavedContent(note.id, note.content));
