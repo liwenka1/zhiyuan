@@ -7,7 +7,6 @@ import {
   useViewStore,
   useWorkspaceStore,
   useNoteStore,
-  useFolderStore,
   useExportThemeStore,
   useExportLayoutStore,
   useShortcutsStore
@@ -23,9 +22,7 @@ function App(): React.JSX.Element {
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
-  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
-  const selectNote = useNoteStore((state) => state.selectNote);
-  const setFolders = useFolderStore((state) => state.setFolders);
+  const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
   const [showPresentation, setShowPresentation] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -35,16 +32,11 @@ function App(): React.JSX.Element {
       const selectedPath = await workspaceIpc.select();
       if (!selectedPath) return;
 
-      const data = await workspaceIpc.scan(selectedPath);
-      if (!data) return;
-
       setWorkspacePath(selectedPath);
-      setFolders(data.folders);
-      await loadFromFileSystem(data);
     } catch {
       /* 静默处理 */
     }
-  }, [setWorkspacePath, setFolders, loadFromFileSystem]);
+  }, [setWorkspacePath]);
 
   // 打开文件（菜单触发）
   const handleMenuOpenFile = useCallback(async () => {
@@ -52,45 +44,23 @@ function App(): React.JSX.Element {
       const result = await workspaceIpc.openFile();
       if (!result) return;
 
-      const data = await workspaceIpc.scan(result.workspacePath);
-      if (!data) return;
-
+      setPendingFilePath(result.filePath);
       setWorkspacePath(result.workspacePath);
-      setFolders(data.folders);
-      await loadFromFileSystem(data);
-
-      const fileName = result.filePath.split("/").pop() || "";
-      const targetNote = data.notes.find((n) => n.fileName === fileName);
-      if (targetNote) {
-        setTimeout(() => selectNote(targetNote.id), 0);
-      }
     } catch {
       /* 静默处理 */
     }
-  }, [setWorkspacePath, setFolders, loadFromFileSystem, selectNote]);
+  }, [setPendingFilePath, setWorkspacePath]);
 
   const handleExternalOpen = useCallback(
     async (payload: { workspacePath: string; filePath?: string }) => {
       try {
-        const data = await workspaceIpc.scan(payload.workspacePath);
-        if (!data) return;
-
+        if (payload.filePath) setPendingFilePath(payload.filePath);
         setWorkspacePath(payload.workspacePath);
-        setFolders(data.folders);
-        await loadFromFileSystem(data);
-
-        if (payload.filePath) {
-          const relativePath = payload.filePath.replace(payload.workspacePath + "/", "");
-          const targetNote = data.notes.find((note) => note.id === relativePath);
-          if (targetNote) {
-            setTimeout(() => selectNote(targetNote.id), 0);
-          }
-        }
       } catch {
         /* 静默处理 */
       }
     },
-    [setWorkspacePath, setFolders, loadFromFileSystem, selectNote]
+    [setPendingFilePath, setWorkspacePath]
   );
 
   const initExportTheme = useExportThemeStore((state) => state.initExportTheme);

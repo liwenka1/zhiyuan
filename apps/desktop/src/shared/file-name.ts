@@ -3,7 +3,7 @@ const WINDOWS_RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i
 
 export function isValidFileNameSegment(value: string): boolean {
   const name = value.trim();
-  if (!name || name === "." || name === "..") return false;
+  if (!name || name !== value || name === "." || name === "..") return false;
   if (INVALID_FILE_NAME_CHARS.test(name)) return false;
   if ([...name].some((char) => char.charCodeAt(0) < 32)) return false;
   if (name.endsWith(".") || name.endsWith(" ")) return false;

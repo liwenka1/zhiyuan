@@ -20,8 +20,10 @@ import {
   type ShortcutConfig,
   DEFAULT_SHORTCUTS,
   type GitHubConfig,
-  type GitHubProjectConfigMap
+  type GitHubProjectConfigMap,
+  isValidFileNameSegment
 } from "@shared";
+import { isIgnoredWorkspaceDirectory } from "../workspace/policy";
 
 /**
  * 校验文件路径是否在当前窗口的工作区内
@@ -38,6 +40,48 @@ function assertPathInWorkspace(event: Electron.IpcMainInvokeEvent, filePath: str
   if (!validation.isValid) {
     throw new Error(`Access denied (${operation}): path is outside workspace`);
   }
+}
+
+function getCallerWorkspaceRoot(event: Electron.IpcMainInvokeEvent): string {
+  const workspacePath = getCallerWorkspace(event);
+  return validatePathInWorkspace(workspacePath, workspacePath).normalizedPath;
+}
+
+function getWorkspaceRelativePath(event: Electron.IpcMainInvokeEvent, targetPath: string, operation: string): string {
+  assertPathInWorkspace(event, targetPath, operation);
+  const validation = validatePathInWorkspace(getCallerWorkspace(event), targetPath);
+  return path.relative(getCallerWorkspaceRoot(event), validation.normalizedPath);
+}
+
+function assertNotWorkspaceRoot(event: Electron.IpcMainInvokeEvent, targetPath: string, operation: string): void {
+  if (getWorkspaceRelativePath(event, targetPath, operation) === "") {
+    throw new Error(`Access denied (${operation}): workspace root cannot be modified`);
+  }
+}
+
+function assertWorkspaceFolderPath(
+  event: Electron.IpcMainInvokeEvent,
+  folderPath: string,
+  operation: string,
+  allowMissing = false
+): void {
+  const relativePath = getWorkspaceRelativePath(event, folderPath, operation);
+  const segments = relativePath.split(path.sep).filter(Boolean);
+  if (segments.length === 0 || segments.some((segment) => !isValidFileNameSegment(segment))) {
+    throw new Error(`Access denied (${operation}): only valid workspace folders are allowed`);
+  }
+  if (segments.some((segment) => isIgnoredWorkspaceDirectory(segment))) {
+    throw new Error(`Access denied (${operation}): generated or hidden folders are not allowed`);
+  }
+  if (!allowMissing) {
+    const stat = fs.lstatSync(folderPath);
+    if (!stat.isDirectory()) throw new Error(`Access denied (${operation}): target is not a directory`);
+  }
+}
+
+function assertRegularFilePath(filePath: string, operation: string): void {
+  const stat = fs.lstatSync(filePath);
+  if (!stat.isFile()) throw new Error(`Access denied (${operation}): target is not a regular file`);
 }
 
 /**
@@ -168,8 +212,9 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle("watcher:pause", (event): IpcResultDTO<void> => {
     try {
       const entry = windowManager.getEntryByWebContents(event.sender);
-      if (entry?.workspacePath) {
-        fileWatcherManager.pauseWatching(entry.workspacePath);
+      const windowId = BrowserWindow.fromWebContents(event.sender)?.id;
+      if (entry?.workspacePath && windowId !== undefined) {
+        fileWatcherManager.pauseWatching(entry.workspacePath, windowId);
       }
       return ipcOk(undefined);
     } catch (error) {
@@ -182,8 +227,9 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle("watcher:resume", (event): IpcResultDTO<void> => {
     try {
       const entry = windowManager.getEntryByWebContents(event.sender);
-      if (entry?.workspacePath) {
-        fileWatcherManager.resumeWatching(entry.workspacePath);
+      const windowId = BrowserWindow.fromWebContents(event.sender)?.id;
+      if (entry?.workspacePath && windowId !== undefined) {
+        fileWatcherManager.resumeWatching(entry.workspacePath, windowId);
       }
       return ipcOk(undefined);
     } catch (error) {
@@ -291,6 +337,7 @@ export function registerWorkspaceHandlers(): void {
     "file:read",
     wrapIpcHandlerWithEvent(async (event, filePath: string) => {
       assertPathInWorkspace(event, filePath, "file:read");
+      assertRegularFilePath(filePath, "file:read");
       return await fileSystem.readFile(filePath);
     }, "FILE_READ_FAILED")
   );
@@ -300,6 +347,8 @@ export function registerWorkspaceHandlers(): void {
     "file:write",
     wrapIpcHandlerWithEvent(async (event, filePath: string, content: string) => {
       assertPathInWorkspace(event, filePath, "file:write");
+      assertNotWorkspaceRoot(event, filePath, "file:write");
+      assertRegularFilePath(filePath, "file:write");
       return await fileSystem.writeFile(filePath, content);
     }, "FILE_WRITE_FAILED")
   );
@@ -318,6 +367,8 @@ export function registerWorkspaceHandlers(): void {
     "file:delete",
     wrapIpcHandlerWithEvent(async (event, filePath: string) => {
       assertPathInWorkspace(event, filePath, "file:delete");
+      assertNotWorkspaceRoot(event, filePath, "file:delete");
+      assertRegularFilePath(filePath, "file:delete");
       return await fileSystem.deleteFile(filePath);
     }, "FILE_DELETE_FAILED")
   );
@@ -328,6 +379,9 @@ export function registerWorkspaceHandlers(): void {
     wrapIpcHandlerWithEvent(async (event, oldPath: string, newPath: string) => {
       assertPathInWorkspace(event, oldPath, "file:rename (source)");
       assertPathInWorkspace(event, newPath, "file:rename (dest)");
+      assertNotWorkspaceRoot(event, oldPath, "file:rename (source)");
+      assertNotWorkspaceRoot(event, newPath, "file:rename (dest)");
+      assertRegularFilePath(oldPath, "file:rename (source)");
       return await fileSystem.renameFile(oldPath, newPath);
     }, "FILE_RENAME_FAILED")
   );
@@ -338,6 +392,7 @@ export function registerWorkspaceHandlers(): void {
     wrapIpcHandlerWithEvent(async (event, sourcePath: string, destPath: string) => {
       assertPathInWorkspace(event, sourcePath, "file:copy (source)");
       assertPathInWorkspace(event, destPath, "file:copy (dest)");
+      assertRegularFilePath(sourcePath, "file:copy (source)");
       return await fileSystem.copyFile(sourcePath, destPath);
     }, "FILE_COPY_FAILED")
   );
@@ -355,7 +410,7 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle(
     "folder:create",
     wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
-      assertPathInWorkspace(event, folderPath, "folder:create");
+      assertWorkspaceFolderPath(event, folderPath, "folder:create", true);
       return await fileSystem.createFolder(folderPath);
     }, "FOLDER_CREATE_FAILED")
   );
@@ -364,7 +419,7 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle(
     "folder:delete",
     wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
-      assertPathInWorkspace(event, folderPath, "folder:delete");
+      assertWorkspaceFolderPath(event, folderPath, "folder:delete");
       return await fileSystem.deleteFolder(folderPath);
     }, "FOLDER_DELETE_FAILED")
   );
@@ -373,8 +428,8 @@ export function registerWorkspaceHandlers(): void {
   ipcMain.handle(
     "folder:rename",
     wrapIpcHandlerWithEvent(async (event, oldPath: string, newPath: string) => {
-      assertPathInWorkspace(event, oldPath, "folder:rename (source)");
-      assertPathInWorkspace(event, newPath, "folder:rename (dest)");
+      assertWorkspaceFolderPath(event, oldPath, "folder:rename (source)");
+      assertWorkspaceFolderPath(event, newPath, "folder:rename (dest)", true);
       return await fileSystem.renameFolder(oldPath, newPath);
     }, "FOLDER_RENAME_FAILED")
   );

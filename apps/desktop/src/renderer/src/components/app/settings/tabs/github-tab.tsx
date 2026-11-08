@@ -70,10 +70,10 @@ export function GitHubTab() {
         repo: activeDraft.repo.trim(),
         token: activeDraft.token.trim()
       };
-      await update(next);
+      const saved = await update(next);
       setDrafts((prev) => ({
         ...prev,
-        [activeProjectKey]: next
+        [activeProjectKey]: saved ? next : { owner, repo, token }
       }));
     }
   };
@@ -231,9 +231,13 @@ export function GitHubTab() {
               variant="destructive"
               onClick={async () => {
                 if (!canRemoveCurrent) return;
-                await removeProject(activeProjectKey);
-                setRemoveDialogOpen(false);
-                toast.success(t("settings.githubProjectRemoved"));
+                const removed = await removeProject(activeProjectKey);
+                if (removed) {
+                  setRemoveDialogOpen(false);
+                  toast.success(t("settings.githubProjectRemoved"));
+                } else {
+                  toast.error(t("settings.githubProjectRemoveFailed"));
+                }
               }}
             >
               {t("settings.githubProjectRemoveConfirmAction")}

@@ -1,4 +1,5 @@
 import path from "path";
+import fs from "fs/promises";
 import Parser from "rss-parser";
 import { fileSystem } from "../file-system";
 import { assertSafeRemoteHttpUrl, fetchSafeRemoteHttp } from "../security/remote-url";
@@ -251,50 +252,54 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
   await fileSystem.createFolder(folderPath);
 
   const metadataItems: RssMetadataItem[] = [];
+  try {
+    for (const item of feed.items || []) {
+      const title = item.title?.trim() || "Untitled";
+      const published = formatDate(item.isoDate || item.pubDate) || undefined;
+      const datePrefix = published || "undated";
+      const fileBaseName = `${datePrefix}-${title}`;
+      const fileName = await getAvailableFileName(folderPath, fileBaseName);
+      const filePath = path.join(folderPath, fileName);
+      const link = item.link?.trim();
+      const guidValue = typeof item.guid === "string" ? item.guid : undefined;
+      const idValue = typeof item.id === "string" ? item.id : undefined;
+      const guid = guidValue?.trim() || idValue?.trim();
 
-  for (const item of feed.items || []) {
-    const title = item.title?.trim() || "Untitled";
-    const published = formatDate(item.isoDate || item.pubDate) || undefined;
-    const datePrefix = published || "undated";
-    const fileBaseName = `${datePrefix}-${title}`;
-    const fileName = await getAvailableFileName(folderPath, fileBaseName);
-    const filePath = path.join(folderPath, fileName);
-    const link = item.link?.trim();
-    const guidValue = typeof item.guid === "string" ? item.guid : undefined;
-    const idValue = typeof item.id === "string" ? item.id : undefined;
-    const guid = guidValue?.trim() || idValue?.trim();
+      const metadata = buildCommentMetadata({
+        "rss-title": title,
+        "rss-link": link,
+        "rss-guid": guid,
+        "rss-published": published,
+        "rss-source": feedTitle
+      });
+      const mediaBlock = buildMediaBlock(getMediaEntries(item));
+      const content = pickItemContent(item);
+      const heading = `# ${title}\n\n`;
+      const markdown = `${metadata}${heading}${mediaBlock}${content}`;
 
-    const metadata = buildCommentMetadata({
-      "rss-title": title,
-      "rss-link": link,
-      "rss-guid": guid,
-      "rss-published": published,
-      "rss-source": feedTitle
-    });
-    const mediaBlock = buildMediaBlock(getMediaEntries(item));
-    const content = pickItemContent(item);
-    const heading = `# ${title}\n\n`;
-    const markdown = `${metadata}${heading}${mediaBlock}${content}`;
+      await fileSystem.createFile(filePath, markdown);
 
-    await fileSystem.createFile(filePath, markdown);
+      metadataItems.push({
+        guid,
+        link,
+        published: published ? new Date(published).toISOString() : undefined,
+        title
+      });
+    }
 
-    metadataItems.push({
-      guid,
-      link,
-      published: published ? new Date(published).toISOString() : undefined,
-      title
-    });
+    const metadata: RssMetadata = {
+      type: "rss",
+      url,
+      title: feedTitle,
+      lastFetched: new Date().toISOString(),
+      items: metadataItems
+    };
+
+    await fileSystem.createFile(path.join(folderPath, ".rss.json"), JSON.stringify(metadata, null, 2));
+  } catch (error) {
+    await fs.rm(folderPath, { recursive: true, force: true }).catch(() => {});
+    throw error;
   }
-
-  const metadata: RssMetadata = {
-    type: "rss",
-    url,
-    title: feedTitle,
-    lastFetched: new Date().toISOString(),
-    items: metadataItems
-  };
-
-  await fileSystem.createFile(path.join(folderPath, ".rss.json"), JSON.stringify(metadata, null, 2));
 
   return {
     folderName,
@@ -321,58 +326,64 @@ export async function updateRss(folderPath: string): Promise<{
   );
 
   const newItems: RssMetadataItem[] = [];
+  const createdFilePaths: string[] = [];
   let addedCount = 0;
+  try {
+    for (const item of feed.items || []) {
+      const title = item.title?.trim() || "Untitled";
+      const published = formatDate(item.isoDate || item.pubDate) || undefined;
+      const link = item.link?.trim();
+      const guidValue = typeof item.guid === "string" ? item.guid : undefined;
+      const idValue = typeof item.id === "string" ? item.id : undefined;
+      const guid = guidValue?.trim() || idValue?.trim();
+      const key = buildItemKey({ guid, link, title, published });
 
-  for (const item of feed.items || []) {
-    const title = item.title?.trim() || "Untitled";
-    const published = formatDate(item.isoDate || item.pubDate) || undefined;
-    const link = item.link?.trim();
-    const guidValue = typeof item.guid === "string" ? item.guid : undefined;
-    const idValue = typeof item.id === "string" ? item.id : undefined;
-    const guid = guidValue?.trim() || idValue?.trim();
-    const key = buildItemKey({ guid, link, title, published });
+      if (key && existingKeys.has(key)) {
+        continue;
+      }
 
-    if (key && existingKeys.has(key)) {
-      continue;
+      const datePrefix = published || "undated";
+      const fileBaseName = `${datePrefix}-${title}`;
+      const fileName = await getAvailableFileName(folderPath, fileBaseName);
+      const filePath = path.join(folderPath, fileName);
+
+      const metadata = buildCommentMetadata({
+        "rss-title": title,
+        "rss-link": link,
+        "rss-guid": guid,
+        "rss-published": published,
+        "rss-source": feedTitle
+      });
+      const mediaBlock = buildMediaBlock(getMediaEntries(item));
+      const content = pickItemContent(item);
+      const heading = `# ${title}\n\n`;
+      const markdown = `${metadata}${heading}${mediaBlock}${content}`;
+
+      await fileSystem.createFile(filePath, markdown);
+      createdFilePaths.push(filePath);
+
+      newItems.push({
+        guid,
+        link,
+        published: published ? new Date(published).toISOString() : undefined,
+        title
+      });
+
+      if (key) {
+        existingKeys.add(key);
+      }
+      addedCount += 1;
     }
 
-    const datePrefix = published || "undated";
-    const fileBaseName = `${datePrefix}-${title}`;
-    const fileName = await getAvailableFileName(folderPath, fileBaseName);
-    const filePath = path.join(folderPath, fileName);
+    metadata.title = feedTitle;
+    metadata.lastFetched = new Date().toISOString();
+    metadata.items = [...metadata.items, ...newItems];
 
-    const metadata = buildCommentMetadata({
-      "rss-title": title,
-      "rss-link": link,
-      "rss-guid": guid,
-      "rss-published": published,
-      "rss-source": feedTitle
-    });
-    const mediaBlock = buildMediaBlock(getMediaEntries(item));
-    const content = pickItemContent(item);
-    const heading = `# ${title}\n\n`;
-    const markdown = `${metadata}${heading}${mediaBlock}${content}`;
-
-    await fileSystem.createFile(filePath, markdown);
-
-    newItems.push({
-      guid,
-      link,
-      published: published ? new Date(published).toISOString() : undefined,
-      title
-    });
-
-    if (key) {
-      existingKeys.add(key);
-    }
-    addedCount += 1;
+    await saveRssMetadata(folderPath, metadata);
+  } catch (error) {
+    await Promise.all(createdFilePaths.map((filePath) => fs.rm(filePath, { force: true }).catch(() => {})));
+    throw error;
   }
-
-  metadata.title = feedTitle;
-  metadata.lastFetched = new Date().toISOString();
-  metadata.items = [...metadata.items, ...newItems];
-
-  await saveRssMetadata(folderPath, metadata);
 
   return { addedCount };
 }

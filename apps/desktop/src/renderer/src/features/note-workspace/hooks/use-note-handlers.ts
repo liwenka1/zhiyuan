@@ -3,10 +3,11 @@ import { resolveNoteAbsolutePath, resolveNoteRelativePath } from "@/lib/workspac
 import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { shellIpc, fileIpc, githubIpc } from "@/ipc";
+import { shellIpc, fileIpc, githubIpc, configIpc } from "@/ipc";
 import { upsertGitHubMetadata } from "@/lib/github-metadata";
 import { collectLocalMarkdownAssets, replaceMarkdownAssetUrls } from "@/lib/markdown-assets";
 import { uploadMarkdownAssets } from "@/lib/github-assets";
+import { clearDebouncedSave, clearPendingSave } from "@/stores/note-store/persistence";
 
 export interface NoteHandlers {
   handleCreateNote: () => void;
@@ -100,8 +101,22 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
     if (!options?.skipConfirm && !window.confirm(t("confirmDeleteNote", { title: note.title }))) return;
 
     try {
+      clearDebouncedSave(note.id);
+      const noteStore = useNoteStore.getState();
+      await noteStore.saveNoteToFileSystem(
+        note.id,
+        noteStore.selectedNoteId === note.id ? noteStore.editorContent : fullNote.content
+      );
       await fileIpc.delete(fullNote.filePath);
       deleteNote(note.id);
+      clearPendingSave(note.id, fullNote.filePath);
+      if (workspacePath) {
+        const pinnedNoteIds = useNoteStore
+          .getState()
+          .notes.filter((item) => item.isPinned)
+          .map((item) => item.id);
+        await configIpc.setPinnedNotes(workspacePath, pinnedNoteIds).catch(() => {});
+      }
     } catch {
       toast.error(t("errors.deleteNoteFailed"));
     }

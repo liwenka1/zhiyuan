@@ -12,6 +12,8 @@ const fileSystemSource = await fsp.readFile("apps/desktop/src/main/file-system/i
 const workspaceSource = await fsp.readFile("apps/desktop/src/main/workspace/index.ts", "utf8");
 const watcherSource = await fsp.readFile("apps/desktop/src/main/file-watcher/index.ts", "utf8");
 const githubHandlerSource = await fsp.readFile("apps/desktop/src/main/ipc/github-handler.ts", "utf8");
+const mainSource = await fsp.readFile("apps/desktop/src/main/index.ts", "utf8");
+const captureSource = await fsp.readFile("apps/desktop/src/main/export/capture.ts", "utf8");
 assert.match(fileNameSource, /WINDOWS_RESERVED_NAMES/);
 assert.match(pathValidatorSource, /realpathSync/);
 assert.match(remoteUrlSource, /mappedIpv4FromIpv6/);
@@ -21,10 +23,14 @@ assert.match(fileSystemSource, /isCaseOnlyRename/);
 assert.match(workspaceSource, /MAX_WORKSPACE_DEPTH/);
 assert.match(watcherSource, /depth: MAX_WORKSPACE_DEPTH/);
 assert.match(githubHandlerSource, /payload\.projectKey/);
+assert.match(workspaceHandlerSource, /assertNotWorkspaceRoot/);
+assert.match(workspaceHandlerSource, /assertWorkspaceFolderPath/);
+assert.match(mainSource, /getFocusedWindow/);
+assert.match(captureSource, /onBeforeRequest/);
 
 function isValidFileNameSegment(value) {
   const name = value.trim();
-  if (!name || name === "." || name === "..") return false;
+  if (!name || name !== value || name === "." || name === "..") return false;
   if (/[\\/:*?"<>|]/.test(name)) return false;
   if ([...name].some((char) => char.charCodeAt(0) < 32)) return false;
   if (name.endsWith(".") || name.endsWith(" ")) return false;
@@ -50,7 +56,8 @@ function validatePathInWorkspace(workspacePath, targetPath) {
   const target = normalizePath(targetPath);
   const relative = path.relative(base, target);
   return {
-    isValid: relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
+    isValid:
+      relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))
   };
 }
 
@@ -58,6 +65,7 @@ assert.equal(isValidFileNameSegment("My note"), true);
 assert.equal(isValidFileNameSegment("../secret"), false);
 assert.equal(isValidFileNameSegment("CON"), false);
 assert.equal(isValidFileNameSegment("note/name"), false);
+assert.equal(isValidFileNameSegment(" note "), false);
 
 const root = await fsp.mkdtemp(path.join(os.tmpdir(), "zhiyuan-core-test-"));
 const workspace = path.join(root, "workspace");

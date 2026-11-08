@@ -102,25 +102,7 @@ export const workspaceManager = {
       if (!rootStat.isDirectory()) {
         throw new Error("Workspace path is not a directory");
       }
-      const entries = await fs.promises.readdir(workspacePath, { withFileTypes: true });
-
-      // 第一遍：收集所有文件夹
-      for (const entry of entries) {
-        if (entry.isDirectory() && !isIgnoredWorkspaceDirectory(entry.name)) {
-          const folderPath = path.join(workspacePath, entry.name);
-          const rssConfigPath = path.join(folderPath, ".rss.json");
-          const isRss = await fileSystem.exists(rssConfigPath);
-          folders.push({
-            id: entry.name,
-            name: entry.name,
-            path: folderPath,
-            noteCount: 0,
-            isRss
-          });
-        }
-      }
-
-      const collectMarkdownNotes = async (
+      const collectDirectory = async (
         directoryPath: string,
         folderId: string | null,
         depth: number
@@ -133,7 +115,18 @@ export const workspaceManager = {
           const entryPath = path.join(directoryPath, entry.name);
           if (entry.isDirectory()) {
             if (depth >= MAX_WORKSPACE_DEPTH || isIgnoredWorkspaceDirectory(entry.name)) continue;
-            noteCount += await collectMarkdownNotes(entryPath, folderId, depth + 1);
+            const childFolderId = path.relative(workspacePath, entryPath).split(path.sep).join("/");
+            const rssConfigPath = path.join(entryPath, ".rss.json");
+            const isRss = await fileSystem.exists(rssConfigPath);
+            const folder: FolderInfo = {
+              id: childFolderId,
+              name: childFolderId,
+              path: entryPath,
+              noteCount: 0,
+              isRss
+            };
+            folders.push(folder);
+            folder.noteCount = await collectDirectory(entryPath, childFolderId, depth + 1);
             continue;
           }
           if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) continue;
@@ -148,17 +141,8 @@ export const workspaceManager = {
         return noteCount;
       };
 
-      // 根目录笔记和每个顶层文件夹中的任意深度 Markdown 文件都会被收集。
-      for (const entry of entries) {
-        if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) continue;
-        const note = await this.loadNote(path.join(workspacePath, entry.name), null, workspacePath);
-        if (note) {
-          notes.push(note);
-        }
-      }
-      for (const folder of folders) {
-        folder.noteCount = await collectMarkdownNotes(folder.path, folder.id, 1);
-      }
+      // 递归收集工作区中的文件夹和 Markdown。folderId 使用相对路径，保证嵌套目录可独立筛选和移动。
+      await collectDirectory(workspacePath, null, 0);
 
       return { folders, notes };
     } catch (error) {

@@ -13,6 +13,14 @@ export const windowApi = {
    */
   isFullScreen: (): Promise<IpcResultDTO<boolean>> => ipcRenderer.invoke("window:isFullScreen"),
 
+  readyToClose: (): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("window:readyToClose"),
+
+  onPrepareClose: (callback: () => void): (() => void) => {
+    const listener = () => callback();
+    ipcRenderer.on("window:prepare-close", listener);
+    return () => ipcRenderer.removeListener("window:prepare-close", listener);
+  },
+
   /**
    * 新建窗口（显示欢迎页）
    */

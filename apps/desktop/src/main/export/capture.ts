@@ -2,8 +2,27 @@ import type { NativeImage } from "electron";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { tmpdir } from "os";
-import { BrowserWindow } from "electron";
+import { BrowserWindow, session } from "electron";
 import { embedLocalImages } from "./assets";
+
+const EXPORT_PARTITION = "export-capture";
+let exportSession: Electron.Session | null = null;
+
+function getExportSession(): Electron.Session {
+  if (exportSession) return exportSession;
+  exportSession = session.fromPartition(EXPORT_PARTITION);
+  exportSession.webRequest.onBeforeRequest(
+    { urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] },
+    (_details, callback) => callback({ cancel: true })
+  );
+  return exportSession;
+}
+
+function stripRemoteMediaSources(html: string): string {
+  return html.replace(/<(img|video|audio|source)\b[^>]*>/gi, (tag) =>
+    tag.replace(/\s(?:src|poster)\s*=\s*(["'])(?:https?:|\/\/)[^"']*\1/gi, "")
+  );
+}
 
 async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10000): Promise<void> {
   const startTime = Date.now();
@@ -17,13 +36,13 @@ async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10
           }
 
           const images = Array.from(document.images);
-          const allImagesLoaded = images.every(img => img.complete && img.naturalHeight !== 0);
+          const allImagesLoaded = images.every(img => img.complete && (img.naturalHeight !== 0 || !img.currentSrc));
           if (!allImagesLoaded) {
             return false;
           }
 
           const videos = Array.from(document.querySelectorAll('video'));
-          const allVideosReady = videos.every(video => video.readyState >= 2);
+          const allVideosReady = videos.every(video => !video.currentSrc || video.readyState >= 2);
           if (!allVideosReady) {
             return false;
           }
@@ -73,18 +92,20 @@ export async function captureHtmlAsImage(
   const CAPTURE_TIMEOUT = 30000;
 
   try {
-    const processedHtml = await embedLocalImages(htmlContent, notePath, workspacePath);
+    const processedHtml = stripRemoteMediaSources(await embedLocalImages(htmlContent, notePath, workspacePath));
 
     tempHtmlPath = path.join(tmpdir(), `export-${Date.now()}.html`);
     await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
 
+    getExportSession();
     window = new BrowserWindow({
       width,
       height: 600,
       show: false,
       webPreferences: {
         nodeIntegration: false,
-        contextIsolation: true
+        contextIsolation: true,
+        partition: EXPORT_PARTITION
       }
     });
 

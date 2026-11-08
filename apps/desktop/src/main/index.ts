@@ -29,13 +29,17 @@ type ExternalOpenPayload = {
 const pendingExternalOpens: ExternalOpenPayload[] = [];
 
 function resolveExternalOpenTarget(targetPath: string): ExternalOpenPayload | null {
-  if (!existsSync(targetPath)) return null;
-  const stat = fs.statSync(targetPath);
-  if (stat.isDirectory()) {
-    return { workspacePath: targetPath };
-  }
-  if (stat.isFile() && targetPath.toLowerCase().endsWith(".md")) {
-    return { workspacePath: path.dirname(targetPath), filePath: targetPath };
+  try {
+    if (!existsSync(targetPath)) return null;
+    const stat = fs.statSync(targetPath);
+    if (stat.isDirectory()) {
+      return { workspacePath: targetPath };
+    }
+    if (stat.isFile() && targetPath.toLowerCase().endsWith(".md")) {
+      return { workspacePath: path.dirname(targetPath), filePath: targetPath };
+    }
+  } catch {
+    // The path can disappear or become inaccessible between existsSync and statSync.
   }
   return null;
 }
@@ -123,10 +127,13 @@ function isAllowedLocalResource(filePath: string): boolean {
     return false;
   }
 
-  return windowManager.getAllEntries().some((entry) => {
-    const workspacePath = entry.workspacePath;
-    return Boolean(workspacePath && validatePathInWorkspace(workspacePath, filePath).isValid);
-  });
+  // The protocol request does not expose the originating WebContents. Restricting
+  // access to the focused window prevents one workspace window from reading a
+  // second open workspace by guessing its absolute path.
+  const focusedWindow = BrowserWindow.getFocusedWindow();
+  const entry = focusedWindow ? windowManager.getEntryById(focusedWindow.id) : undefined;
+  const workspacePath = entry?.workspacePath;
+  return Boolean(workspacePath && validatePathInWorkspace(workspacePath, filePath).isValid);
 }
 
 // This method will be called when Electron has finished

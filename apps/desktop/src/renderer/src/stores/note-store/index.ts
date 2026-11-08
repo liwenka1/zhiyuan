@@ -7,7 +7,7 @@ import { createFileEventHandlers } from "./file-events";
 import { createLoaders } from "./loaders";
 import { createSelectors } from "./selectors";
 
-export { clearAllDebouncedSaves } from "./persistence";
+export { clearAllDebouncedSaves, clearPendingSave, flushAllDebouncedSaves } from "./persistence";
 
 export const useNoteStore = create<NoteStore>()(
   immer((set, get) => ({
