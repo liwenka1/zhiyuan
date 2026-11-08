@@ -9,6 +9,7 @@ import { isSafeUrl } from "../security/url-validator";
 import { fileWatcherManager } from "../file-watcher";
 import { configManager } from "../config";
 import { recordDiagnostic } from "../diagnostics";
+import { CloseAttemptTracker } from "./close-attempt";
 
 const CLOSE_FLUSH_TIMEOUT_MS = 10_000;
 
@@ -23,8 +24,7 @@ interface WindowEntry {
  */
 class WindowManager {
   private windows: Map<number, WindowEntry> = new Map();
-  private closingWindows = new Set<number>();
-  private closeAttempts = new Map<number, number>();
+  private readonly closeAttempts = new CloseAttemptTracker();
 
   private normalizeWorkspacePath(workspacePath: string): string {
     try {
@@ -128,27 +128,25 @@ class WindowManager {
 
     // 等待 renderer flush 完待保存内容；无响应时解除关闭拦截，避免未保存内容被强制销毁。
     win.on("close", (event) => {
-      if (this.closingWindows.has(win.id)) {
+      if (this.closeAttempts.isPending(win.id)) {
         event.preventDefault();
         return;
       }
 
       event.preventDefault();
-      this.closingWindows.add(win.id);
-      const closeAttempt = (this.closeAttempts.get(win.id) ?? 0) + 1;
-      this.closeAttempts.set(win.id, closeAttempt);
+      const closeAttempt = this.closeAttempts.begin(win.id);
       if (!win.isDestroyed()) {
         win.webContents.send("window:prepare-close", closeAttempt);
       }
 
       setTimeout(() => {
-        if (win.isDestroyed() || !this.closingWindows.has(win.id) || this.closeAttempts.get(win.id) !== closeAttempt) {
+        if (win.isDestroyed() || !this.closeAttempts.isCurrent(win.id, closeAttempt)) {
           return;
         }
         recordDiagnostic("window.close-timeout", new Error("Renderer did not finish saving before close timeout"), {
           windowId: win.id
         });
-        this.closingWindows.delete(win.id);
+        this.closeAttempts.cancel(win.id);
         win.show();
       }, CLOSE_FLUSH_TIMEOUT_MS);
     });
@@ -183,8 +181,7 @@ class WindowManager {
 
     // 窗口关闭时清理
     win.on("closed", () => {
-      this.closingWindows.delete(win.id);
-      this.closeAttempts.delete(win.id);
+      this.closeAttempts.clear(win.id);
       const entry = this.windows.get(win.id);
       if (entry?.workspacePath) {
         // 将关闭窗口的工作区移到最近列表顶部，以便下次启动恢复
@@ -222,14 +219,10 @@ class WindowManager {
 
   allowClose(windowId: number, closeAttempt: number): void {
     const entry = this.windows.get(windowId);
-    if (
-      !entry ||
-      entry.window.isDestroyed() ||
-      !this.closingWindows.has(windowId) ||
-      this.closeAttempts.get(windowId) !== closeAttempt
-    ) {
+    if (!entry || entry.window.isDestroyed() || !this.closeAttempts.isCurrent(windowId, closeAttempt)) {
       return;
     }
+    this.closeAttempts.complete(windowId, closeAttempt);
     entry.window.destroy();
   }
 
