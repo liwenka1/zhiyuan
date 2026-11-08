@@ -13,7 +13,8 @@ import {
   githubApi,
   rssApi,
   urlApi,
-  terminalApi
+  terminalApi,
+  diagnosticsApi
 } from "./apis";
 
 // 聚合所有 API 模块
@@ -31,7 +32,8 @@ const api = {
   github: githubApi,
   rss: rssApi,
   url: urlApi,
-  terminal: terminalApi
+  terminal: terminalApi,
+  diagnostics: diagnosticsApi
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

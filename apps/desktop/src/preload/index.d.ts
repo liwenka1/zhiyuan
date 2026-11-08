@@ -314,6 +314,10 @@ export interface TerminalAPI {
   onExit: (callback: (payload: { id: string; exitCode: number; signal?: number }) => void) => () => void;
 }
 
+export interface DiagnosticsAPI {
+  reportError: (payload: { source: string; message: string; stack?: string }) => void;
+}
+
 // API 集合接口
 export interface API {
   theme: ThemeAPI;
@@ -330,6 +334,7 @@ export interface API {
   rss: RssAPI;
   url: UrlAPI;
   terminal: TerminalAPI;
+  diagnostics: DiagnosticsAPI;
 }
 
 declare global {
