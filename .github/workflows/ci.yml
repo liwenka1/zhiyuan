@@ -52,6 +52,20 @@ jobs:
       - name: Unit tests
         run: pnpm test:unit
 
+      - name: Typecheck tests
+        run: pnpm typecheck:tests
+
+      - name: Unit test coverage report
+        run: pnpm test:unit:coverage
+
+      - name: Upload unit coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-coverage
+          path: coverage/
+          if-no-files-found: ignore
+
       - name: Build desktop app
         run: pnpm --filter zhiyuan build
 

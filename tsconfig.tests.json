@@ -1,0 +1,22 @@
+{
+  "extends": "./apps/desktop/tsconfig.web.json",
+  "compilerOptions": {
+    "composite": false,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
+    "types": ["node", "vitest/globals"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["apps/desktop/src/renderer/src/*"],
+      "@shared": ["apps/desktop/src/shared/index"],
+      "@shared/*": ["apps/desktop/src/shared/*"]
+    }
+  },
+  "include": ["tests/**/*.ts", "apps/desktop/src/preload/index.d.ts"]
+}
