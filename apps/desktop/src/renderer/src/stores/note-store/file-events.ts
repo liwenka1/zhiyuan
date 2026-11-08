@@ -91,7 +91,7 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       }
 
       const content = await handleFileChanged(filePath, fullPath);
-      if (!content) return;
+      if (content === null) return;
 
       set((state) => {
         const targetNote = state.notes.find((n) => n.id === filePath);
