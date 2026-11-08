@@ -7,8 +7,9 @@ import { setLastSavedContent } from "./persistence";
 
 export function createLoaders(set: NoteStoreSet, get: NoteStoreGet) {
   return {
-    loadFromFileSystem: async (data: { notes: Note[] }) => {
+    loadFromFileSystem: async (data: { notes: Note[] }, expectedWorkspacePath?: string) => {
       const workspacePath = useWorkspaceStore.getState().workspacePath;
+      if (expectedWorkspacePath && workspacePath !== expectedWorkspacePath) return;
       let pinnedNoteIds: string[] = [];
 
       if (workspacePath) {
@@ -38,6 +39,8 @@ export function createLoaders(set: NoteStoreSet, get: NoteStoreGet) {
         selectedNote.content = current.editorContent;
         selectedNote.github = parseGitHubMetadata(current.editorContent);
       }
+
+      if (expectedWorkspacePath && useWorkspaceStore.getState().workspacePath !== expectedWorkspacePath) return;
 
       set({
         notes: notesWithPinState,
