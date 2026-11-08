@@ -10,6 +10,8 @@ import { fileWatcherManager } from "../file-watcher";
 import { configManager } from "../config";
 import { recordDiagnostic } from "../diagnostics";
 
+const CLOSE_FLUSH_TIMEOUT_MS = 10_000;
+
 interface WindowEntry {
   window: BrowserWindow;
   workspacePath: string | null;
@@ -123,7 +125,7 @@ class WindowManager {
       win.show();
     });
 
-    // 等待 renderer flush 完待保存内容；无响应时超时放行，避免窗口永久卡住。
+    // 等待 renderer flush 完待保存内容；无响应时解除关闭拦截，避免未保存内容被强制销毁。
     win.on("close", (event) => {
       if (this.closingWindows.has(win.id)) return;
 
@@ -134,8 +136,13 @@ class WindowManager {
       }
 
       setTimeout(() => {
-        if (!win.isDestroyed()) win.destroy();
-      }, 2000);
+        if (win.isDestroyed() || !this.closingWindows.has(win.id)) return;
+        recordDiagnostic("window.close-timeout", new Error("Renderer did not finish saving before close timeout"), {
+          windowId: win.id
+        });
+        this.closingWindows.delete(win.id);
+        win.show();
+      }, CLOSE_FLUSH_TIMEOUT_MS);
     });
 
     win.webContents.setWindowOpenHandler((details) => {

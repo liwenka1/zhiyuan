@@ -141,16 +141,19 @@ export function useWorkspaceInit() {
   // 主进程在真正关闭窗口前等待 renderer 完成保存。
   useEffect(() => {
     const handlePrepareClose = async () => {
+      let saveSucceeded = false;
       try {
         const { selectedNoteId, editorContent } = useNoteStore.getState();
         if (selectedNoteId && editorContent !== undefined) {
           await useNoteStore.getState().saveNoteToFileSystem(selectedNoteId, editorContent);
         }
         await flushAllDebouncedSaves(useNoteStore.getState);
+        saveSucceeded = true;
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         toast.error(`${t("errors.saveNoteFailed")}: ${message}`);
-      } finally {
+      }
+      if (saveSucceeded) {
         await window.api.window.readyToClose().catch(() => {});
       }
     };
