@@ -56,6 +56,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   themeMode: "system",
 
   setTheme: async (mode: ThemeMode) => {
+    const previousState = get();
     // 1. 立即更新本地状态（响应快）
     // 预测实际主题：system 模式使用系统主题，否则直接使用指定值
     const resolvedTheme: Theme = mode === "system" ? getSystemTheme() : mode;
@@ -63,7 +64,12 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     applyThemeToDocument(resolvedTheme);
 
     // 2. 同步到主进程（持久化 + 通知其他窗口）
-    await themeIpc.set(mode).catch(() => {});
+    try {
+      await themeIpc.set(mode);
+    } catch {
+      set({ themeMode: previousState.themeMode, theme: previousState.theme });
+      applyThemeToDocument(previousState.theme);
+    }
   },
 
   toggleTheme: () => {

@@ -326,6 +326,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           .map((n) => n.id);
         await configIpc.setPinnedNotes(workspacePath, allPinnedNotes);
       } catch (error) {
+        set((state) => {
+          const targetNote = state.notes.find((n) => n.id === noteId);
+          if (targetNote) targetNote.isPinned = note.isPinned;
+        });
         toast.error(i18n.t("note:pin.failed"));
         throw error;
       }
