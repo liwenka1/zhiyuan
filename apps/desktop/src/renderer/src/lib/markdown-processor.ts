@@ -15,15 +15,22 @@ import rehypeSlug from "rehype-slug";
 import rehypePrettyCode from "rehype-pretty-code";
 import rehypeKatex from "rehype-katex";
 import rehypeStringify from "rehype-stringify";
-import mermaid from "mermaid";
 import type { Root, Element } from "hast";
 import { visit } from "unist-util-visit";
 import { iconButtonVariants } from "@/components/ui/button";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
 import { normalizeMarkdownPaths, resolveResourcePath, isRelativePath } from "@shared";
 
-// 初始化 mermaid（securityLevel: "strict" 防止 XSS）
-mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "strict" });
+type MermaidApi = typeof import("mermaid").default;
+let mermaidPromise: Promise<MermaidApi> | null = null;
+
+async function loadMermaid(): Promise<MermaidApi> {
+  mermaidPromise ??= import("mermaid").then(({ default: mermaid }) => {
+    mermaid.initialize({ startOnLoad: false, theme: "default", securityLevel: "strict" });
+    return mermaid;
+  });
+  return mermaidPromise;
+}
 
 /**
  * 从 HTML 中提取纯文本（移除所有标签）
@@ -154,6 +161,8 @@ async function renderMermaidBlocks(html: string, isDarkTheme = false): Promise<s
   const matches = [...html.matchAll(mermaidRegex)];
 
   if (matches.length === 0) return html;
+
+  const mermaid = await loadMermaid();
 
   // 根据主题设置 mermaid 主题
   const mermaidTheme = isDarkTheme ? "dark" : "default";
