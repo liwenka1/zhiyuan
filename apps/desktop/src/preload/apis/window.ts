@@ -13,10 +13,11 @@ export const windowApi = {
    */
   isFullScreen: (): Promise<IpcResultDTO<boolean>> => ipcRenderer.invoke("window:isFullScreen"),
 
-  readyToClose: (): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("window:readyToClose"),
+  readyToClose: (closeAttempt: number): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("window:readyToClose", closeAttempt),
 
-  onPrepareClose: (callback: () => void): (() => void) => {
-    const listener = () => callback();
+  onPrepareClose: (callback: (closeAttempt: number) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, closeAttempt: number) => callback(closeAttempt);
     ipcRenderer.on("window:prepare-close", listener);
     return () => ipcRenderer.removeListener("window:prepare-close", listener);
   },

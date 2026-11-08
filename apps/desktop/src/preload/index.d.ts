@@ -125,8 +125,8 @@ export interface WindowAPI {
    * 获取窗口全屏状态
    */
   isFullScreen: () => Promise<IpcResultDTO<boolean>>;
-  readyToClose: () => Promise<IpcResultDTO<void>>;
-  onPrepareClose: (callback: () => void) => () => void;
+  readyToClose: (closeAttempt: number) => Promise<IpcResultDTO<void>>;
+  onPrepareClose: (callback: (closeAttempt: number) => void) => () => void;
 
   /**
    * 新建窗口（显示欢迎页）
