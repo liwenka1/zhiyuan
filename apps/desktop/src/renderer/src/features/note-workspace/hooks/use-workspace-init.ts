@@ -140,7 +140,7 @@ export function useWorkspaceInit() {
 
   // 主进程在真正关闭窗口前等待 renderer 完成保存。
   useEffect(() => {
-    const handlePrepareClose = async () => {
+    const handlePrepareClose = async (closeAttempt: number) => {
       let saveSucceeded = false;
       try {
         const { selectedNoteId, editorContent } = useNoteStore.getState();
@@ -154,12 +154,12 @@ export function useWorkspaceInit() {
         toast.error(`${t("errors.saveNoteFailed")}: ${message}`);
       }
       if (saveSucceeded) {
-        await window.api.window.readyToClose().catch(() => {});
+        await window.api.window.readyToClose(closeAttempt).catch(() => {});
       }
     };
 
-    return window.api.window.onPrepareClose(() => {
-      void handlePrepareClose();
+    return window.api.window.onPrepareClose((closeAttempt) => {
+      void handlePrepareClose(closeAttempt);
     });
   }, [t]);
 }

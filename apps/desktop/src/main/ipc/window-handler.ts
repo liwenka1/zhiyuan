@@ -7,11 +7,14 @@ import { windowManager } from "../window-manager";
  * 注册窗口相关的 IPC 处理器
  */
 export function registerWindowHandlers(): void {
-  ipcMain.handle("window:readyToClose", (event): IpcResultDTO<void> => {
+  ipcMain.handle("window:readyToClose", (event, closeAttempt: number): IpcResultDTO<void> => {
     try {
+      if (!Number.isInteger(closeAttempt) || closeAttempt < 1) {
+        return ipcErr("无效的关闭请求", "WINDOW_INVALID_CLOSE_ATTEMPT");
+      }
       const win = BrowserWindow.fromWebContents(event.sender);
       if (!win) return ipcErr("无法获取窗口实例", "WINDOW_NOT_FOUND");
-      setImmediate(() => windowManager.allowClose(win.id));
+      setImmediate(() => windowManager.allowClose(win.id, closeAttempt));
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
