@@ -23,9 +23,11 @@ export function useWorkspaceInit() {
   const pendingFilePath = useWorkspaceStore((state) => state.pendingFilePath);
   const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
   const previousWorkspacePathRef = useRef<string | null>(null);
+  const scanGenerationRef = useRef(0);
 
   // workspacePath 已由 App.tsx 设置，这里只负责扫描和加载工作区内容
   useEffect(() => {
+    const scanGeneration = ++scanGenerationRef.current;
     if (!workspacePath) return;
 
     const loadWorkspace = async () => {
@@ -43,9 +45,21 @@ export function useWorkspaceInit() {
           }
         }
         const data = await workspaceIpc.scan(workspacePath);
+        if (
+          scanGeneration !== scanGenerationRef.current ||
+          useWorkspaceStore.getState().workspacePath !== workspacePath
+        ) {
+          return;
+        }
         setFolders(data.folders);
-        await loadFromFileSystem(data);
+        await loadFromFileSystem(data, workspacePath);
       } catch (error) {
+        if (
+          scanGeneration !== scanGenerationRef.current ||
+          useWorkspaceStore.getState().workspacePath !== workspacePath
+        ) {
+          return;
+        }
         setPendingFilePath(null);
         if (previousWorkspacePath && previousWorkspacePath !== workspacePath) {
           previousWorkspacePathRef.current = previousWorkspacePath;
