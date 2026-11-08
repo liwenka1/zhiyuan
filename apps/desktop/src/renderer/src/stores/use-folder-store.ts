@@ -6,7 +6,7 @@ import { folderIpc, configIpc, watcherIpc } from "@/ipc";
 import { toast } from "sonner";
 import i18n from "@/lib/i18n";
 import { useNoteStore } from "./note-store";
-import { clearDebouncedSave, setLastSavedContent } from "./note-store/persistence";
+import { clearDebouncedSave, flushAllDebouncedSaves, setLastSavedContent } from "./note-store/persistence";
 import { isValidFileNameSegment } from "@shared";
 
 interface FolderStore {
@@ -138,21 +138,25 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     }
 
     try {
-      if (!isValidFileNameSegment(newName)) {
+      const normalizedName = newName.trim();
+      if (!isValidFileNameSegment(normalizedName)) {
         toast.error(i18n.t("note:errors.invalidName"));
         return;
       }
-      if (get().folders.some((item) => item.id !== folderId && item.name === newName)) {
+      if (get().folders.some((item) => item.id !== folderId && item.name === normalizedName)) {
         toast.error(i18n.t("note:errors.folderAlreadyExists"));
         return;
       }
       // 构建新的文件夹路径
       const separator = workspacePath.includes("\\") ? "\\" : "/";
-      const newFolderPath = `${workspacePath}${separator}${newName}`;
+      const parentFolderPath = folder.path.split(/[\\/]/).slice(0, -1).join(separator);
+      const newFolderPath = `${parentFolderPath}${separator}${normalizedName}`;
       const oldFolderPathPrefix = `${folder.path}${separator}`;
       const newFolderPathPrefix = `${newFolderPath}${separator}`;
       const oldNotePrefix = `${folderId}/`;
-      const newNotePrefix = `${newName}/`;
+      const folderParentId = folderId.split("/").slice(0, -1).join("/");
+      const newFolderId = folderParentId ? `${folderParentId}/${normalizedName}` : normalizedName;
+      const newNotePrefix = `${newFolderId}/`;
       const noteStore = useNoteStore.getState();
       const selectedNote = noteStore.selectedNoteId
         ? noteStore.notes.find((n) => n.id === noteStore.selectedNoteId)
@@ -162,6 +166,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         clearDebouncedSave(selectedNote.id);
         await noteStore.saveNoteToFileSystem(selectedNote.id, noteStore.editorContent);
       }
+      await flushAllDebouncedSaves(useNoteStore.getState);
 
       await watcherIpc.pause();
 
@@ -171,18 +176,23 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       // 更新 store 中的文件夹信息
       set(
         produce((draft) => {
-          const targetFolder = draft.folders.find((f) => f.id === folderId);
-          if (targetFolder) {
-            targetFolder.id = newName; // 使用新名称作为 ID
-            targetFolder.name = newName;
-            targetFolder.path = newFolderPath;
-            targetFolder.updatedAt = new Date().toISOString();
-          }
+          const renameFolderId = (id: string) =>
+            id === folderId || id.startsWith(oldNotePrefix) ? `${newFolderId}${id.slice(folderId.length)}` : id;
+          draft.folders = draft.folders.map((item) => {
+            if (item.id !== folderId && !item.id.startsWith(oldNotePrefix)) return item;
+            return {
+              ...item,
+              id: renameFolderId(item.id),
+              name: renameFolderId(item.name),
+              path: item.path?.startsWith(oldFolderPathPrefix)
+                ? `${newFolderPathPrefix}${item.path.slice(oldFolderPathPrefix.length)}`
+                : item.path,
+              updatedAt: new Date().toISOString()
+            };
+          });
 
           // 如果重命名的是当前选中的文件夹，更新选中状态
-          if (draft.selectedFolderId === folderId) {
-            draft.selectedFolderId = newName;
-          }
+          if (draft.selectedFolderId) draft.selectedFolderId = renameFolderId(draft.selectedFolderId);
         })
       );
 
@@ -192,7 +202,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
 
         return {
           notes: state.notes.map((note) => {
-            if (note.folderId !== folderId) return note;
+            if (note.folderId !== folderId && !note.folderId?.startsWith(oldNotePrefix)) return note;
 
             return {
               ...note,
@@ -200,7 +210,10 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
               filePath: note.filePath?.startsWith(oldFolderPathPrefix)
                 ? `${newFolderPathPrefix}${note.filePath.slice(oldFolderPathPrefix.length)}`
                 : note.filePath,
-              folderId: newName,
+              folderId:
+                note.folderId === folderId
+                  ? newFolderId
+                  : `${newNotePrefix}${note.folderId?.slice(oldNotePrefix.length) || ""}`,
               updatedAt: new Date().toISOString()
             };
           }),
@@ -212,7 +225,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       });
 
       useNoteStore.getState().notes.forEach((note) => {
-        if (note.folderId === newName) {
+        if (note.folderId === newFolderId || note.folderId?.startsWith(`${newFolderId}/`)) {
           setLastSavedContent(note.id, note.content);
         }
       });

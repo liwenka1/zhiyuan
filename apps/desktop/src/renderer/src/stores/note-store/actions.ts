@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
 import { fileIpc, configIpc, watcherIpc } from "@/ipc";
-import { clearDebouncedSave, setLastSavedContent } from "./persistence";
+import { clearDebouncedSave, clearPendingSave, setLastSavedContent } from "./persistence";
 import { isValidFileNameSegment } from "@shared";
 
 export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
@@ -25,7 +25,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const currentNote = get().notes.find((n) => n.id === selectedNoteId);
         if (currentNote?.filePath) {
           clearDebouncedSave(selectedNoteId);
-          get().saveNoteToFileSystem(selectedNoteId, editorContent);
+          void get()
+            .saveNoteToFileSystem(selectedNoteId, editorContent)
+            .catch(() => {});
         }
       }
 
@@ -147,6 +149,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     deleteNote: (noteId: string) => {
+      clearPendingSave(noteId);
       set((state) => {
         state.notes = state.notes.filter((n) => n.id !== noteId);
         state.openNoteIds = state.openNoteIds.filter((id) => id !== noteId);
@@ -169,21 +172,20 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       }
 
       try {
-        if (!isValidFileNameSegment(newTitle)) {
+        const normalizedTitle = newTitle.trim();
+        if (!isValidFileNameSegment(normalizedTitle)) {
           toast.error(i18n.t("note:errors.invalidName"));
           return;
         }
         const separator = note.filePath.includes("\\") ? "\\" : "/";
         const pathParts = note.filePath.split(/[\\/]/);
         const oldFileName = pathParts[pathParts.length - 1];
-        const newFileName = `${newTitle}.md`;
+        const newFileName = `${normalizedTitle}.md`;
         pathParts[pathParts.length - 1] = newFileName;
         const newFilePath = pathParts.join(separator);
 
-        if (get().selectedNoteId === noteId) {
-          clearDebouncedSave(noteId);
-          await get().saveNoteToFileSystem(noteId, get().editorContent);
-        }
+        clearDebouncedSave(noteId);
+        await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
 
         await watcherIpc.pause();
 
@@ -196,7 +198,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           const targetNote = state.notes.find((n) => n.id === noteId);
           if (targetNote) {
             targetNote.id = newNoteId;
-            targetNote.title = newTitle;
+            targetNote.title = normalizedTitle;
             targetNote.fileName = newFileName;
             targetNote.filePath = newFilePath;
             targetNote.updatedAt = new Date().toISOString();
@@ -261,10 +263,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const newTitle = `${note.title} ${copySuffix} ${nextCopyNumber}`;
         const newFileName = `${newTitle}.md`;
 
-        if (get().selectedNoteId === noteId) {
-          clearDebouncedSave(noteId);
-          await get().saveNoteToFileSystem(noteId, get().editorContent);
-        }
+        clearDebouncedSave(noteId);
+        await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
 
         const separator = note.filePath.includes("\\") ? "\\" : "/";
         const pathParts = note.filePath.split(/[\\/]/);
@@ -280,6 +280,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           title: newTitle,
           fileName: newFileName,
           filePath: newFilePath,
+          isPinned: false,
+          github: undefined,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         };
@@ -367,10 +369,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       let renamed = false;
 
       try {
-        if (get().selectedNoteId === noteId) {
-          clearDebouncedSave(noteId);
-          await get().saveNoteToFileSystem(noteId, get().editorContent);
-        }
+        clearDebouncedSave(noteId);
+        await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
         await watcherIpc.pause();
         let index = 1;
         while (await fileIpc.exists(resolvedFilePath)) {

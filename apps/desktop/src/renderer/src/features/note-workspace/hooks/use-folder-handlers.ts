@@ -2,16 +2,34 @@ import { useFolderStore, useWorkspaceStore, useNoteStore } from "@/stores";
 import { resolveFolderAbsolutePath, resolveFolderRelativePath } from "@/lib/workspace-paths";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { workspaceIpc, watcherIpc, folderIpc, shellIpc, rssIpc } from "@/ipc";
+import { workspaceIpc, watcherIpc, folderIpc, shellIpc, rssIpc, configIpc } from "@/ipc";
+import { flushAllDebouncedSaves } from "@/stores/note-store/persistence";
 
 export interface FolderHandlers {
   handleCreateFolder: () => void;
   handleImportRss: () => void;
-  handleUpdateRss: (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => Promise<void>;
-  handleUnsubscribeRss: (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => Promise<void>;
-  handleShowFolderInExplorer: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
-  handleDeleteFolder: (folder: { id: string; name: string; noteCount?: number }) => Promise<void>;
-  handleRenameFolder: (folder: { id: string; name: string; noteCount?: number }) => void;
+  handleUpdateRss: (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => Promise<void>;
+  handleUnsubscribeRss: (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => Promise<void>;
+  handleShowFolderInExplorer: (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+  }) => Promise<void>;
+  handleDeleteFolder: (folder: { id: string; name: string; path?: string; noteCount?: number }) => Promise<void>;
+  handleRenameFolder: (folder: { id: string; name: string; path?: string; noteCount?: number }) => void;
   handleCopyFolderRelativePath: (folder: {
     id: string;
     name: string;
@@ -31,7 +49,7 @@ export interface FolderHandlers {
 interface UseFolderHandlersProps {
   onOpenCreateDialog: () => void;
   onOpenRssImportDialog: () => void;
-  onOpenRenameDialog: (folder: { id: string; name: string; noteCount?: number }) => void;
+  onOpenRenameDialog: (folder: { id: string; name: string; path?: string; noteCount?: number }) => void;
 }
 
 /**
@@ -58,19 +76,31 @@ export function useFolderHandlers({
     onOpenRssImportDialog();
   };
 
-  const handleUpdateRss = async (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => {
+  const handleUpdateRss = async (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => {
     if (!workspacePath || !folder.isRss) return;
 
-    const folderPath = `${workspacePath}/${folder.name}`;
+    const folderPath = folder.path || `${workspacePath}/${folder.name}`;
     const toastId = `rss-update-${folder.id}`;
     toast.loading(t("rss.updating"), { id: toastId });
 
     try {
+      await flushAllDebouncedSaves(useNoteStore.getState);
       await watcherIpc.pause();
       const result = await rssIpc.update(folderPath);
       const data = await workspaceIpc.scan(workspacePath);
       setFolders(data.folders);
       await loadFromFileSystem(data);
+      const pinnedNoteIds = useNoteStore
+        .getState()
+        .notes.filter((note) => note.isPinned)
+        .map((note) => note.id);
+      await configIpc.setPinnedNotes(workspacePath, pinnedNoteIds);
       if (result.addedCount > 0) {
         toast.success(t("rss.updated", { count: result.addedCount }), { id: toastId });
       } else {
@@ -84,10 +114,16 @@ export function useFolderHandlers({
     }
   };
 
-  const handleUnsubscribeRss = async (folder: { id: string; name: string; noteCount?: number; isRss?: boolean }) => {
+  const handleUnsubscribeRss = async (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+    isRss?: boolean;
+  }) => {
     if (!workspacePath || !folder.isRss) return;
 
-    const folderPath = `${workspacePath}/${folder.name}`;
+    const folderPath = folder.path || `${workspacePath}/${folder.name}`;
     const toastId = `rss-unsubscribe-${folder.id}`;
     toast.loading(t("rss.unsubscribing"), { id: toastId });
 
@@ -147,9 +183,14 @@ export function useFolderHandlers({
   };
 
   // 在文件管理器中显示文件夹
-  const handleShowFolderInExplorer = async (folder: { id: string; name: string; noteCount?: number }) => {
+  const handleShowFolderInExplorer = async (folder: {
+    id: string;
+    name: string;
+    path?: string;
+    noteCount?: number;
+  }) => {
     if (!workspacePath) return;
-    const folderPath = `${workspacePath}/${folder.name}`;
+    const folderPath = folder.path || `${workspacePath}/${folder.name}`;
     try {
       await shellIpc.openPath(folderPath);
     } catch {
@@ -158,17 +199,23 @@ export function useFolderHandlers({
   };
 
   // 删除文件夹 - 直接删除
-  const handleDeleteFolder = async (folder: { id: string; name: string; noteCount?: number }) => {
+  const handleDeleteFolder = async (folder: { id: string; name: string; path?: string; noteCount?: number }) => {
     if (!workspacePath) return;
     if (!window.confirm(t("note:confirmDeleteFolder", { name: folder.name }))) return;
-    const folderPath = `${workspacePath}/${folder.name}`;
+    const folderPath = folder.path || `${workspacePath}/${folder.name}`;
 
     try {
+      await flushAllDebouncedSaves(useNoteStore.getState);
       await watcherIpc.pause();
       await folderIpc.delete(folderPath);
       const data = await workspaceIpc.scan(workspacePath);
       setFolders(data.folders);
       await loadFromFileSystem(data);
+      const pinnedNoteIds = useNoteStore
+        .getState()
+        .notes.filter((note) => note.isPinned)
+        .map((note) => note.id);
+      await configIpc.setPinnedNotes(workspacePath, pinnedNoteIds);
     } catch {
       toast.error(t("note:errors.deleteFolderFailed"));
     } finally {
@@ -177,7 +224,7 @@ export function useFolderHandlers({
   };
 
   // 重命名文件夹 - 打开对话框
-  const handleRenameFolder = (folder: { id: string; name: string; noteCount?: number }) => {
+  const handleRenameFolder = (folder: { id: string; name: string; path?: string; noteCount?: number }) => {
     onOpenRenameDialog(folder);
   };
 

@@ -45,6 +45,7 @@
     "githubProjectSwitched": "已切换项目配置",
     "githubProjectSetDefault": "已设为默认项目",
     "githubProjectRemoved": "已删除项目配置",
+    "githubProjectRemoveFailed": "删除项目配置失败，已恢复原状态",
     "githubProjectRemoveConfirm": "确认删除当前项目的 GitHub 配置吗？",
     "githubProjectRemoveCancel": "取消",
     "githubProjectRemoveConfirmAction": "确认删除",

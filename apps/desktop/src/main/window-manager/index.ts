@@ -20,6 +20,7 @@ interface WindowEntry {
  */
 class WindowManager {
   private windows: Map<number, WindowEntry> = new Map();
+  private closingWindows = new Set<number>();
 
   private normalizeWorkspacePath(workspacePath: string): string {
     try {
@@ -121,6 +122,21 @@ class WindowManager {
       win.show();
     });
 
+    // 等待 renderer flush 完待保存内容；无响应时超时放行，避免窗口永久卡住。
+    win.on("close", (event) => {
+      if (this.closingWindows.has(win.id)) return;
+
+      event.preventDefault();
+      this.closingWindows.add(win.id);
+      if (!win.isDestroyed()) {
+        win.webContents.send("window:prepare-close");
+      }
+
+      setTimeout(() => {
+        if (!win.isDestroyed()) win.destroy();
+      }, 2000);
+    });
+
     win.webContents.setWindowOpenHandler((details) => {
       if (isSafeUrl(details.url)) {
         shell.openExternal(details.url);
@@ -144,6 +160,7 @@ class WindowManager {
 
     // 窗口关闭时清理
     win.on("closed", () => {
+      this.closingWindows.delete(win.id);
       const entry = this.windows.get(win.id);
       if (entry?.workspacePath) {
         // 将关闭窗口的工作区移到最近列表顶部，以便下次启动恢复
@@ -177,6 +194,13 @@ class WindowManager {
    */
   getEntryById(windowId: number): WindowEntry | undefined {
     return this.windows.get(windowId);
+  }
+
+  allowClose(windowId: number): void {
+    const entry = this.windows.get(windowId);
+    if (!entry || entry.window.isDestroyed()) return;
+    this.closingWindows.add(windowId);
+    entry.window.destroy();
   }
 
   /**

@@ -14,6 +14,14 @@ import {
 
 const LEGACY_DEFAULT_GITHUB_PROJECT_KEY = "__default__";
 
+function isSecureTokenStorageAvailable(): boolean {
+  try {
+    return safeStorage.isEncryptionAvailable();
+  } catch {
+    return false;
+  }
+}
+
 interface AppConfig {
   recentWorkspaces: string[];
   pinnedNotes: Record<string, string[]>;
@@ -41,11 +49,13 @@ function normalizeGitHubConfig(config?: Partial<GitHubConfig> | null): GitHubCon
 
 function encryptGitHubToken(token: string): string {
   if (!token || token.startsWith("enc:v1:")) return token;
+  if (!isSecureTokenStorageAvailable()) {
+    throw new Error("Secure GitHub token storage is unavailable on this system");
+  }
   try {
-    if (!safeStorage.isEncryptionAvailable()) return token;
     return `enc:v1:${safeStorage.encryptString(token).toString("base64")}`;
   } catch {
-    return token;
+    throw new Error("Failed to encrypt GitHub token");
   }
 }
 
@@ -220,8 +230,27 @@ export const configManager = {
   getGitHubProjectConfigs(): GitHubProjectConfigMap {
     const saved = store.get("githubProjects") || {};
     const normalized: GitHubProjectConfigMap = {};
+    let needsTokenMigration = false;
     for (const [projectKey, config] of Object.entries(saved)) {
-      normalized[projectKey] = normalizeGitHubConfig(config);
+      const next = normalizeGitHubConfig(config);
+      if (next.token && !String(config?.token || "").startsWith("enc:v1:")) {
+        if (isSecureTokenStorageAvailable()) {
+          needsTokenMigration = true;
+        } else {
+          next.token = "";
+          needsTokenMigration = true;
+        }
+      }
+      normalized[projectKey] = next;
+    }
+
+    if (needsTokenMigration) {
+      const persisted: GitHubProjectConfigMap = {};
+      for (const [projectKey, config] of Object.entries(normalized)) {
+        persisted[projectKey] = serializeGitHubConfig(config);
+      }
+      store.set("githubProjects", persisted);
+      if (!isSecureTokenStorageAvailable()) store.set("github", { owner: "", repo: "", token: "" });
     }
 
     if (Object.keys(normalized).length > 0) {
@@ -230,6 +259,10 @@ export const configManager = {
 
     // 兼容旧版本：单个 github 配置自动迁移到一个真实的项目键
     const legacy = normalizeGitHubConfig(store.get("github"));
+    if (!isSecureTokenStorageAvailable() && legacy.token) {
+      legacy.token = "";
+      store.set("github", { owner: legacy.owner, repo: legacy.repo, token: "" });
+    }
     if (hasGitHubConfig(legacy)) {
       const migrated: GitHubProjectConfigMap = {
         [LEGACY_DEFAULT_GITHUB_PROJECT_KEY]: serializeGitHubConfig(legacy)

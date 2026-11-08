@@ -7,22 +7,16 @@ import { DropHoverMask, TitleBar, SettingsPopover } from "@/components/app";
 import { Logo } from "@/components/icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { useWorkspaceStore, useNoteStore, useFolderStore } from "@/stores";
+import { useWorkspaceStore } from "@/stores";
 import { useMarkdownFileDrop, usePlatform } from "@/hooks";
 import { workspaceIpc } from "@/ipc";
-
-function getFileName(filePath: string): string {
-  return filePath.split(/[/\\]/).pop() || "";
-}
 
 export function WelcomePage() {
   const { t } = useTranslation("common");
   const { t: tEditor } = useTranslation("editor");
   const { isMac, isWindows } = usePlatform();
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
-  const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
-  const selectNote = useNoteStore((state) => state.selectNote);
-  const setFolders = useFolderStore((state) => state.setFolders);
+  const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([]);
 
   useEffect(() => {
@@ -33,21 +27,11 @@ export function WelcomePage() {
   }, []);
 
   const openResolvedFile = useCallback(
-    async ({ filePath, workspacePath }: { filePath: string; workspacePath: string }) => {
-      const data = await workspaceIpc.scan(workspacePath);
-      if (!data) return;
-
+    ({ filePath, workspacePath }: { filePath: string; workspacePath: string }) => {
+      setPendingFilePath(filePath);
       setWorkspacePath(workspacePath);
-      setFolders(data.folders);
-      await loadFromFileSystem(data);
-
-      const fileName = getFileName(filePath);
-      const targetNote = data.notes.find((note) => note.fileName === fileName);
-      if (targetNote) {
-        setTimeout(() => selectNote(targetNote.id), 0);
-      }
     },
-    [loadFromFileSystem, selectNote, setFolders, setWorkspacePath]
+    [setPendingFilePath, setWorkspacePath]
   );
 
   const { isFileDropHover, dragHandlers } = useMarkdownFileDrop({
@@ -70,12 +54,7 @@ export function WelcomePage() {
       // null = 用户取消或已跳转到已有窗口
       if (!selectedPath) return;
 
-      const data = await workspaceIpc.scan(selectedPath);
-      if (!data) return; // 已跳转到已有窗口
-
       setWorkspacePath(selectedPath);
-      setFolders(data.folders);
-      await loadFromFileSystem(data);
     } catch {
       toast.error(t("welcome.openFolderFailed"));
     }
@@ -99,13 +78,7 @@ export function WelcomePage() {
 
   const handleOpenRecent = async (workspacePath: string) => {
     try {
-      const data = await workspaceIpc.scan(workspacePath);
-      // null = 已跳转到已有窗口，当前窗口保持不变
-      if (!data) return;
-
       setWorkspacePath(workspacePath);
-      setFolders(data.folders);
-      await loadFromFileSystem(data);
     } catch {
       toast.error(t("welcome.openFolderFailed"));
     }

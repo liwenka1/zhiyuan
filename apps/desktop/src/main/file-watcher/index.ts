@@ -7,7 +7,7 @@ import { isIgnoredWorkspaceDirectory, MAX_WORKSPACE_DEPTH } from "../workspace/p
 interface WatcherEntry {
   watcher: FSWatcher;
   windowIds: Set<number>;
-  pauseCount: number;
+  pauseCounts: Map<number, number>;
 }
 
 /**
@@ -64,7 +64,7 @@ class FileWatcherManager {
     const entry: WatcherEntry = {
       watcher,
       windowIds: new Set([windowId]),
-      pauseCount: 0
+      pauseCounts: new Map()
     };
 
     watcher.on("error", () => {
@@ -74,7 +74,6 @@ class FileWatcherManager {
 
     // 文件修改事件
     watcher.on("change", (filePath: string) => {
-      if (entry.pauseCount > 0) return;
       if (!filePath.toLowerCase().endsWith(".md")) return;
 
       const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
@@ -86,7 +85,6 @@ class FileWatcherManager {
 
     // 文件添加事件
     watcher.on("add", (filePath: string) => {
-      if (entry.pauseCount > 0) return;
       if (!filePath.toLowerCase().endsWith(".md")) return;
 
       const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
@@ -98,7 +96,6 @@ class FileWatcherManager {
 
     // 文件删除事件
     watcher.on("unlink", (filePath: string) => {
-      if (entry.pauseCount > 0) return;
       if (!filePath.toLowerCase().endsWith(".md")) return;
 
       const relativePath = path.relative(workspacePath, filePath).split(path.sep).join("/");
@@ -110,11 +107,8 @@ class FileWatcherManager {
 
     // 文件夹添加事件
     watcher.on("addDir", (dirPath: string) => {
-      if (entry.pauseCount > 0) return;
-
       const relativePath = path.relative(workspacePath, dirPath).split(path.sep).join("/");
       if (!relativePath || relativePath === ".") return;
-      if (relativePath.includes("/")) return;
 
       this.broadcastToWorkspace(workspacePath, "folder:added", {
         folderPath: relativePath,
@@ -124,11 +118,8 @@ class FileWatcherManager {
 
     // 文件夹删除事件
     watcher.on("unlinkDir", (dirPath: string) => {
-      if (entry.pauseCount > 0) return;
-
       const relativePath = path.relative(workspacePath, dirPath).split(path.sep).join("/");
       if (!relativePath || relativePath === ".") return;
-      if (relativePath.includes("/")) return;
 
       this.broadcastToWorkspace(workspacePath, "folder:deleted", {
         folderPath: relativePath,
@@ -149,6 +140,7 @@ class FileWatcherManager {
     if (!entry) return;
 
     entry.windowIds.delete(windowId);
+    entry.pauseCounts.delete(windowId);
 
     // 没有窗口引用了，销毁 watcher
     if (entry.windowIds.size === 0) {
@@ -160,22 +152,24 @@ class FileWatcherManager {
   /**
    * 暂停指定工作区的文件监听
    */
-  pauseWatching(workspacePath: string): void {
+  pauseWatching(workspacePath: string, windowId: number): void {
     workspacePath = this.normalizeWorkspacePath(workspacePath);
     const entry = this.watchers.get(workspacePath);
     if (entry) {
-      entry.pauseCount += 1;
+      entry.pauseCounts.set(windowId, (entry.pauseCounts.get(windowId) ?? 0) + 1);
     }
   }
 
   /**
    * 恢复指定工作区的文件监听
    */
-  resumeWatching(workspacePath: string): void {
+  resumeWatching(workspacePath: string, windowId: number): void {
     workspacePath = this.normalizeWorkspacePath(workspacePath);
     const entry = this.watchers.get(workspacePath);
     if (entry) {
-      entry.pauseCount = Math.max(0, entry.pauseCount - 1);
+      const next = Math.max(0, (entry.pauseCounts.get(windowId) ?? 0) - 1);
+      if (next === 0) entry.pauseCounts.delete(windowId);
+      else entry.pauseCounts.set(windowId, next);
     }
   }
 
@@ -187,6 +181,7 @@ class FileWatcherManager {
     if (!entry) return;
 
     for (const windowId of entry.windowIds) {
+      if ((entry.pauseCounts.get(windowId) ?? 0) > 0) continue;
       const win = BrowserWindow.fromId(windowId);
       if (win && !win.isDestroyed()) {
         win.webContents.send(channel, data);

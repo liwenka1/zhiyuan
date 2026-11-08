@@ -45,6 +45,7 @@
     "githubProjectSwitched": "Project config switched",
     "githubProjectSetDefault": "Default project updated",
     "githubProjectRemoved": "Project config removed",
+    "githubProjectRemoveFailed": "Failed to remove project config; the previous state was restored",
     "githubProjectRemoveConfirm": "Remove GitHub config for current project?",
     "githubProjectRemoveCancel": "Cancel",
     "githubProjectRemoveConfirmAction": "Delete",

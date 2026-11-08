@@ -2,11 +2,10 @@ import type { NoteStoreGet, NoteStoreSet } from "./types";
 import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
-import { wasRecentlySaved } from "./persistence";
+import { clearPendingSave, getLastSavedContent, setLastSavedContent, wasRecentlySaved } from "./persistence";
 import { parseGitHubMetadata } from "@/lib/github-metadata";
 import { toast } from "sonner";
 import i18n from "@/lib/i18n";
-import { getLastSavedContent, setLastSavedContent } from "./persistence";
 
 export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
   return {
@@ -36,7 +35,16 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       const note = get().notes.find((n) => n.id === filePath);
       if (!note) return;
 
+      if (get().selectedNoteId === filePath) {
+        const lastSavedContent = getLastSavedContent(filePath) ?? note.content;
+        if (lastSavedContent !== get().editorContent) {
+          toast.warning(i18n.t("note:errors.externalChangeConflict"));
+          return;
+        }
+      }
+
       const folderId = note.folderId;
+      clearPendingSave(filePath);
 
       set((state) => {
         state.notes = state.notes.filter((n) => n.id !== filePath);

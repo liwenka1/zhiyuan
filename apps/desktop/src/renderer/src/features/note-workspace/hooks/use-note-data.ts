@@ -1,6 +1,22 @@
 import { useMemo } from "react";
 import { useNoteStore, useFolderStore } from "@/stores";
 
+const searchContentCache = new Map<string, { content: string; normalized: string }>();
+const MAX_SEARCH_CACHE_ENTRIES = 10_000;
+
+function getNormalizedContent(note: { id: string; content: string }): string {
+  const cached = searchContentCache.get(note.id);
+  if (cached?.content === note.content) return cached.normalized;
+
+  const normalized = note.content.toLocaleLowerCase();
+  if (searchContentCache.size >= MAX_SEARCH_CACHE_ENTRIES) {
+    const oldestKey = searchContentCache.keys().next().value;
+    if (oldestKey) searchContentCache.delete(oldestKey);
+  }
+  searchContentCache.set(note.id, { content: note.content, normalized });
+  return normalized;
+}
+
 /**
  * 笔记数据派生 Hook
  * 负责过滤、排序等数据处理逻辑
@@ -16,10 +32,10 @@ export function useNoteData() {
     let filtered = selectedFolderId ? notes.filter((note) => note.folderId === selectedFolderId) : notes;
 
     // 根据搜索关键词过滤笔记（搜索标题和内容）
-    if (searchKeyword.trim()) {
-      const keyword = searchKeyword.toLowerCase();
+    const keyword = searchKeyword.trim().toLocaleLowerCase();
+    if (keyword) {
       filtered = filtered.filter(
-        (note) => note.title.toLowerCase().includes(keyword) || note.content.toLowerCase().includes(keyword)
+        (note) => note.title.toLocaleLowerCase().includes(keyword) || getNormalizedContent(note).includes(keyword)
       );
     }
 
