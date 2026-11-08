@@ -24,6 +24,7 @@
     "test:unit:coverage": "vitest run --coverage",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "verify:desktop-build": "node scripts/verify-desktop-build.mjs",
+    "smoke:desktop": "node scripts/smoke-desktop.mjs",
     "typecheck:desktop": "pnpm --filter zhiyuan typecheck",
     "typecheck:landing": "pnpm --filter landing typecheck",
     "release:desktop": "pnpm --filter zhiyuan release"
