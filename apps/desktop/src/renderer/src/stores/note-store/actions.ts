@@ -311,8 +311,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         return;
       }
 
+      const previousPinnedState = note.isPinned;
       try {
-        const newPinnedState = !note.isPinned;
+        const newPinnedState = !previousPinnedState;
 
         set((state) => {
           const targetNote = state.notes.find((n) => n.id === noteId);
@@ -328,7 +329,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       } catch (error) {
         set((state) => {
           const targetNote = state.notes.find((n) => n.id === noteId);
-          if (targetNote) targetNote.isPinned = note.isPinned;
+          if (targetNote) targetNote.isPinned = previousPinnedState;
         });
         toast.error(i18n.t("note:pin.failed"));
         throw error;
