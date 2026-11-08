@@ -72,6 +72,9 @@ jobs:
       - name: Verify desktop build output
         run: pnpm verify:desktop-build
 
+      - name: Desktop startup smoke
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" pnpm smoke:desktop
+
   # 三平台真机打包冒烟：只出包、不发布，确保 electron-builder 各平台配置都没问题
   package:
     needs: verify
