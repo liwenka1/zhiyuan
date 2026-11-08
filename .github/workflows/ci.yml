@@ -69,6 +69,9 @@ jobs:
       - name: Build desktop app
         run: pnpm --filter zhiyuan build
 
+      - name: Verify desktop build output
+        run: pnpm verify:desktop-build
+
   # 三平台真机打包冒烟：只出包、不发布，确保 electron-builder 各平台配置都没问题
   package:
     needs: verify
@@ -106,6 +109,9 @@ jobs:
 
       - name: Build desktop app
         run: pnpm --filter zhiyuan build
+
+      - name: Verify desktop build output
+        run: pnpm verify:desktop-build
 
       - name: Package without publishing
         run: |
