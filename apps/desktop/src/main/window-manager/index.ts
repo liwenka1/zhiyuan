@@ -127,7 +127,10 @@ class WindowManager {
 
     // 等待 renderer flush 完待保存内容；无响应时解除关闭拦截，避免未保存内容被强制销毁。
     win.on("close", (event) => {
-      if (this.closingWindows.has(win.id)) return;
+      if (this.closingWindows.has(win.id)) {
+        event.preventDefault();
+        return;
+      }
 
       event.preventDefault();
       this.closingWindows.add(win.id);
