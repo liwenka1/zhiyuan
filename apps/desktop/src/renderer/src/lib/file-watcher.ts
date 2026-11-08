@@ -25,8 +25,8 @@ export async function handleFileAdded(
     let folderId: string | null = null;
 
     if (pathParts.length > 1) {
-      // 文件在子文件夹中
-      folderId = pathParts[0];
+      // 使用完整的相对目录作为 folderId，和工作区扫描结果保持一致。
+      folderId = pathParts.slice(0, -1).join("/");
     }
 
     // 提取文件名
