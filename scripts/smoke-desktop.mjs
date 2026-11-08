@@ -21,12 +21,28 @@ function appendOutput(chunk) {
   if (output.length > 80) output.shift();
 }
 
-function finish(child, error) {
+function waitForExit(child) {
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+  return new Promise((resolve) => {
+    const onExit = () => {
+      clearTimeout(fallback);
+      resolve();
+    };
+    const fallback = setTimeout(() => {
+      child.removeListener("exit", onExit);
+      resolve();
+    }, 2_000);
+    child.once("exit", onExit);
+  });
+}
+
+async function finish(child, error) {
   if (finished) return;
   finished = true;
   clearTimeout(timeout);
-  if (!child.killed) child.kill();
-  void rm(smokeRoot, { recursive: true, force: true });
+  if (!child.killed && child.exitCode === null) child.kill();
+  await waitForExit(child);
+  await rm(smokeRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }).catch(() => {});
   if (error) {
     console.error(error.message);
     console.error(output.join(""));
