@@ -20,6 +20,8 @@ import path from "path";
 import { ipcOk, ipcErr } from "./ipc/ipc-result";
 import type { IpcResultDTO } from "@shared";
 import { validatePathInWorkspace } from "./security/path-validator";
+import { initializeDiagnostics, recordDiagnostic } from "./diagnostics";
+import { registerDiagnosticsHandlers } from "./ipc/diagnostics-handler";
 
 type ExternalOpenPayload = {
   workspacePath: string;
@@ -27,6 +29,14 @@ type ExternalOpenPayload = {
 };
 
 const pendingExternalOpens: ExternalOpenPayload[] = [];
+
+process.on("uncaughtExceptionMonitor", (error) => {
+  recordDiagnostic("main.uncaught-exception", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  recordDiagnostic("main.unhandled-rejection", reason);
+});
 
 function resolveExternalOpenTarget(targetPath: string): ExternalOpenPayload | null {
   try {
@@ -140,6 +150,7 @@ function isAllowedLocalResource(filePath: string): boolean {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  initializeDiagnostics();
   // 注册 local-resource:// 协议处理器
   // 用于加载本地文件资源，正确处理中文路径
   protocol.handle("local-resource", (request) => {
@@ -219,6 +230,8 @@ app.whenReady().then(() => {
 
   // 注册终端相关 IPC 处理器
   registerTerminalHandlers();
+
+  registerDiagnosticsHandlers();
 
   // 注册新建窗口 IPC
   ipcMain.handle("window:new", (): IpcResultDTO<void> => {

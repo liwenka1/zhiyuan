@@ -8,6 +8,7 @@ import { getThemeBackgroundColor, getThemeForegroundColor } from "../theme/color
 import { isSafeUrl } from "../security/url-validator";
 import { fileWatcherManager } from "../file-watcher";
 import { configManager } from "../config";
+import { recordDiagnostic } from "../diagnostics";
 
 interface WindowEntry {
   window: BrowserWindow;
@@ -146,6 +147,13 @@ class WindowManager {
 
     win.webContents.on("will-navigate", (event) => {
       event.preventDefault();
+    });
+
+    win.webContents.on("render-process-gone", (_event, details) => {
+      recordDiagnostic("renderer.process-gone", new Error(details.reason), {
+        windowId: win.id,
+        exitCode: details.exitCode
+      });
     });
 
     // 监听主题变化，动态更新窗口背景色和标题栏
