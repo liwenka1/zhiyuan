@@ -4,7 +4,7 @@ import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { shellIpc, fileIpc, githubIpc, configIpc } from "@/ipc";
-import { upsertGitHubMetadata } from "@/lib/github-metadata";
+import { getGitHubIssueNumberForRepository, upsertGitHubMetadata } from "@/lib/github-metadata";
 import { collectLocalMarkdownAssets, replaceMarkdownAssetUrls } from "@/lib/markdown-assets";
 import { uploadMarkdownAssets } from "@/lib/github-assets";
 import { clearDebouncedSave, clearPendingSave } from "@/stores/note-store/persistence";
@@ -59,7 +59,6 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
   const { t } = useTranslation("note");
   const notes = useNoteStore((state) => state.notes);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
-  const updateNoteContentById = useNoteStore((state) => state.updateNoteContentById);
   const deleteNote = useNoteStore((state) => state.deleteNote);
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const togglePinNote = useNoteStore((state) => state.togglePinNote);
@@ -223,7 +222,8 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
   };
 
   const handlePushToGitHub = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
-    const fullNote = notes.find((n) => n.id === note.id);
+    const sourceWorkspacePath = useWorkspaceStore.getState().workspacePath;
+    const fullNote = useNoteStore.getState().notes.find((n) => n.id === note.id);
     if (!fullNote?.filePath || !fullNote.fileName) return;
 
     const githubState = githubStore.getState();
@@ -269,16 +269,22 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
         token: "",
         title,
         body,
-        issueNumber: fullNote.github?.issueNumber
+        issueNumber: getGitHubIssueNumberForRepository(fullNote.github, currentConfig.owner, currentConfig.repo)
       });
 
-      const nextContent = upsertGitHubMetadata(fullNote.content, {
-        issueNumber: result.issueNumber,
-        issueUrl: result.issueUrl
-      });
-
-      if (nextContent !== fullNote.content) {
-        updateNoteContentById(fullNote.id, nextContent);
+      // 发布期间仍可输入或切换工作区，只把返回元数据合并到同一文件的最新正文。
+      const currentState = useNoteStore.getState();
+      const currentNote = currentState.notes.find(
+        (item) => item.id === fullNote.id && item.filePath === fullNote.filePath
+      );
+      if (currentNote && useWorkspaceStore.getState().workspacePath === sourceWorkspacePath) {
+        const nextContent = upsertGitHubMetadata(currentNote.content, {
+          issueNumber: result.issueNumber,
+          issueUrl: result.issueUrl
+        });
+        if (nextContent !== currentNote.content) {
+          currentState.updateNoteContentById(currentNote.id, nextContent);
+        }
       }
 
       toast.success(t("github.pushSuccess", { url: result.issueUrl }));
