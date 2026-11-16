@@ -184,9 +184,12 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
               ...item,
               id: renameFolderId(item.id),
               name: renameFolderId(item.name),
-              path: item.path?.startsWith(oldFolderPathPrefix)
-                ? `${newFolderPathPrefix}${item.path.slice(oldFolderPathPrefix.length)}`
-                : item.path,
+              path:
+                item.id === folderId
+                  ? newFolderPath
+                  : item.path?.startsWith(oldFolderPathPrefix)
+                    ? `${newFolderPathPrefix}${item.path.slice(oldFolderPathPrefix.length)}`
+                    : item.path,
               updatedAt: new Date().toISOString()
             };
           });
