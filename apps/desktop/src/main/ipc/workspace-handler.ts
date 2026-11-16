@@ -24,6 +24,7 @@ import {
   isValidFileNameSegment
 } from "@shared";
 import { isIgnoredWorkspaceDirectory } from "../workspace/policy";
+import { registerWatcherHandlers } from "./watcher-handler";
 
 const pendingWorkspaceScans = new Map<number, symbol>();
 
@@ -221,35 +222,7 @@ export function registerWorkspaceHandlers(): void {
     }, "WORKSPACE_APPROVE_DROPPED_FILE_FAILED")
   );
 
-  // 暂停文件监听
-  ipcMain.handle("watcher:pause", (event): IpcResultDTO<void> => {
-    try {
-      const entry = windowManager.getEntryByWebContents(event.sender);
-      const windowId = BrowserWindow.fromWebContents(event.sender)?.id;
-      if (entry?.workspacePath && windowId !== undefined) {
-        fileWatcherManager.pauseWatching(entry.workspacePath, windowId);
-      }
-      return ipcOk(undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return ipcErr(message, "WATCHER_PAUSE_FAILED");
-    }
-  });
-
-  // 恢复文件监听
-  ipcMain.handle("watcher:resume", (event): IpcResultDTO<void> => {
-    try {
-      const entry = windowManager.getEntryByWebContents(event.sender);
-      const windowId = BrowserWindow.fromWebContents(event.sender)?.id;
-      if (entry?.workspacePath && windowId !== undefined) {
-        fileWatcherManager.resumeWatching(entry.workspacePath, windowId);
-      }
-      return ipcOk(undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return ipcErr(message, "WATCHER_RESUME_FAILED");
-    }
-  });
+  registerWatcherHandlers();
 
   // 打开文件
   ipcMain.handle(

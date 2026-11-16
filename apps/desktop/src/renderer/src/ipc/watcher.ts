@@ -6,11 +6,11 @@ import { safeUnwrapIpcResult } from "@/lib/ipc-utils";
 
 // watcher 使用 safeUnwrap，失败只记录日志不中断流程
 export const watcherIpc = {
-  pause: async () => {
-    safeUnwrapIpcResult(await window.api.watcher.pause());
+  pause: async (expectedWorkspacePath?: string) => {
+    safeUnwrapIpcResult(await window.api.watcher.pause(expectedWorkspacePath));
   },
 
-  resume: async () => {
-    safeUnwrapIpcResult(await window.api.watcher.resume());
+  resume: async (expectedWorkspacePath?: string) => {
+    safeUnwrapIpcResult(await window.api.watcher.resume(expectedWorkspacePath));
   }
 };

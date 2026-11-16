@@ -94,8 +94,8 @@ export interface FileAPI {
 }
 
 export interface WatcherAPI {
-  pause: () => Promise<IpcResultDTO<void>>;
-  resume: () => Promise<IpcResultDTO<void>>;
+  pause: (expectedWorkspacePath?: string) => Promise<IpcResultDTO<void>>;
+  resume: (expectedWorkspacePath?: string) => Promise<IpcResultDTO<void>>;
 }
 
 // 文件夹 API 接口
@@ -187,6 +187,7 @@ export interface ExportAPI {
 
 // 工具 API 接口
 export interface UtilsAPI {
+  getLocalResourceToken: () => string;
   /**
    * 获取拖拽文件的本地路径
    * 用于处理文件拖拽到编辑器的场景
