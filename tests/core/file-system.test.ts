@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,6 +29,30 @@ describe("atomic note writes", () => {
 
     expect(await readFile(filePath, "utf8")).toBe("new content");
     expect(await readdir(root)).toEqual(["note.md"]);
+  });
+
+  it.skipIf(process.platform === "win32")("preserves a private note's POSIX permission bits", async () => {
+    const filePath = path.join(root, "private.md");
+    await writeFile(filePath, "private draft");
+    await chmod(filePath, 0o600);
+
+    await fileSystem.writeFileAtomic(filePath, "updated private draft");
+
+    expect((await stat(filePath)).mode & 0o777).toBe(0o600);
+    expect(await readFile(filePath, "utf8")).toBe("updated private draft");
+  });
+
+  it.skipIf(process.platform === "win32")("keeps group permissions and writes new atomic files privately", async () => {
+    const existingPath = path.join(root, "shared.md");
+    const newPath = path.join(root, "new.md");
+    await writeFile(existingPath, "old content");
+    await chmod(existingPath, 0o640);
+
+    await fileSystem.writeFileAtomic(existingPath, "new content");
+    await fileSystem.writeFileAtomic(newPath, "new private file");
+
+    expect((await stat(existingPath)).mode & 0o777).toBe(0o640);
+    expect((await stat(newPath)).mode & 0o777).toBe(0o600);
   });
 
   it.each(["EPERM", "EEXIST"])("keeps the original note if replacement fails with %s on Windows", async (code) => {

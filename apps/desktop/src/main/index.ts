@@ -22,6 +22,7 @@ import type { IpcResultDTO } from "@shared";
 import { resolveAuthorizedLocalResource } from "./security/local-resource";
 import { initializeDiagnostics, recordDiagnostic } from "./diagnostics";
 import { registerDiagnosticsHandlers } from "./ipc/diagnostics-handler";
+import { getExternalOpenCandidates } from "./external-open-args";
 
 type ExternalOpenPayload = {
   workspacePath: string;
@@ -40,6 +41,7 @@ process.on("unhandledRejection", (reason) => {
 
 function resolveExternalOpenTarget(targetPath: string): ExternalOpenPayload | null {
   try {
+    targetPath = path.resolve(targetPath);
     if (!existsSync(targetPath)) return null;
     const stat = fs.statSync(targetPath);
     if (stat.isDirectory()) {
@@ -71,7 +73,10 @@ function handleExternalOpenPath(targetPath: string): boolean {
   configManager.addRecentWorkspace(payload.workspacePath);
 
   if (!app.isReady()) {
-    pendingExternalOpens.push(payload);
+    const target = payload.filePath ?? payload.workspacePath;
+    if (!pendingExternalOpens.some((entry) => (entry.filePath ?? entry.workspacePath) === target)) {
+      pendingExternalOpens.push(payload);
+    }
     return true;
   }
 
@@ -91,27 +96,25 @@ function handleExternalOpenPath(targetPath: string): boolean {
   return true;
 }
 
+function handleExternalOpenArguments(argv: string[], workingDirectory = process.cwd()): void {
+  for (const candidate of getExternalOpenCandidates(argv, process.defaultApp)) {
+    if (handleExternalOpenPath(path.resolve(workingDirectory, candidate))) return;
+  }
+}
+
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
 if (!gotSingleInstanceLock) {
   app.quit();
 } else {
-  app.on("second-instance", (_event, argv) => {
-    const candidatePaths = argv.slice(1);
-    for (const candidate of candidatePaths) {
-      if (handleExternalOpenPath(candidate)) {
-        return;
-      }
-    }
+  // 冷启动时文件关联参数不会触发 second-instance，必须先加入待打开队列。
+  handleExternalOpenArguments(process.argv);
+  app.on("second-instance", (_event, argv, workingDirectory) => {
+    handleExternalOpenArguments(argv, workingDirectory);
   });
 }
 
 app.on("open-file", (event, filePath) => {
   event.preventDefault();
-  if (!app.isReady()) {
-    const payload = resolveExternalOpenTarget(filePath);
-    if (payload) pendingExternalOpens.push(payload);
-    return;
-  }
   handleExternalOpenPath(filePath);
 });
 
@@ -189,7 +192,7 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window);
   });
 
-  // 设置应用菜单（macOS: 最小化菜单 / Windows & Linux: 移除默认菜单）
+  // macOS/Linux 使用原生菜单；Windows 使用自定义菜单栏。
   setupApplicationMenu();
 
   // 初始化主题管理器

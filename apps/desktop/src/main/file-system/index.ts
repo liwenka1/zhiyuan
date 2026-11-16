@@ -81,10 +81,23 @@ export const fileSystem = {
       `.${path.basename(filePath)}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.tmp`
     );
 
+    let existingMode: number | undefined;
+    if (process.platform !== "win32") {
+      try {
+        existingMode = (await fs.promises.stat(filePath)).mode & 0o7777;
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+      }
+    }
+
+    let ownsTempFile = false;
     try {
-      const handle = await fs.promises.open(tempPath, "w");
+      // 写入期间仅当前用户可读；提交前继承原权限，避免保存扩大正文的可读范围。
+      const handle = await fs.promises.open(tempPath, "wx", 0o600);
+      ownsTempFile = true;
       try {
         await handle.writeFile(content, "utf-8");
+        if (existingMode !== undefined) await handle.chmod(existingMode);
         await handle.sync();
       } finally {
         await handle.close();
@@ -93,7 +106,7 @@ export const fileSystem = {
       // 不能先删除目标再重试，否则重试失败时原稿与临时文件会同时丢失。
       await fs.promises.rename(tempPath, filePath);
     } finally {
-      await fs.promises.unlink(tempPath).catch(() => {});
+      if (ownsTempFile) await fs.promises.unlink(tempPath).catch(() => {});
     }
   },
 

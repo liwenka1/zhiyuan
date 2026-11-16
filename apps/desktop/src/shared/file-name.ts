@@ -11,6 +11,11 @@ export function isValidFileNameSegment(value: string): boolean {
   return true;
 }
 
+/** 工作区扫描忽略隐藏条目；用户创建的笔记和目录必须能够再次被加载。 */
+export function isValidWorkspaceEntryName(value: string): boolean {
+  return isValidFileNameSegment(value) && !value.startsWith(".");
+}
+
 export function normalizeFileNameSegment(value: string): string {
   return [...value.trim()]
     .filter((char) => char.charCodeAt(0) >= 32)
