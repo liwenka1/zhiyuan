@@ -128,6 +128,8 @@ class WindowManager {
 
     // 等待 renderer flush 完待保存内容；无响应时解除关闭拦截，避免未保存内容被强制销毁。
     win.on("close", (event) => {
+      // 未绑定工作区没有笔记需要落盘；renderer 启动失败或欢迎页也必须能够关闭。
+      if (!this.windows.get(win.id)?.workspacePath) return;
       if (this.closeAttempts.isPending(win.id)) {
         event.preventDefault();
         return;
