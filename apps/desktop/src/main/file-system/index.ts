@@ -3,11 +3,18 @@ import path from "path";
 import crypto from "crypto";
 import { shell } from "electron";
 
-function isCaseOnlyRename(oldPath: string, newPath: string): boolean {
-  if (process.platform !== "win32") return false;
+async function isCaseOnlyRename(oldPath: string, newPath: string): Promise<boolean> {
   const oldResolved = path.resolve(oldPath);
   const newResolved = path.resolve(newPath);
-  return oldResolved !== newResolved && oldResolved.toLowerCase() === newResolved.toLowerCase();
+  if (oldResolved === newResolved || oldResolved.toLowerCase() !== newResolved.toLowerCase()) return false;
+  try {
+    const [source, destination] = await Promise.all([fs.promises.lstat(oldPath), fs.promises.lstat(newPath)]);
+    // macOS 也常使用不区分大小写的卷；Windows 也可能启用区分大小写。
+    // 只能在两个路径实际指向同一条目时绕过重名保护。
+    return source.dev === destination.dev && source.ino === destination.ino;
+  } catch {
+    return false;
+  }
 }
 
 async function renameCaseOnly(oldPath: string, newPath: string): Promise<void> {
@@ -82,18 +89,9 @@ export const fileSystem = {
       } finally {
         await handle.close();
       }
-      try {
-        await fs.promises.rename(tempPath, filePath);
-      } catch (error) {
-        // Windows 不允许 rename 覆盖已有文件，先移除目标再完成替换。
-        // 这仍然避免了半写入文件，且保留了跨平台保存能力。
-        const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
-        if (process.platform !== "win32" || (code !== "EEXIST" && code !== "EPERM")) {
-          throw error;
-        }
-        await fs.promises.rm(filePath, { force: true });
-        await fs.promises.rename(tempPath, filePath);
-      }
+      // rename 支持替换已有文件；若被权限或文件锁阻止，保留原文件并向调用方报告失败。
+      // 不能先删除目标再重试，否则重试失败时原稿与临时文件会同时丢失。
+      await fs.promises.rename(tempPath, filePath);
     } finally {
       await fs.promises.unlink(tempPath).catch(() => {});
     }
@@ -143,7 +141,7 @@ export const fileSystem = {
    * 重命名文件
    */
   async renameFile(oldPath: string, newPath: string): Promise<void> {
-    const caseOnly = isCaseOnlyRename(oldPath, newPath);
+    const caseOnly = await isCaseOnlyRename(oldPath, newPath);
     if ((await this.exists(newPath)) && !caseOnly) {
       throw new Error("Target file already exists");
     }
@@ -158,7 +156,7 @@ export const fileSystem = {
    * 重命名文件夹
    */
   async renameFolder(oldPath: string, newPath: string): Promise<void> {
-    const caseOnly = isCaseOnlyRename(oldPath, newPath);
+    const caseOnly = await isCaseOnlyRename(oldPath, newPath);
     if ((await this.exists(newPath)) && !caseOnly) {
       throw new Error("Target folder already exists");
     }
