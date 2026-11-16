@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import i18n from "@/lib/i18n";
 
 export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
+  const pendingFileReads = new Map<string, symbol>();
+
   return {
     handleFileAddedEvent: async (filePath: string, fullPath: string) => {
       const workspacePath = useWorkspaceStore.getState().workspacePath;
@@ -32,6 +34,7 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     handleFileDeletedEvent: (filePath: string) => {
+      pendingFileReads.delete(filePath);
       const note = get().notes.find((n) => n.id === filePath);
       if (!note) return;
 
@@ -68,18 +71,20 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     handleFileChangedEvent: async (filePath: string, fullPath: string) => {
+      pendingFileReads.delete(filePath);
+      const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === filePath);
-      if (!note) return;
+      if (!workspacePath || !note || note.filePath !== fullPath) return;
 
-      const { selectedNoteId, savingNoteIds } = get();
+      const { selectedNoteId, editorContent, savingNoteIds } = get();
+      const originalContent = note.content;
+      const originalUpdatedAt = note.updatedAt;
+      const lastSavedContent = getLastSavedContent(filePath) ?? originalContent;
+      const displayedContent = selectedNoteId === filePath ? editorContent : originalContent;
 
-      if (selectedNoteId === filePath) {
-        const selectedNote = get().notes.find((item) => item.id === filePath);
-        const lastSavedContent = getLastSavedContent(filePath) ?? selectedNote?.content;
-        if (selectedNote && lastSavedContent !== get().editorContent) {
-          toast.warning(i18n.t("note:errors.externalChangeConflict"));
-          return;
-        }
+      if (originalContent !== lastSavedContent || displayedContent !== lastSavedContent) {
+        toast.warning(i18n.t("note:errors.externalChangeConflict"));
+        return;
       }
 
       if (savingNoteIds.has(filePath)) {
@@ -90,21 +95,54 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
         return;
       }
 
-      const content = await handleFileChanged(filePath, fullPath);
-      if (content === null) return;
+      const readToken = Symbol("file-change-read");
+      pendingFileReads.set(filePath, readToken);
+      try {
+        const content = await handleFileChanged(filePath, fullPath);
+        if (content === null || pendingFileReads.get(filePath) !== readToken) return;
 
-      set((state) => {
-        const targetNote = state.notes.find((n) => n.id === filePath);
-        if (targetNote) {
-          targetNote.content = content;
-          targetNote.updatedAt = new Date().toISOString();
-          targetNote.github = parseGitHubMetadata(content);
-          if (state.selectedNoteId === filePath) {
-            state.editorContent = content;
-          }
-          setLastSavedContent(filePath, content);
+        // 文件读取期间可能发生输入、切换工作区或重命名，迟到的结果不能覆盖新状态。
+        const current = get();
+        const currentNote = current.notes.find((item) => item.id === filePath);
+        if (
+          useWorkspaceStore.getState().workspacePath !== workspacePath ||
+          !currentNote ||
+          currentNote.filePath !== fullPath
+        ) {
+          return;
         }
-      });
+        if (current.savingNoteIds.has(filePath) || wasRecentlySaved(filePath)) return;
+
+        const currentSavedContent = getLastSavedContent(filePath) ?? lastSavedContent;
+        const currentDisplayedContent =
+          current.selectedNoteId === filePath ? current.editorContent : currentNote.content;
+        if (
+          currentNote.content !== originalContent ||
+          currentNote.updatedAt !== originalUpdatedAt ||
+          currentNote.content !== currentSavedContent ||
+          currentDisplayedContent !== currentSavedContent
+        ) {
+          toast.warning(i18n.t("note:errors.externalChangeConflict"));
+          return;
+        }
+
+        set((state) => {
+          const targetNote = state.notes.find((n) => n.id === filePath);
+          if (targetNote) {
+            targetNote.content = content;
+            targetNote.updatedAt = new Date().toISOString();
+            targetNote.github = parseGitHubMetadata(content);
+            if (state.selectedNoteId === filePath) {
+              state.editorContent = content;
+            }
+            setLastSavedContent(filePath, content);
+          }
+        });
+      } finally {
+        if (pendingFileReads.get(filePath) === readToken) {
+          pendingFileReads.delete(filePath);
+        }
+      }
     }
   };
 }
