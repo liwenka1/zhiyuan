@@ -37,12 +37,17 @@ describe("workspace path policy", () => {
 });
 
 describe("remote URL policy", () => {
-  it.each(["http://127.0.0.1/", "http://[::1]/", "http://[::ffff:7f00:1]/", "http://[fe90::1]/"])(
-    "blocks private address %s",
-    async (url) => {
-      await expect(assertSafeRemoteHttpUrl(url)).rejects.toThrow(/Private network URLs/);
-    }
-  );
+  it.each([
+    "http://127.0.0.1/",
+    "http://[::1]/",
+    "http://[::ffff:7f00:1]/",
+    "http://[fe90::1]/",
+    "http://100.64.0.1/",
+    "http://100.100.100.200/",
+    "http://[::ffff:6464:64c8]/"
+  ])("blocks private address %s", async (url) => {
+    await expect(assertSafeRemoteHttpUrl(url)).rejects.toThrow(/Private network URLs/);
+  });
 });
 
 describe("workspace scan policy", () => {
