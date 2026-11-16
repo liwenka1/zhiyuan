@@ -88,12 +88,12 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       const folderSeparator = workspacePath.includes("\\") ? "\\" : "/";
       const folderPath = `${workspacePath}${folderSeparator}${folderName}`;
 
-      await watcherIpc.pause();
+      await watcherIpc.pause(workspacePath);
       try {
         // 在文件系统中创建文件夹
         await folderIpc.create(folderPath);
       } finally {
-        await watcherIpc.resume();
+        await watcherIpc.resume(workspacePath);
       }
 
       const newFolder: Folder = {
@@ -168,7 +168,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       }
       await flushAllDebouncedSaves(useNoteStore.getState);
 
-      await watcherIpc.pause();
+      await watcherIpc.pause(workspacePath);
 
       // 在文件系统中重命名文件夹
       await folderIpc.rename(folder.path, newFolderPath);
@@ -242,7 +242,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       toast.error(i18n.t("note:errors.renameFolderFailed"));
       throw error;
     } finally {
-      await watcherIpc.resume();
+      await watcherIpc.resume(workspacePath);
     }
   },
 
