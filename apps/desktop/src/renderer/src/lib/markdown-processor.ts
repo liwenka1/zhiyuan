@@ -197,37 +197,16 @@ async function renderMermaidBlocks(html: string, isDarkTheme = false): Promise<s
  * 将相对路径转换为 local-resource:// 协议的绝对路径
  */
 function resolveRelativePathsInHTML(html: string, notePath: string): string {
-  // 处理 img 标签的 src 属性
-  let result = html.replace(/<img([^>]*?)src="([^"]+)"([^>]*?)>/g, (match, before, src, after) => {
-    if (isRelativePath(src)) {
-      const resolvedSrc = resolveResourcePath(src, notePath);
-      return `<img${before}src="${resolvedSrc}"${after}>`;
+  const document = new DOMParser().parseFromString(html, "text/html");
+  for (const element of document.querySelectorAll("img[src], a[href], video[src], audio[src], source[src]")) {
+    const attribute = element.tagName.toLowerCase() === "a" ? "href" : "src";
+    const source = element.getAttribute(attribute);
+    if (source && isRelativePath(source)) {
+      // Read HTML entities once, resolve URL path escapes once, then let the DOM serialize the attribute.
+      element.setAttribute(attribute, resolveResourcePath(source, notePath));
     }
-    return match;
-  });
-
-  // 处理 a 标签的 href 属性（文件链接）
-  result = result.replace(/<a([^>]*?)href="([^"]+)"([^>]*?)>/g, (match, before, href, after) => {
-    if (isRelativePath(href)) {
-      const resolvedHref = resolveResourcePath(href, notePath);
-      return `<a${before}href="${resolvedHref}"${after}>`;
-    }
-    return match;
-  });
-
-  // 处理 video/audio/source 标签的 src 属性
-  result = result.replace(
-    /<(video|audio|source)([^>]*?)src="([^"]+)"([^>]*?)>/g,
-    (match, tagName, before, src, after) => {
-      if (isRelativePath(src)) {
-        const resolvedSrc = resolveResourcePath(src, notePath);
-        return `<${tagName}${before}src="${resolvedSrc}"${after}>`;
-      }
-      return match;
-    }
-  );
-
-  return result;
+  }
+  return document.body.innerHTML;
 }
 
 export interface MarkdownToHTMLOptions {
