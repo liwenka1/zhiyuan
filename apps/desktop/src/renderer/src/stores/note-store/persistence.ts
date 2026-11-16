@@ -24,6 +24,10 @@ export function getLastSavedContent(noteId: string): string | undefined {
   return lastSavedContents.get(noteId);
 }
 
+export function hasPendingSave(filePath: string): boolean {
+  return pendingContents.has(filePath);
+}
+
 function getCurrentFilePath(get: NoteStoreGet, noteId: string): string | undefined {
   return get().notes.find((note) => note.id === noteId)?.filePath;
 }
