@@ -1,5 +1,6 @@
 import path from "path";
 import fs from "fs/promises";
+import { realpathSync } from "fs";
 import Parser from "rss-parser";
 import { fileSystem } from "../file-system";
 import { assertSafeRemoteHttpUrl, fetchSafeRemoteHttp } from "../security/remote-url";
@@ -26,6 +27,45 @@ interface RssMetadata {
 }
 
 const MAX_RSS_BYTES = 10 * 1024 * 1024;
+
+interface SubscriptionOperationState {
+  generation: number;
+  users: number;
+  commitQueue: Promise<void>;
+}
+
+const subscriptionOperations = new Map<string, SubscriptionOperationState>();
+
+function beginSubscriptionOperation(folderPath: string) {
+  let key: string;
+  try {
+    key = realpathSync(folderPath);
+  } catch {
+    key = path.resolve(folderPath);
+  }
+  const state = subscriptionOperations.get(key) ?? { generation: 0, users: 0, commitQueue: Promise.resolve() };
+  state.users += 1;
+  subscriptionOperations.set(key, state);
+  return {
+    state,
+    release: () => {
+      if (--state.users === 0 && subscriptionOperations.get(key) === state) subscriptionOperations.delete(key);
+    }
+  };
+}
+
+function commitSubscriptionOperation<T>(state: SubscriptionOperationState, commit: () => Promise<T>): Promise<T> {
+  const result = state.commitQueue.then(commit);
+  state.commitQueue = result.then(
+    () => {},
+    () => {}
+  );
+  return result;
+}
+
+function assertSubscriptionGeneration(state: SubscriptionOperationState, generation: number): void {
+  if (state.generation !== generation) throw new Error("RSS subscription changed while updating");
+}
 
 async function readLimitedBody(response: Response, maxBytes: number): Promise<Uint8Array> {
   if (!response.body) {
@@ -71,17 +111,22 @@ type RssItem = Parser.Item & {
 
 import { sanitizeName, formatDate, buildCommentMetadata } from "../utils/content-import";
 
-async function getAvailableFolderName(workspacePath: string, baseName: string): Promise<string> {
+async function createAvailableFolder(workspacePath: string, baseName: string): Promise<string> {
   const normalizedBase = sanitizeName(baseName) || "RSS";
   let candidate = normalizedBase;
   let counter = 2;
 
-  while (await fileSystem.exists(path.join(workspacePath, candidate))) {
-    candidate = `${normalizedBase}-${counter}`;
-    counter += 1;
+  while (true) {
+    try {
+      // mkdir without recursive owns this directory exclusively, including across concurrent imports.
+      await fs.mkdir(path.join(workspacePath, candidate));
+      return candidate;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      candidate = `${normalizedBase}-${counter}`;
+      counter += 1;
+    }
   }
-
-  return candidate;
 }
 
 async function getAvailableFileName(folderPath: string, baseName: string): Promise<string> {
@@ -247,9 +292,8 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
   const feed = await parseFeed(parser, url);
   const feedTitle = getFeedTitle(feed, url);
 
-  const folderName = await getAvailableFolderName(workspacePath, feedTitle);
+  const folderName = await createAvailableFolder(workspacePath, feedTitle);
   const folderPath = path.join(workspacePath, folderName);
-  await fileSystem.createFolder(folderPath);
 
   const metadataItems: RssMetadataItem[] = [];
   try {
@@ -312,6 +356,20 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
 export async function updateRss(folderPath: string): Promise<{
   addedCount: number;
 }> {
+  const operation = beginSubscriptionOperation(folderPath);
+  const generation = operation.state.generation;
+  try {
+    return await updateSubscription(folderPath, operation.state, generation);
+  } finally {
+    operation.release();
+  }
+}
+
+async function updateSubscription(
+  folderPath: string,
+  state: SubscriptionOperationState,
+  generation: number
+): Promise<{ addedCount: number }> {
   const metadata = await loadRssMetadata(folderPath);
   await assertSafeRemoteHttpUrl(metadata.url);
   const parser: Parser<RssItem> = new Parser({
@@ -322,77 +380,102 @@ export async function updateRss(folderPath: string): Promise<{
   const feed = await parseFeed(parser, metadata.url);
   const feedTitle = getFeedTitle(feed, metadata.url);
 
-  const existingKeys = new Set(
-    metadata.items.map((item) => buildItemKey(item)).filter((key): key is string => Boolean(key))
-  );
+  return commitSubscriptionOperation(state, async () => {
+    assertSubscriptionGeneration(state, generation);
+    // Another update may have committed while this request was fetching. Deduplicate against its latest metadata.
+    const currentMetadata = await loadRssMetadata(folderPath);
+    assertSubscriptionGeneration(state, generation);
+    if (currentMetadata.url !== metadata.url) throw new Error("RSS subscription changed while updating");
+    const existingKeys = new Set(
+      currentMetadata.items.map((item) => buildItemKey(item)).filter((key): key is string => Boolean(key))
+    );
 
-  const newItems: RssMetadataItem[] = [];
-  const createdFilePaths: string[] = [];
-  let addedCount = 0;
-  try {
-    for (const item of feed.items || []) {
-      const title = item.title?.trim() || "Untitled";
-      const publicationDate = item.isoDate || item.pubDate;
-      const published = publicationDate ? formatDate(publicationDate) || undefined : undefined;
-      const link = item.link?.trim();
-      const guidValue = typeof item.guid === "string" ? item.guid : undefined;
-      const idValue = typeof item.id === "string" ? item.id : undefined;
-      const guid = guidValue?.trim() || idValue?.trim();
-      const key = buildItemKey({ guid, link, title, published });
+    const newItems: RssMetadataItem[] = [];
+    const createdFilePaths: string[] = [];
+    let addedCount = 0;
+    let metadataCommitted = false;
+    try {
+      for (const item of feed.items || []) {
+        const title = item.title?.trim() || "Untitled";
+        const publicationDate = item.isoDate || item.pubDate;
+        const published = publicationDate ? formatDate(publicationDate) || undefined : undefined;
+        const link = item.link?.trim();
+        const guidValue = typeof item.guid === "string" ? item.guid : undefined;
+        const idValue = typeof item.id === "string" ? item.id : undefined;
+        const guid = guidValue?.trim() || idValue?.trim();
+        const key = buildItemKey({ guid, link, title, published });
 
-      if (key && existingKeys.has(key)) {
-        continue;
+        if (key && existingKeys.has(key)) {
+          continue;
+        }
+
+        const datePrefix = published || "undated";
+        const fileBaseName = `${datePrefix}-${title}`;
+        const fileName = await getAvailableFileName(folderPath, fileBaseName);
+        const filePath = path.join(folderPath, fileName);
+        assertSubscriptionGeneration(state, generation);
+
+        const metadata = buildCommentMetadata({
+          "rss-title": title,
+          "rss-link": link,
+          "rss-guid": guid,
+          "rss-published": published,
+          "rss-source": feedTitle
+        });
+        const mediaBlock = buildMediaBlock(getMediaEntries(item));
+        const content = pickItemContent(item);
+        const heading = `# ${title}\n\n`;
+        const markdown = `${metadata}${heading}${mediaBlock}${content}`;
+
+        await fileSystem.createFile(filePath, markdown);
+        createdFilePaths.push(filePath);
+        assertSubscriptionGeneration(state, generation);
+
+        newItems.push({
+          guid,
+          link,
+          published: published ? new Date(published).toISOString() : undefined,
+          title
+        });
+
+        if (key) {
+          existingKeys.add(key);
+        }
+        addedCount += 1;
       }
 
-      const datePrefix = published || "undated";
-      const fileBaseName = `${datePrefix}-${title}`;
-      const fileName = await getAvailableFileName(folderPath, fileBaseName);
-      const filePath = path.join(folderPath, fileName);
+      currentMetadata.title = feedTitle;
+      currentMetadata.lastFetched = new Date().toISOString();
+      currentMetadata.items = [...currentMetadata.items, ...newItems];
 
-      const metadata = buildCommentMetadata({
-        "rss-title": title,
-        "rss-link": link,
-        "rss-guid": guid,
-        "rss-published": published,
-        "rss-source": feedTitle
-      });
-      const mediaBlock = buildMediaBlock(getMediaEntries(item));
-      const content = pickItemContent(item);
-      const heading = `# ${title}\n\n`;
-      const markdown = `${metadata}${heading}${mediaBlock}${content}`;
-
-      await fileSystem.createFile(filePath, markdown);
-      createdFilePaths.push(filePath);
-
-      newItems.push({
-        guid,
-        link,
-        published: published ? new Date(published).toISOString() : undefined,
-        title
-      });
-
-      if (key) {
-        existingKeys.add(key);
+      assertSubscriptionGeneration(state, generation);
+      await saveRssMetadata(folderPath, currentMetadata);
+      metadataCommitted = true;
+      assertSubscriptionGeneration(state, generation);
+    } catch (error) {
+      // If unsubscribe fails after a metadata commit, its item references must still point at existing files.
+      if (!metadataCommitted) {
+        await Promise.all(createdFilePaths.map((filePath) => fs.rm(filePath, { force: true }).catch(() => {})));
       }
-      addedCount += 1;
+      throw error;
     }
 
-    metadata.title = feedTitle;
-    metadata.lastFetched = new Date().toISOString();
-    metadata.items = [...metadata.items, ...newItems];
-
-    await saveRssMetadata(folderPath, metadata);
-  } catch (error) {
-    await Promise.all(createdFilePaths.map((filePath) => fs.rm(filePath, { force: true }).catch(() => {})));
-    throw error;
-  }
-
-  return { addedCount };
+    return { addedCount };
+  });
 }
 
 export async function unsubscribeRss(folderPath: string): Promise<void> {
-  const metadataPath = path.join(folderPath, ".rss.json");
-  const exists = await fileSystem.exists(metadataPath);
-  if (!exists) return;
-  await fileSystem.deleteFile(metadataPath);
+  const operation = beginSubscriptionOperation(folderPath);
+  // Invalidate immediately; cancellation must not wait for the remote feed response.
+  operation.state.generation += 1;
+  try {
+    await commitSubscriptionOperation(operation.state, async () => {
+      const metadataPath = path.join(folderPath, ".rss.json");
+      const exists = await fileSystem.exists(metadataPath);
+      if (!exists) return;
+      await fileSystem.deleteFile(metadataPath);
+    });
+  } finally {
+    operation.release();
+  }
 }

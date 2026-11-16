@@ -5,6 +5,7 @@
 
 import { JSDOM } from "jsdom";
 import { Readability } from "@mozilla/readability";
+import { randomUUID } from "node:crypto";
 import { assertSafeRemoteHttpUrl, fetchSafeRemoteHttp } from "../security/remote-url";
 
 export interface ArticleContent {
@@ -120,6 +121,16 @@ function cleanHTML(html: string): string {
     if (href) a.setAttribute("href", href);
   });
 
+  // 代码中的空白有语义，既不能被文本清理折叠，也不能被后续 HTML 字符串格式化改写。
+  const codePrefix = `__ZHIYUAN_CODE_${randomUUID()}_`;
+  const preservedCode = new Map<string, string>();
+  for (const element of document.querySelectorAll("pre, code")) {
+    if (element.parentElement?.closest("pre, code")) continue;
+    const placeholder = `${codePrefix}${preservedCode.size}__`;
+    preservedCode.set(placeholder, element.outerHTML);
+    element.replaceWith(document.createTextNode(placeholder));
+  }
+
   // 6. 移除空的 div 和 span
   let changed = true;
   while (changed) {
@@ -205,6 +216,10 @@ function cleanHTML(html: string): string {
   // 13. 移除开头和结尾的无用 div 标签
   if (result.startsWith("<div>") && result.endsWith("</div>")) {
     result = result.slice(5, -6).trim();
+  }
+
+  for (const [placeholder, code] of preservedCode) {
+    result = result.replaceAll(placeholder, () => code);
   }
 
   return result;
