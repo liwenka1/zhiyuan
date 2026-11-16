@@ -255,7 +255,8 @@ export async function importRss(url: string, workspacePath: string): Promise<Rss
   try {
     for (const item of feed.items || []) {
       const title = item.title?.trim() || "Untitled";
-      const published = formatDate(item.isoDate || item.pubDate) || undefined;
+      const publicationDate = item.isoDate || item.pubDate;
+      const published = publicationDate ? formatDate(publicationDate) || undefined : undefined;
       const datePrefix = published || "undated";
       const fileBaseName = `${datePrefix}-${title}`;
       const fileName = await getAvailableFileName(folderPath, fileBaseName);
@@ -331,7 +332,8 @@ export async function updateRss(folderPath: string): Promise<{
   try {
     for (const item of feed.items || []) {
       const title = item.title?.trim() || "Untitled";
-      const published = formatDate(item.isoDate || item.pubDate) || undefined;
+      const publicationDate = item.isoDate || item.pubDate;
+      const published = publicationDate ? formatDate(publicationDate) || undefined : undefined;
       const link = item.link?.trim();
       const guidValue = typeof item.guid === "string" ? item.guid : undefined;
       const idValue = typeof item.id === "string" ? item.id : undefined;
