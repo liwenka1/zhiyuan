@@ -95,8 +95,8 @@ xattr -cr /Applications/纸鸢.app
 
 ### 环境要求
 
-- Node.js >= 18
-- pnpm >= 8
+- Node.js 20.19 及以上的 20.x 版本，或 22.12 及以上版本
+- pnpm >= 9
 
 ### 安装依赖
 
