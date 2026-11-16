@@ -1,12 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Note } from "../../apps/desktop/src/renderer/src/types";
 
-const { noteState, workspaceState, githubState, pushMock, updateContentMock } = vi.hoisted(() => {
+const { noteState, workspaceState, githubState, pushMock, updateContentMock, saveMock } = vi.hoisted(() => {
   const updateContentMock = vi.fn();
+  const saveMock = vi.fn();
   return {
     noteState: {
       notes: [] as Note[],
       updateNoteContentById: updateContentMock,
+      saveNoteToFileSystem: saveMock,
       deleteNote: vi.fn(),
       duplicateNote: vi.fn(),
       togglePinNote: vi.fn()
@@ -14,7 +16,8 @@ const { noteState, workspaceState, githubState, pushMock, updateContentMock } = 
     workspaceState: { workspacePath: "/workspace" },
     githubState: { owner: "owner", repo: "repo", activeProjectKey: "project", isLoaded: true, load: vi.fn() },
     pushMock: vi.fn(),
-    updateContentMock
+    updateContentMock,
+    saveMock
   };
 });
 
@@ -39,6 +42,8 @@ import { useNoteHandlers } from "../../apps/desktop/src/renderer/src/features/no
 import {
   beginCloseRequest,
   beginFileOperation,
+  beginPublishing,
+  isPublishingPath,
   waitForBackgroundSaves
 } from "../../apps/desktop/src/renderer/src/stores/note-store/operation-guard";
 
@@ -65,6 +70,7 @@ describe("GitHub publishing", () => {
     githubState.repo = "repo";
     githubState.isLoaded = true;
     githubState.load.mockReset();
+    saveMock.mockReset().mockResolvedValue(undefined);
   });
 
   it("applies returned metadata to the latest local content after an in-flight edit", async () => {
@@ -137,15 +143,80 @@ describe("GitHub publishing", () => {
     await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
     await waitForBackgroundSaves();
     expect(pushMock).not.toHaveBeenCalled();
+    expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(false);
   });
 
-  it("does not apply returned metadata after the note was renamed or moved", async () => {
+  it("blocks the source file and its parent directory until publication metadata is saved", async () => {
     const finishPush = holdPush();
     const publishing = createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
-    noteState.notes = [{ ...noteState.notes[0], id: "moved/note.md", filePath: "/workspace/moved/note.md" }];
+    const finishWriting = (() => {
+      let finish!: () => void;
+      saveMock.mockReturnValueOnce(new Promise<void>((resolve) => (finish = resolve)));
+      return () => finish();
+    })();
+    expect(beginFileOperation({ workspacePath: "/workspace", path: "/workspace/note.md" })).toBeNull();
+    expect(
+      beginFileOperation({ workspacePath: "/workspace", path: "/workspace", includeDescendants: true })
+    ).toBeNull();
     finishPush();
+    for (let index = 0; index < 5; index++) await Promise.resolve();
+    expect(saveMock).toHaveBeenCalledWith(
+      "note.md",
+      expect.stringContaining("github-issue-number: 12"),
+      "/workspace/note.md"
+    );
+    expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(true);
+    finishWriting();
     await publishing;
-    expect(updateContentMock).not.toHaveBeenCalled();
+    expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(false);
+  });
+
+  it("does not issue a second create while the same note is being published", async () => {
+    const finishPush = holdPush();
+    const first = createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    finishPush();
+    await first;
+  });
+
+  it("releases the publication lease after a remote failure so retry is possible", async () => {
+    pushMock.mockRejectedValueOnce(new Error("network unavailable"));
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(false);
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    expect(pushMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("allows a different note to publish and perform file operations independently", async () => {
+    noteState.notes.push({
+      id: "other.md",
+      fileName: "other.md",
+      filePath: "/workspace/other.md",
+      title: "other",
+      content: "other"
+    });
+    const finishPush = holdPush();
+    const first = createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    await createHandlers().handlePushToGitHub({ id: "other.md", title: "other" });
+    expect(pushMock).toHaveBeenCalledTimes(2);
+    const release = beginFileOperation({ workspacePath: "/workspace", path: "/workspace/other.md" });
+    expect(release).not.toBeNull();
+    release?.();
+    finishPush();
+    await first;
+  });
+
+  it("normalizes Windows path spelling and keeps directory boundaries distinct", () => {
+    const release = beginPublishing("C:\\", "C:\\notes\\note.md");
+    expect(release).not.toBeNull();
+    try {
+      expect(isPublishingPath("c:/", "c:/NOTES", true)).toBe(true);
+      expect(isPublishingPath("c:/", "c:/note", true)).toBe(false);
+      expect(isPublishingPath("D:/", "c:/notes/note.md")).toBe(false);
+    } finally {
+      release?.();
+    }
   });
 
   it("creates an issue instead of updating the same number in a different repository", async () => {

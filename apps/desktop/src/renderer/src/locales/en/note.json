@@ -158,6 +158,7 @@
     "importSuccessWithSkipped": "Imported {{importedCount}}, skipped {{skippedCount}}"
   },
   "github": {
+    "publishInProgress": "A note is being published. Try again after it finishes.",
     "pushSuccess": "Push succeeded: {{url}}",
     "assetsUploaded": "Uploaded {{count}} assets"
   },

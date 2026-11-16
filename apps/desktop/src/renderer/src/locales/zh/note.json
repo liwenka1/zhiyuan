@@ -153,6 +153,7 @@
     "importSuccessWithSkipped": "已导入 {{importedCount}} 个，跳过 {{skippedCount}} 个"
   },
   "github": {
+    "publishInProgress": "有笔记正在发布，请完成后重试。",
     "pushSuccess": "推送成功：{{url}}",
     "assetsUploaded": "已上传 {{count}} 个资源"
   },
