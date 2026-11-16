@@ -11,6 +11,29 @@ import { validatePathInWorkspace } from "../security/path-validator";
 import { configManager } from "../config";
 import { isValidFileNameSegment } from "@shared";
 
+function resolveSelectedGitHubProject(payload: { projectKey?: string; owner: string; repo: string }) {
+  const projectKey = String(payload.projectKey || configManager.getGitHubActiveProjectKey()).trim();
+  const project = configManager.getGitHubProjectConfigs()[projectKey];
+  if (!project?.owner || !project.repo || !project.token) {
+    throw new Error("Missing GitHub config");
+  }
+  const owner = project.owner.trim();
+  const repo = project.repo.trim();
+  // The renderer chose its issue and assets using this repository snapshot.
+  // Never silently redirect that request after another window edits the project.
+  if (
+    String(payload.owner || "")
+      .trim()
+      .toLowerCase() !== owner.toLowerCase() ||
+    String(payload.repo || "")
+      .trim()
+      .toLowerCase() !== repo.toLowerCase()
+  ) {
+    throw new Error("GitHub project changed. Reload the project settings before publishing.");
+  }
+  return { owner, repo, token: project.token.trim() };
+}
+
 export function registerGitHubHandlers(): void {
   ipcMain.handle(
     "github:pushIssue",
@@ -20,15 +43,7 @@ export function registerGitHubHandlers(): void {
           return ipcErr("Invalid payload", "GITHUB_PUSH_INVALID");
         }
 
-        const projectKey = String(payload.projectKey || configManager.getGitHubActiveProjectKey()).trim();
-        const projectConfig = configManager.getGitHubProjectConfigs()[projectKey] ?? {
-          owner: "",
-          repo: "",
-          token: ""
-        };
-        const owner = String(projectConfig.owner || payload.owner || "").trim();
-        const repo = String(projectConfig.repo || payload.repo || "").trim();
-        const token = String(projectConfig.token || payload.token || "").trim();
+        const { owner, repo, token } = resolveSelectedGitHubProject(payload);
         const title = String(payload.title || "").trim();
         const body = String(payload.body || "");
 
@@ -77,15 +92,7 @@ export function registerGitHubHandlers(): void {
           return ipcErr("Invalid payload", "GITHUB_UPLOAD_INVALID");
         }
 
-        const projectKey = String(payload.projectKey || configManager.getGitHubActiveProjectKey()).trim();
-        const projectConfig = configManager.getGitHubProjectConfigs()[projectKey] ?? {
-          owner: "",
-          repo: "",
-          token: ""
-        };
-        const owner = String(projectConfig.owner || payload.owner || "").trim();
-        const repo = String(projectConfig.repo || payload.repo || "").trim();
-        const token = String(projectConfig.token || payload.token || "").trim();
+        const { owner, repo, token } = resolveSelectedGitHubProject(payload);
         const noteId = String(payload.noteId || "").trim();
         const localPath = String(payload.localPath || "").trim();
         const assetsFolder = payload.assetsFolder?.trim() || "assets";
