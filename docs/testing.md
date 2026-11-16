@@ -7,7 +7,7 @@
 - `pnpm typecheck:tests`：单独检查测试源码，避免测试本身因为类型错误失效。
 - `pnpm test:unit:coverage`：生成 V8 覆盖率文本、JSON 摘要和 HTML 报告。当前先报告，不设置全局阈值。
 - `pnpm verify:desktop-build`：确认 main、preload、renderer 入口和应用版本都存在且有效。
-- `pnpm smoke:desktop`：用独立临时配置启动生产产物，实际打开并编辑临时笔记，确认 CodeMirror 初始化成功且内容写入磁盘；同时要求成功标记和正常退出。
+- `pnpm smoke:desktop`：分别通过真实路径与符号链接别名冷启动生产产物，每轮使用独立临时配置，直接确认参数指定的临时笔记已自动选中，再编辑并核对实际落盘；同时要求成功标记和正常退出，不通过点击列表补开笔记。
 - `pnpm build:desktop`：执行桌面端类型检查和生产构建。
 
 新增涉及持久化、文件系统、工作区切换、IPC 或窗口生命周期的代码时，应优先补运行时行为测试；只有输入策略或源码结构约束才使用 `test:core` 的静态检查。

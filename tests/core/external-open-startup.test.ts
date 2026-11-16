@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -82,7 +82,7 @@ describe("external file opening at application startup", () => {
         new Set(processEvents.listeners(event) as Array<(...args: never[]) => void>)
       ])
     );
-    root = await mkdtemp(path.join(os.tmpdir(), "zhiyuan-external-startup-"));
+    root = await realpath(await mkdtemp(path.join(os.tmpdir(), "zhiyuan-external-startup-")));
     oldWorkspace = path.join(root, "old");
     await mkdir(oldWorkspace);
     notePath = path.join(root, "associated.md");
@@ -194,6 +194,58 @@ describe("external file opening at application startup", () => {
     await finishStartup();
 
     expect(createWindow).toHaveBeenCalledExactlyOnceWith(root);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  async function createAliasedNote() {
+    const workspace = path.join(root, "workspace");
+    const alias = path.join(root, "workspace-alias");
+    await mkdir(workspace);
+    const target = path.join(workspace, "target.md");
+    await writeFile(target, "# canonical fixture");
+    await symlink(workspace, alias, originalPlatform === "win32" ? "junction" : "dir");
+    return { workspace: await realpath(workspace), target: await realpath(target), alias };
+  }
+
+  it("uses the same real file identity as the workspace scanner for a cold symlink alias", async () => {
+    const fixture = await createAliasedNote();
+    process.argv = ["Zhiyuan.exe", path.join(fixture.alias, "target.md")];
+    await import("../../apps/desktop/src/main/index");
+    await finishStartup();
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith(fixture.workspace);
+    expect(send).toHaveBeenCalledWith("workspace:external-open", {
+      workspacePath: fixture.workspace,
+      filePath: fixture.target
+    });
+    expect(addRecent).toHaveBeenCalledWith(fixture.workspace);
+  });
+
+  it("canonicalizes a second-instance relative alias against the caller's working directory", async () => {
+    const fixture = await createAliasedNote();
+    process.argv = ["Zhiyuan.exe"];
+    await import("../../apps/desktop/src/main/index");
+    await finishStartup();
+    createWindow.mockClear();
+
+    state.handlers.get("second-instance")?.({}, ["Zhiyuan.exe", "workspace-alias/target.md"], root);
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith(fixture.workspace);
+    expect(send).toHaveBeenCalledWith("workspace:external-open", {
+      workspacePath: fixture.workspace,
+      filePath: fixture.target
+    });
+  });
+
+  it("deduplicates a macOS alias open-file event against its canonical startup argument", async () => {
+    const fixture = await createAliasedNote();
+    Object.defineProperty(process, "platform", { value: "darwin" });
+    process.argv = ["Zhiyuan", fixture.target];
+    await import("../../apps/desktop/src/main/index");
+    state.handlers.get("open-file")?.({ preventDefault: vi.fn() }, path.join(fixture.alias, "target.md"));
+    await finishStartup();
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith(fixture.workspace);
     expect(send).toHaveBeenCalledTimes(1);
   });
 });

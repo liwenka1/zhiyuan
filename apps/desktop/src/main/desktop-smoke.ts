@@ -26,16 +26,13 @@ export function startDesktopSmokeTest(window?: BrowserWindow): void {
         editorReady = await window.webContents.executeJavaScript(`
           (() => {
             const editor = document.querySelector('.cm-content[contenteditable="true"]');
-            if (editor) return Array.from(editor.querySelectorAll('.cm-line')).map(line => line.textContent).join('\\n') === ${JSON.stringify(initial)};
-            const note = document.querySelector('[data-note-item="true"] button');
-            if (note) note.click();
-            return false;
+            return !!editor && Array.from(editor.querySelectorAll('.cm-line')).map(line => line.textContent).join('\\n') === ${JSON.stringify(initial)};
           })()
         `);
         if (editorReady) break;
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      if (!editorReady) throw new Error("The fixture note did not mount a working Markdown editor");
+      if (!editorReady) throw new Error("The startup file was not automatically selected in a working Markdown editor");
       await window.webContents.executeJavaScript(`
         (() => {
           const editor = document.querySelector('.cm-content[contenteditable="true"]');
