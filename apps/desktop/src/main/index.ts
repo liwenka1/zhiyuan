@@ -1,3 +1,4 @@
+import "./smoke-paths";
 import { app, BrowserWindow, ipcMain, protocol, net } from "electron";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
@@ -23,6 +24,7 @@ import { resolveAuthorizedLocalResource } from "./security/local-resource";
 import { initializeDiagnostics, recordDiagnostic } from "./diagnostics";
 import { registerDiagnosticsHandlers } from "./ipc/diagnostics-handler";
 import { getExternalOpenCandidates } from "./external-open-args";
+import { startDesktopSmokeTest } from "./desktop-smoke";
 
 type ExternalOpenPayload = {
   workspacePath: string;
@@ -132,28 +134,6 @@ protocol.registerSchemesAsPrivileged([
   }
 ]);
 
-function startDesktopSmokeTest(): void {
-  if (process.env.ZHIYUAN_SMOKE_TEST !== "1") return;
-
-  const smokeTimeout = setTimeout(() => {
-    console.error("ZHIYUAN_SMOKE_TIMEOUT");
-    app.exit(1);
-  }, 15_000);
-  const entry = windowManager.getAllEntries()[0];
-  if (!entry) {
-    clearTimeout(smokeTimeout);
-    console.error("ZHIYUAN_SMOKE_NO_WINDOW");
-    app.exit(1);
-    return;
-  }
-
-  entry.window.webContents.once("did-finish-load", () => {
-    clearTimeout(smokeTimeout);
-    console.log("ZHIYUAN_SMOKE_READY");
-    setTimeout(() => app.exit(0), 100);
-  });
-}
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -251,7 +231,7 @@ app.whenReady().then(() => {
     }
   }
 
-  startDesktopSmokeTest();
+  if (process.env.ZHIYUAN_SMOKE_TEST === "1") startDesktopSmokeTest(windowManager.getAllEntries()[0]?.window);
 
   app.on("activate", function () {
     // On macOS it's common to re-create a window in the app when the
