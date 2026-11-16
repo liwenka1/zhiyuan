@@ -96,7 +96,7 @@ class WindowManager {
       x,
       y,
       show: false,
-      autoHideMenuBar: true,
+      autoHideMenuBar: process.platform === "win32",
       backgroundColor: getBackgroundColor(),
       ...(process.platform === "darwin"
         ? {

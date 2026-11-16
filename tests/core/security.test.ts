@@ -2,7 +2,11 @@ import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { isValidFileNameSegment, normalizeFileNameSegment } from "../../apps/desktop/src/shared/file-name";
+import {
+  isValidFileNameSegment,
+  isValidWorkspaceEntryName,
+  normalizeFileNameSegment
+} from "../../apps/desktop/src/shared/file-name";
 import { isPathInside, validatePathInWorkspace } from "../../apps/desktop/src/main/security/path-validator";
 import { assertSafeRemoteHttpUrl } from "../../apps/desktop/src/main/security/remote-url";
 import { isIgnoredWorkspaceDirectory, MAX_WORKSPACE_DEPTH } from "../../apps/desktop/src/main/workspace/policy";
@@ -14,6 +18,13 @@ describe("file name policy", () => {
     expect(isValidFileNameSegment("../secret")).toBe(false);
     expect(isValidFileNameSegment("CON")).toBe(false);
     expect(normalizeFileNameSegment(" note ")).toBe("note");
+  });
+
+  it("rejects hidden workspace entries without forbidding hidden resource directories", () => {
+    expect(isValidWorkspaceEntryName(".draft")).toBe(false);
+    expect(isValidWorkspaceEntryName(".draft.md")).toBe(false);
+    expect(isValidWorkspaceEntryName("draft")).toBe(true);
+    expect(isValidFileNameSegment(".assets")).toBe(true);
   });
 });
 
