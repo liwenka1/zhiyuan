@@ -1,6 +1,31 @@
 import { ipcRenderer } from "electron";
 import type { IpcResultDTO } from "@shared";
 
+type ExternalOpenPayload = { workspacePath: string; filePath?: string };
+const externalOpenListeners = new Set<(payload: ExternalOpenPayload) => void>();
+const pendingExternalOpens: ExternalOpenPayload[] = [];
+let deliveringExternalOpens = false;
+
+function deliverPendingExternalOpens(): void {
+  if (deliveringExternalOpens) return;
+  deliveringExternalOpens = true;
+  try {
+    while (externalOpenListeners.size > 0) {
+      const payload = pendingExternalOpens.shift();
+      if (!payload) break;
+      for (const listener of [...externalOpenListeners]) listener(payload);
+    }
+  } finally {
+    deliveringExternalOpens = false;
+  }
+}
+
+// Preload runs before page load finishes; React may subscribe after the startup event arrives.
+ipcRenderer.on("workspace:external-open", (_event: Electron.IpcRendererEvent, payload: ExternalOpenPayload) => {
+  pendingExternalOpens.push(payload);
+  deliverPendingExternalOpens();
+});
+
 export const workspaceApi = {
   /**
    * 选择工作区文件夹
@@ -95,10 +120,12 @@ export const workspaceApi = {
   /**
    * 监听外部打开（拖拽到图标等）事件
    */
-  onExternalOpen: (callback: (payload: { workspacePath: string; filePath?: string }) => void): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, payload: { workspacePath: string; filePath?: string }) =>
-      callback(payload);
-    ipcRenderer.on("workspace:external-open", listener);
-    return () => ipcRenderer.removeListener("workspace:external-open", listener);
+  onExternalOpen: (callback: (payload: ExternalOpenPayload) => void): (() => void) => {
+    const listener = (payload: ExternalOpenPayload) => callback(payload);
+    externalOpenListeners.add(listener);
+    deliverPendingExternalOpens();
+    return () => {
+      externalOpenListeners.delete(listener);
+    };
   }
 };
