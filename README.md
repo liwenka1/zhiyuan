@@ -95,8 +95,8 @@ Run the command above once, then open the app again.
 
 ### Requirements
 
-- Node.js >= 18
-- pnpm >= 8
+- Node.js 20.19+ (20.x) or 22.12+
+- pnpm >= 9
 
 ### Install dependencies
 

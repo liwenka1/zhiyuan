@@ -6,6 +6,8 @@ const repoRoot = path.resolve(__dirname);
 export default defineConfig({
   resolve: {
     alias: {
+      // Desktop hooks and test mocks must resolve the same React package, including JSX subpaths.
+      react: path.join(repoRoot, "apps/desktop/node_modules/react"),
       "@": path.join(repoRoot, "apps/desktop/src/renderer/src"),
       "@shared": path.join(repoRoot, "apps/desktop/src/shared")
     }
