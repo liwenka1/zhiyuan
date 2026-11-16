@@ -7,6 +7,7 @@ import type { IncomingHttpHeaders, IncomingMessage } from "node:http";
 
 const MAX_REDIRECTS = 5;
 const REQUEST_TIMEOUT_MS = 30_000;
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
 interface ResolvedRemoteTarget {
   url: URL;
@@ -80,7 +81,7 @@ function isPrivateIpAddress(address: string): boolean {
   if (normalized === "::" || normalized === "::1") return true;
   const hextets = parseIpv6Hextets(normalized);
   if (!hextets) return false;
-  return (hextets[0] & 0xffc0) === 0xfe80 || (hextets[0] & 0xff00) === 0xfc00;
+  return (hextets[0] & 0xffc0) === 0xfe80 || (hextets[0] & 0xfe00) === 0xfc00;
 }
 
 async function resolveSafeRemoteTarget(input: string | URL): Promise<ResolvedRemoteTarget> {
@@ -155,24 +156,33 @@ function requestPinnedTarget(target: ResolvedRemoteTarget, init: RequestInit): P
     };
 
     const request = requester(requestOptions, (incoming: IncomingMessage) => {
-      const body = Readable.toWeb(incoming) as ReadableStream<Uint8Array>;
-      resolve(
-        new Response(body, {
-          status: incoming.statusCode ?? 502,
+      incoming.once("error", reject);
+      try {
+        const status = incoming.statusCode ?? 502;
+        const hasNoBody = init.method?.toUpperCase() === "HEAD" || status === 204 || status === 205 || status === 304;
+        const body = hasNoBody ? null : (Readable.toWeb(incoming) as ReadableStream<Uint8Array>);
+        const response = new Response(body, {
+          status,
           statusText: incoming.statusMessage,
           headers: incomingHeadersToHeaders(incoming.headers)
-        })
-      );
+        });
+        if (hasNoBody) incoming.resume();
+        resolve(response);
+      } catch (error) {
+        incoming.destroy();
+        reject(error);
+      }
     });
 
     const abort = () => request.destroy(new Error("Remote request aborted"));
+    request.once("error", reject);
+    request.once("close", () => init.signal?.removeEventListener("abort", abort));
     if (init.signal?.aborted) {
       abort();
       return;
     }
     init.signal?.addEventListener("abort", abort, { once: true });
     request.setTimeout(REQUEST_TIMEOUT_MS, () => request.destroy(new Error("Remote request timed out")));
-    request.once("error", reject);
 
     if (init.body) {
       request.destroy(new Error("Only bodyless remote GET requests are supported"));
@@ -192,10 +202,10 @@ export async function fetchSafeRemoteHttp(
     const target = await resolveSafeRemoteTarget(currentUrl);
     const response = await requestPinnedTarget(target, init);
 
-    if (response.status >= 300 && response.status < 400) {
-      if (attempt === MAX_REDIRECTS) throw new Error("Too many redirects");
+    if (REDIRECT_STATUSES.has(response.status)) {
       const location = response.headers.get("location");
       await response.body?.cancel();
+      if (attempt === MAX_REDIRECTS) throw new Error("Too many redirects");
       if (!location) throw new Error("Redirect response is missing a location");
       currentUrl = new URL(location, currentUrl);
       continue;
