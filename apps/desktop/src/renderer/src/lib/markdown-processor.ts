@@ -20,6 +20,7 @@ import { visit } from "unist-util-visit";
 import { iconButtonVariants } from "@/components/ui/button";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
 import { normalizeMarkdownPaths, resolveResourcePath, isRelativePath } from "@shared";
+import { authorizeLocalResourcesInHtml } from "./local-resource";
 
 type MermaidApi = typeof import("mermaid").default;
 let mermaidPromise: Promise<MermaidApi> | null = null;
@@ -198,9 +199,8 @@ async function renderMermaidBlocks(html: string, isDarkTheme = false): Promise<s
 function resolveRelativePathsInHTML(html: string, notePath: string): string {
   // 处理 img 标签的 src 属性
   let result = html.replace(/<img([^>]*?)src="([^"]+)"([^>]*?)>/g, (match, before, src, after) => {
-    const decodedSrc = decodeURI(src);
-    if (isRelativePath(decodedSrc)) {
-      const resolvedSrc = resolveResourcePath(decodedSrc, notePath);
+    if (isRelativePath(src)) {
+      const resolvedSrc = resolveResourcePath(src, notePath);
       return `<img${before}src="${resolvedSrc}"${after}>`;
     }
     return match;
@@ -208,9 +208,8 @@ function resolveRelativePathsInHTML(html: string, notePath: string): string {
 
   // 处理 a 标签的 href 属性（文件链接）
   result = result.replace(/<a([^>]*?)href="([^"]+)"([^>]*?)>/g, (match, before, href, after) => {
-    const decodedHref = decodeURI(href);
-    if (isRelativePath(decodedHref)) {
-      const resolvedHref = resolveResourcePath(decodedHref, notePath);
+    if (isRelativePath(href)) {
+      const resolvedHref = resolveResourcePath(href, notePath);
       return `<a${before}href="${resolvedHref}"${after}>`;
     }
     return match;
@@ -220,9 +219,8 @@ function resolveRelativePathsInHTML(html: string, notePath: string): string {
   result = result.replace(
     /<(video|audio|source)([^>]*?)src="([^"]+)"([^>]*?)>/g,
     (match, tagName, before, src, after) => {
-      const decodedSrc = decodeURI(src);
-      if (isRelativePath(decodedSrc)) {
-        const resolvedSrc = resolveResourcePath(decodedSrc, notePath);
+      if (isRelativePath(src)) {
+        const resolvedSrc = resolveResourcePath(src, notePath);
         return `<${tagName}${before}src="${resolvedSrc}"${after}>`;
       }
       return match;
@@ -291,5 +289,6 @@ export async function markdownToHTML(markdown: string, options?: MarkdownToHTMLO
     html = resolveRelativePathsInHTML(html, notePath);
   }
 
-  return html;
+  const resourceToken = typeof window === "undefined" ? "" : (window.api?.utils?.getLocalResourceToken?.() ?? "");
+  return authorizeLocalResourcesInHtml(html, resourceToken);
 }

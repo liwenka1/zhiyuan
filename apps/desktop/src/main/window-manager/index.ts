@@ -1,6 +1,7 @@
 import { BrowserWindow, shell, screen, app } from "electron";
 import { join, basename, resolve } from "path";
 import fs from "fs";
+import { randomBytes } from "node:crypto";
 import { is } from "@electron-toolkit/utils";
 import icon from "../../../resources/icon.png?asset";
 import { themeManager } from "../theme";
@@ -16,6 +17,7 @@ const CLOSE_FLUSH_TIMEOUT_MS = 10_000;
 interface WindowEntry {
   window: BrowserWindow;
   workspacePath: string | null;
+  localResourceToken: string;
 }
 
 /**
@@ -62,6 +64,7 @@ class WindowManager {
    * 创建新窗口
    */
   createWindow(workspacePath?: string): BrowserWindow {
+    const localResourceToken = randomBytes(32).toString("hex");
     const normalizedWorkspacePath = workspacePath ? this.normalizeWorkspacePath(workspacePath) : null;
     const getBackgroundColor = (): string => {
       const theme = themeManager.getTheme();
@@ -111,7 +114,8 @@ class WindowManager {
         preload: join(__dirname, "../preload/index.cjs"),
         sandbox: true,
         contextIsolation: true,
-        nodeIntegration: false
+        nodeIntegration: false,
+        additionalArguments: [`--zhiyuan-resource-token=${localResourceToken}`]
       }
     });
 
@@ -119,7 +123,8 @@ class WindowManager {
     this.applyWorkspaceIdentity(win, normalizedWorkspacePath);
     this.windows.set(win.id, {
       window: win,
-      workspacePath: normalizedWorkspacePath
+      workspacePath: normalizedWorkspacePath,
+      localResourceToken
     });
 
     win.on("ready-to-show", () => {
@@ -217,6 +222,13 @@ class WindowManager {
    */
   getEntryById(windowId: number): WindowEntry | undefined {
     return this.windows.get(windowId);
+  }
+
+  getWorkspaceForResourceToken(token: string): string | null {
+    for (const entry of this.windows.values()) {
+      if (entry.localResourceToken === token && !entry.window.isDestroyed()) return entry.workspacePath;
+    }
+    return null;
   }
 
   allowClose(windowId: number, closeAttempt: number): void {

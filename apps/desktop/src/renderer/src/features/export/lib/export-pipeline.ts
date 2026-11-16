@@ -28,7 +28,8 @@ export async function buildExportDocument(
     markdown: note.content,
     format,
     themeId,
-    layout
+    layout,
+    notePath: note.filePath
   });
 }
 
@@ -50,7 +51,8 @@ export async function buildExportDocumentsBySections(
         markdown: section,
         format,
         themeId,
-        layout
+        layout,
+        notePath: note.filePath
       });
     })
   );
@@ -75,6 +77,6 @@ export async function buildWechatDocument(
   themeId: string,
   layout?: Partial<ExportLayoutConfig>
 ): Promise<string> {
-  const htmlBody = await markdownToHTML(note.content, { enableCopyButton: false });
+  const htmlBody = await markdownToHTML(note.content, { notePath: note.filePath, enableCopyButton: false });
   return generateWechatHTMLDocument(note.title, htmlBody, themeId, layout);
 }
