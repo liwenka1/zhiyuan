@@ -3,18 +3,24 @@ import * as fs from "fs/promises";
 import * as path from "path";
 import { tmpdir } from "os";
 import { BrowserWindow, session } from "electron";
+import { pathToFileURL } from "node:url";
 import { embedLocalImages } from "./assets";
+import { embedLocalCssImages } from "./css-assets";
 
 const EXPORT_PARTITION = "export-capture";
 let exportSession: Electron.Session | null = null;
+const exportMainDocuments = new Map<number, string>();
 
 function getExportSession(): Electron.Session {
   if (exportSession) return exportSession;
   exportSession = session.fromPartition(EXPORT_PARTITION);
-  exportSession.webRequest.onBeforeRequest(
-    { urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] },
-    (_details, callback) => callback({ cancel: true })
-  );
+  exportSession.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
+    const ownDocument =
+      details.webContentsId === undefined ? undefined : exportMainDocuments.get(details.webContentsId);
+    const isOwnDocument = details.resourceType === "mainFrame" && details.url === ownDocument;
+    // All local subresources must have been workspace-validated and embedded first.
+    callback({ cancel: !isOwnDocument && !details.url.startsWith("data:") && details.url !== "about:blank" });
+  });
   return exportSession;
 }
 
@@ -85,16 +91,20 @@ export async function captureHtmlAsImage(
   workspacePath?: string
 ): Promise<NativeImage> {
   let window: BrowserWindow | null = null;
-  let tempHtmlPath: string | null = null;
+  let windowId: number | null = null;
+  let tempDirectory: string | null = null;
 
   const DOM_READY_TIMEOUT = 30000;
   const EXECUTE_JS_TIMEOUT = 10000;
   const CAPTURE_TIMEOUT = 30000;
 
   try {
-    const processedHtml = stripRemoteMediaSources(await embedLocalImages(htmlContent, notePath, workspacePath));
+    const processedHtml = stripRemoteMediaSources(
+      await embedLocalCssImages(await embedLocalImages(htmlContent, notePath, workspacePath), notePath, workspacePath)
+    );
 
-    tempHtmlPath = path.join(tmpdir(), `export-${Date.now()}.html`);
+    tempDirectory = await fs.mkdtemp(path.join(tmpdir(), "zhiyuan-export-"));
+    const tempHtmlPath = path.join(tempDirectory, "index.html");
     await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
 
     getExportSession();
@@ -107,6 +117,12 @@ export async function captureHtmlAsImage(
         contextIsolation: true,
         partition: EXPORT_PARTITION
       }
+    });
+    windowId = window.webContents.id;
+    exportMainDocuments.set(windowId, pathToFileURL(tempHtmlPath).href);
+    window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    window.webContents.on("will-navigate", (event, url) => {
+      if (url !== pathToFileURL(tempHtmlPath).href) event.preventDefault();
     });
 
     const domReadyPromise = new Promise<void>((resolve) => {
@@ -138,11 +154,12 @@ export async function captureHtmlAsImage(
 
     return await withTimeout(window.webContents.capturePage(), CAPTURE_TIMEOUT, `页面截图超时 (${CAPTURE_TIMEOUT}ms)`);
   } finally {
+    if (windowId !== null) exportMainDocuments.delete(windowId);
     if (window && !window.isDestroyed()) {
       window.close();
     }
-    if (tempHtmlPath) {
-      await fs.unlink(tempHtmlPath).catch(() => {});
+    if (tempDirectory) {
+      await fs.rm(tempDirectory, { recursive: true, force: true }).catch(() => {});
     }
   }
 }

@@ -1,8 +1,5 @@
 import { parseGitHubMetadata as parseSharedGitHubMetadata, type GitHubMetadata } from "@shared";
 
-const ISSUE_NUMBER_REGEX = /<!--\s*github-issue-number:\s*(\d+)\s*-->/i;
-const ISSUE_URL_REGEX = /<!--\s*github-issue-url:\s*([^\s]+)\s*-->/i;
-
 export function parseGitHubMetadata(markdown: string): GitHubMetadata {
   return parseSharedGitHubMetadata(markdown);
 }
@@ -33,10 +30,11 @@ export function getGitHubIssueNumberForRepository(
   }
 }
 
-function stripGitHubMetadata(markdown: string): string {
-  const lines = markdown.split("\n");
-  const filtered = lines.filter((line) => !ISSUE_NUMBER_REGEX.test(line) && !ISSUE_URL_REGEX.test(line));
-  return filtered.join("\n");
+export function stripGitHubMetadata(markdown: string): string {
+  const comment = "<!--\\s*github-issue-(?:number:\\s*\\d+|url:\\s*[^\\s]+)\\s*-->";
+  return markdown
+    .replace(new RegExp(`^[\\t ]*${comment}[\\t ]*(?:\\r?\\n|$)`, "gim"), "")
+    .replace(new RegExp(comment, "gi"), "");
 }
 
 export function upsertGitHubMetadata(markdown: string, metadata: { issueNumber: number; issueUrl: string }): string {
