@@ -383,24 +383,24 @@ export const configManager = {
     if (!targetKey) return;
     const allConfigs = this.getGitHubProjectConfigs();
     if (!(targetKey in allConfigs)) return;
+    const activeKey = this.getGitHubActiveProjectKey();
 
     delete allConfigs[targetKey];
     const persistedConfigs: GitHubProjectConfigMap = {};
     for (const [key, value] of Object.entries(allConfigs)) {
       persistedConfigs[key] = serializeGitHubConfig(value);
     }
-    store.set("githubProjects", persistedConfigs);
-
-    const activeKey = this.getGitHubActiveProjectKey();
-    if (activeKey === targetKey) {
-      const fallbackKey = Object.keys(allConfigs)[0] || "";
-      store.set("githubActiveProjectKey", fallbackKey);
-      const fallback = fallbackKey ? allConfigs[fallbackKey] : undefined;
-      store.set("github", {
+    const nextActiveKey = activeKey && allConfigs[activeKey] ? activeKey : Object.keys(allConfigs)[0] || "";
+    const fallback = nextActiveKey ? allConfigs[nextActiveKey] : undefined;
+    // 一次性同步兼容配置，避免删除最后一个项目后从旧 github 配置重新迁移已删除的凭据。
+    store.set({
+      githubProjects: persistedConfigs,
+      githubActiveProjectKey: nextActiveKey,
+      github: {
         owner: fallback?.owner || "",
         repo: fallback?.repo || "",
         token: encryptGitHubToken(fallback?.token || "")
-      });
-    }
+      }
+    });
   }
 };
