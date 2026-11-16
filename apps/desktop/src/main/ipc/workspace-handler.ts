@@ -21,7 +21,8 @@ import {
   DEFAULT_SHORTCUTS,
   type GitHubConfig,
   type GitHubProjectConfigMap,
-  isValidFileNameSegment
+  isValidFileNameSegment,
+  isValidWorkspaceEntryName
 } from "@shared";
 import { isIgnoredWorkspaceDirectory } from "../workspace/policy";
 import { registerWatcherHandlers } from "./watcher-handler";
@@ -271,13 +272,18 @@ export function registerWorkspaceHandlers(): void {
             continue;
           }
 
+          const fileName = path.basename(sourcePath);
+          if (!isValidWorkspaceEntryName(fileName)) {
+            skippedCount += 1;
+            continue;
+          }
+
           const stat = await fs.promises.stat(sourcePath);
           if (!stat.isFile()) {
             skippedCount += 1;
             continue;
           }
 
-          const fileName = path.basename(sourcePath);
           const targetPath = await resolveAvailableMarkdownPath(event, targetDir, fileName);
           await fs.promises.copyFile(sourcePath, targetPath, fs.constants.COPYFILE_EXCL);
           importedPaths.push(targetPath);
