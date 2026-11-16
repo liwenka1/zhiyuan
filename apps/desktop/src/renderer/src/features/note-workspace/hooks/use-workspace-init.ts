@@ -1,3 +1,4 @@
+import { captureNoteLoadSnapshot } from "@/stores/note-store/loaders";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -10,7 +11,6 @@ import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
  * 负责：
  * - 扫描并加载当前工作区内容（workspacePath 由 App.tsx 或 WelcomePage 设置）
  * - 监听文件系统变化
- * - 窗口关闭时保存
  */
 export function useWorkspaceInit() {
   const { t } = useTranslation("note");
@@ -44,6 +44,12 @@ export function useWorkspaceInit() {
             throw error;
           }
         }
+        if (
+          scanGeneration !== scanGenerationRef.current ||
+          useWorkspaceStore.getState().workspacePath !== workspacePath
+        )
+          return;
+        const beforeScan = captureNoteLoadSnapshot(useNoteStore.getState);
         const data = await workspaceIpc.scan(workspacePath);
         if (
           scanGeneration !== scanGenerationRef.current ||
@@ -63,7 +69,7 @@ export function useWorkspaceInit() {
           return;
         }
         setFolders(data.folders);
-        await loadFromFileSystem(data, workspacePath);
+        await loadFromFileSystem(data, workspacePath, beforeScan);
       } catch (error) {
         if (
           scanGeneration !== scanGenerationRef.current ||
@@ -137,29 +143,4 @@ export function useWorkspaceInit() {
       unsubscribeFolderDeleted();
     };
   }, []);
-
-  // 主进程在真正关闭窗口前等待 renderer 完成保存。
-  useEffect(() => {
-    const handlePrepareClose = async (closeAttempt: number) => {
-      let saveSucceeded = false;
-      try {
-        const { selectedNoteId, editorContent } = useNoteStore.getState();
-        if (selectedNoteId && editorContent !== undefined) {
-          await useNoteStore.getState().saveNoteToFileSystem(selectedNoteId, editorContent);
-        }
-        await flushAllDebouncedSaves(useNoteStore.getState);
-        saveSucceeded = true;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        toast.error(`${t("errors.saveNoteFailed")}: ${message}`);
-      }
-      if (saveSucceeded) {
-        await window.api.window.readyToClose(closeAttempt).catch(() => {});
-      }
-    };
-
-    return window.api.window.onPrepareClose((closeAttempt) => {
-      void handlePrepareClose(closeAttempt);
-    });
-  }, [t]);
 }
