@@ -9,41 +9,55 @@ import i18n from "@/lib/i18n";
 
 export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
   const pendingFileReads = new Map<string, symbol>();
+  const pendingFileAdds = new Map<string, symbol>();
 
   return {
     handleFileAddedEvent: async (filePath: string, fullPath: string) => {
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       if (!workspacePath) return;
 
-      const newNote = await handleFileAdded(filePath, fullPath, workspacePath, get().notes);
-      if (!newNote) return;
+      const readToken = Symbol("file-add-read");
+      pendingFileAdds.set(filePath, readToken);
+      try {
+        const newNote = await handleFileAdded(filePath, fullPath, workspacePath, get().notes);
+        if (
+          !newNote ||
+          pendingFileAdds.get(filePath) !== readToken ||
+          useWorkspaceStore.getState().workspacePath !== workspacePath ||
+          get().notes.some((note) => note.id === newNote.id)
+        ) {
+          return;
+        }
 
-      set((state) => {
-        state.notes.push(newNote);
-      });
-      setLastSavedContent(newNote.id, newNote.content);
+        set((state) => {
+          state.notes.push(newNote);
+        });
+        setLastSavedContent(newNote.id, newNote.content);
 
-      if (newNote.folderId) {
-        const folderStore = useFolderStore.getState();
-        folderStore.setFolders(
-          folderStore.folders.map((folder) =>
-            folder.id === newNote.folderId ? { ...folder, noteCount: (folder.noteCount || 0) + 1 } : folder
-          )
-        );
+        if (newNote.folderId) {
+          const folderStore = useFolderStore.getState();
+          folderStore.setFolders(
+            folderStore.folders.map((folder) =>
+              folder.id === newNote.folderId ? { ...folder, noteCount: (folder.noteCount || 0) + 1 } : folder
+            )
+          );
+        }
+      } finally {
+        if (pendingFileAdds.get(filePath) === readToken) pendingFileAdds.delete(filePath);
       }
     },
 
     handleFileDeletedEvent: (filePath: string) => {
       pendingFileReads.delete(filePath);
+      pendingFileAdds.delete(filePath);
       const note = get().notes.find((n) => n.id === filePath);
       if (!note) return;
 
-      if (get().selectedNoteId === filePath) {
-        const lastSavedContent = getLastSavedContent(filePath) ?? note.content;
-        if (lastSavedContent !== get().editorContent) {
-          toast.warning(i18n.t("note:errors.externalChangeConflict"));
-          return;
-        }
+      const lastSavedContent = getLastSavedContent(filePath) ?? note.content;
+      const displayedContent = get().selectedNoteId === filePath ? get().editorContent : note.content;
+      if (note.content !== lastSavedContent || displayedContent !== lastSavedContent) {
+        toast.warning(i18n.t("note:errors.externalChangeConflict"));
+        return;
       }
 
       const folderId = note.folderId;

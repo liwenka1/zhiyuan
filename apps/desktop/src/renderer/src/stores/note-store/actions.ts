@@ -99,11 +99,11 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           filePath = `${workspacePath}${pathSeparator}${fileName}`;
         }
 
-        await watcherIpc.pause();
+        await watcherIpc.pause(workspacePath);
         try {
           await fileIpc.create(filePath, content);
         } finally {
-          await watcherIpc.resume();
+          await watcherIpc.resume(workspacePath);
         }
 
         const newNote: Note = {
@@ -139,10 +139,29 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     formatCurrentNote: async () => {
       const { selectedNoteId, editorContent } = get();
       if (!selectedNoteId) return;
+      const workspacePath = useWorkspaceStore.getState().workspacePath;
+      const note = get().notes.find((item) => item.id === selectedNoteId);
+      if (!note) return;
+      const originalFilePath = note.filePath;
+      const originalContent = note.content;
+      const originalUpdatedAt = note.updatedAt;
 
       try {
         const formattedContent = await formatMarkdown(editorContent);
-        get().updateNoteContent(formattedContent);
+        const current = get();
+        const currentNote = current.notes.find((item) => item.id === selectedNoteId);
+        if (
+          useWorkspaceStore.getState().workspacePath !== workspacePath ||
+          current.selectedNoteId !== selectedNoteId ||
+          current.editorContent !== editorContent ||
+          !currentNote ||
+          currentNote.filePath !== originalFilePath ||
+          currentNote.content !== originalContent ||
+          currentNote.updatedAt !== originalUpdatedAt
+        ) {
+          return;
+        }
+        current.updateNoteContent(formattedContent);
       } catch {
         toast.error(i18n.t("note:errors.formatNoteFailed"));
       }
@@ -187,7 +206,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         clearDebouncedSave(noteId);
         await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
 
-        await watcherIpc.pause();
+        await watcherIpc.pause(workspacePath);
 
         await fileIpc.rename(note.filePath, newFilePath);
 
@@ -235,7 +254,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         toast.error(i18n.t("note:errors.renameNoteFailed"));
         throw error;
       } finally {
-        await watcherIpc.resume();
+        await watcherIpc.resume(workspacePath);
       }
     },
 
@@ -286,7 +305,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           updatedAt: new Date().toISOString()
         };
 
-        await watcherIpc.pause();
+        await watcherIpc.pause(workspacePath);
         try {
           await fileIpc.copy(note.filePath, newFilePath);
           set((state) => {
@@ -294,7 +313,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           });
           setLastSavedContent(newNote.id, newNote.content);
         } finally {
-          await watcherIpc.resume();
+          await watcherIpc.resume(workspacePath);
         }
       } catch (error) {
         toast.error(i18n.t("note:errors.duplicateNoteFailed"));
@@ -376,7 +395,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       try {
         clearDebouncedSave(noteId);
         await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
-        await watcherIpc.pause();
+        await watcherIpc.pause(workspacePath);
         let index = 1;
         while (await fileIpc.exists(resolvedFilePath)) {
           renamed = true;
@@ -394,7 +413,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         }
         return { moved: false, reason: "failed" as const, errorMessage: message || undefined };
       } finally {
-        await watcherIpc.resume();
+        await watcherIpc.resume(workspacePath);
       }
 
       const newNoteId = targetFolderId + "/" + resolvedFileName;
