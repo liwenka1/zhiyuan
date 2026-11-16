@@ -47,7 +47,12 @@ class FileWatcherManager {
       if (segments.slice(0, -1).some((segment) => isIgnoredWorkspaceDirectory(segment))) return true;
       const lastSegment = segments.at(-1) || "";
       if (isIgnoredWorkspaceDirectory(lastSegment) && !stats?.isFile()) return true;
-      return segments.length > MAX_WORKSPACE_DEPTH;
+      // 扫描允许第 MAX_WORKSPACE_DEPTH 层目录内的文件，文件名本身还占一段路径。
+      // chokidar 会先不带 stats 调用，不能在拿到文件类型前把最深层笔记排除。
+      return (
+        segments.length > MAX_WORKSPACE_DEPTH + 1 ||
+        (segments.length > MAX_WORKSPACE_DEPTH && Boolean(stats?.isDirectory()))
+      );
     };
 
     const watcher = chokidar.watch(workspacePath, {
