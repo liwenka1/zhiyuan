@@ -1,7 +1,41 @@
 import * as fs from "fs/promises";
 import * as path from "path";
-import { isRelativePath, decodeLocalResourceUrl } from "@shared";
+import { fileURLToPath } from "node:url";
+import { JSDOM } from "jsdom";
+import { createUrlTransformer, decodeLocalResourceUrl } from "@shared";
 import { validatePathInWorkspace } from "../security/path-validator";
+
+function parseAssetHtml(html: string) {
+  const isDocument = /<(?:!doctype|html|head|body)(?:\s|>)/i.test(html);
+  const dom = new JSDOM(isDocument ? html : "");
+  const template = isDocument ? null : dom.window.document.createElement("template");
+  if (template) template.innerHTML = html;
+  return {
+    dom,
+    root: template?.content ?? dom.window.document,
+    serialize: () => template?.innerHTML ?? dom.serialize()
+  };
+}
+
+function resolveLocalAsset(source: string, notePath: string, workspacePath: string) {
+  try {
+    const reference = createUrlTransformer(notePath)(source);
+    const url = new URL(reference);
+    const filePath =
+      url.protocol === "local-resource:"
+        ? decodeLocalResourceUrl(reference)
+        : url.protocol === "file:"
+          ? fileURLToPath(url)
+          : null;
+    if (!filePath) return null;
+    const validation = validatePathInWorkspace(workspacePath, filePath);
+    if (!validation.isValid) return null;
+    url.searchParams.delete("__window");
+    return { filePath: validation.normalizedPath, search: url.search, hash: url.hash };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * 获取图片的 MIME 类型
@@ -29,51 +63,23 @@ export async function embedLocalImages(
   notePath?: string,
   workspacePath?: string
 ): Promise<string> {
-  if (!notePath) return htmlContent;
+  if (!notePath || !workspacePath) return htmlContent;
 
-  const noteDir = path.dirname(notePath);
-  let result = htmlContent;
-
-  const imgRegex = /<img[^>]+src=(["]|['])([^"']+)\1[^>]*>/gi;
-  const matches = [...htmlContent.matchAll(imgRegex)];
-
-  for (const match of matches) {
-    const fullMatch = match[0];
-    const quote = match[1];
-    const src = match[2];
-
-    let imagePath: string;
-    if (src.startsWith("local-resource://")) {
-      imagePath = decodeLocalResourceUrl(src);
-    } else if (isRelativePath(src)) {
-      imagePath = path.resolve(noteDir, src.replace(/^\.\//, ""));
-    } else {
-      continue;
+  const document = parseAssetHtml(htmlContent);
+  try {
+    for (const element of document.root.querySelectorAll("img[src]")) {
+      // DOM attributes decode HTML entities exactly once; URLs perform their own path decoding.
+      const asset = resolveLocalAsset(element.getAttribute("src")!, notePath, workspacePath);
+      if (!asset) continue;
+      const imageBuffer = await fs.readFile(asset.filePath).catch(() => null);
+      if (!imageBuffer) continue;
+      const mimeType = getImageMimeType(path.extname(asset.filePath));
+      element.setAttribute("src", `data:${mimeType};base64,${imageBuffer.toString("base64")}${asset.hash}`);
     }
-
-    try {
-      await fs.access(imagePath);
-    } catch {
-      continue;
-    }
-
-    if (!workspacePath || !validatePathInWorkspace(workspacePath, imagePath).isValid) {
-      continue;
-    }
-
-    const imageBuffer = await fs.readFile(imagePath).catch(() => null);
-    if (!imageBuffer) continue;
-
-    const ext = path.extname(imagePath);
-    const mimeType = getImageMimeType(ext);
-    const base64 = imageBuffer.toString("base64");
-    const dataUri = `data:${mimeType};base64,${base64}`;
-
-    const newImgTag = fullMatch.replace(`src=${quote}${src}${quote}`, `src=${quote}${dataUri}${quote}`);
-    result = result.replace(fullMatch, newImgTag);
+    return document.serialize();
+  } finally {
+    document.dom.window.close();
   }
-
-  return result;
 }
 
 /**
@@ -86,77 +92,56 @@ export async function collectAndCopyAssets(
   assetsFolderName: string,
   workspacePath?: string
 ): Promise<{ processedHtml: string; copiedFiles: string[] }> {
-  const noteDir = path.dirname(notePath);
+  if (!workspacePath) return { processedHtml: html, copiedFiles: [] };
+
   const copiedFiles: string[] = [];
-  const fileMap = new Map<string, string>();
   const copiedFileNames = new Set<string>();
-
-  const resourceRegex = /<(img|video|audio|source)[^>]+(src|href)=(["'])([^"']+)\3[^>]*>/gi;
-  const matches = html.matchAll(resourceRegex);
-
-  const promises = Array.from(matches).map(async (match) => {
-    const src = match[4];
-
-    if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) {
-      return;
-    }
-
-    let sourcePath: string;
-    let fragment = "";
-    if (src.startsWith("local-resource://")) {
-      sourcePath = decodeLocalResourceUrl(src);
-      fragment = new URL(src).hash;
-    } else if (src.startsWith("file://")) {
-      sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
-    } else if (isRelativePath(src)) {
-      sourcePath = path.resolve(noteDir, src.replace(/^\.\//, ""));
-    } else {
-      return;
-    }
-
-    try {
-      await fs.access(sourcePath);
-    } catch {
-      return;
-    }
-
-    if (!workspacePath || !validatePathInWorkspace(workspacePath, sourcePath).isValid) {
-      return;
-    }
-
+  const copies = new Map<string, Promise<string | null>>();
+  const copyAsset = (sourcePath: string): Promise<string | null> => {
+    const existing = copies.get(sourcePath);
+    if (existing) return existing;
     const ext = path.extname(sourcePath);
     const basename = path.basename(sourcePath, ext);
     let fileName = `${basename}${ext}`;
     let counter = 1;
 
-    while (copiedFileNames.has(fileName)) {
+    while (copiedFileNames.has(fileName.normalize("NFC").toLowerCase())) {
       fileName = `${basename}-${counter}${ext}`;
       counter++;
     }
 
-    copiedFileNames.add(fileName);
+    copiedFileNames.add(fileName.normalize("NFC").toLowerCase());
 
     const destPath = path.join(assetsDir, fileName);
-    const copied = await fs.copyFile(sourcePath, destPath).then(
-      () => true,
-      () => false
+    const copying = fs.copyFile(sourcePath, destPath).then(
+      () => {
+        copiedFiles.push(destPath);
+        const folderSegment = encodeURIComponent(assetsFolderName).replaceAll("'", "%27");
+        const fileSegment = encodeURIComponent(fileName).replaceAll("'", "%27");
+        return `./${folderSegment}/${fileSegment}`;
+      },
+      () => null
     );
-    if (copied) {
-      copiedFiles.push(destPath);
-      const folderSegment = encodeURIComponent(assetsFolderName).replaceAll("'", "%27");
-      const fileSegment = encodeURIComponent(fileName).replaceAll("'", "%27");
-      const relativePath = `./${folderSegment}/${fileSegment}${fragment}`;
-      fileMap.set(src, relativePath);
-    }
-  });
+    copies.set(sourcePath, copying);
+    return copying;
+  };
 
-  await Promise.all(promises);
-
-  let processedHtml = html;
-  fileMap.forEach((newPath, oldPath) => {
-    const escapedOldPath = oldPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    processedHtml = processedHtml.replace(new RegExp(escapedOldPath, "g"), () => newPath);
-  });
-
-  return { processedHtml, copiedFiles };
+  const document = parseAssetHtml(html);
+  try {
+    await Promise.all(
+      [...document.root.querySelectorAll("img, video, audio, source")].map(async (element) => {
+        for (const attribute of ["src", "href"]) {
+          const source = element.getAttribute(attribute);
+          if (!source) continue;
+          const asset = resolveLocalAsset(source, notePath, workspacePath);
+          if (!asset) continue;
+          const copiedUrl = await copyAsset(asset.filePath);
+          if (copiedUrl) element.setAttribute(attribute, `${copiedUrl}${asset.search}${asset.hash}`);
+        }
+      })
+    );
+    return { processedHtml: document.serialize(), copiedFiles };
+  } finally {
+    document.dom.window.close();
+  }
 }
