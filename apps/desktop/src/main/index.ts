@@ -43,8 +43,8 @@ process.on("unhandledRejection", (reason) => {
 
 function resolveExternalOpenTarget(targetPath: string): ExternalOpenPayload | null {
   try {
-    targetPath = path.resolve(targetPath);
-    if (!existsSync(targetPath)) return null;
+    // Use the same identity as WindowManager and workspace scanning, including symlink aliases.
+    targetPath = fs.realpathSync(path.resolve(targetPath));
     const stat = fs.statSync(targetPath);
     if (stat.isDirectory()) {
       return { workspacePath: targetPath };
@@ -53,7 +53,7 @@ function resolveExternalOpenTarget(targetPath: string): ExternalOpenPayload | nu
       return { workspacePath: path.dirname(targetPath), filePath: targetPath };
     }
   } catch {
-    // The path can disappear or become inaccessible between existsSync and statSync.
+    // The path can disappear or become inaccessible while resolving or reading it.
   }
   return null;
 }
