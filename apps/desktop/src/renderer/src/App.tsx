@@ -15,8 +15,10 @@ import { Toaster } from "@/components/ui/sonner";
 import { PresentationView } from "@/features/editor";
 import { workspaceIpc } from "@/ipc";
 import { useShortcutDispatcher } from "@/hooks/use-shortcut-dispatcher";
+import { useWindowClose } from "@/hooks/use-window-close";
 
 function App(): React.JSX.Element {
+  useWindowClose();
   const initTheme = useThemeStore((state) => state.initTheme);
   const cleanup = useThemeStore((state) => state.cleanup);
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);

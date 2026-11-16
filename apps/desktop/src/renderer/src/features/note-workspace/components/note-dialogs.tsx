@@ -1,6 +1,7 @@
+import { captureNoteLoadSnapshot } from "@/stores/note-store/loaders";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { InputDialog } from "@renderer/components/input-dialog";
+import { InputDialog } from "@/components/input-dialog";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { workspaceIpc, watcherIpc, rssIpc, urlIpc } from "@/ipc";
 
@@ -63,6 +64,7 @@ export function NoteDialogs({
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const selectNote = useNoteStore((state) => state.selectNote);
+  const isCurrentWorkspace = () => useWorkspaceStore.getState().workspacePath === workspacePath;
 
   // 确认创建文件夹
   const handleConfirmCreateFolder = async (folderName: string) => {
@@ -84,13 +86,30 @@ export function NoteDialogs({
     toast.loading(t("rss.importing"), { id: toastId });
 
     try {
-      await watcherIpc.pause();
+      await watcherIpc.pause(workspacePath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       const result = await rssIpc.import(url, workspacePath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
+      const beforeScan = captureNoteLoadSnapshot(useNoteStore.getState);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
       selectFolder(result.folderName);
-      await loadFromFileSystem(data, workspacePath);
+      await loadFromFileSystem(data, workspacePath, beforeScan);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       const firstImportedNote = data.notes.find((note) => note.folderId === result.folderName);
       if (firstImportedNote) selectNote(firstImportedNote.id);
       toast.success(t("rss.success"), { id: toastId });
@@ -98,7 +117,7 @@ export function NoteDialogs({
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.failed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      await watcherIpc.resume();
+      await watcherIpc.resume(workspacePath);
     }
   };
 
@@ -113,13 +132,30 @@ export function NoteDialogs({
     toast.loading(t("url.creating"), { id: toastId });
 
     try {
-      await watcherIpc.pause();
+      await watcherIpc.pause(workspacePath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       const selectedFolderId = useFolderStore.getState().selectedFolderId;
       const result = await urlIpc.createNote(url, workspacePath, selectedFolderId || undefined);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
+      const beforeScan = captureNoteLoadSnapshot(useNoteStore.getState);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
-      await loadFromFileSystem(data, workspacePath);
+      await loadFromFileSystem(data, workspacePath, beforeScan);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       const importedNote = data.notes.find(
         (note) => note.id === result.noteId || note.id.replace(/\.md$/i, "") === result.noteId
       );
@@ -129,7 +165,7 @@ export function NoteDialogs({
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("url.failed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      await watcherIpc.resume();
+      await watcherIpc.resume(workspacePath);
     }
   };
 

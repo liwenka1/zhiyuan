@@ -22,6 +22,8 @@ export interface MoveNoteResult {
   renamed?: boolean;
 }
 
+export type NoteLoadSnapshot = ReadonlyMap<string, { content: string; savedContent?: string; hasEdits: boolean }>;
+
 export interface NoteStore extends NoteStoreState {
   setNotes: (notes: Note[]) => void;
   selectNote: (noteId: string) => void;
@@ -37,7 +39,11 @@ export interface NoteStore extends NoteStoreState {
 
   setSearchKeyword: (keyword: string) => void;
 
-  loadFromFileSystem: (data: { notes: Note[] }, expectedWorkspacePath?: string) => Promise<void>;
+  loadFromFileSystem: (
+    data: { notes: Note[] },
+    expectedWorkspacePath?: string,
+    beforeScan?: NoteLoadSnapshot
+  ) => Promise<void>;
   saveNoteToFileSystem: (noteId: string, content: string, expectedFilePath?: string) => Promise<void>;
 
   setNotePlaying: (noteId: string, isPlaying: boolean) => void;

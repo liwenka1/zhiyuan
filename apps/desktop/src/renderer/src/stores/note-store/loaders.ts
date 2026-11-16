@@ -1,4 +1,4 @@
-import type { NoteStoreGet, NoteStoreSet } from "./types";
+import type { NoteLoadSnapshot, NoteStoreGet, NoteStoreSet } from "./types";
 import type { Note } from "@/types";
 import { parseGitHubMetadata } from "@/lib/github-metadata";
 import { useWorkspaceStore } from "../use-workspace-store";
@@ -12,23 +12,48 @@ function hasLocalEdits(note: Note, content: string): boolean {
   );
 }
 
+function shouldPreserveContent(
+  note: Note,
+  content: string,
+  initial: NoteLoadSnapshot,
+  scanStartedEarlier: boolean
+): boolean {
+  const original = note.filePath ? initial.get(note.filePath) : undefined;
+  return Boolean(
+    hasLocalEdits(note, content) ||
+    original?.hasEdits ||
+    (original
+      ? original.content !== content || original.savedContent !== getLastSavedContent(note.id)
+      : scanStartedEarlier)
+  );
+}
+
+// 必须在发出扫描请求之前调用，覆盖扫描与配置读取的整个异步区间。
+export function captureNoteLoadSnapshot(get: NoteStoreGet): NoteLoadSnapshot {
+  const initial = get();
+  const snapshot = new Map<string, { content: string; savedContent?: string; hasEdits: boolean }>();
+  for (const note of initial.notes) {
+    if (!note.filePath) continue;
+    const content = initial.selectedNoteId === note.id ? initial.editorContent : note.content;
+    snapshot.set(note.filePath, {
+      content,
+      savedContent: getLastSavedContent(note.id),
+      hasEdits: hasLocalEdits(note, content)
+    });
+  }
+  return snapshot;
+}
+
 export function createLoaders(set: NoteStoreSet, get: NoteStoreGet) {
   return {
-    loadFromFileSystem: async (data: { notes: Note[] }, expectedWorkspacePath?: string) => {
+    loadFromFileSystem: async (
+      data: { notes: Note[] },
+      expectedWorkspacePath?: string,
+      beforeScan?: NoteLoadSnapshot
+    ) => {
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       if (expectedWorkspacePath && workspacePath !== expectedWorkspacePath) return;
-      // 配置读取期间保存可能完成，先记录本地编辑，避免标记清除后接受旧扫描正文。
-      const initial = get();
-      const initialFileStates = new Map<string, { content: string; savedContent?: string; hasEdits: boolean }>();
-      for (const note of initial.notes) {
-        if (!note.filePath) continue;
-        const content = initial.selectedNoteId === note.id ? initial.editorContent : note.content;
-        initialFileStates.set(note.filePath, {
-          content,
-          savedContent: getLastSavedContent(note.id),
-          hasEdits: hasLocalEdits(note, content)
-        });
-      }
+      const initialFileStates = beforeScan ?? captureNoteLoadSnapshot(get);
       let pinnedNoteIds: string[] = [];
 
       if (workspacePath) {
@@ -40,20 +65,22 @@ export function createLoaders(set: NoteStoreSet, get: NoteStoreGet) {
 
       const current = get();
       const currentNotes = new Map(current.notes.map((note) => [note.id, note]));
+      const currentPaths = new Set(current.notes.map((note) => note.filePath));
       const pinnedNoteIdSet = new Set(pinnedNoteIds);
-      const notesWithPinState = data.notes.map((note) => {
+      // 已在本地删除或改名的文件也可能残留在早先的扫描快照里。
+      const scannedNotes = data.notes.filter(
+        (note) =>
+          !beforeScan || !note.filePath || !initialFileStates.has(note.filePath) || currentPaths.has(note.filePath)
+      );
+      const notesWithPinState: Note[] = scannedNotes.map((note) => {
         const existingNote = currentNotes.get(note.id);
         const localContent =
           current.selectedNoteId === note.id ? current.editorContent : (existingNote?.content ?? note.content);
-        const initialFileState = note.filePath ? initialFileStates.get(note.filePath) : undefined;
-        const changedWhileLoading =
-          initialFileState &&
-          (initialFileState.content !== localContent || initialFileState.savedContent !== getLastSavedContent(note.id));
         const preserveLocalContent = Boolean(
           existingNote &&
           note.filePath &&
           existingNote.filePath === note.filePath &&
-          (initialFileState?.hasEdits || changedWhileLoading || hasLocalEdits(existingNote, localContent))
+          shouldPreserveContent(existingNote, localContent, initialFileStates, Boolean(beforeScan))
         );
         const content = preserveLocalContent ? localContent : note.content;
 
@@ -67,6 +94,19 @@ export function createLoaders(set: NoteStoreSet, get: NoteStoreGet) {
           github: parseGitHubMetadata(content)
         };
       });
+
+      // 扫描快照可能不含刚创建的文件，或已被外部删除但仍有本地草稿的文件。
+      // 保留当前工作区内这些记录，不能因刷新把唯一的内存正文清掉。
+      const scannedIds = new Set(scannedNotes.map((note) => note.id));
+      const workspacePrefix = workspacePath ? `${workspacePath.replaceAll("\\", "/").replace(/\/+$/, "")}/` : null;
+      for (const note of current.notes) {
+        if (scannedIds.has(note.id) || !note.filePath || !workspacePrefix) continue;
+        if (!note.filePath.replaceAll("\\", "/").startsWith(workspacePrefix)) continue;
+        const content = current.selectedNoteId === note.id ? current.editorContent : note.content;
+        if (shouldPreserveContent(note, content, initialFileStates, Boolean(beforeScan))) {
+          notesWithPinState.push({ ...note, content, github: parseGitHubMetadata(content) });
+        }
+      }
 
       const availableIds = new Set(notesWithPinState.map((note) => note.id));
       const selectedNoteId =

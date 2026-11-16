@@ -1,3 +1,4 @@
+import { captureNoteLoadSnapshot } from "@/stores/note-store/loaders";
 import { useFolderStore, useWorkspaceStore, useNoteStore } from "@/stores";
 import { resolveFolderAbsolutePath, resolveFolderRelativePath } from "@/lib/workspace-paths";
 import { toast } from "sonner";
@@ -62,10 +63,10 @@ export function useFolderHandlers({
   onOpenRenameDialog
 }: UseFolderHandlersProps): FolderHandlers {
   const { t } = useTranslation(["sidebar", "note"]);
-  const folders = useFolderStore((state) => state.folders);
   const setFolders = useFolderStore((state) => state.setFolders);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const isCurrentWorkspace = () => useWorkspaceStore.getState().workspacePath === workspacePath;
 
   // 处理新建文件夹 - 打开对话框
   const handleCreateFolder = () => {
@@ -91,12 +92,33 @@ export function useFolderHandlers({
 
     try {
       await flushAllDebouncedSaves(useNoteStore.getState);
-      await watcherIpc.pause();
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
+      await watcherIpc.pause(workspacePath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       const result = await rssIpc.update(folderPath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
+      const beforeScan = captureNoteLoadSnapshot(useNoteStore.getState);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
-      await loadFromFileSystem(data, workspacePath);
+      await loadFromFileSystem(data, workspacePath, beforeScan);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       const pinnedNoteIds = useNoteStore
         .getState()
         .notes.filter((note) => note.isPinned)
@@ -111,7 +133,7 @@ export function useFolderHandlers({
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.updateFailed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      await watcherIpc.resume();
+      await watcherIpc.resume(workspacePath);
     }
   };
 
@@ -130,8 +152,12 @@ export function useFolderHandlers({
 
     try {
       await rssIpc.unsubscribe(folderPath);
+      if (!isCurrentWorkspace()) {
+        toast.dismiss(toastId);
+        return;
+      }
       setFolders(
-        folders.map((item) =>
+        useFolderStore.getState().folders.map((item) =>
           item.id === folder.id
             ? {
                 ...item,
@@ -207,12 +233,18 @@ export function useFolderHandlers({
 
     try {
       await flushAllDebouncedSaves(useNoteStore.getState);
-      await watcherIpc.pause();
+      if (!isCurrentWorkspace()) return;
+      await watcherIpc.pause(workspacePath);
+      if (!isCurrentWorkspace()) return;
       await folderIpc.delete(folderPath);
+      if (!isCurrentWorkspace()) return;
+      const beforeScan = captureNoteLoadSnapshot(useNoteStore.getState);
       const data = await workspaceIpc.scan(workspacePath);
+      if (!isCurrentWorkspace()) return;
       if (!data) throw new Error("Workspace is already open in another window");
       setFolders(data.folders);
-      await loadFromFileSystem(data, workspacePath);
+      await loadFromFileSystem(data, workspacePath, beforeScan);
+      if (!isCurrentWorkspace()) return;
       const pinnedNoteIds = useNoteStore
         .getState()
         .notes.filter((note) => note.isPinned)
@@ -221,7 +253,7 @@ export function useFolderHandlers({
     } catch {
       toast.error(t("note:errors.deleteFolderFailed"));
     } finally {
-      await watcherIpc.resume();
+      await watcherIpc.resume(workspacePath);
     }
   };
 

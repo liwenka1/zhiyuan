@@ -23,7 +23,7 @@ vi.mock("../../apps/desktop/src/renderer/src/stores/use-workspace-store", () => 
   useWorkspaceStore: { getState: () => workspaceState }
 }));
 
-import { createLoaders } from "../../apps/desktop/src/renderer/src/stores/note-store/loaders";
+import { captureNoteLoadSnapshot, createLoaders } from "../../apps/desktop/src/renderer/src/stores/note-store/loaders";
 import {
   applyPersistence,
   clearAllDebouncedSaves,
@@ -109,6 +109,94 @@ describe("workspace scan loading", () => {
 
     expect(state.editorContent).toBe("external change");
     expect(getLastSavedContent("note.md")).toBe("external change");
+  });
+
+  it("preserves edits saved while the workspace scan itself is still running", async () => {
+    const { state, get, persistence, loaders } = createStore();
+    const beforeScan = captureNoteLoadSnapshot(get);
+    let finishScan!: (data: { notes: Note[] }) => void;
+    const scan = new Promise<{ notes: Note[] }>((resolve) => (finishScan = resolve));
+
+    persistence.updateNoteContent("saved during slow scan");
+    await flushAllDebouncedSaves(get);
+    finishScan({ notes: [note()] });
+    await loaders.loadFromFileSystem(await scan, "/workspace", beforeScan);
+
+    expect(state.editorContent).toBe("saved during slow scan");
+    expect(getLastSavedContent("note.md")).toBe("saved during slow scan");
+  });
+
+  it("keeps a dirty draft even if its file disappears from the scan", async () => {
+    const { state, get, persistence, loaders } = createStore();
+    persistence.updateNoteContent("draft whose file was deleted externally");
+    const beforeScan = captureNoteLoadSnapshot(get);
+
+    await loaders.loadFromFileSystem({ notes: [] }, "/workspace", beforeScan);
+
+    expect(state.selectedNoteId).toBe("note.md");
+    expect(state.editorContent).toBe("draft whose file was deleted externally");
+    expect(state.notes).toMatchObject([{ id: "note.md", content: "draft whose file was deleted externally" }]);
+  });
+
+  it("keeps notes created while a scan was already in progress", async () => {
+    const { state, get, loaders } = createStore();
+    const beforeScan = captureNoteLoadSnapshot(get);
+    state.notes.push(note("new.md", "created after scanning started"));
+    setLastSavedContent("new.md", "created after scanning started");
+    state.selectedNoteId = "new.md";
+    state.editorContent = "created after scanning started";
+
+    await loaders.loadFromFileSystem({ notes: [note()] }, "/workspace", beforeScan);
+
+    expect(state.selectedNoteId).toBe("new.md");
+    expect(state.editorContent).toBe("created after scanning started");
+    expect(state.notes.find((item) => item.id === "new.md")?.content).toBe("created after scanning started");
+  });
+
+  it("still removes clean notes that are absent from the scan", async () => {
+    const { state, get, loaders } = createStore();
+    const beforeScan = captureNoteLoadSnapshot(get);
+
+    await loaders.loadFromFileSystem({ notes: [] }, "/workspace", beforeScan);
+
+    expect(state.notes).toEqual([]);
+    expect(state.selectedNoteId).toBeNull();
+  });
+
+  it("keeps a new note's latest saved content even if the scan contains an earlier version", async () => {
+    const { state, get, loaders } = createStore();
+    const beforeScan = captureNoteLoadSnapshot(get);
+    state.notes.push(note("new.md", "latest saved content"));
+    setLastSavedContent("new.md", "latest saved content");
+
+    await loaders.loadFromFileSystem({ notes: [note("new.md", "early scan content")] }, "/workspace", beforeScan);
+
+    expect(state.notes.find((item) => item.id === "new.md")?.content).toBe("latest saved content");
+  });
+
+  it("keeps newly saved content for a note omitted by an older scan", async () => {
+    const { state, get, persistence, loaders } = createStore();
+    const beforeScan = captureNoteLoadSnapshot(get);
+    persistence.updateNoteContent("saved after scan began");
+    await flushAllDebouncedSaves(get);
+
+    await loaders.loadFromFileSystem({ notes: [] }, "/workspace", beforeScan);
+
+    expect(state.editorContent).toBe("saved after scan began");
+    expect(state.notes.find((item) => item.id === "note.md")?.content).toBe("saved after scan began");
+  });
+
+  it("does not resurrect the previous filename if a note was renamed during scanning", async () => {
+    const { state, get, loaders } = createStore();
+    const beforeScan = captureNoteLoadSnapshot(get);
+    state.notes = [note("renamed.md")];
+    state.selectedNoteId = "renamed.md";
+    setLastSavedContent("renamed.md", "disk content");
+
+    await loaders.loadFromFileSystem({ notes: [note()] }, "/workspace", beforeScan);
+
+    expect(state.notes.map((item) => item.id)).toEqual(["renamed.md"]);
+    expect(state.selectedNoteId).toBe("renamed.md");
   });
 
   it("keeps edits made while pin settings are being fetched", async () => {

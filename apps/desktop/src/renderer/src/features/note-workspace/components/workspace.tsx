@@ -1,3 +1,4 @@
+import { captureNoteLoadSnapshot } from "@/stores/note-store/loaders";
 import {
   DndContext,
   DragOverlay,
@@ -176,13 +177,17 @@ export function NoteWorkspace() {
         : workspacePath;
 
       const result = await workspaceIpc.importMarkdownFiles(sourcePaths, targetDir);
+      if (useWorkspaceStore.getState().workspacePath !== workspacePath) return { ...result, importedNoteIds: [] };
+      const beforeScan = captureNoteLoadSnapshot(useNoteStore.getState);
       const refreshed = await workspaceIpc.scan(workspacePath);
+      if (useWorkspaceStore.getState().workspacePath !== workspacePath) return { ...result, importedNoteIds: [] };
       const importedNoteIds = (result.importedPaths ?? []).map((filePath) =>
         filePath.replaceAll("\\", "/").replace(`${workspacePath.replaceAll("\\", "/")}/`, "")
       );
       if (refreshed) {
         setFolders(refreshed.folders);
-        await loadFromFileSystem(refreshed, workspacePath);
+        await loadFromFileSystem(refreshed, workspacePath, beforeScan);
+        if (useWorkspaceStore.getState().workspacePath !== workspacePath) return { ...result, importedNoteIds: [] };
       }
       return { ...result, importedNoteIds };
     },
