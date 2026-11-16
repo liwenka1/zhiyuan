@@ -64,19 +64,25 @@ export function NoteDialogs({
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const selectNote = useNoteStore((state) => state.selectNote);
-  const isCurrentWorkspace = () => useWorkspaceStore.getState().workspacePath === workspacePath;
+  const isCurrentWorkspace = () => {
+    const current = useWorkspaceStore.getState();
+    return !current.isLoading && current.workspacePath === workspacePath;
+  };
 
   // 确认创建文件夹
   const handleConfirmCreateFolder = async (folderName: string) => {
+    if (!isCurrentWorkspace()) return;
     await createFolder(folderName);
   };
 
   // 确认创建笔记
   const handleConfirmCreateNote = async (noteTitle: string) => {
+    if (!isCurrentWorkspace()) return;
     await createNote(selectedFolderId || undefined, noteTitle || undefined);
   };
 
   const handleConfirmRssImport = async (url: string) => {
+    if (!isCurrentWorkspace()) return;
     if (!workspacePath) {
       toast.error(t("rss.noWorkspace"));
       return;
@@ -123,6 +129,7 @@ export function NoteDialogs({
 
   // 确认从 URL 创建笔记
   const handleConfirmUrlCreate = async (url: string) => {
+    if (!isCurrentWorkspace()) return;
     if (!workspacePath) {
       toast.error(t("url.noWorkspace"));
       return;
@@ -171,6 +178,7 @@ export function NoteDialogs({
 
   // 确认重命名笔记
   const handleConfirmRenameNote = async (newTitle: string) => {
+    if (!isCurrentWorkspace()) return;
     if (!noteToRename || !newTitle || newTitle === noteToRename.title) return;
 
     await renameNote(noteToRename.id, newTitle).catch(() => {});
@@ -179,6 +187,7 @@ export function NoteDialogs({
 
   // 确认重命名文件夹
   const handleConfirmRenameFolder = async (newName: string) => {
+    if (!isCurrentWorkspace()) return;
     if (!folderToRename || !newName || newName === folderToRename.name) return;
 
     await renameFolder(folderToRename.id, newName).catch(() => {});

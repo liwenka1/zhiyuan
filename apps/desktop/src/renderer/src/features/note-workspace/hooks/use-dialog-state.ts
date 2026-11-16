@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useWorkspaceStore } from "@/stores/use-workspace-store";
 
 /**
  * Dialog 状态管理 Hook
@@ -21,6 +22,22 @@ export function useDialogState() {
     name: string;
     noteCount?: number;
   } | null>(null);
+
+  useEffect(
+    () =>
+      useWorkspaceStore.subscribe((current, previous) => {
+        if (current.workspacePath === previous.workspacePath) return;
+        setShowCreateFolderDialog(false);
+        setShowCreateNoteDialog(false);
+        setShowRssImportDialog(false);
+        setShowUrlCreateDialog(false);
+        setShowRenameNoteDialog(false);
+        setShowRenameFolderDialog(false);
+        setNoteToRename(null);
+        setFolderToRename(null);
+      }),
+    []
+  );
 
   return {
     // 创建文件夹对话框

@@ -9,6 +9,7 @@
     "switch": "Switch to 中文"
   },
   "workspace": {
+    "loading": "Opening workspace…",
     "switch": "Switch Workspace",
     "selectFolder": "Select Workspace Folder",
     "selectButton": "Select",

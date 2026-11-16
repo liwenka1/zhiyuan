@@ -19,6 +19,8 @@ export function useWorkspaceInit() {
   const selectNote = useNoteStore((state) => state.selectNote);
   const setFolders = useFolderStore((state) => state.setFolders);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const isLoading = useWorkspaceStore((state) => state.isLoading);
+  const setLoading = useWorkspaceStore((state) => state.setLoading);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const pendingFilePath = useWorkspaceStore((state) => state.pendingFilePath);
   const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
@@ -29,13 +31,13 @@ export function useWorkspaceInit() {
   useEffect(() => {
     const scanGeneration = ++scanGenerationRef.current;
     if (!workspacePath) return;
+    setLoading(true);
 
     const loadWorkspace = async () => {
       let previousWorkspacePath: string | null = null;
       let flushFailed = false;
       try {
         previousWorkspacePath = previousWorkspacePathRef.current;
-        previousWorkspacePathRef.current = workspacePath;
         if (previousWorkspacePath && previousWorkspacePath !== workspacePath) {
           try {
             await flushAllDebouncedSaves(useNoteStore.getState);
@@ -70,6 +72,12 @@ export function useWorkspaceInit() {
         }
         setFolders(data.folders);
         await loadFromFileSystem(data, workspacePath, beforeScan);
+        if (
+          scanGeneration === scanGenerationRef.current &&
+          useWorkspaceStore.getState().workspacePath === workspacePath
+        ) {
+          previousWorkspacePathRef.current = workspacePath;
+        }
       } catch (error) {
         if (
           scanGeneration !== scanGenerationRef.current ||
@@ -81,27 +89,40 @@ export function useWorkspaceInit() {
         if (previousWorkspacePath && previousWorkspacePath !== workspacePath) {
           previousWorkspacePathRef.current = previousWorkspacePath;
           setWorkspacePath(previousWorkspacePath);
+        } else {
+          previousWorkspacePathRef.current = null;
+          setWorkspacePath(null);
         }
         if (flushFailed && error instanceof Error) {
           toast.error(`${t("errors.saveNoteFailed")}: ${error.message}`);
         } else {
           toast.error(t("errors.initWorkspaceFailed"));
         }
+      } finally {
+        if (
+          scanGeneration === scanGenerationRef.current &&
+          useWorkspaceStore.getState().workspacePath === workspacePath
+        ) {
+          setLoading(false);
+        }
       }
     };
 
     loadWorkspace();
-  }, [workspacePath, loadFromFileSystem, setFolders, setPendingFilePath, setWorkspacePath, t]);
+  }, [workspacePath, loadFromFileSystem, setFolders, setPendingFilePath, setWorkspacePath, setLoading, t]);
 
   // 扫描完成后再根据待打开路径选中笔记，避免 pendingFilePath 清空触发第二次扫描。
   useEffect(() => {
-    if (!workspacePath || !pendingFilePath) return;
+    if (isLoading || !workspacePath || !pendingFilePath) return;
     const normalize = (value: string) => value.replaceAll("\\", "/").replace(/\/$/, "");
     const target = notes.find((note) => note.filePath && normalize(note.filePath) === normalize(pendingFilePath));
     if (!target) return;
-    window.setTimeout(() => selectNote(target.id), 0);
+    window.setTimeout(() => {
+      const current = useWorkspaceStore.getState();
+      if (!current.isLoading && current.workspacePath === workspacePath) selectNote(target.id);
+    }, 0);
     setPendingFilePath(null);
-  }, [notes, pendingFilePath, selectNote, setPendingFilePath, workspacePath]);
+  }, [isLoading, notes, pendingFilePath, selectNote, setPendingFilePath, workspacePath]);
 
   // 监听文件系统变化
   useEffect(() => {

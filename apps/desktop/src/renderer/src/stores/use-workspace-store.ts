@@ -19,7 +19,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   isLoading: false,
 
   // 操作方法
-  setWorkspacePath: (path) => set({ workspacePath: path }),
+  // Lock synchronously: the previous editor can still dispatch events before React rerenders.
+  setWorkspacePath: (path) =>
+    set((state) => (state.workspacePath === path ? state : { workspacePath: path, isLoading: path !== null })),
   setPendingFilePath: (path) => set({ pendingFilePath: path }),
   setLoading: (loading) => set({ isLoading: loading })
 }));
