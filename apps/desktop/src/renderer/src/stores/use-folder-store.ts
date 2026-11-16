@@ -1,4 +1,4 @@
-import { beginFileOperation, isEditingBlocked } from "./note-store/operation-guard";
+import { beginFileOperation, isEditingBlocked, isPublishingPath } from "./note-store/operation-guard";
 import { create } from "zustand";
 import { produce } from "immer";
 import { Folder } from "@/types";
@@ -164,8 +164,11 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       const folderParentId = folderId.split("/").slice(0, -1).join("/");
       const newFolderId = folderParentId ? `${folderParentId}/${normalizedName}` : normalizedName;
       const newNotePrefix = `${newFolderId}/`;
-      releaseOperation = beginFileOperation();
-      if (!releaseOperation) return;
+      releaseOperation = beginFileOperation({ workspacePath, path: folder.path, includeDescendants: true });
+      if (!releaseOperation) {
+        if (isPublishingPath(workspacePath, folder.path, true)) toast.error(i18n.t("note:github.publishInProgress"));
+        return;
+      }
       const noteStore = useNoteStore.getState();
       const selectedNote = noteStore.selectedNoteId
         ? noteStore.notes.find((n) => n.id === noteStore.selectedNoteId)

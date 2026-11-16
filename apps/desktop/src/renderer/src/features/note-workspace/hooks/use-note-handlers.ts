@@ -8,7 +8,7 @@ import { getGitHubIssueNumberForRepository, upsertGitHubMetadata } from "@/lib/g
 import { collectLocalMarkdownAssets, replaceMarkdownAssetUrls } from "@/lib/markdown-assets";
 import { uploadMarkdownAssets } from "@/lib/github-assets";
 import { clearDebouncedSave, clearPendingSave } from "@/stores/note-store/persistence";
-import { beginBackgroundSave, isEditingBlocked, waitForFileOperations } from "@/stores/note-store/operation-guard";
+import { beginPublishing, isEditingBlocked, waitForFileOperations } from "@/stores/note-store/operation-guard";
 
 export interface NoteHandlers {
   handleCreateNote: () => void;
@@ -237,9 +237,13 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
     if (!isCurrentWorkspace() || isEditingBlocked()) return;
     const sourceWorkspacePath = useWorkspaceStore.getState().workspacePath;
     const fullNote = useNoteStore.getState().notes.find((n) => n.id === note.id);
-    if (!fullNote?.filePath || !fullNote.fileName) return;
+    if (!sourceWorkspacePath || !fullNote?.filePath || !fullNote.fileName) return;
 
-    const finishBackgroundSave = beginBackgroundSave();
+    const finishPublishing = beginPublishing(sourceWorkspacePath, fullNote.filePath);
+    if (!finishPublishing) {
+      toast.error(t("github.publishInProgress"));
+      return;
+    }
     try {
       const githubState = githubStore.getState();
       if (!githubState.isLoaded) {
@@ -300,6 +304,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
         if (nextContent !== currentNote.content) {
           currentState.updateNoteContentById(currentNote.id, nextContent);
         }
+        await currentState.saveNoteToFileSystem(currentNote.id, nextContent, currentNote.filePath);
       }
 
       toast.success(t("github.pushSuccess", { url: result.issueUrl }));
@@ -307,7 +312,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       const message = error instanceof Error ? error.message : String(error);
       toast.error(t("errors.githubPushFailed", { message }));
     } finally {
-      finishBackgroundSave();
+      finishPublishing();
     }
   };
 

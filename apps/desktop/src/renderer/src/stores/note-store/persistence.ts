@@ -90,6 +90,7 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
     try {
       await fileIpc.write(pending.filePath, pending.content);
       if (pendingContents.get(pending.filePath)?.content === pending.content) {
+        clearDebouncedSave(pending.noteId, pending.filePath);
         pendingContents.delete(pending.filePath);
       }
       setLastSavedContent(pending.noteId, pending.content);
