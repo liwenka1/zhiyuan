@@ -19,6 +19,30 @@ function normalizePath(pathValue: string): string {
   return pathValue.replace(/\\/g, "/");
 }
 
+function localResourceUrl(filePath: string): string {
+  const normalized = normalizePath(filePath);
+  const encoded = encodeURI(normalized).replaceAll("?", "%3F").replaceAll("#", "%23");
+  return `local-resource://${normalized.startsWith("/") ? "" : "/"}${encoded}`;
+}
+
+function decodeResourcePath(value: string): string {
+  // URL 路径只解码一次；未转义的百分号仍可以是合法文件名。
+  return value.replace(/(?:%[\da-f]{2})+/gi, (encoded) => {
+    try {
+      return decodeURIComponent(encoded);
+    } catch {
+      return encoded;
+    }
+  });
+}
+
+function splitResourceReference(value: string): { pathname: string; suffix: string } {
+  const suffixIndex = value.search(/[?#]/);
+  return suffixIndex < 0
+    ? { pathname: value, suffix: "" }
+    : { pathname: value.slice(0, suffixIndex), suffix: value.slice(suffixIndex) };
+}
+
 function getDirectory(filePath: string): string {
   const normalized = normalizePath(filePath);
   const lastSlash = normalized.lastIndexOf("/");
@@ -29,11 +53,12 @@ export function resolveResourcePath(src: string, notePath: string): string {
   if (!isRelativePath(src)) return src;
 
   const noteDir = getDirectory(notePath);
-  const decodedSrc = decodeURI(src);
+  const { pathname, suffix } = splitResourceReference(src);
+  const decodedSrc = decodeResourcePath(pathname);
   const cleanSrc = decodedSrc.replace(/^\.\//, "");
   const fullPath = `${noteDir}/${cleanSrc}`;
 
-  return `local-resource://${encodeURI(fullPath)}`;
+  return `${localResourceUrl(fullPath)}${suffix}`;
 }
 
 export function resolveLocalPath(src: string, notePath: string): string {
@@ -52,7 +77,8 @@ export function createUrlTransformer(notePath: string | undefined) {
     }
 
     if (isLocalAbsolutePath(url)) {
-      return `local-resource://${encodeURI(url)}`;
+      // 绝对路径来自本地文件系统，#、?、% 都属于文件名。
+      return localResourceUrl(url);
     }
 
     if (notePath && isRelativePath(url)) {
@@ -73,11 +99,15 @@ export function normalizeMarkdownPaths(markdown: string): string {
     if (!isAbsolute && !isRelative) return match;
 
     if (isAbsolute) {
-      return `${prefix}local-resource://${encodeURI(trimmed)}${suffix}`;
+      return `${prefix}${localResourceUrl(trimmed)}${suffix}`;
     }
 
     if (/\s/.test(trimmed)) {
-      return `${prefix}${encodeURI(trimmed)}${suffix}`;
+      const reference = splitResourceReference(trimmed);
+      const encodedPath = encodeURI(decodeResourcePath(reference.pathname))
+        .replaceAll("#", "%23")
+        .replaceAll("?", "%3F");
+      return `${prefix}${encodedPath}${reference.suffix}${suffix}`;
     }
 
     return match;
@@ -86,6 +116,22 @@ export function normalizeMarkdownPaths(markdown: string): string {
 
 export function decodeLocalResourceUrl(url: string): string {
   if (!url.startsWith("local-resource://")) return url;
-  const decoded = decodeURIComponent(url.replace(/^local-resource:\/\//, ""));
-  return decoded.replace(/^localhost/, "");
+  const parsed = new URL(url);
+  const decodedPath = decodeURIComponent(parsed.pathname);
+  // 兼容旧版 Windows URL，同时为新版 hostless URL 保留盘符。
+  const legacyDrive = /^local-resource:\/\/([A-Za-z]):\//.exec(url)?.[1];
+  if (legacyDrive) return `${legacyDrive}:${decodedPath}`;
+  if (/^\/[A-Za-z]:\//.test(decodedPath)) return decodedPath.slice(1);
+  return parsed.hostname && parsed.hostname !== "localhost" ? `/${parsed.hostname}${decodedPath}` : decodedPath;
+}
+
+/** 窗口 capability 只进入渲染 URL，不写入 Markdown 正文。 */
+export function authorizeLocalResourceUrl(url: string, token: string): string {
+  if (!url.startsWith("local-resource://")) return url;
+  const original = new URL(url);
+  const authorized = new URL(localResourceUrl(decodeLocalResourceUrl(url)));
+  authorized.search = original.search;
+  authorized.hash = original.hash;
+  authorized.searchParams.set("__window", token);
+  return authorized.href;
 }

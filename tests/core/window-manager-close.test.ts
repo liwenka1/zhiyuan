@@ -51,4 +51,19 @@ describe("window close interception", () => {
     expect(event.preventDefault).toHaveBeenCalledOnce();
     expect(win.webContents.send).toHaveBeenCalledWith("window:prepare-close", 1);
   });
+
+  it("gives each window an independent resource capability and invalidates it on close", () => {
+    const first = windowManager.createWindow("/workspace-a");
+    const second = windowManager.createWindow("/workspace-b");
+    const firstToken = windowManager.getEntryById(first.id)!.localResourceToken;
+    const secondToken = windowManager.getEntryById(second.id)!.localResourceToken;
+    expect(firstToken).toMatch(/^[a-f0-9]{64}$/);
+    expect(secondToken).not.toBe(firstToken);
+    expect(windowManager.getWorkspaceForResourceToken(firstToken)).toBe("/workspace-a");
+    first.emit("closed");
+    expect(windowManager.getWorkspaceForResourceToken(firstToken)).toBeNull();
+    expect(windowManager.getWorkspaceForResourceToken(secondToken)).toBe("/workspace-b");
+    vi.mocked(second.isDestroyed).mockReturnValue(true);
+    expect(windowManager.getWorkspaceForResourceToken(secondToken)).toBeNull();
+  });
 });

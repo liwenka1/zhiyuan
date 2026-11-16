@@ -25,7 +25,8 @@ assert.match(watcherSource, /depth: MAX_WORKSPACE_DEPTH/);
 assert.match(githubHandlerSource, /payload\.projectKey/);
 assert.match(workspaceHandlerSource, /assertNotWorkspaceRoot/);
 assert.match(workspaceHandlerSource, /assertWorkspaceFolderPath/);
-assert.match(mainSource, /getFocusedWindow/);
+assert.match(mainSource, /resolveAuthorizedLocalResource/);
+assert.match(mainSource, /getWorkspaceForResourceToken/);
 assert.match(captureSource, /onBeforeRequest/);
 
 function isValidFileNameSegment(value) {

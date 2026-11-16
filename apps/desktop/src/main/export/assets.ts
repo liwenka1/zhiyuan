@@ -102,8 +102,10 @@ export async function collectAndCopyAssets(
     }
 
     let sourcePath: string;
+    let fragment = "";
     if (src.startsWith("local-resource://")) {
       sourcePath = decodeLocalResourceUrl(src);
+      fragment = new URL(src).hash;
     } else if (src.startsWith("file://")) {
       sourcePath = decodeURIComponent(src.replace(/^file:\/\//, ""));
     } else if (isRelativePath(src)) {
@@ -141,7 +143,9 @@ export async function collectAndCopyAssets(
     );
     if (copied) {
       copiedFiles.push(destPath);
-      const relativePath = `./${assetsFolderName}/${fileName}`;
+      const folderSegment = encodeURIComponent(assetsFolderName).replaceAll("'", "%27");
+      const fileSegment = encodeURIComponent(fileName).replaceAll("'", "%27");
+      const relativePath = `./${folderSegment}/${fileSegment}${fragment}`;
       fileMap.set(src, relativePath);
     }
   });
@@ -151,7 +155,7 @@ export async function collectAndCopyAssets(
   let processedHtml = html;
   fileMap.forEach((newPath, oldPath) => {
     const escapedOldPath = oldPath.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    processedHtml = processedHtml.replace(new RegExp(escapedOldPath, "g"), newPath);
+    processedHtml = processedHtml.replace(new RegExp(escapedOldPath, "g"), () => newPath);
   });
 
   return { processedHtml, copiedFiles };

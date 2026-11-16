@@ -19,7 +19,7 @@ import fs from "fs";
 import path from "path";
 import { ipcOk, ipcErr } from "./ipc/ipc-result";
 import type { IpcResultDTO } from "@shared";
-import { validatePathInWorkspace } from "./security/path-validator";
+import { resolveAuthorizedLocalResource } from "./security/local-resource";
 import { initializeDiagnostics, recordDiagnostic } from "./diagnostics";
 import { registerDiagnosticsHandlers } from "./ipc/diagnostics-handler";
 
@@ -129,23 +129,6 @@ protocol.registerSchemesAsPrivileged([
   }
 ]);
 
-function isAllowedLocalResource(filePath: string): boolean {
-  if (!existsSync(filePath)) return false;
-  try {
-    if (!fs.statSync(filePath).isFile()) return false;
-  } catch {
-    return false;
-  }
-
-  // The protocol request does not expose the originating WebContents. Restricting
-  // access to the focused window prevents one workspace window from reading a
-  // second open workspace by guessing its absolute path.
-  const focusedWindow = BrowserWindow.getFocusedWindow();
-  const entry = focusedWindow ? windowManager.getEntryById(focusedWindow.id) : undefined;
-  const workspacePath = entry?.workspacePath;
-  return Boolean(workspacePath && validatePathInWorkspace(workspacePath, filePath).isValid);
-}
-
 function startDesktopSmokeTest(): void {
   if (process.env.ZHIYUAN_SMOKE_TEST !== "1") return;
 
@@ -177,27 +160,10 @@ app.whenReady().then(() => {
   // 用于加载本地文件资源，正确处理中文路径
   protocol.handle("local-resource", (request) => {
     try {
-      const url = new URL(request.url);
-      let filePath: string;
-
-      if (process.platform === "win32") {
-        // Windows: 重新组合盘符和路径
-        // local-resource://D:/path/file.jpg -> D:/path/file.jpg
-        const drive = url.hostname.toUpperCase();
-        const pathPart = decodeURIComponent(url.pathname);
-        filePath = `${drive}:${pathPart}`;
-      } else {
-        // macOS/Linux: 处理绝对路径
-        // local-resource:///Users/path/file.jpg -> /Users/path/file.jpg
-        if (url.hostname) {
-          // 兼容两个斜杠的格式
-          filePath = decodeURIComponent(`/${url.hostname}${url.pathname}`);
-        } else {
-          filePath = decodeURIComponent(url.pathname);
-        }
-      }
-
-      if (!isAllowedLocalResource(filePath)) {
+      const filePath = resolveAuthorizedLocalResource(request.url, (token) =>
+        windowManager.getWorkspaceForResourceToken(token)
+      );
+      if (!filePath) {
         return new Response("File not found", { status: 404 });
       }
 
