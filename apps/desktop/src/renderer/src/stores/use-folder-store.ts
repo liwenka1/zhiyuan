@@ -1,3 +1,4 @@
+import { beginFileOperation, isEditingBlocked } from "./note-store/operation-guard";
 import { create } from "zustand";
 import { produce } from "immer";
 import { Folder } from "@/types";
@@ -7,7 +8,7 @@ import { toast } from "sonner";
 import i18n from "@/lib/i18n";
 import { useNoteStore } from "./note-store";
 import { clearDebouncedSave, flushAllDebouncedSaves, setLastSavedContent } from "./note-store/persistence";
-import { isValidFileNameSegment } from "@shared";
+import { isValidWorkspaceFolderName } from "@shared";
 
 interface FolderStore {
   // 状态
@@ -48,7 +49,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
   },
 
   createFolder: async (name) => {
-    if (useWorkspaceStore.getState().isLoading) return;
+    if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
     // 从工作区 store 获取当前工作区路径
     const workspacePath = useWorkspaceStore.getState().workspacePath;
 
@@ -73,7 +74,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       folderName = `${defaultFolderName} ${maxNum + 1}`;
     }
 
-    if (!isValidFileNameSegment(folderName)) {
+    if (!isValidWorkspaceFolderName(folderName)) {
       toast.error(i18n.t("note:errors.invalidName"));
       return;
     }
@@ -132,7 +133,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
   },
 
   renameFolder: async (folderId, newName) => {
-    if (useWorkspaceStore.getState().isLoading) return;
+    if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
     const workspacePath = useWorkspaceStore.getState().workspacePath;
     const folder = get().folders.find((f) => f.id === folderId);
 
@@ -142,9 +143,10 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     }
 
     let didPause = false;
+    let releaseOperation: (() => void) | null = null;
     try {
       const normalizedName = newName.trim();
-      if (!isValidFileNameSegment(normalizedName)) {
+      if (!isValidWorkspaceFolderName(normalizedName)) {
         toast.error(i18n.t("note:errors.invalidName"));
         return;
       }
@@ -162,6 +164,8 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       const folderParentId = folderId.split("/").slice(0, -1).join("/");
       const newFolderId = folderParentId ? `${folderParentId}/${normalizedName}` : normalizedName;
       const newNotePrefix = `${newFolderId}/`;
+      releaseOperation = beginFileOperation();
+      if (!releaseOperation) return;
       const noteStore = useNoteStore.getState();
       const selectedNote = noteStore.selectedNoteId
         ? noteStore.notes.find((n) => n.id === noteStore.selectedNoteId)
@@ -251,7 +255,11 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       toast.error(i18n.t("note:errors.renameFolderFailed"));
       throw error;
     } finally {
-      if (didPause) await watcherIpc.resume(workspacePath);
+      try {
+        if (didPause) await watcherIpc.resume(workspacePath);
+      } finally {
+        releaseOperation?.();
+      }
     }
   },
 

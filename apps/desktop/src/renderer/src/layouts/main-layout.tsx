@@ -9,6 +9,7 @@ import { useViewStore } from "@/stores";
 import { cn } from "@/lib/utils";
 
 interface MainLayoutProps {
+  inert?: boolean;
   leftSidebar: ReactNode;
   rightSidebar: ReactNode;
   mainContent: ReactNode;
@@ -17,7 +18,7 @@ interface MainLayoutProps {
 // 动画过渡样式
 const TRANSITION_STYLE = "flex-grow 0.25s cubic-bezier(0.32, 0.72, 0, 1)";
 
-export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayoutProps) {
+export function MainLayout({ leftSidebar, rightSidebar, mainContent, inert = false }: MainLayoutProps) {
   const { isMac, isWindows } = usePlatform();
   const showFolderSidebar = useViewStore((state) => state.showFolderSidebar);
   const setShowFolderSidebar = useViewStore((state) => state.setShowFolderSidebar);
@@ -107,7 +108,12 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent }: MainLayou
   };
 
   return (
-    <div className="bg-background relative flex h-screen w-full overflow-hidden" style={outerStyle}>
+    <div
+      inert={inert}
+      aria-busy={inert}
+      className="bg-background relative flex h-screen w-full overflow-hidden"
+      style={outerStyle}
+    >
       {/* 自定义标题栏（Windows 拖拽区域） */}
       <TitleBar />
 

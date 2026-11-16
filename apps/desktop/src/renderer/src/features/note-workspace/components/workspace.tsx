@@ -15,6 +15,8 @@ import { FileText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
 import { TitleBar } from "@/components/app/title-bar";
+import { useOperationStore } from "@/stores/note-store/operation-guard";
+import { moveNotesInWorkspace } from "../lib/move-notes";
 import { ListRow } from "@/components/app/list-row";
 import { FolderTree } from "./folder-tree";
 import { NoteList } from "./note-list";
@@ -42,7 +44,9 @@ export function NoteWorkspace() {
 
   // Dialog 状态管理
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const workspaceRevision = useWorkspaceStore((state) => state.revision);
   const isLoading = useWorkspaceStore((state) => state.isLoading);
+  const isOperationPending = useOperationStore((state) => state.fileOperationCount > 0 || state.closeRequestCount > 0);
   const dialogState = useDialogState();
   const { t } = useTranslation("note");
 
@@ -128,6 +132,13 @@ export function NoteWorkspace() {
     const { active, over } = event;
     setDraggingNoteId(null);
     setDraggingNoteIds([]);
+    const currentWorkspace = useWorkspaceStore.getState();
+    if (
+      currentWorkspace.isLoading ||
+      currentWorkspace.workspacePath !== workspacePath ||
+      currentWorkspace.revision !== workspaceRevision
+    )
+      return;
     if (!over?.id || typeof active.id !== "string" || typeof over.id !== "string") return;
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -148,18 +159,13 @@ export function NoteWorkspace() {
     }
 
     void (async () => {
-      let movedCount = 0;
-      let skippedCount = 0;
-      let renamedCount = 0;
-      for (const movingNoteId of currentDraggingIds) {
-        const result = await moveNote(movingNoteId, targetFolderId, { silent: true });
-        if (result.moved) {
-          movedCount += 1;
-          if (result.renamed) renamedCount += 1;
-        } else {
-          skippedCount += 1;
-        }
-      }
+      const { movedCount, skippedCount, renamedCount, cancelled } = await moveNotesInWorkspace(
+        currentDraggingIds,
+        targetFolderId,
+        moveNote,
+        { workspacePath, revision: workspaceRevision }
+      );
+      if (cancelled) return;
       if (movedCount > 0 && skippedCount === 0) {
         toast.success(
           renamedCount > 0
@@ -330,6 +336,7 @@ export function NoteWorkspace() {
       }}
     >
       <MainLayout
+        inert={isOperationPending}
         leftSidebar={
           <FolderTree
             folders={foldersWithCount}

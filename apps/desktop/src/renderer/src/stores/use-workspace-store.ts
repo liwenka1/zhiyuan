@@ -5,6 +5,7 @@ interface WorkspaceStore {
   workspacePath: string | null;
   pendingFilePath: string | null;
   isLoading: boolean;
+  revision: number;
 
   // 操作方法
   setWorkspacePath: (path: string | null) => void;
@@ -17,11 +18,16 @@ export const useWorkspaceStore = create<WorkspaceStore>((set) => ({
   workspacePath: null,
   pendingFilePath: null,
   isLoading: false,
+  revision: 0,
 
   // 操作方法
   // Lock synchronously: the previous editor can still dispatch events before React rerenders.
   setWorkspacePath: (path) =>
-    set((state) => (state.workspacePath === path ? state : { workspacePath: path, isLoading: path !== null })),
+    set((state) =>
+      state.workspacePath === path
+        ? state
+        : { workspacePath: path, isLoading: path !== null, revision: state.revision + 1 }
+    ),
   setPendingFilePath: (path) => set({ pendingFilePath: path }),
   setLoading: (loading) => set({ isLoading: loading })
 }));

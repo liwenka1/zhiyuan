@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   isValidFileNameSegment,
   isValidWorkspaceEntryName,
+  isValidWorkspaceFolderName,
   normalizeFileNameSegment
 } from "../../apps/desktop/src/shared/file-name";
 import { isPathInside, validatePathInWorkspace } from "../../apps/desktop/src/main/security/path-validator";
@@ -25,6 +26,10 @@ describe("file name policy", () => {
     expect(isValidWorkspaceEntryName(".draft.md")).toBe(false);
     expect(isValidWorkspaceEntryName("draft")).toBe(true);
     expect(isValidFileNameSegment(".assets")).toBe(true);
+    expect(isValidWorkspaceFolderName("dist")).toBe(false);
+    expect(isValidWorkspaceFolderName("BUILD")).toBe(false);
+    expect(isValidWorkspaceFolderName("notes")).toBe(true);
+    expect(isValidWorkspaceEntryName("dist")).toBe(true);
   });
 });
 

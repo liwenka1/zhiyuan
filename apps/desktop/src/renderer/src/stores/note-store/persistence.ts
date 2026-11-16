@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { fileIpc } from "@/ipc";
 import { parseGitHubMetadata } from "@/lib/github-metadata";
 import { useWorkspaceStore } from "../use-workspace-store";
+import { isEditingBlocked, useOperationStore } from "./operation-guard";
 
 const debouncedSaves = new Map<string, ReturnType<typeof setTimeout>>();
-const recentSaves = new Map<string, number>();
 interface PendingSave {
   noteId: string;
   filePath: string;
@@ -66,21 +66,15 @@ export async function flushAllDebouncedSaves(get: NoteStoreGet): Promise<void> {
   debouncedSaves.forEach((timer) => clearTimeout(timer));
   debouncedSaves.clear();
 
-  const pending = Array.from(pendingContents.values());
-  await Promise.all(pending.map((item) => get().saveNoteToFileSystem(item.noteId, item.content, item.filePath)));
-}
-
-function recordSaveTime(noteId: string) {
-  recentSaves.set(noteId, Date.now());
-  setTimeout(() => {
-    recentSaves.delete(noteId);
-  }, 500);
-}
-
-export function wasRecentlySaved(noteId: string, withinMs = 500): boolean {
-  const saveTime = recentSaves.get(noteId);
-  if (!saveTime) return false;
-  return Date.now() - saveTime < withinMs;
+  while (pendingContents.size > 0 || saveQueues.size > 0) {
+    clearAllDebouncedSaves();
+    const pending = Array.from(pendingContents.values());
+    await Promise.all([
+      ...pending.map((item) => get().saveNoteToFileSystem(item.noteId, item.content, item.filePath)),
+      ...saveQueues.values()
+    ]);
+  }
+  clearAllDebouncedSaves();
 }
 
 export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
@@ -91,7 +85,6 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
       set((state) => {
         state.savingNoteIds.add(pending.noteId);
       });
-      recordSaveTime(pending.noteId);
     }
 
     try {
@@ -130,7 +123,7 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
 
   return {
     updateNoteContent: (content) => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const { selectedNoteId } = get();
       if (!selectedNoteId) return;
 
@@ -164,7 +157,7 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     updateNoteContentById: (noteId, content) => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || useOperationStore.getState().fileOperationCount > 0) return;
       set((state) => {
         const note = state.notes.find((n) => n.id === noteId);
         if (note) {

@@ -36,6 +36,11 @@ vi.mock("@/lib/github-assets", () => ({ uploadMarkdownAssets: vi.fn() }));
 vi.mock("@/stores/note-store/persistence", () => ({ clearDebouncedSave: vi.fn(), clearPendingSave: vi.fn() }));
 
 import { useNoteHandlers } from "../../apps/desktop/src/renderer/src/features/note-workspace/hooks/use-note-handlers";
+import {
+  beginCloseRequest,
+  beginFileOperation,
+  waitForBackgroundSaves
+} from "../../apps/desktop/src/renderer/src/stores/note-store/operation-guard";
 
 function createHandlers() {
   return useNoteHandlers({ onOpenRenameDialog: vi.fn(), onOpenCreateNoteDialog: vi.fn() });
@@ -58,6 +63,8 @@ describe("GitHub publishing", () => {
     workspaceState.workspacePath = "/workspace";
     githubState.owner = "owner";
     githubState.repo = "repo";
+    githubState.isLoaded = true;
+    githubState.load.mockReset();
   });
 
   it("applies returned metadata to the latest local content after an in-flight edit", async () => {
@@ -79,6 +86,57 @@ describe("GitHub publishing", () => {
     finishPush();
     await publishing;
     expect(updateContentMock).not.toHaveBeenCalled();
+  });
+
+  it("waits for another note's file operation before applying successful publication metadata", async () => {
+    const finishPush = holdPush();
+    const publishing = createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    const release = beginFileOperation();
+    expect(release).not.toBeNull();
+    try {
+      finishPush();
+      for (let index = 0; index < 5; index++) await Promise.resolve();
+      expect(updateContentMock).not.toHaveBeenCalled();
+    } finally {
+      release?.();
+    }
+    await publishing;
+    expect(updateContentMock).toHaveBeenCalledWith("note.md", expect.stringContaining("github-issue-number: 12"));
+  });
+
+  it("tracks publication through the metadata commit so closing can wait for it", async () => {
+    const finishPush = holdPush();
+    const publishing = createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    let backgroundFinished = false;
+    const waiting = waitForBackgroundSaves().then(() => {
+      backgroundFinished = true;
+    });
+    for (let index = 0; index < 5; index++) await Promise.resolve();
+    expect(backgroundFinished).toBe(false);
+    finishPush();
+    await publishing;
+    await waiting;
+    expect(updateContentMock).toHaveBeenCalled();
+    expect(backgroundFinished).toBe(true);
+  });
+
+  it("does not start another publication after a close request locks editing", async () => {
+    const release = beginCloseRequest();
+    try {
+      await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+      await waitForBackgroundSaves();
+      expect(pushMock).not.toHaveBeenCalled();
+    } finally {
+      release();
+    }
+  });
+
+  it("releases background tracking even when loading project settings fails", async () => {
+    githubState.isLoaded = false;
+    githubState.load.mockRejectedValueOnce(new Error("settings unavailable"));
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    await waitForBackgroundSaves();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it("does not apply returned metadata after the note was renamed or moved", async () => {

@@ -21,7 +21,13 @@ export type { IpcError, IpcResultDTO } from "./ipc";
 export type { GitHubConfig, GitHubProjectConfigMap, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";
 export type { GitHubMetadata } from "./github-metadata";
 export { parseGitHubMetadata } from "./github-metadata";
-export { isValidFileNameSegment, isValidWorkspaceEntryName, normalizeFileNameSegment } from "./file-name";
+export {
+  isValidFileNameSegment,
+  isValidWorkspaceEntryName,
+  isValidWorkspaceFolderName,
+  normalizeFileNameSegment
+} from "./file-name";
+export { MAX_WORKSPACE_DEPTH, IGNORED_WORKSPACE_DIRECTORIES, isIgnoredWorkspaceDirectory } from "./workspace-policy";
 export type { GitHubAssetUploadRequest, GitHubAssetUploadResult } from "./github-assets";
 export {
   isRelativePath,

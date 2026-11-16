@@ -153,4 +153,31 @@ describe("note persistence queue", () => {
     expect(state.editorContent).toBe("draft");
     expect(writeMock).toHaveBeenCalledWith("/workspace/note.md", "draft");
   });
+
+  it("drains edits queued during a flush and cancels their stale debounce callbacks", async () => {
+    vi.useFakeTimers();
+    try {
+      const writing = deferred<void>();
+      writeMock.mockImplementationOnce(() => writing.promise).mockResolvedValue({ mtime: 0 });
+      const { actions, get } = createTestStore({
+        id: "flush.md",
+        filePath: "/workspace/flush.md",
+        content: "old",
+        isPinned: false
+      });
+      actions.updateNoteContent("first");
+      const flushing = flushAllDebouncedSaves(get as never);
+      await Promise.resolve();
+      await Promise.resolve();
+      actions.updateNoteContent("second");
+      writing.resolve();
+      await flushing;
+      expect(writeMock).toHaveBeenLastCalledWith("/workspace/flush.md", "second");
+      const count = writeMock.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(501);
+      expect(writeMock).toHaveBeenCalledTimes(count);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
