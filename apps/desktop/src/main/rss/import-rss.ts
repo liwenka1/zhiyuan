@@ -109,10 +109,10 @@ type RssItem = Parser.Item & {
   [key: string]: unknown;
 };
 
-import { sanitizeName, formatDate, buildCommentMetadata } from "../utils/content-import";
+import { sanitizeName, sanitizeFolderName, formatDate, buildCommentMetadata } from "../utils/content-import";
 
 async function createAvailableFolder(workspacePath: string, baseName: string): Promise<string> {
-  const normalizedBase = sanitizeName(baseName) || "RSS";
+  const normalizedBase = sanitizeFolderName(baseName) || "RSS";
   let candidate = normalizedBase;
   let counter = 2;
 

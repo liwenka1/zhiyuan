@@ -57,7 +57,15 @@ vi.mock("@/lib/formatter", () => ({ formatMarkdown: formatMock }));
 vi.mock("@/features/export", () => ({ useNoteExport: () => ({ exportNote: vi.fn(), copyToWechat: vi.fn() }) }));
 vi.mock("@/ipc", () => ({
   workspaceIpc: { scan: scanMock },
-  fileIpc: { write: writeMock, create: createMock, rename: renameMock, delete: deleteMock, copy: copyMock },
+  fileIpc: {
+    write: writeMock,
+    create: createMock,
+    rename: renameMock,
+    delete: deleteMock,
+    copy: copyMock,
+    exists: vi.fn().mockResolvedValue(false),
+    read: vi.fn()
+  },
   folderIpc: { create: folderCreateMock, rename: folderRenameMock, delete: folderDeleteMock },
   watcherIpc: { pause: pauseMock, resume: resumeMock },
   configIpc: { getPinnedNotes: vi.fn().mockResolvedValue([]), setPinnedNotes: pinsMock },
@@ -103,6 +111,24 @@ import {
   flushAllDebouncedSaves,
   hasPendingSave
 } from "../../apps/desktop/src/renderer/src/stores/note-store/persistence";
+import {
+  getLastSavedContent,
+  setLastSavedContent
+} from "../../apps/desktop/src/renderer/src/stores/note-store/persistence";
+import { useWindowClose } from "../../apps/desktop/src/renderer/src/hooks/use-window-close";
+import {
+  beginBackgroundSave,
+  useOperationStore
+} from "../../apps/desktop/src/renderer/src/stores/note-store/operation-guard";
+import { moveNotesInWorkspace } from "../../apps/desktop/src/renderer/src/features/note-workspace/lib/move-notes";
+import { configIpc } from "@/ipc";
+import { fileIpc } from "@/ipc";
+import { createFileEventHandlers } from "../../apps/desktop/src/renderer/src/stores/note-store/file-events";
+import {
+  getGitHubIssueNumberForRepository,
+  parseGitHubMetadata,
+  upsertGitHubMetadata
+} from "../../apps/desktop/src/renderer/src/lib/github-metadata";
 import { useWorkspaceInit } from "../../apps/desktop/src/renderer/src/features/note-workspace/hooks/use-workspace-init";
 import { useNoteHandlers } from "../../apps/desktop/src/renderer/src/features/note-workspace/hooks/use-note-handlers";
 import { useFolderHandlers } from "../../apps/desktop/src/renderer/src/features/note-workspace/hooks/use-folder-handlers";
@@ -201,6 +227,9 @@ describe("workspace switching edit isolation", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    renameMock.mockReset().mockResolvedValue(undefined);
+    folderRenameMock.mockReset().mockResolvedValue(undefined);
+    createMock.mockReset().mockResolvedValue(undefined);
     savedFiles.clear();
     harness.refs = [];
     harness.refIndex = 0;
@@ -221,11 +250,21 @@ describe("workspace switching edit isolation", () => {
       if (typeof update === "function") update(harness.state);
       else Object.assign(harness.state, update);
     };
-    Object.assign(harness.state, createNoteActions(set, get), applyPersistence(set, get), createLoaders(set, get));
+    Object.assign(
+      harness.state,
+      createNoteActions(set, get),
+      applyPersistence(set, get),
+      createLoaders(set, get),
+      createFileEventHandlers(set, get)
+    );
     scanMock.mockImplementation(async (root: string) => scanData(root));
     writeMock.mockImplementation(async (filePath: string, content: string) => {
       savedFiles.set(filePath, content);
     });
+    vi.mocked(fileIpc.read).mockImplementation(async (filePath: string) => ({
+      content: savedFiles.get(filePath)!,
+      mtime: 0
+    }));
     pauseMock.mockResolvedValue(undefined);
     formatMock.mockResolvedValue("formatted");
     vi.stubGlobal("window", { confirm: () => true, setTimeout });
@@ -233,6 +272,7 @@ describe("workspace switching edit isolation", () => {
 
   afterEach(() => {
     clearAllDebouncedSaves();
+    for (const note of harness.state.notes) clearPendingSave(note.id);
     clearPendingSave("note.md");
     vi.useRealTimers();
     vi.unstubAllGlobals();
@@ -456,5 +496,260 @@ describe("workspace switching edit isolation", () => {
     await operation;
     expect(harness.state.notes.map((note) => note.filePath)).toEqual([`${rootB}/note.md`]);
     expect(useWorkspaceStore.getState().isLoading).toBe(false);
+  });
+
+  it("locks new edits while closing waits for a real background save, then acknowledges", async () => {
+    await openA();
+    harness.state.notes.push({
+      id: "background.md",
+      title: "background",
+      filePath: `${rootA}/background.md`,
+      content: "disk"
+    });
+    setLastSavedContent("background.md", "disk");
+    harness.state.updateNoteContentById("background.md", "background draft");
+    const writing = deferred<void>();
+    writeMock.mockImplementationOnce(async (file: string, content: string) => {
+      await writing.promise;
+      savedFiles.set(file, content);
+    });
+    let close!: (token: number) => void;
+    const ready = vi.fn().mockResolvedValue({ ok: true });
+    window.api = {
+      window: {
+        onPrepareClose: (callback: typeof close) => {
+          close = callback;
+          return vi.fn();
+        },
+        readyToClose: ready
+      }
+    } as never;
+    harness.effects = [];
+    useWindowClose();
+    harness.effects[0]();
+    close(11);
+    await settle();
+    expect(useOperationStore.getState().closeRequestCount).toBe(1);
+    harness.state.updateNoteContent("late input");
+    expect(harness.state.editorContent).toBe(`${rootA} disk`);
+    expect(ready).not.toHaveBeenCalled();
+    writing.resolve();
+    await settle();
+    expect(savedFiles.get(`${rootA}/background.md`)).toBe("background draft");
+    expect(ready).toHaveBeenCalledWith(11);
+    expect(useOperationStore.getState().closeRequestCount).toBe(0);
+  });
+
+  it("releases the closing lock after a real save failure and preserves a retryable draft", async () => {
+    await openA();
+    harness.state.updateNoteContent("draft");
+    writeMock.mockRejectedValueOnce(new Error("disk full"));
+    let close!: (token: number) => void;
+    const ready = vi.fn();
+    window.api = {
+      window: {
+        onPrepareClose: (callback: typeof close) => {
+          close = callback;
+          return vi.fn();
+        },
+        readyToClose: ready
+      }
+    } as never;
+    harness.effects = [];
+    useWindowClose();
+    harness.effects[0]();
+    close(12);
+    await settle();
+    expect(ready).not.toHaveBeenCalled();
+    expect(useOperationStore.getState().closeRequestCount).toBe(0);
+    harness.state.updateNoteContent("retry draft");
+    await flushAllDebouncedSaves(() => harness.state);
+    expect(savedFiles.get(`${rootA}/note.md`)).toBe("retry draft");
+  });
+
+  it.each(["rename", "move", "rename-folder"] as const)(
+    "keeps saves and their baseline on the actual path while %s is pending",
+    async (kind) => {
+      await openA();
+      if (kind === "rename-folder") {
+        Object.assign(harness.state.notes[0], {
+          id: "folder/note.md",
+          filePath: `${rootA}/folder/note.md`,
+          folderId: "folder"
+        });
+        harness.state.selectedNoteId = "folder/note.md";
+        setLastSavedContent("folder/note.md", harness.state.editorContent);
+      }
+      const oldId = harness.state.selectedNoteId!;
+      const oldPath = harness.state.notes[0].filePath!;
+      const renaming = deferred<void>();
+      const mutate = async (oldPath: string, newPath: string) => {
+        await renaming.promise;
+        for (const [file, content] of [...savedFiles]) {
+          if (file === oldPath || file.startsWith(`${oldPath}/`)) {
+            savedFiles.delete(file);
+            savedFiles.set(newPath + file.slice(oldPath.length), content);
+          }
+        }
+      };
+      renameMock.mockImplementation(mutate);
+      folderRenameMock.mockImplementation(mutate);
+      const operation =
+        kind === "rename-folder"
+          ? useFolderStore.getState().renameFolder("folder", "renamed")
+          : kind === "rename"
+            ? harness.state.renameNote(oldId, "renamed")
+            : harness.state.moveNote(oldId, "folder");
+      await settle();
+      expect(useOperationStore.getState().fileOperationCount).toBe(1);
+      harness.state.updateNoteContent("input during rename");
+      expect(harness.state.editorContent).toBe(`${rootA} disk`);
+      renaming.resolve();
+      await operation;
+      const note = harness.state.notes[0];
+      expect(note.filePath).not.toBe(oldPath);
+      expect(hasPendingSave(oldPath)).toBe(false);
+      expect(getLastSavedContent(note.id)).toBe(savedFiles.get(note.filePath!));
+      expect(useOperationStore.getState().fileOperationCount).toBe(0);
+      harness.state.updateNoteContent("after rename");
+      await flushAllDebouncedSaves(() => harness.state);
+      expect(savedFiles.get(note.filePath!)).toBe("after rename");
+      expect(savedFiles.has(oldPath)).toBe(false);
+    }
+  );
+
+  it("cancels the rest of a batch when another workspace with identical IDs becomes ready", async () => {
+    await openA();
+    const first = deferred<{ moved: boolean }>();
+    const moving = vi.fn().mockReturnValueOnce(first.promise).mockResolvedValue({ moved: true });
+    const batch = moveNotesInWorkspace(["a.md", "b.md"], "folder", moving, useWorkspaceStore.getState());
+    useWorkspaceStore.getState().setWorkspacePath(rootB);
+    useWorkspaceStore.getState().setLoading(false);
+    first.resolve({ moved: false });
+    expect((await batch).cancelled).toBe(true);
+    expect(moving).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels a batch even when a switch returns to the same root", async () => {
+    await openA();
+    const first = deferred<{ moved: boolean }>();
+    const moving = vi.fn().mockReturnValueOnce(first.promise);
+    const batch = moveNotesInWorkspace(["a.md", "b.md"], "folder", moving, { ...useWorkspaceStore.getState() });
+    useWorkspaceStore.getState().setWorkspacePath(rootB);
+    useWorkspaceStore.getState().setWorkspacePath(rootA);
+    useWorkspaceStore.getState().setLoading(false);
+    first.resolve({ moved: false });
+    expect((await batch).cancelled).toBe(true);
+    expect(moving).toHaveBeenCalledTimes(1);
+  });
+
+  it("persists a pinned note's new ID so reloading preserves its pin", async () => {
+    await openA();
+    harness.state.notes[0].isPinned = true;
+    await harness.state.moveNote("note.md", "folder");
+    const note = { ...harness.state.notes[0] };
+    expect(pinsMock).toHaveBeenCalledWith(rootA, ["folder/note.md"]);
+    vi.mocked(configIpc.getPinnedNotes).mockResolvedValueOnce(["folder/note.md"]);
+    harness.state.notes = [];
+    await harness.state.loadFromFileSystem({ notes: [note] }, rootA);
+    expect(harness.state.notes[0].isPinned).toBe(true);
+  });
+
+  it("reads a real external change immediately after its own save instead of discarding it for 500ms", async () => {
+    await openA();
+    harness.state.updateNoteContent("local save");
+    await flushAllDebouncedSaves(() => harness.state);
+    savedFiles.set(`${rootA}/note.md`, "external save");
+    await harness.state.handleFileChangedEvent("note.md", `${rootA}/note.md`);
+    expect(harness.state.editorContent).toBe("external save");
+    expect(getLastSavedContent("note.md")).toBe("external save");
+    await harness.state.saveNoteToFileSystem("note.md", harness.state.editorContent);
+    expect(savedFiles.get(`${rootA}/note.md`)).toBe("external save");
+  });
+
+  it("duplicates published content without inheriting its issue after a disk reload", async () => {
+    await openA();
+    const published = upsertGitHubMetadata("# Original\n\nbody", {
+      issueNumber: 7,
+      issueUrl: "https://github.com/owner/repo/issues/7"
+    });
+    Object.assign(harness.state.notes[0], { content: published, github: parseGitHubMetadata(published) });
+    harness.state.editorContent = published;
+    createMock.mockImplementation(async (file: string, content: string) => savedFiles.set(file, content));
+    await harness.state.duplicateNote("note.md");
+    const copy = harness.state.notes.find((note) => note.id !== "note.md")!;
+    expect(copy).toBeDefined();
+    expect(copy.content).toBe("# Original\n\nbody");
+    expect(savedFiles.get(copy.filePath!)).toBe(copy.content);
+    const reloaded = harness.state.notes.map((note) => ({ ...note, content: savedFiles.get(note.filePath!)! }));
+    harness.state.notes = [];
+    await harness.state.loadFromFileSystem({ notes: reloaded }, rootA);
+    const reloadedCopy = harness.state.notes.find((note) => note.id === copy.id)!;
+    expect(getGitHubIssueNumberForRepository(reloadedCopy.github, "owner", "repo")).toBeUndefined();
+    expect(parseGitHubMetadata(savedFiles.get(`${rootA}/note.md`)!)).toMatchObject({ issueNumber: 7 });
+  });
+
+  it("waits for a pending rename to synchronize paths before acknowledging close", async () => {
+    await openA();
+    const renaming = deferred<void>();
+    renameMock.mockReturnValueOnce(renaming.promise);
+    const operation = harness.state.renameNote("note.md", "renamed");
+    await settle();
+    let close!: (token: number) => void;
+    const ready = vi.fn().mockResolvedValue({ ok: true });
+    window.api = {
+      window: {
+        onPrepareClose: (callback: typeof close) => {
+          close = callback;
+          return vi.fn();
+        },
+        readyToClose: ready
+      }
+    } as never;
+    harness.effects = [];
+    useWindowClose();
+    harness.effects[0]();
+    close(13);
+    await settle();
+    expect(ready).not.toHaveBeenCalled();
+    renaming.resolve();
+    await operation;
+    await settle();
+    expect(harness.state.selectedNoteId).toBe("renamed.md");
+    expect(ready).toHaveBeenCalledWith(13);
+    expect(useOperationStore.getState()).toEqual({ fileOperationCount: 0, closeRequestCount: 0 });
+  });
+
+  it("waits for publishing metadata and flushes it before closing while user input stays locked", async () => {
+    await openA();
+    const finishPublishing = beginBackgroundSave();
+    let close!: (token: number) => void;
+    const ready = vi.fn().mockResolvedValue({ ok: true });
+    window.api = {
+      window: {
+        onPrepareClose: (callback: typeof close) => {
+          close = callback;
+          return vi.fn();
+        },
+        readyToClose: ready
+      }
+    } as never;
+    harness.effects = [];
+    useWindowClose();
+    harness.effects[0]();
+    close(14);
+    await settle();
+    expect(ready).not.toHaveBeenCalled();
+    harness.state.updateNoteContent("late input");
+    const content = upsertGitHubMetadata(harness.state.editorContent, {
+      issueNumber: 12,
+      issueUrl: "https://github.com/owner/repo/issues/12"
+    });
+    harness.state.updateNoteContentById("note.md", content);
+    finishPublishing();
+    await settle();
+    expect(savedFiles.get(`${rootA}/note.md`)).toBe(content);
+    expect(content).not.toContain("late input");
+    expect(ready).toHaveBeenCalledWith(14);
   });
 });

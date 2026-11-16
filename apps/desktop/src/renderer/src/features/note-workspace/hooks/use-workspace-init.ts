@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { flushAllDebouncedSaves } from "@/stores/note-store/persistence";
+import { waitForFileOperations } from "@/stores/note-store/operation-guard";
 import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
 
 /**
@@ -38,6 +39,7 @@ export function useWorkspaceInit() {
       let flushFailed = false;
       try {
         previousWorkspacePath = previousWorkspacePathRef.current;
+        await waitForFileOperations();
         if (previousWorkspacePath && previousWorkspacePath !== workspacePath) {
           try {
             await flushAllDebouncedSaves(useNoteStore.getState);

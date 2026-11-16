@@ -1,3 +1,5 @@
+import { isIgnoredWorkspaceDirectory } from "./workspace-policy";
+
 const INVALID_FILE_NAME_CHARS = /[\\/:*?"<>|]/;
 const WINDOWS_RESERVED_NAMES = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i;
 
@@ -14,6 +16,10 @@ export function isValidFileNameSegment(value: string): boolean {
 /** 工作区扫描忽略隐藏条目；用户创建的笔记和目录必须能够再次被加载。 */
 export function isValidWorkspaceEntryName(value: string): boolean {
   return isValidFileNameSegment(value) && !value.startsWith(".");
+}
+
+export function isValidWorkspaceFolderName(value: string): boolean {
+  return isValidWorkspaceEntryName(value) && !isIgnoredWorkspaceDirectory(value);
 }
 
 export function normalizeFileNameSegment(value: string): string {

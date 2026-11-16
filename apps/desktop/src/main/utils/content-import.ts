@@ -1,10 +1,15 @@
-import { isValidWorkspaceEntryName } from "@shared";
+import { isValidWorkspaceEntryName, isValidWorkspaceFolderName } from "@shared";
 
 const INVALID_NAME_CHARS = /[\\/:*?"<>|]/g;
 
 export function sanitizeName(name: string): string {
   const normalized = name.replace(INVALID_NAME_CHARS, "-").replace(/\s+/g, " ").trim();
   return isValidWorkspaceEntryName(normalized) ? normalized : "untitled";
+}
+
+export function sanitizeFolderName(name: string): string {
+  const normalized = sanitizeName(name);
+  return isValidWorkspaceFolderName(normalized) ? normalized : "untitled";
 }
 
 export function formatDate(dateValue?: string): string | null {

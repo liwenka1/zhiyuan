@@ -8,6 +8,7 @@ import { getGitHubIssueNumberForRepository, upsertGitHubMetadata } from "@/lib/g
 import { collectLocalMarkdownAssets, replaceMarkdownAssetUrls } from "@/lib/markdown-assets";
 import { uploadMarkdownAssets } from "@/lib/github-assets";
 import { clearDebouncedSave, clearPendingSave } from "@/stores/note-store/persistence";
+import { beginBackgroundSave, isEditingBlocked, waitForFileOperations } from "@/stores/note-store/operation-guard";
 
 export interface NoteHandlers {
   handleCreateNote: () => void;
@@ -233,24 +234,25 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
   };
 
   const handlePushToGitHub = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
-    if (!isCurrentWorkspace()) return;
+    if (!isCurrentWorkspace() || isEditingBlocked()) return;
     const sourceWorkspacePath = useWorkspaceStore.getState().workspacePath;
     const fullNote = useNoteStore.getState().notes.find((n) => n.id === note.id);
     if (!fullNote?.filePath || !fullNote.fileName) return;
 
-    const githubState = githubStore.getState();
-    if (!githubState.isLoaded) {
-      await githubState.load();
-    }
-
-    const { owner, repo, activeProjectKey } = githubStore.getState();
-    const currentConfig = { owner, repo, projectKey: activeProjectKey };
-    if (!currentConfig.projectKey || !currentConfig.owner || !currentConfig.repo) {
-      toast.error(t("errors.githubConfigMissing"));
-      return;
-    }
-
+    const finishBackgroundSave = beginBackgroundSave();
     try {
+      const githubState = githubStore.getState();
+      if (!githubState.isLoaded) {
+        await githubState.load();
+      }
+
+      const { owner, repo, activeProjectKey } = githubStore.getState();
+      const currentConfig = { owner, repo, projectKey: activeProjectKey };
+      if (!currentConfig.projectKey || !currentConfig.owner || !currentConfig.repo) {
+        toast.error(t("errors.githubConfigMissing"));
+        return;
+      }
+
       const title = fullNote.fileName.replace(/\.md$/i, "");
       const assets = collectLocalMarkdownAssets(fullNote.content, fullNote.filePath);
       let body = fullNote.content;
@@ -285,6 +287,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       });
 
       // 发布期间仍可输入或切换工作区，只把返回元数据合并到同一文件的最新正文。
+      await waitForFileOperations();
       const currentState = useNoteStore.getState();
       const currentNote = currentState.notes.find(
         (item) => item.id === fullNote.id && item.filePath === fullNote.filePath
@@ -303,6 +306,8 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       toast.error(t("errors.githubPushFailed", { message }));
+    } finally {
+      finishBackgroundSave();
     }
   };
 

@@ -4,7 +4,12 @@ import os from "node:os";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { fetchMock, trashMock } = vi.hoisted(() => ({ fetchMock: vi.fn(), trashMock: vi.fn() }));
-vi.mock("electron", () => ({ shell: { trashItem: trashMock } }));
+vi.mock("electron", () => ({
+  shell: { trashItem: trashMock },
+  BrowserWindow: class {},
+  dialog: {}
+}));
+vi.mock("../../apps/desktop/src/main/config", () => ({ configManager: { addRecentWorkspace: vi.fn() } }));
 vi.mock("../../apps/desktop/src/main/security/remote-url", () => ({
   assertSafeRemoteHttpUrl: vi.fn(),
   fetchSafeRemoteHttp: fetchMock
@@ -12,6 +17,7 @@ vi.mock("../../apps/desktop/src/main/security/remote-url", () => ({
 
 import { importRss, unsubscribeRss, updateRss } from "../../apps/desktop/src/main/rss/import-rss";
 import { fileSystem } from "../../apps/desktop/src/main/file-system";
+import { workspaceManager } from "../../apps/desktop/src/main/workspace";
 
 function feed(dateXml = ""): string {
   return `<?xml version="1.0"?><rss version="2.0"><channel><title>Test Feed</title><description>Feed</description><link>https://example.com</link><item><title>Undated Article</title><description>Body</description>${dateXml}</item></channel></rss>`;
@@ -50,6 +56,20 @@ describe("RSS imports and subscription updates", () => {
     expect(files).toContain("undated-Undated Article.md");
     expect(metadata.items).toHaveLength(1);
     expect(metadata.items[0].published).toBeUndefined();
+  });
+
+  it.each(["dist", "build", "node_modules"])("imports a feed named %s into a discoverable directory", async (title) => {
+    fetchMock.mockImplementation(async () => ({
+      response: new Response(feed().replace("<title>Test Feed</title>", `<title>${title}</title>`))
+    }));
+
+    const imported = await importRss("https://example.com/feed", workspacePath);
+    const scanned = await workspaceManager.scanWorkspace(workspacePath);
+
+    expect(scanned.folders).toEqual([expect.objectContaining({ id: imported.folderName })]);
+    expect(scanned.notes).toEqual([
+      expect.objectContaining({ id: `${imported.folderName}/undated-Undated Article.md` })
+    ]);
   });
 
   it("does not import the same undated article again after a day changes", async () => {

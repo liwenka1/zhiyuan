@@ -8,7 +8,9 @@ import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
 import { fileIpc, configIpc, watcherIpc } from "@/ipc";
 import { clearDebouncedSave, clearPendingSave, setLastSavedContent } from "./persistence";
-import { isValidFileNameSegment } from "@shared";
+import { isValidWorkspaceEntryName } from "@shared";
+import { beginFileOperation, isEditingBlocked } from "./operation-guard";
+import { stripGitHubMetadata } from "@/lib/github-metadata";
 
 export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
   const isCurrentWorkspaceReady = (workspacePath: string | null) => {
@@ -23,7 +25,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       }),
 
     selectNote: (noteId: string) => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const { selectedNoteId, editorContent } = get();
 
       if (selectedNoteId) {
@@ -55,7 +57,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
 
     createNote: async (folderId?: string, customTitle?: string) => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
 
       if (!workspacePath) {
@@ -70,7 +72,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         if (customTitle) {
           // 使用用户提供的标题
           title = customTitle.trim();
-          if (!isValidFileNameSegment(title)) {
+          if (!isValidWorkspaceEntryName(title)) {
             toast.error(i18n.t("note:errors.invalidName"));
             return;
           }
@@ -145,7 +147,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     formatCurrentNote: async () => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const { selectedNoteId, editorContent } = get();
       if (!selectedNoteId) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
@@ -191,7 +193,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     renameNote: async (noteId: string, newTitle: string) => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
 
@@ -201,9 +203,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       }
 
       let didPause = false;
+      let releaseOperation: (() => void) | null = null;
       try {
         const normalizedTitle = newTitle.trim();
-        if (!isValidFileNameSegment(normalizedTitle)) {
+        if (!isValidWorkspaceEntryName(normalizedTitle)) {
           toast.error(i18n.t("note:errors.invalidName"));
           return;
         }
@@ -214,6 +217,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         pathParts[pathParts.length - 1] = newFileName;
         const newFilePath = pathParts.join(separator);
 
+        releaseOperation = beginFileOperation();
+        if (!releaseOperation) return;
         clearDebouncedSave(noteId);
         await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
         if (!isCurrentWorkspaceReady(workspacePath)) return;
@@ -269,12 +274,16 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         toast.error(i18n.t("note:errors.renameNoteFailed"));
         throw error;
       } finally {
-        if (didPause) await watcherIpc.resume(workspacePath);
+        try {
+          if (didPause) await watcherIpc.resume(workspacePath);
+        } finally {
+          releaseOperation?.();
+        }
       }
     },
 
     duplicateNote: async (noteId: string) => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
 
@@ -283,6 +292,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         return;
       }
 
+      const releaseOperation = beginFileOperation();
+      if (!releaseOperation) return;
       try {
         const allNotes = get().notes;
         const copySuffix = i18n.t("note:copySuffix");
@@ -310,8 +321,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const newNoteId = note.id.endsWith(note.fileName)
           ? `${note.id.slice(0, -note.fileName.length)}${newFileName}`
           : newFileName;
+        const content = stripGitHubMetadata(note.content);
         const newNote: Note = {
           ...note,
+          content,
           id: newNoteId,
           title: newTitle,
           fileName: newFileName,
@@ -325,7 +338,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         await watcherIpc.pause(workspacePath);
         try {
           if (!isCurrentWorkspaceReady(workspacePath)) return;
-          await fileIpc.copy(note.filePath, newFilePath);
+          await fileIpc.create(newFilePath, content);
           if (!isCurrentWorkspaceReady(workspacePath)) return;
           set((state) => {
             state.notes.push(newNote);
@@ -337,11 +350,13 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       } catch (error) {
         toast.error(i18n.t("note:errors.duplicateNoteFailed"));
         throw error;
+      } finally {
+        releaseOperation();
       }
     },
 
     togglePinNote: async (noteId: string) => {
-      if (useWorkspaceStore.getState().isLoading) return;
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
 
@@ -388,7 +403,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     moveNote: async (noteId: string, targetFolderId: string, options) => {
-      if (useWorkspaceStore.getState().isLoading) return { moved: false, reason: "no-workspace" as const };
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked())
+        return { moved: false, reason: "no-workspace" as const };
       const silent = options?.silent ?? false;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
@@ -416,6 +432,8 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       let renamed = false;
       let didPause = false;
 
+      const releaseOperation = beginFileOperation();
+      if (!releaseOperation) return { moved: false, reason: "no-workspace" as const };
       try {
         clearDebouncedSave(noteId);
         await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
@@ -433,6 +451,55 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         }
         if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
         await fileIpc.rename(note.filePath, resolvedFilePath);
+        if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
+
+        const newNoteId = targetFolderId + "/" + resolvedFileName;
+        set((state) => {
+          const targetNote = state.notes.find((n) => n.id === noteId);
+          if (targetNote) {
+            targetNote.id = newNoteId;
+            targetNote.filePath = resolvedFilePath;
+            targetNote.fileName = resolvedFileName;
+            targetNote.title = resolvedFileName.replace(/\.md$/i, "");
+            targetNote.folderId = targetFolderId;
+            targetNote.updatedAt = new Date().toISOString();
+          }
+          const openIndex = state.openNoteIds.indexOf(noteId);
+          if (openIndex !== -1) {
+            state.openNoteIds[openIndex] = newNoteId;
+          }
+          const playingIndex = state.playingNoteIds.indexOf(noteId);
+          if (playingIndex !== -1) {
+            state.playingNoteIds[playingIndex] = newNoteId;
+          }
+          if (state.selectedNoteId === noteId) {
+            state.selectedNoteId = newNoteId;
+          }
+        });
+
+        const movedNote = get().notes.find((item) => item.id === newNoteId);
+        if (movedNote) setLastSavedContent(newNoteId, movedNote.content);
+
+        const folderStore = useFolderStore.getState();
+        folderStore.setFolders(
+          folderStore.folders.map((f) =>
+            f.id === targetFolderId
+              ? { ...f, noteCount: (f.noteCount ?? 0) + 1 }
+              : f.id === note.folderId
+                ? { ...f, noteCount: Math.max(0, (f.noteCount ?? 0) - 1) }
+                : f
+          )
+        );
+        await configIpc.setPinnedNotes(
+          workspacePath,
+          get()
+            .notes.filter((item) => item.isPinned)
+            .map((item) => item.id)
+        );
+        if (!silent) {
+          toast.success(renamed ? i18n.t("note:moveNoteRenamedSuccess") : i18n.t("note:moveNoteSuccess"));
+        }
+        return { moved: true, renamed };
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (!silent) {
@@ -442,51 +509,12 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         }
         return { moved: false, reason: "failed" as const, errorMessage: message || undefined };
       } finally {
-        if (didPause) await watcherIpc.resume(workspacePath);
+        try {
+          if (didPause) await watcherIpc.resume(workspacePath);
+        } finally {
+          releaseOperation();
+        }
       }
-      if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
-
-      const newNoteId = targetFolderId + "/" + resolvedFileName;
-      set((state) => {
-        const targetNote = state.notes.find((n) => n.id === noteId);
-        if (targetNote) {
-          targetNote.id = newNoteId;
-          targetNote.filePath = resolvedFilePath;
-          targetNote.fileName = resolvedFileName;
-          targetNote.title = resolvedFileName.replace(/\.md$/i, "");
-          targetNote.folderId = targetFolderId;
-          targetNote.updatedAt = new Date().toISOString();
-        }
-        const openIndex = state.openNoteIds.indexOf(noteId);
-        if (openIndex !== -1) {
-          state.openNoteIds[openIndex] = newNoteId;
-        }
-        const playingIndex = state.playingNoteIds.indexOf(noteId);
-        if (playingIndex !== -1) {
-          state.playingNoteIds[playingIndex] = newNoteId;
-        }
-        if (state.selectedNoteId === noteId) {
-          state.selectedNoteId = newNoteId;
-        }
-      });
-
-      const movedNote = get().notes.find((item) => item.id === newNoteId);
-      if (movedNote) setLastSavedContent(newNoteId, movedNote.content);
-
-      const folderStore = useFolderStore.getState();
-      folderStore.setFolders(
-        folderStore.folders.map((f) =>
-          f.id === targetFolderId
-            ? { ...f, noteCount: (f.noteCount ?? 0) + 1 }
-            : f.id === note.folderId
-              ? { ...f, noteCount: Math.max(0, (f.noteCount ?? 0) - 1) }
-              : f
-        )
-      );
-      if (!silent) {
-        toast.success(renamed ? i18n.t("note:moveNoteRenamedSuccess") : i18n.t("note:moveNoteSuccess"));
-      }
-      return { moved: true, renamed };
     }
   };
 }

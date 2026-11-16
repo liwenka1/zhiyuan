@@ -2,7 +2,7 @@ import type { NoteStoreGet, NoteStoreSet } from "./types";
 import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
-import { clearPendingSave, getLastSavedContent, setLastSavedContent, wasRecentlySaved } from "./persistence";
+import { clearPendingSave, getLastSavedContent, setLastSavedContent } from "./persistence";
 import { parseGitHubMetadata } from "@/lib/github-metadata";
 import { toast } from "sonner";
 import i18n from "@/lib/i18n";
@@ -90,7 +90,7 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       const note = get().notes.find((n) => n.id === filePath);
       if (!workspacePath || !note || note.filePath !== fullPath) return;
 
-      const { selectedNoteId, editorContent, savingNoteIds } = get();
+      const { selectedNoteId, editorContent } = get();
       const originalContent = note.content;
       const originalUpdatedAt = note.updatedAt;
       const lastSavedContent = getLastSavedContent(filePath) ?? originalContent;
@@ -98,14 +98,6 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
 
       if (originalContent !== lastSavedContent || displayedContent !== lastSavedContent) {
         toast.warning(i18n.t("note:errors.externalChangeConflict"));
-        return;
-      }
-
-      if (savingNoteIds.has(filePath)) {
-        return;
-      }
-
-      if (wasRecentlySaved(filePath)) {
         return;
       }
 
@@ -125,8 +117,6 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
         ) {
           return;
         }
-        if (current.savingNoteIds.has(filePath) || wasRecentlySaved(filePath)) return;
-
         const currentSavedContent = getLastSavedContent(filePath) ?? lastSavedContent;
         const currentDisplayedContent =
           current.selectedNoteId === filePath ? current.editorContent : currentNote.content;
@@ -139,6 +129,10 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
           toast.warning(i18n.t("note:errors.externalChangeConflict"));
           return;
         }
+
+        // A filesystem event may be our own atomic save or a real external write.
+        // Compare bytes instead of dropping all changes within a time window.
+        if (content === currentSavedContent) return;
 
         set((state) => {
           const targetNote = state.notes.find((n) => n.id === filePath);
