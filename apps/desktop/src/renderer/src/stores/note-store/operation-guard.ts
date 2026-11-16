@@ -90,6 +90,10 @@ export async function waitForBackgroundSaves(): Promise<void> {
   while (backgroundSaves.size > 0) await Promise.all(backgroundSaves);
 }
 
+export function hasBackgroundSaves(): boolean {
+  return backgroundSaves.size > 0;
+}
+
 export function beginCloseRequest(): () => void {
   useOperationStore.setState((state) => ({ closeRequestCount: state.closeRequestCount + 1 }));
   let released = false;
