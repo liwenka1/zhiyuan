@@ -3,6 +3,7 @@ import i18n from "@/lib/i18n";
 import { toast } from "sonner";
 import { fileIpc } from "@/ipc";
 import { parseGitHubMetadata } from "@/lib/github-metadata";
+import { useWorkspaceStore } from "../use-workspace-store";
 
 const debouncedSaves = new Map<string, ReturnType<typeof setTimeout>>();
 const recentSaves = new Map<string, number>();
@@ -129,6 +130,7 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
 
   return {
     updateNoteContent: (content) => {
+      if (useWorkspaceStore.getState().isLoading) return;
       const { selectedNoteId } = get();
       if (!selectedNoteId) return;
 
@@ -162,6 +164,7 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     updateNoteContentById: (noteId, content) => {
+      if (useWorkspaceStore.getState().isLoading) return;
       set((state) => {
         const note = state.notes.find((n) => n.id === noteId);
         if (note) {

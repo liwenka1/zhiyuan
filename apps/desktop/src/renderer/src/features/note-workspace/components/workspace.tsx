@@ -12,8 +12,9 @@ import {
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { FileText } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MainLayout } from "@/layouts/main-layout";
+import { TitleBar } from "@/components/app/title-bar";
 import { ListRow } from "@/components/app/list-row";
 import { FolderTree } from "./folder-tree";
 import { NoteList } from "./note-list";
@@ -40,6 +41,8 @@ export function NoteWorkspace() {
   useWorkspaceInit();
 
   // Dialog 状态管理
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const isLoading = useWorkspaceStore((state) => state.isLoading);
   const dialogState = useDialogState();
   const { t } = useTranslation("note");
 
@@ -52,7 +55,6 @@ export function NoteWorkspace() {
   const notes = useNoteStore((state) => state.notes);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const folders = useFolderStore((state) => state.folders);
-  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const selectFolder = useFolderStore((state) => state.selectFolder);
   const setFolders = useFolderStore((state) => state.setFolders);
   const selectNote = useNoteStore((state) => state.selectNote);
@@ -77,6 +79,17 @@ export function NoteWorkspace() {
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
   const [draggingNoteIds, setDraggingNoteIds] = useState<string[]>([]);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+
+  useEffect(
+    () =>
+      useWorkspaceStore.subscribe((current, previous) => {
+        if (current.workspacePath === previous.workspacePath) return;
+        setDraggingNoteId(null);
+        setDraggingNoteIds([]);
+        setSelectedNoteIds([]);
+      }),
+    []
+  );
 
   const moveNote = useNoteStore((state) => state.moveNote);
 
@@ -168,6 +181,9 @@ export function NoteWorkspace() {
   const draggingNote = draggingNoteId ? notes.find((note) => note.id === draggingNoteId) : null;
   const handleImportExternalMarkdownFiles = useCallback(
     async (sourcePaths: string[]) => {
+      if (useWorkspaceStore.getState().isLoading || useWorkspaceStore.getState().workspacePath !== workspacePath) {
+        return { importedCount: 0, skippedCount: sourcePaths.length, importedNoteIds: [] };
+      }
       if (!workspacePath) {
         throw new Error("No workspace selected");
       }
@@ -280,6 +296,17 @@ export function NoteWorkspace() {
       y: transform.y + offsetY
     };
   };
+
+  if (isLoading) {
+    return (
+      <div className="bg-background flex h-screen items-center justify-center">
+        <TitleBar />
+        <div role="status" aria-busy="true" className="text-muted-foreground text-sm">
+          {t("common:workspace.loading")}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <DndContext

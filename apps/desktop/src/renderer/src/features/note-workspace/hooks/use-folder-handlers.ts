@@ -66,14 +66,19 @@ export function useFolderHandlers({
   const setFolders = useFolderStore((state) => state.setFolders);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
-  const isCurrentWorkspace = () => useWorkspaceStore.getState().workspacePath === workspacePath;
+  const isCurrentWorkspace = () => {
+    const current = useWorkspaceStore.getState();
+    return !current.isLoading && current.workspacePath === workspacePath;
+  };
 
   // 处理新建文件夹 - 打开对话框
   const handleCreateFolder = () => {
+    if (!isCurrentWorkspace()) return;
     onOpenCreateDialog();
   };
 
   const handleImportRss = () => {
+    if (!isCurrentWorkspace()) return;
     onOpenRssImportDialog();
   };
 
@@ -84,12 +89,13 @@ export function useFolderHandlers({
     noteCount?: number;
     isRss?: boolean;
   }) => {
-    if (!workspacePath || !folder.isRss) return;
+    if (!workspacePath || !folder.isRss || !isCurrentWorkspace()) return;
 
     const folderPath = folder.path || `${workspacePath}/${folder.name}`;
     const toastId = `rss-update-${folder.id}`;
     toast.loading(t("rss.updating"), { id: toastId });
 
+    let didPause = false;
     try {
       await flushAllDebouncedSaves(useNoteStore.getState);
       if (!isCurrentWorkspace()) {
@@ -97,6 +103,7 @@ export function useFolderHandlers({
         return;
       }
       await watcherIpc.pause(workspacePath);
+      didPause = true;
       if (!isCurrentWorkspace()) {
         toast.dismiss(toastId);
         return;
@@ -133,7 +140,7 @@ export function useFolderHandlers({
       const errorMessage = error instanceof Error ? error.message : String(error);
       toast.error(`${t("rss.updateFailed")}: ${errorMessage}`, { id: toastId });
     } finally {
-      await watcherIpc.resume(workspacePath);
+      if (didPause) await watcherIpc.resume(workspacePath);
     }
   };
 
@@ -144,7 +151,7 @@ export function useFolderHandlers({
     noteCount?: number;
     isRss?: boolean;
   }) => {
-    if (!workspacePath || !folder.isRss) return;
+    if (!workspacePath || !folder.isRss || !isCurrentWorkspace()) return;
 
     const folderPath = folder.path || `${workspacePath}/${folder.name}`;
     const toastId = `rss-unsubscribe-${folder.id}`;
@@ -227,14 +234,17 @@ export function useFolderHandlers({
 
   // 删除文件夹 - 直接删除
   const handleDeleteFolder = async (folder: { id: string; name: string; path?: string; noteCount?: number }) => {
+    if (!isCurrentWorkspace()) return;
     if (!workspacePath) return;
     if (!window.confirm(t("note:confirmDeleteFolder", { name: folder.name }))) return;
     const folderPath = folder.path || `${workspacePath}/${folder.name}`;
 
+    let didPause = false;
     try {
       await flushAllDebouncedSaves(useNoteStore.getState);
       if (!isCurrentWorkspace()) return;
       await watcherIpc.pause(workspacePath);
+      didPause = true;
       if (!isCurrentWorkspace()) return;
       await folderIpc.delete(folderPath);
       if (!isCurrentWorkspace()) return;
@@ -253,12 +263,13 @@ export function useFolderHandlers({
     } catch {
       toast.error(t("note:errors.deleteFolderFailed"));
     } finally {
-      await watcherIpc.resume(workspacePath);
+      if (didPause) await watcherIpc.resume(workspacePath);
     }
   };
 
   // 重命名文件夹 - 打开对话框
   const handleRenameFolder = (folder: { id: string; name: string; path?: string; noteCount?: number }) => {
+    if (!isCurrentWorkspace()) return;
     onOpenRenameDialog(folder);
   };
 

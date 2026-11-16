@@ -11,6 +11,10 @@ import { clearDebouncedSave, clearPendingSave, setLastSavedContent } from "./per
 import { isValidFileNameSegment } from "@shared";
 
 export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
+  const isCurrentWorkspaceReady = (workspacePath: string | null) => {
+    const current = useWorkspaceStore.getState();
+    return !current.isLoading && current.workspacePath === workspacePath;
+  };
   return {
     setNotes: (notes: Note[]) =>
       set((state) => {
@@ -19,6 +23,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       }),
 
     selectNote: (noteId: string) => {
+      if (useWorkspaceStore.getState().isLoading) return;
       const { selectedNoteId, editorContent } = get();
 
       if (selectedNoteId) {
@@ -50,6 +55,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
 
     createNote: async (folderId?: string, customTitle?: string) => {
+      if (useWorkspaceStore.getState().isLoading) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
 
       if (!workspacePath) {
@@ -101,10 +107,12 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
         await watcherIpc.pause(workspacePath);
         try {
+          if (!isCurrentWorkspaceReady(workspacePath)) return;
           await fileIpc.create(filePath, content);
         } finally {
           await watcherIpc.resume(workspacePath);
         }
+        if (!isCurrentWorkspaceReady(workspacePath)) return;
 
         const newNote: Note = {
           id: filePath.replace(`${workspacePath}${pathSeparator}`, "").replaceAll("\\", "/"),
@@ -137,6 +145,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     formatCurrentNote: async () => {
+      if (useWorkspaceStore.getState().isLoading) return;
       const { selectedNoteId, editorContent } = get();
       if (!selectedNoteId) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
@@ -151,7 +160,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const current = get();
         const currentNote = current.notes.find((item) => item.id === selectedNoteId);
         if (
-          useWorkspaceStore.getState().workspacePath !== workspacePath ||
+          !isCurrentWorkspaceReady(workspacePath) ||
           current.selectedNoteId !== selectedNoteId ||
           current.editorContent !== editorContent ||
           !currentNote ||
@@ -182,6 +191,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     renameNote: async (noteId: string, newTitle: string) => {
+      if (useWorkspaceStore.getState().isLoading) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
 
@@ -190,6 +200,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         return;
       }
 
+      let didPause = false;
       try {
         const normalizedTitle = newTitle.trim();
         if (!isValidFileNameSegment(normalizedTitle)) {
@@ -205,10 +216,14 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
         clearDebouncedSave(noteId);
         await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
+        if (!isCurrentWorkspaceReady(workspacePath)) return;
 
         await watcherIpc.pause(workspacePath);
+        didPause = true;
+        if (!isCurrentWorkspaceReady(workspacePath)) return;
 
         await fileIpc.rename(note.filePath, newFilePath);
+        if (!isCurrentWorkspaceReady(workspacePath)) return;
 
         const newNoteId = note.id.endsWith(oldFileName)
           ? `${note.id.slice(0, -oldFileName.length)}${newFileName}`
@@ -254,11 +269,12 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         toast.error(i18n.t("note:errors.renameNoteFailed"));
         throw error;
       } finally {
-        await watcherIpc.resume(workspacePath);
+        if (didPause) await watcherIpc.resume(workspacePath);
       }
     },
 
     duplicateNote: async (noteId: string) => {
+      if (useWorkspaceStore.getState().isLoading) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
 
@@ -284,6 +300,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
         clearDebouncedSave(noteId);
         await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
+        if (!isCurrentWorkspaceReady(workspacePath)) return;
 
         const separator = note.filePath.includes("\\") ? "\\" : "/";
         const pathParts = note.filePath.split(/[\\/]/);
@@ -307,7 +324,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
         await watcherIpc.pause(workspacePath);
         try {
+          if (!isCurrentWorkspaceReady(workspacePath)) return;
           await fileIpc.copy(note.filePath, newFilePath);
+          if (!isCurrentWorkspaceReady(workspacePath)) return;
           set((state) => {
             state.notes.push(newNote);
           });
@@ -322,6 +341,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     togglePinNote: async (noteId: string) => {
+      if (useWorkspaceStore.getState().isLoading) return;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
 
@@ -346,10 +366,12 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           .map((n) => n.id);
         await configIpc.setPinnedNotes(workspacePath, allPinnedNotes);
       } catch (error) {
-        set((state) => {
-          const targetNote = state.notes.find((n) => n.id === noteId);
-          if (targetNote) targetNote.isPinned = previousPinnedState;
-        });
+        if (isCurrentWorkspaceReady(workspacePath)) {
+          set((state) => {
+            const targetNote = state.notes.find((n) => n.id === noteId);
+            if (targetNote) targetNote.isPinned = previousPinnedState;
+          });
+        }
         toast.error(i18n.t("note:pin.failed"));
         throw error;
       }
@@ -366,6 +388,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
     },
 
     moveNote: async (noteId: string, targetFolderId: string, options) => {
+      if (useWorkspaceStore.getState().isLoading) return { moved: false, reason: "no-workspace" as const };
       const silent = options?.silent ?? false;
       const workspacePath = useWorkspaceStore.getState().workspacePath;
       const note = get().notes.find((n) => n.id === noteId);
@@ -391,18 +414,24 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       const pathSeparator = targetFolder.path.includes("\\") ? "\\" : "/";
       let resolvedFilePath = `${targetFolder.path}${pathSeparator}${resolvedFileName}`;
       let renamed = false;
+      let didPause = false;
 
       try {
         clearDebouncedSave(noteId);
         await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
+        if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
         await watcherIpc.pause(workspacePath);
+        didPause = true;
+        if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
         let index = 1;
         while (await fileIpc.exists(resolvedFilePath)) {
+          if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
           renamed = true;
           resolvedFileName = `${baseName} (${index})${extension}`;
           resolvedFilePath = `${targetFolder.path}${pathSeparator}${resolvedFileName}`;
           index += 1;
         }
+        if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
         await fileIpc.rename(note.filePath, resolvedFilePath);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -413,8 +442,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         }
         return { moved: false, reason: "failed" as const, errorMessage: message || undefined };
       } finally {
-        await watcherIpc.resume(workspacePath);
+        if (didPause) await watcherIpc.resume(workspacePath);
       }
+      if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
 
       const newNoteId = targetFolderId + "/" + resolvedFileName;
       set((state) => {

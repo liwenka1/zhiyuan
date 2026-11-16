@@ -48,6 +48,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
   },
 
   createFolder: async (name) => {
+    if (useWorkspaceStore.getState().isLoading) return;
     // 从工作区 store 获取当前工作区路径
     const workspacePath = useWorkspaceStore.getState().workspacePath;
 
@@ -90,11 +91,13 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
 
       await watcherIpc.pause(workspacePath);
       try {
+        if (!isCurrentWorkspaceReady(workspacePath)) return;
         // 在文件系统中创建文件夹
         await folderIpc.create(folderPath);
       } finally {
         await watcherIpc.resume(workspacePath);
       }
+      if (!isCurrentWorkspaceReady(workspacePath)) return;
 
       const newFolder: Folder = {
         id: folderName, // 使用文件夹名作为 ID
@@ -129,6 +132,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
   },
 
   renameFolder: async (folderId, newName) => {
+    if (useWorkspaceStore.getState().isLoading) return;
     const workspacePath = useWorkspaceStore.getState().workspacePath;
     const folder = get().folders.find((f) => f.id === folderId);
 
@@ -137,6 +141,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       return;
     }
 
+    let didPause = false;
     try {
       const normalizedName = newName.trim();
       if (!isValidFileNameSegment(normalizedName)) {
@@ -167,11 +172,15 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         await noteStore.saveNoteToFileSystem(selectedNote.id, noteStore.editorContent);
       }
       await flushAllDebouncedSaves(useNoteStore.getState);
+      if (!isCurrentWorkspaceReady(workspacePath)) return;
 
       await watcherIpc.pause(workspacePath);
+      didPause = true;
+      if (!isCurrentWorkspaceReady(workspacePath)) return;
 
       // 在文件系统中重命名文件夹
       await folderIpc.rename(folder.path, newFolderPath);
+      if (!isCurrentWorkspaceReady(workspacePath)) return;
 
       // 更新 store 中的文件夹信息
       set(
@@ -242,7 +251,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       toast.error(i18n.t("note:errors.renameFolderFailed"));
       throw error;
     } finally {
-      await watcherIpc.resume(workspacePath);
+      if (didPause) await watcherIpc.resume(workspacePath);
     }
   },
 
@@ -287,3 +296,8 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
     );
   }
 }));
+
+function isCurrentWorkspaceReady(workspacePath: string): boolean {
+  const current = useWorkspaceStore.getState();
+  return !current.isLoading && current.workspacePath === workspacePath;
+}

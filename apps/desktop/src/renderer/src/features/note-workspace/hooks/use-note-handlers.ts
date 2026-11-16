@@ -63,12 +63,17 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
   const duplicateNote = useNoteStore((state) => state.duplicateNote);
   const togglePinNote = useNoteStore((state) => state.togglePinNote);
   const githubStore = useGitHubSettingsStore;
+  const isCurrentWorkspace = () => {
+    const current = useWorkspaceStore.getState();
+    return !current.isLoading && current.workspacePath === workspacePath;
+  };
 
   // 使用导出 hook
   const { exportNote, copyToWechat } = useNoteExport();
 
   // 处理新建笔记 - 打开对话框
   const handleCreateNote = () => {
+    if (!isCurrentWorkspace()) return;
     onOpenCreateNoteDialog();
   };
 
@@ -95,6 +100,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
     note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
     options?: { skipConfirm?: boolean }
   ) => {
+    if (!isCurrentWorkspace()) return;
     const fullNote = notes.find((n) => n.id === note.id);
     if (!fullNote?.filePath) return;
     if (!options?.skipConfirm && !window.confirm(t("confirmDeleteNote", { title: note.title }))) return;
@@ -106,7 +112,9 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
         note.id,
         noteStore.selectedNoteId === note.id ? noteStore.editorContent : fullNote.content
       );
+      if (!isCurrentWorkspace()) return;
       await fileIpc.delete(fullNote.filePath);
+      if (!isCurrentWorkspace()) return;
       deleteNote(note.id);
       clearPendingSave(note.id, fullNote.filePath);
       if (workspacePath) {
@@ -123,16 +131,19 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
 
   // 重命名笔记 - 打开对话框
   const handleRenameNote = (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    if (!isCurrentWorkspace()) return;
     onOpenRenameDialog(note);
   };
 
   // 复制笔记
   const handleDuplicateNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    if (!isCurrentWorkspace()) return;
     await duplicateNote(note.id).catch(() => {});
   };
 
   // 切换置顶状态
   const handleTogglePinNote = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    if (!isCurrentWorkspace()) return;
     await togglePinNote(note.id).catch(() => {});
   };
 
@@ -222,6 +233,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
   };
 
   const handlePushToGitHub = async (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => {
+    if (!isCurrentWorkspace()) return;
     const sourceWorkspacePath = useWorkspaceStore.getState().workspacePath;
     const fullNote = useNoteStore.getState().notes.find((n) => n.id === note.id);
     if (!fullNote?.filePath || !fullNote.fileName) return;
