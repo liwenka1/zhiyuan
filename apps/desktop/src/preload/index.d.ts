@@ -302,6 +302,7 @@ export interface UrlAPI {
 // GitHub API 接口
 export interface GitHubAPI {
   pushIssue: (payload: GitHubIssuePushRequest) => Promise<IpcResultDTO<GitHubIssuePushResult>>;
+  releasePublication: (publicationId: string) => Promise<IpcResultDTO<void>>;
   uploadAsset: (payload: GitHubAssetUploadRequest) => Promise<IpcResultDTO<GitHubAssetUploadResult>>;
 }
 

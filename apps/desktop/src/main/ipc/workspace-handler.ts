@@ -27,6 +27,7 @@ import {
 } from "@shared";
 import { isIgnoredWorkspaceDirectory } from "../workspace/policy";
 import { registerWatcherHandlers } from "./watcher-handler";
+import { publicationLeases } from "../github/publication-leases";
 
 const pendingWorkspaceScans = new Map<number, symbol>();
 
@@ -368,7 +369,15 @@ export function registerWorkspaceHandlers(): void {
       assertPathInWorkspace(event, filePath, "file:delete");
       assertNotWorkspaceRoot(event, filePath, "file:delete");
       assertRegularFilePath(filePath, "file:delete");
-      return await fileSystem.deleteFile(filePath);
+      const sourcePath = fs.realpathSync.native(filePath);
+      const finishChange = publicationLeases.beginPathChange(sourcePath);
+      try {
+        const result = await fileSystem.deleteFile(filePath);
+        publicationLeases.completePathChange(sourcePath);
+        return result;
+      } finally {
+        finishChange();
+      }
     }, "FILE_DELETE_FAILED")
   );
 
@@ -381,7 +390,16 @@ export function registerWorkspaceHandlers(): void {
       assertNotWorkspaceRoot(event, oldPath, "file:rename (source)");
       assertNotWorkspaceRoot(event, newPath, "file:rename (dest)");
       assertRegularFilePath(oldPath, "file:rename (source)");
-      return await fileSystem.renameFile(oldPath, newPath);
+      const sourcePath = fs.realpathSync.native(oldPath);
+      const finishChange = publicationLeases.beginPathChange(sourcePath);
+      try {
+        const result = await fileSystem.renameFile(oldPath, newPath);
+        const destinationPath = fs.realpathSync.native(newPath);
+        publicationLeases.completePathChange(sourcePath, destinationPath);
+        return result;
+      } finally {
+        finishChange();
+      }
     }, "FILE_RENAME_FAILED")
   );
 
@@ -419,7 +437,15 @@ export function registerWorkspaceHandlers(): void {
     "folder:delete",
     wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
       assertWorkspaceFolderPath(event, folderPath, "folder:delete");
-      return await fileSystem.deleteFolder(folderPath);
+      const sourcePath = fs.realpathSync.native(folderPath);
+      const finishChange = publicationLeases.beginPathChange(sourcePath, true);
+      try {
+        const result = await fileSystem.deleteFolder(folderPath);
+        publicationLeases.completePathChange(sourcePath, undefined, true);
+        return result;
+      } finally {
+        finishChange();
+      }
     }, "FOLDER_DELETE_FAILED")
   );
 
@@ -429,7 +455,16 @@ export function registerWorkspaceHandlers(): void {
     wrapIpcHandlerWithEvent(async (event, oldPath: string, newPath: string) => {
       assertWorkspaceFolderPath(event, oldPath, "folder:rename (source)");
       assertWorkspaceFolderPath(event, newPath, "folder:rename (dest)", true);
-      return await fileSystem.renameFolder(oldPath, newPath);
+      const sourcePath = fs.realpathSync.native(oldPath);
+      const finishChange = publicationLeases.beginPathChange(sourcePath, true);
+      try {
+        const result = await fileSystem.renameFolder(oldPath, newPath);
+        const destinationPath = fs.realpathSync.native(newPath);
+        publicationLeases.completePathChange(sourcePath, destinationPath, true);
+        return result;
+      } finally {
+        finishChange();
+      }
     }, "FOLDER_RENAME_FAILED")
   );
 

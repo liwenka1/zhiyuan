@@ -13,6 +13,8 @@ import type {
 export const githubIpc = {
   pushIssue: async (payload: GitHubIssuePushRequest): Promise<GitHubIssuePushResult> =>
     unwrapIpcResult(await window.api.github.pushIssue(payload)),
+  releasePublication: async (publicationId: string): Promise<void> =>
+    unwrapIpcResult(await window.api.github.releasePublication(publicationId)),
   uploadAsset: async (payload: GitHubAssetUploadRequest): Promise<GitHubAssetUploadResult> =>
     unwrapIpcResult(await window.api.github.uploadAsset(payload))
 };

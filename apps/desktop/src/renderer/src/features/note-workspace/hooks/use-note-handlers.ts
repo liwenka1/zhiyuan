@@ -244,6 +244,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       toast.error(t("github.publishInProgress"));
       return;
     }
+    let publicationId: string | undefined;
     try {
       const githubState = githubStore.getState();
       if (!githubState.isLoaded) {
@@ -287,8 +288,10 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
         token: "",
         title,
         body,
+        sourcePath: fullNote.filePath,
         issueNumber: getGitHubIssueNumberForRepository(fullNote.github, currentConfig.owner, currentConfig.repo)
       });
+      publicationId = result.publicationId;
 
       // 发布期间仍可输入或切换工作区，只把返回元数据合并到同一文件的最新正文。
       await waitForFileOperations();
@@ -312,7 +315,13 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       const message = error instanceof Error ? error.message : String(error);
       toast.error(t("errors.githubPushFailed", { message }));
     } finally {
-      finishPublishing();
+      try {
+        if (publicationId) await githubIpc.releasePublication(publicationId);
+      } catch (error) {
+        toast.error(t("errors.githubPushFailed", { message: error instanceof Error ? error.message : String(error) }));
+      } finally {
+        finishPublishing();
+      }
     }
   };
 

@@ -10,6 +10,7 @@ import { getCallerWorkspace } from "../security/window-context";
 import { validatePathInWorkspace } from "../security/path-validator";
 import { configManager } from "../config";
 import { isValidFileNameSegment } from "@shared";
+import { publicationLeases as publications, type PublicationLeases } from "../github/publication-leases";
 
 function resolveSelectedGitHubProject(payload: { projectKey?: string; owner: string; repo: string }) {
   const projectKey = String(payload.projectKey || configManager.getGitHubActiveProjectKey()).trim();
@@ -37,7 +38,8 @@ function resolveSelectedGitHubProject(payload: { projectKey?: string; owner: str
 export function registerGitHubHandlers(): void {
   ipcMain.handle(
     "github:pushIssue",
-    async (_event, payload: GitHubIssuePushRequest): Promise<IpcResultDTO<GitHubIssuePushResult>> => {
+    async (event, payload: GitHubIssuePushRequest): Promise<IpcResultDTO<GitHubIssuePushResult>> => {
+      let lease: ReturnType<PublicationLeases["acquire"]> | undefined;
       try {
         if (!payload || typeof payload !== "object") {
           return ipcErr("Invalid payload", "GITHUB_PUSH_INVALID");
@@ -55,34 +57,66 @@ export function registerGitHubHandlers(): void {
           return ipcErr("Missing issue title", "GITHUB_PUSH_TITLE_MISSING");
         }
 
-        if (payload.issueNumber) {
+        const workspacePath = getCallerWorkspace(event);
+        if (typeof payload.sourcePath !== "string" || !path.isAbsolute(payload.sourcePath)) {
+          return ipcErr("Missing source file path", "GITHUB_PUSH_SOURCE_INVALID");
+        }
+        const sourcePath = await fs.realpath(payload.sourcePath);
+        if (!validatePathInWorkspace(workspacePath, sourcePath).isValid || !(await fs.stat(sourcePath)).isFile()) {
+          return ipcErr("Source file is outside workspace", "GITHUB_PUSH_SOURCE_INVALID");
+        }
+        lease = publications.acquire(sourcePath, owner, repo, event.sender);
+        // Other windows may still display an older association. The actual file (or
+        // an uncommitted successful create) determines whether this is an update.
+        const issueNumber = publications.issueNumber(lease, await fs.readFile(sourcePath, "utf8"));
+        if (issueNumber) {
           const issue = await updateIssue({
             owner,
             repo,
             token,
-            issueNumber: payload.issueNumber,
+            issueNumber,
             title,
             body
           });
-          return ipcOk({
-            issueNumber: payload.issueNumber,
+          const result = {
+            issueNumber,
             issueUrl: issue.html_url,
-            isNew: false
-          });
+            isNew: false,
+            publicationId: lease.id
+          };
+          publications.remoteSucceeded(lease, result);
+          return ipcOk(result);
         }
 
         const issue = await createIssue({ owner, repo, token, title, body });
-        return ipcOk({
+        const result = {
           issueNumber: issue.number,
           issueUrl: issue.html_url,
-          isNew: true
-        });
+          isNew: true,
+          publicationId: lease.id
+        };
+        publications.remoteSucceeded(lease, result);
+        return ipcOk(result);
       } catch (error) {
+        if (lease) publications.remoteFailed(lease);
         const message = error instanceof Error ? error.message : String(error);
         return ipcErr(message, "GITHUB_PUSH_FAILED", error);
       }
     }
   );
+
+  ipcMain.handle("github:releasePublication", async (event, publicationId: string): Promise<IpcResultDTO<void>> => {
+    try {
+      const lease = publications.owned(String(publicationId), event.sender);
+      if (lease) {
+        const content = await fs.readFile(lease.sourcePath, "utf8").catch(() => undefined);
+        publications.release(lease, content);
+      }
+      return ipcOk(undefined);
+    } catch (error) {
+      return ipcErr(error instanceof Error ? error.message : String(error), "GITHUB_PUBLICATION_RELEASE_FAILED", error);
+    }
+  });
 
   ipcMain.handle(
     "github:uploadAsset",
