@@ -28,7 +28,9 @@ vi.mock("../../apps/desktop/src/renderer/src/stores/note-store/persistence", () 
   clearPendingSave: clearPendingMock,
   getLastSavedContent: () => "saved",
   setLastSavedContent: setSavedMock,
-  wasRecentlySaved: () => false
+  recordSaveConflict: vi.fn(),
+  hasPendingSave: () => false,
+  isOwnSaveContent: () => false
 }));
 
 import { createFileEventHandlers } from "../../apps/desktop/src/renderer/src/stores/note-store/file-events";

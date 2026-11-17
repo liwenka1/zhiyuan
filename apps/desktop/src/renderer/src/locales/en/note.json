@@ -157,6 +157,15 @@
     "importSuccess": "Imported {{count}} file(s)",
     "importSuccessWithSkipped": "Imported {{importedCount}}, skipped {{skippedCount}}"
   },
+  "conflict": {
+    "title": "External changes conflict with this draft",
+    "description": "Automatic saving is paused. Keep the local draft as a separate note, then load the latest version from disk. The external file will be preserved.",
+    "local": "Local draft",
+    "external": "External version",
+    "unavailable": "The file was deleted or could not be read. It will be checked again when resolving.",
+    "keepBoth": "Keep local copy and load external version",
+    "resolved": "Local draft preserved as a conflict copy"
+  },
   "github": {
     "publishInProgress": "A note is being published. Try again after it finishes.",
     "pushSuccess": "Push succeeded: {{url}}",

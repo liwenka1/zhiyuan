@@ -18,7 +18,7 @@ export function unwrapIpcResult<T>(dto: IpcResultDTO<T>): T {
   if (dto.ok) {
     return dto.value;
   }
-  throw new Error(dto.error.message);
+  throw Object.assign(new Error(dto.error.message), { code: dto.error.code });
 }
 
 /**

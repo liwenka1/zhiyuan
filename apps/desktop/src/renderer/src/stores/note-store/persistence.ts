@@ -2,20 +2,40 @@ import type { NoteStoreGet, NoteStoreSet } from "./types";
 import i18n from "@/lib/i18n";
 import { toast } from "sonner";
 import { fileIpc } from "@/ipc";
-import { parseGitHubMetadata } from "@/lib/github-metadata";
+import { parseGitHubMetadata, stripGitHubMetadata } from "@/lib/github-metadata";
 import { useWorkspaceStore } from "../use-workspace-store";
-import { isEditingBlocked, useOperationStore } from "./operation-guard";
+import { beginFileOperation, isEditingBlocked, useOperationStore } from "./operation-guard";
+import { assertNoSaveConflict, clearSaveConflict, setSaveConflict, useSaveConflictStore } from "./save-conflicts";
+
+export { assertNoSaveConflict } from "./save-conflicts";
 
 const debouncedSaves = new Map<string, ReturnType<typeof setTimeout>>();
 interface PendingSave {
   noteId: string;
   filePath: string;
   content: string;
+  expectedContent: string;
 }
 
 const pendingContents = new Map<string, PendingSave>();
 const saveQueues = new Map<string, Promise<void>>();
 const lastSavedContents = new Map<string, string>();
+const activeWrites = new Map<string, string>();
+
+export function isOwnSaveContent(filePath: string, content: string): boolean {
+  return activeWrites.get(filePath) === content;
+}
+
+/** Keep the draft pending, but stop every writer until both versions are preserved. */
+export function recordSaveConflict(
+  noteId: string,
+  filePath: string,
+  localContent: string,
+  diskContent: string | null | undefined
+): void {
+  clearDebouncedSave(noteId, filePath);
+  setSaveConflict({ noteId, filePath, localContent, diskContent });
+}
 
 export function setLastSavedContent(noteId: string, content: string): void {
   lastSavedContents.set(noteId, content);
@@ -63,6 +83,7 @@ export function clearAllDebouncedSaves() {
 }
 
 export async function flushAllDebouncedSaves(get: NoteStoreGet): Promise<void> {
+  for (const filePath of Object.keys(useSaveConflictStore.getState().conflicts)) assertNoSaveConflict(filePath);
   debouncedSaves.forEach((timer) => clearTimeout(timer));
   debouncedSaves.clear();
 
@@ -79,6 +100,7 @@ export async function flushAllDebouncedSaves(get: NoteStoreGet): Promise<void> {
 
 export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
   const performSave = async (pending: PendingSave): Promise<void> => {
+    assertNoSaveConflict(pending.filePath);
     const currentNote = get().notes.find((note) => note.id === pending.noteId && note.filePath === pending.filePath);
 
     if (currentNote) {
@@ -88,13 +110,34 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
     }
 
     try {
-      await fileIpc.write(pending.filePath, pending.content);
+      activeWrites.set(pending.filePath, pending.content);
+      await fileIpc.write(pending.filePath, pending.content, pending.expectedContent);
       if (pendingContents.get(pending.filePath)?.content === pending.content) {
         clearDebouncedSave(pending.noteId, pending.filePath);
         pendingContents.delete(pending.filePath);
       }
-      setLastSavedContent(pending.noteId, pending.content);
+      const newer = pendingContents.get(pending.filePath);
+      if (newer) newer.expectedContent = pending.content;
+      if (get().notes.some((note) => note.id === pending.noteId && note.filePath === pending.filePath)) {
+        setLastSavedContent(pending.noteId, pending.content);
+      }
+    } catch (error) {
+      if ((error as { code?: string })?.code === "FILE_CONTENT_CONFLICT") {
+        const note = get().notes.find((item) => item.id === pending.noteId && item.filePath === pending.filePath);
+        const localContent = note
+          ? get().selectedNoteId === note.id
+            ? get().editorContent
+            : note.content
+          : (pendingContents.get(pending.filePath)?.content ?? pending.content);
+        // Pause synchronously; an asynchronous read must not leave a writer free to retry.
+        recordSaveConflict(pending.noteId, pending.filePath, localContent, undefined);
+        const disk = await fileIpc.read(pending.filePath).catch(() => null);
+        const currentConflict = useSaveConflictStore.getState().conflicts[pending.filePath];
+        if (currentConflict) setSaveConflict({ ...currentConflict, diskContent: disk?.content });
+      }
+      throw error;
     } finally {
+      activeWrites.delete(pending.filePath);
       if (currentNote) {
         set((state) => {
           state.savingNoteIds.delete(pending.noteId);
@@ -122,11 +165,31 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
     return tracked;
   };
 
+  const queueDraft = (noteId: string, filePath: string, content: string, previousContent: string): void => {
+    const expectedContent =
+      pendingContents.get(filePath)?.expectedContent ?? getLastSavedContent(noteId) ?? previousContent;
+    pendingContents.set(filePath, { noteId, filePath, content, expectedContent });
+    clearDebouncedSave(noteId, filePath);
+    const conflict = useSaveConflictStore.getState().conflicts[filePath];
+    if (conflict) {
+      setSaveConflict({ ...conflict, localContent: content });
+      return;
+    }
+    const timer = setTimeout(() => {
+      void get()
+        .saveNoteToFileSystem(noteId, content, filePath)
+        .catch(() => {});
+      debouncedSaves.delete(filePath);
+    }, 500);
+    debouncedSaves.set(filePath, timer);
+  };
+
   return {
     updateNoteContent: (content) => {
       if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
       const { selectedNoteId } = get();
       if (!selectedNoteId) return;
+      const previousContent = get().notes.find((note) => note.id === selectedNoteId)?.content ?? get().editorContent;
 
       set((state) => {
         state.editorContent = content;
@@ -142,23 +205,12 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
       const targetNote = get().notes.find((n) => n.id === selectedNoteId);
       if (!targetNote?.filePath) return;
 
-      const filePath = targetNote.filePath;
-      pendingContents.set(filePath, { noteId: selectedNoteId, filePath, content });
-
-      clearDebouncedSave(selectedNoteId, filePath);
-
-      const timer = setTimeout(() => {
-        void get()
-          .saveNoteToFileSystem(selectedNoteId, content, filePath)
-          .catch(() => {});
-        debouncedSaves.delete(filePath);
-      }, 500);
-
-      debouncedSaves.set(filePath, timer);
+      queueDraft(selectedNoteId, targetNote.filePath, content, previousContent);
     },
 
     updateNoteContentById: (noteId, content) => {
       if (useWorkspaceStore.getState().isLoading || useOperationStore.getState().fileOperationCount > 0) return;
+      const previousContent = get().notes.find((note) => note.id === noteId)?.content ?? content;
       set((state) => {
         const note = state.notes.find((n) => n.id === noteId);
         if (note) {
@@ -175,26 +227,19 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
       const targetNote = get().notes.find((n) => n.id === noteId);
       if (!targetNote?.filePath) return;
 
-      const filePath = targetNote.filePath;
-      pendingContents.set(filePath, { noteId, filePath, content });
-
-      clearDebouncedSave(noteId, filePath);
-
-      const timer = setTimeout(() => {
-        void get()
-          .saveNoteToFileSystem(noteId, content, filePath)
-          .catch(() => {});
-        debouncedSaves.delete(filePath);
-      }, 500);
-
-      debouncedSaves.set(filePath, timer);
+      queueDraft(noteId, targetNote.filePath, content, previousContent);
     },
 
     saveNoteToFileSystem: async (noteId, content, expectedFilePath?: string) => {
       const filePath = expectedFilePath ?? getCurrentFilePath(get, noteId);
       if (!filePath) return;
       try {
-        await enqueueSave({ noteId, filePath, content });
+        assertNoSaveConflict(filePath);
+        const note = get().notes.find((item) => item.id === noteId && item.filePath === filePath);
+        const expectedContent =
+          pendingContents.get(filePath)?.expectedContent ?? getLastSavedContent(noteId) ?? note?.content;
+        if (expectedContent === undefined) throw new Error("The file has no saved baseline");
+        await enqueueSave({ noteId, filePath, content, expectedContent });
       } catch (error) {
         set((state) => {
           state.savingNoteIds.delete(noteId);
@@ -203,6 +248,76 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         toast.error(`${i18n.t("note:errors.saveNoteFailed")}: ${errorMessage}`);
         throw error;
+      }
+    },
+
+    resolveSaveConflict: async (filePath: string) => {
+      const release = beginFileOperation();
+      if (!release) throw new Error("Wait for the current file operation to finish");
+      try {
+        const conflict = useSaveConflictStore.getState().conflicts[filePath];
+        if (!conflict) return;
+        await Promise.allSettled([saveQueues.get(filePath)]);
+        const note = get().notes.find((item) => item.filePath === filePath);
+        if (!note) throw new Error("The conflicted note is no longer available");
+        if (!/\.md$/i.test(filePath)) throw new Error("Only Markdown notes can be recovered");
+        const localContent = get().selectedNoteId === note.id ? get().editorContent : note.content;
+        const backupContent = stripGitHubMetadata(localContent);
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const sourceFileName = filePath.split(/[\\/]/).pop()!;
+        const directory = filePath.slice(0, -sourceFileName.length);
+        // Leave room for the recovery suffix even when the original filename is near the filesystem limit.
+        const stem = Array.from(sourceFileName.replace(/\.md$/i, "")).slice(0, 30).join("");
+        let backupPath = "";
+        for (let index = 1; !backupPath; index++) {
+          const candidate = `${directory}${stem} (conflict ${stamp}-${index}).md`;
+          try {
+            await fileIpc.create(candidate, backupContent);
+            backupPath = candidate;
+          } catch (error) {
+            if (!(await fileIpc.exists(candidate))) throw error;
+          }
+        }
+        // Never write the external file. Re-read after the backup is durable.
+        const disk = await fileIpc.read(filePath).catch(async (error) => {
+          if (await fileIpc.exists(filePath)) throw error;
+          return null;
+        });
+        const fileName = backupPath.split(/[\\/]/).pop()!;
+        const backupId = `${note.id.slice(0, note.id.lastIndexOf("/") + 1)}${fileName}`;
+        clearPendingSave(note.id, filePath);
+        setLastSavedContent(backupId, backupContent);
+        if (disk) setLastSavedContent(note.id, disk.content);
+        set((state) => {
+          const source = state.notes.find((item) => item.id === note.id && item.filePath === filePath);
+          if (source && disk) {
+            source.content = disk.content;
+            source.github = parseGitHubMetadata(disk.content);
+            if (state.selectedNoteId === source.id) state.editorContent = disk.content;
+          } else if (source) {
+            state.notes = state.notes.filter((item) => item.id !== source.id);
+            state.openNoteIds = state.openNoteIds.filter((id) => id !== source.id);
+          }
+          if (!state.notes.some((item) => item.filePath === backupPath))
+            state.notes.push({
+              ...note,
+              id: backupId,
+              filePath: backupPath,
+              fileName,
+              title: fileName.replace(/\.md$/i, ""),
+              content: backupContent,
+              github: undefined,
+              isPinned: false
+            });
+          if (!disk && state.selectedNoteId === note.id) {
+            state.selectedNoteId = backupId;
+            state.editorContent = backupContent;
+            state.openNoteIds.push(backupId);
+          }
+        });
+        clearSaveConflict(filePath);
+      } finally {
+        release();
       }
     }
   };

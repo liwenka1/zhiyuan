@@ -139,6 +139,7 @@ const folder = { id: "folder", name: "folder", path: `${rootA}/folder` };
 const savedFiles = new Map<string, string>();
 
 function scanData(root: string) {
+  if (!savedFiles.has(`${root}/note.md`)) savedFiles.set(`${root}/note.md`, `${root} disk`);
   return {
     folders: [{ ...folder, path: `${root}/folder` }],
     notes: [
@@ -151,6 +152,15 @@ function scanData(root: string) {
       }
     ]
   };
+}
+
+function renameSavedFiles(oldPath: string, newPath: string) {
+  for (const [file, content] of [...savedFiles]) {
+    if (file === oldPath || file.startsWith(`${oldPath}/`)) {
+      savedFiles.delete(file);
+      savedFiles.set(newPath + file.slice(oldPath.length), content);
+    }
+  }
 }
 
 function deferred<T>() {
@@ -227,8 +237,12 @@ describe("workspace switching edit isolation", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
-    renameMock.mockReset().mockResolvedValue(undefined);
-    folderRenameMock.mockReset().mockResolvedValue(undefined);
+    renameMock
+      .mockReset()
+      .mockImplementation(async (oldPath: string, newPath: string) => renameSavedFiles(oldPath, newPath));
+    folderRenameMock
+      .mockReset()
+      .mockImplementation(async (oldPath: string, newPath: string) => renameSavedFiles(oldPath, newPath));
     createMock.mockReset().mockResolvedValue(undefined);
     savedFiles.clear();
     harness.refs = [];
@@ -292,7 +306,7 @@ describe("workspace switching edit isolation", () => {
     renderWorkspaceLoad();
     await settle();
     expect(scanMock).toHaveBeenLastCalledWith(rootB);
-    expect(writeMock).toHaveBeenCalledWith(`${rootA}/note.md`, "draft before switching");
+    expect(writeMock).toHaveBeenCalledWith(`${rootA}/note.md`, "draft before switching", `${rootA} disk`);
     expect(hasPendingSave(`${rootA}/note.md`)).toBe(false);
     expect(harness.state.notes[0].filePath).toBe(`${rootA}/note.md`);
 
@@ -336,7 +350,7 @@ describe("workspace switching edit isolation", () => {
     harness.state.selectNote("note.md");
     harness.state.updateNoteContent("B new draft");
     await flushAllDebouncedSaves(() => harness.state);
-    expect(writeMock).toHaveBeenLastCalledWith(`${rootB}/note.md`, "B new draft");
+    expect(writeMock).toHaveBeenLastCalledWith(`${rootB}/note.md`, "B new draft", `${rootB} disk`);
   });
 
   it.each(["cancelled", "rejected", "save-failed"] as const)(
@@ -361,7 +375,11 @@ describe("workspace switching edit isolation", () => {
       expect(harness.state.editorContent).toBe("A preserved draft");
       harness.state.updateNoteContent("A editing recovered");
       await flushAllDebouncedSaves(() => harness.state);
-      expect(writeMock).toHaveBeenLastCalledWith(`${rootA}/note.md`, "A editing recovered");
+      expect(writeMock).toHaveBeenLastCalledWith(
+        `${rootA}/note.md`,
+        "A editing recovered",
+        failure === "save-failed" ? `${rootA} disk` : "A preserved draft"
+      );
     }
   );
 
@@ -416,6 +434,16 @@ describe("workspace switching edit isolation", () => {
     "does not resume another operation's watcher pause when an old %s exits before pausing",
     async (kind) => {
       await openA();
+      if (kind === "rename-folder") {
+        Object.assign(harness.state.notes[0], {
+          id: "folder/note.md",
+          filePath: `${rootA}/folder/note.md`,
+          folderId: "folder"
+        });
+        harness.state.selectedNoteId = "folder/note.md";
+        setLastSavedContent("folder/note.md", harness.state.editorContent);
+        savedFiles.set(`${rootA}/folder/note.md`, harness.state.editorContent);
+      }
       const operation = startOldOperation(kind);
       const scan = beginSwitch();
       await operation;
@@ -579,18 +607,15 @@ describe("workspace switching edit isolation", () => {
         });
         harness.state.selectedNoteId = "folder/note.md";
         setLastSavedContent("folder/note.md", harness.state.editorContent);
+        savedFiles.delete(`${rootA}/note.md`);
+        savedFiles.set(`${rootA}/folder/note.md`, harness.state.editorContent);
       }
       const oldId = harness.state.selectedNoteId!;
       const oldPath = harness.state.notes[0].filePath!;
       const renaming = deferred<void>();
       const mutate = async (oldPath: string, newPath: string) => {
         await renaming.promise;
-        for (const [file, content] of [...savedFiles]) {
-          if (file === oldPath || file.startsWith(`${oldPath}/`)) {
-            savedFiles.delete(file);
-            savedFiles.set(newPath + file.slice(oldPath.length), content);
-          }
-        }
+        renameSavedFiles(oldPath, newPath);
       };
       renameMock.mockImplementation(mutate);
       folderRenameMock.mockImplementation(mutate);
@@ -692,7 +717,10 @@ describe("workspace switching edit isolation", () => {
   it("waits for a pending rename to synchronize paths before acknowledging close", async () => {
     await openA();
     const renaming = deferred<void>();
-    renameMock.mockReturnValueOnce(renaming.promise);
+    renameMock.mockImplementationOnce(async (oldPath: string, newPath: string) => {
+      await renaming.promise;
+      renameSavedFiles(oldPath, newPath);
+    });
     const operation = harness.state.renameNote("note.md", "renamed");
     await settle();
     let close!: (token: number) => void;

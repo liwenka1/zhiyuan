@@ -2,7 +2,8 @@ import { ipcMain, shell, BrowserWindow, app } from "electron";
 import fs from "fs";
 import path from "path";
 import { workspaceManager } from "../workspace";
-import { fileSystem } from "../file-system";
+import { FileContentConflictError, fileSystem } from "../file-system";
+import { writeExistingFile } from "../file-system/guarded-write";
 import { fileWatcherManager } from "../file-watcher";
 import { windowManager } from "../window-manager";
 import { configManager } from "../config";
@@ -332,15 +333,24 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 写入文件（校验路径在工作区内）
-  ipcMain.handle(
-    "file:write",
-    wrapIpcHandlerWithEvent(async (event, filePath: string, content: string) => {
+  ipcMain.handle("file:write", async (event, filePath: string, content: string, expectedContent?: string) => {
+    try {
+      if (typeof content !== "string" || (expectedContent !== undefined && typeof expectedContent !== "string")) {
+        throw new Error("Invalid file content");
+      }
       assertPathInWorkspace(event, filePath, "file:write");
       assertNotWorkspaceRoot(event, filePath, "file:write");
       assertRegularFilePath(filePath, "file:write");
-      return await fileSystem.writeFile(filePath, content);
-    }, "FILE_WRITE_FAILED")
-  );
+      return ipcOk(await writeExistingFile(filePath, content, expectedContent));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(
+        message,
+        error instanceof FileContentConflictError ? "FILE_CONTENT_CONFLICT" : "FILE_WRITE_FAILED",
+        error
+      );
+    }
+  });
 
   // 创建文件（校验路径在工作区内）
   ipcMain.handle(

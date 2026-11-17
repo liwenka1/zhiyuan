@@ -31,12 +31,67 @@ describe("atomic note writes", () => {
     expect(await readdir(root)).toEqual(["note.md"]);
   });
 
+  it("rejects an editor save if the on-disk baseline changed", async () => {
+    const filePath = path.join(root, "note.md");
+    await writeFile(filePath, "external draft");
+
+    await expect(fileSystem.writeFileAtomic(filePath, "local draft", "original")).rejects.toMatchObject({
+      code: "FILE_CONTENT_CONFLICT"
+    });
+
+    expect(await readFile(filePath, "utf8")).toBe("external draft");
+    expect(await readdir(root)).toEqual(["note.md"]);
+  });
+
+  it("checks the baseline again after the replacement has been prepared", async () => {
+    const filePath = path.join(root, "note.md");
+    await writeFile(filePath, "original");
+    const open = fs.promises.open.bind(fs.promises);
+    vi.spyOn(fs.promises, "open").mockImplementationOnce(async (...args) => {
+      const handle = await open(...args);
+      const sync = handle.sync.bind(handle);
+      vi.spyOn(handle, "sync").mockImplementation(async () => {
+        await sync();
+        await writeFile(filePath, "external update during save");
+      });
+      return handle;
+    });
+
+    await expect(fileSystem.writeFileAtomic(filePath, "local draft", "original")).rejects.toMatchObject({
+      code: "FILE_CONTENT_CONFLICT"
+    });
+
+    expect(await readFile(filePath, "utf8")).toBe("external update during save");
+    expect(await readdir(root)).toEqual(["note.md"]);
+  });
+
+  it("treats an already-committed draft as an idempotent save without replacing it", async () => {
+    const filePath = path.join(root, "note.md");
+    await writeFile(filePath, "committed draft");
+    const rename = vi.spyOn(fs.promises, "rename");
+
+    await fileSystem.writeFileAtomic(filePath, "committed draft", "old baseline");
+
+    expect(rename).not.toHaveBeenCalled();
+    expect(await readFile(filePath, "utf8")).toBe("committed draft");
+  });
+
+  it("does not recreate a removed file when an editor save carries its old baseline", async () => {
+    const filePath = path.join(root, "removed.md");
+
+    await expect(fileSystem.writeFileAtomic(filePath, "local draft", "original")).rejects.toMatchObject({
+      code: "ENOENT"
+    });
+
+    expect(await readdir(root)).toEqual([]);
+  });
+
   it.skipIf(process.platform === "win32")("preserves a private note's POSIX permission bits", async () => {
     const filePath = path.join(root, "private.md");
     await writeFile(filePath, "private draft");
     await chmod(filePath, 0o600);
 
-    await fileSystem.writeFileAtomic(filePath, "updated private draft");
+    await fileSystem.writeFileAtomic(filePath, "updated private draft", "private draft");
 
     expect((await stat(filePath)).mode & 0o777).toBe(0o600);
     expect(await readFile(filePath, "utf8")).toBe("updated private draft");

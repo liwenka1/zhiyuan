@@ -7,7 +7,8 @@ import { unwrapIpcResult } from "@/lib/ipc-utils";
 export const fileIpc = {
   read: async (filePath: string) => unwrapIpcResult(await window.api.file.read(filePath)),
 
-  write: async (filePath: string, content: string) => unwrapIpcResult(await window.api.file.write(filePath, content)),
+  write: async (filePath: string, content: string, expectedContent?: string) =>
+    unwrapIpcResult(await window.api.file.write(filePath, content, expectedContent)),
 
   create: async (filePath: string, content: string) => unwrapIpcResult(await window.api.file.create(filePath, content)),
 

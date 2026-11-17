@@ -11,8 +11,8 @@ export const fileApi = {
   /**
    * 写入文件
    */
-  write: (filePath: string, content: string): Promise<IpcResultDTO<{ mtime: number }>> =>
-    ipcRenderer.invoke("file:write", filePath, content),
+  write: (filePath: string, content: string, expectedContent?: string): Promise<IpcResultDTO<{ mtime: number }>> =>
+    ipcRenderer.invoke("file:write", filePath, content, expectedContent),
 
   /**
    * 创建文件

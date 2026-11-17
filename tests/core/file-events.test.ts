@@ -1,13 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { handleFileChangedMock, getLastSavedContentMock, setLastSavedContentMock, warningMock, workspaceState } =
-  vi.hoisted(() => ({
-    handleFileChangedMock: vi.fn(),
-    getLastSavedContentMock: vi.fn(),
-    setLastSavedContentMock: vi.fn(),
-    warningMock: vi.fn(),
-    workspaceState: { workspacePath: "/workspace" }
-  }));
+const {
+  handleFileChangedMock,
+  getLastSavedContentMock,
+  setLastSavedContentMock,
+  hasPendingSaveMock,
+  recordSaveConflictMock,
+  isOwnSaveContentMock,
+  warningMock,
+  workspaceState
+} = vi.hoisted(() => ({
+  handleFileChangedMock: vi.fn(),
+  getLastSavedContentMock: vi.fn(),
+  setLastSavedContentMock: vi.fn(),
+  hasPendingSaveMock: vi.fn(),
+  recordSaveConflictMock: vi.fn(),
+  isOwnSaveContentMock: vi.fn(),
+  warningMock: vi.fn(),
+  workspaceState: { workspacePath: "/workspace" }
+}));
 
 vi.mock("@/lib/file-watcher", () => ({
   handleFileChanged: handleFileChangedMock,
@@ -38,7 +49,9 @@ vi.mock("../../apps/desktop/src/renderer/src/stores/note-store/persistence", () 
   clearPendingSave: vi.fn(),
   getLastSavedContent: getLastSavedContentMock,
   setLastSavedContent: setLastSavedContentMock,
-  wasRecentlySaved: vi.fn(() => false)
+  hasPendingSave: hasPendingSaveMock,
+  recordSaveConflict: recordSaveConflictMock,
+  isOwnSaveContent: isOwnSaveContentMock
 }));
 
 import { createFileEventHandlers } from "../../apps/desktop/src/renderer/src/stores/note-store/file-events";
@@ -94,6 +107,8 @@ describe("file watcher event handling", () => {
     vi.clearAllMocks();
     workspaceState.workspacePath = "/workspace";
     getLastSavedContentMock.mockReturnValue("old");
+    hasPendingSaveMock.mockReturnValue(false);
+    isOwnSaveContentMock.mockReturnValue(false);
   });
 
   it("applies an externally emptied markdown file", async () => {
@@ -123,6 +138,12 @@ describe("file watcher event handling", () => {
     expect(state.editorContent).toBe("local draft");
     expect(setLastSavedContentMock).not.toHaveBeenCalled();
     expect(warningMock).toHaveBeenCalled();
+    expect(recordSaveConflictMock).toHaveBeenCalledWith(
+      "note.md",
+      "/workspace/note.md",
+      "local draft",
+      "external content"
+    );
   });
 
   it("preserves edits made to a background note during the read", async () => {
@@ -185,13 +206,57 @@ describe("file watcher event handling", () => {
     expect(setLastSavedContentMock).toHaveBeenCalledTimes(1);
   });
 
-  it("does not read over existing unsaved edits in a background note", async () => {
+  it("reads the actual external content before recording a dirty background note's conflict", async () => {
+    const read = deferred<string>();
+    handleFileChangedMock.mockReturnValue(read.promise);
     const { state, handlers } = createTestStore();
     state.notes[0].content = "unsaved background draft";
 
+    const update = handlers.handleFileChangedEvent("note.md", "/workspace/note.md");
+
+    expect(handleFileChangedMock).toHaveBeenCalledWith("note.md", "/workspace/note.md");
+    expect(recordSaveConflictMock).not.toHaveBeenCalled();
+    read.resolve("outside draft");
+    await update;
+
+    expect(state.notes[0].content).toBe("unsaved background draft");
+    expect(recordSaveConflictMock).toHaveBeenCalledWith(
+      "note.md",
+      "/workspace/note.md",
+      "unsaved background draft",
+      "outside draft"
+    );
+    expect(setLastSavedContentMock).not.toHaveBeenCalled();
+  });
+
+  it("does not report a conflict for an active own-save notification while newer edits are pending", async () => {
+    handleFileChangedMock.mockResolvedValue("own write in progress");
+    isOwnSaveContentMock.mockImplementation(
+      (filePath: string, content: string) => filePath === "/workspace/note.md" && content === "own write in progress"
+    );
+    const { state, handlers } = createTestStore();
+    state.selectedNoteId = "note.md";
+    state.notes[0].content = "newer draft";
+    state.editorContent = "newer draft";
+
     await handlers.handleFileChangedEvent("note.md", "/workspace/note.md");
 
-    expect(handleFileChangedMock).not.toHaveBeenCalled();
-    expect(state.notes[0].content).toBe("unsaved background draft");
+    expect(state.editorContent).toBe("newer draft");
+    expect(recordSaveConflictMock).not.toHaveBeenCalled();
+    expect(warningMock).not.toHaveBeenCalled();
+    expect(setLastSavedContentMock).not.toHaveBeenCalled();
+  });
+
+  it("ignores a saved-baseline notification while a background note has newer edits", async () => {
+    handleFileChangedMock.mockResolvedValue("old");
+    const { state, handlers } = createTestStore();
+    state.notes[0].content = "newer background draft";
+
+    await handlers.handleFileChangedEvent("note.md", "/workspace/note.md");
+
+    expect(state.notes[0].content).toBe("newer background draft");
+    expect(recordSaveConflictMock).not.toHaveBeenCalled();
+    expect(warningMock).not.toHaveBeenCalled();
+    expect(setLastSavedContentMock).not.toHaveBeenCalled();
   });
 });

@@ -89,7 +89,7 @@ describe("workspace scan loading", () => {
 
     persistence.updateNoteContent(`${state.editorContent} continued`);
     await flushAllDebouncedSaves(get);
-    expect(writeMock).toHaveBeenLastCalledWith("/workspace/note.md", "unsaved draft continued");
+    expect(writeMock).toHaveBeenLastCalledWith("/workspace/note.md", "unsaved draft continued", "disk content");
   });
 
   it("also keeps pending edits to an unselected note", async () => {
