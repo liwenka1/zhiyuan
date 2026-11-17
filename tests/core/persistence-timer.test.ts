@@ -7,7 +7,7 @@ import type { NoteStore, NoteStoreSet } from "../../apps/desktop/src/renderer/sr
 const { write, rename } = vi.hoisted(() => ({ write: vi.fn(), rename: vi.fn() }));
 vi.mock("electron", () => ({ shell: {} }));
 vi.mock("@/ipc", () => ({
-  fileIpc: { write, rename },
+  fileIpc: { write, rename, read: async (file: string) => ({ content: await fs.readFile(file, "utf8") }) },
   watcherIpc: { pause: vi.fn(), resume: vi.fn() },
   configIpc: { setPinnedNotes: vi.fn() }
 }));
@@ -113,7 +113,7 @@ describe("explicit saves and their debounce ownership", () => {
 
     await vi.advanceTimersByTimeAsync(501);
 
-    expect(write).toHaveBeenCalledWith(filePath, "metadata with a newer edit");
+    expect(write).toHaveBeenCalledWith(filePath, "metadata with a newer edit", "metadata");
     await flushAllDebouncedSaves(() => state);
     expect(await fs.readFile(filePath, "utf8")).toBe("metadata with a newer edit");
   });

@@ -82,7 +82,7 @@ export interface WorkspaceAPI {
 // 文件 API 接口
 export interface FileAPI {
   read: (filePath: string) => Promise<IpcResultDTO<{ content: string; mtime: number }>>;
-  write: (filePath: string, content: string) => Promise<IpcResultDTO<{ mtime: number }>>;
+  write: (filePath: string, content: string, expectedContent?: string) => Promise<IpcResultDTO<{ mtime: number }>>;
   create: (filePath: string, content: string) => Promise<IpcResultDTO<void>>;
   delete: (filePath: string) => Promise<IpcResultDTO<void>>;
   rename: (oldPath: string, newPath: string) => Promise<IpcResultDTO<void>>;

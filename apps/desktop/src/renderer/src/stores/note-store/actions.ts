@@ -16,7 +16,8 @@ import {
 } from "./persistence";
 import { isValidWorkspaceEntryName } from "@shared";
 import { beginFileOperation, isEditingBlocked, isPublishingPath } from "./operation-guard";
-import { stripGitHubMetadata } from "@/lib/github-metadata";
+import { parseGitHubMetadata, stripGitHubMetadata } from "@/lib/github-metadata";
+import { saveNoteBeforePathChange } from "./path-change-persistence";
 
 export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
   const beginNotePathOperation = (workspacePath: string, filePath: string) => {
@@ -29,6 +30,21 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
   const isCurrentWorkspaceReady = (workspacePath: string | null) => {
     const current = useWorkspaceStore.getState();
     return !current.isLoading && current.workspacePath === workspacePath;
+  };
+  const reloadNoteContent = async (noteId: string, filePath: string, workspacePath: string) => {
+    const { content } = await fileIpc.read(filePath);
+    if (!isCurrentWorkspaceReady(workspacePath)) return;
+    const note = get().notes.find((item) => item.id === noteId && item.filePath === filePath);
+    if (!note) return;
+    set((state) => {
+      const target = state.notes.find((item) => item.id === noteId && item.filePath === filePath);
+      if (!target) return;
+      target.content = content;
+      target.github = parseGitHubMetadata(content);
+      if (state.selectedNoteId === noteId) state.editorContent = content;
+    });
+    setLastSavedContent(noteId, content);
+    return content;
   };
   return {
     setNotes: (notes: Note[]) =>
@@ -236,8 +252,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
         releaseOperation = beginNotePathOperation(workspacePath, note.filePath);
         if (!releaseOperation) return;
-        clearDebouncedSave(noteId);
-        await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
+        const savedContent = await saveNoteBeforePathChange(get, noteId);
         if (!isCurrentWorkspaceReady(workspacePath)) return;
 
         await watcherIpc.pause(workspacePath);
@@ -280,13 +295,13 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           }
         });
 
-        const renamedNote = get().notes.find((item) => item.id === newNoteId);
-        if (renamedNote) setLastSavedContent(newNoteId, renamedNote.content);
+        if (savedContent !== undefined) setLastSavedContent(newNoteId, savedContent);
 
         const allPinnedNotes = get()
           .notes.filter((n) => n.isPinned)
           .map((n) => n.id);
         await configIpc.setPinnedNotes(workspacePath, allPinnedNotes);
+        await reloadNoteContent(newNoteId, newFilePath, workspacePath);
       } catch (error) {
         toast.error(i18n.t("note:errors.renameNoteFailed"));
         throw error;
@@ -326,9 +341,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const newTitle = `${note.title} ${copySuffix} ${nextCopyNumber}`;
         const newFileName = `${newTitle}.md`;
 
-        clearDebouncedSave(noteId);
-        await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
+        await saveNoteBeforePathChange(get, noteId);
         if (!isCurrentWorkspaceReady(workspacePath)) return;
+        const sourceContent = await reloadNoteContent(noteId, note.filePath, workspacePath);
+        if (sourceContent === undefined || !isCurrentWorkspaceReady(workspacePath)) return;
 
         const separator = note.filePath.includes("\\") ? "\\" : "/";
         const pathParts = note.filePath.split(/[\\/]/);
@@ -338,7 +354,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
         const newNoteId = note.id.endsWith(note.fileName)
           ? `${note.id.slice(0, -note.fileName.length)}${newFileName}`
           : newFileName;
-        const content = stripGitHubMetadata(note.content);
+        const content = stripGitHubMetadata(sourceContent);
         const newNote: Note = {
           ...note,
           content,
@@ -452,8 +468,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       const releaseOperation = beginNotePathOperation(workspacePath, note.filePath);
       if (!releaseOperation) return { moved: false, reason: "no-workspace" as const };
       try {
-        clearDebouncedSave(noteId);
-        await get().saveNoteToFileSystem(noteId, get().selectedNoteId === noteId ? get().editorContent : note.content);
+        const savedContent = await saveNoteBeforePathChange(get, noteId);
         if (!isCurrentWorkspaceReady(workspacePath)) return { moved: false, reason: "no-workspace" as const };
         await watcherIpc.pause(workspacePath);
         didPause = true;
@@ -494,8 +509,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           }
         });
 
-        const movedNote = get().notes.find((item) => item.id === newNoteId);
-        if (movedNote) setLastSavedContent(newNoteId, movedNote.content);
+        if (savedContent !== undefined) setLastSavedContent(newNoteId, savedContent);
 
         const folderStore = useFolderStore.getState();
         folderStore.setFolders(
@@ -513,6 +527,7 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
             .notes.filter((item) => item.isPinned)
             .map((item) => item.id)
         );
+        await reloadNoteContent(newNoteId, resolvedFilePath, workspacePath);
         if (!silent) {
           toast.success(renamed ? i18n.t("note:moveNoteRenamedSuccess") : i18n.t("note:moveNoteSuccess"));
         }

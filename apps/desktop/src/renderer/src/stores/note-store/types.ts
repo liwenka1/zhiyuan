@@ -45,6 +45,7 @@ export interface NoteStore extends NoteStoreState {
     beforeScan?: NoteLoadSnapshot
   ) => Promise<void>;
   saveNoteToFileSystem: (noteId: string, content: string, expectedFilePath?: string) => Promise<void>;
+  resolveSaveConflict: (filePath: string) => Promise<void>;
 
   setNotePlaying: (noteId: string, isPlaying: boolean) => void;
 

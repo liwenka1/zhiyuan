@@ -42,7 +42,12 @@ vi.mock("@/lib/markdown-assets", () => ({ collectLocalMarkdownAssets: () => [], 
 vi.mock("@/lib/github-assets", () => ({ uploadMarkdownAssets: vi.fn() }));
 vi.mock("@/ipc", () => ({
   githubIpc: { pushIssue: push },
-  fileIpc: { write, rename, exists: vi.fn().mockResolvedValue(false) },
+  fileIpc: {
+    write,
+    read: async (file: string) => ({ content: await fs.readFile(file, "utf8") }),
+    rename,
+    exists: vi.fn().mockResolvedValue(false)
+  },
   folderIpc: { rename },
   watcherIpc: { pause: vi.fn(), resume: vi.fn() },
   configIpc: { setPinnedNotes: pins },

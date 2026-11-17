@@ -16,6 +16,7 @@ import { PresentationView } from "@/features/editor";
 import { workspaceIpc } from "@/ipc";
 import { useShortcutDispatcher } from "@/hooks/use-shortcut-dispatcher";
 import { useWindowClose } from "@/hooks/use-window-close";
+import { SaveConflictDialog } from "@/components/app/save-conflict-dialog";
 
 function App(): React.JSX.Element {
   useWindowClose();
@@ -183,6 +184,7 @@ function App(): React.JSX.Element {
     return (
       <>
         <WelcomePage />
+        <SaveConflictDialog />
         <Toaster position="bottom-right" />
       </>
     );
@@ -190,6 +192,7 @@ function App(): React.JSX.Element {
 
   return (
     <>
+      <SaveConflictDialog />
       {/* 工作区：进入演示模式时淡出，退出时淡入 */}
       <motion.div
         animate={{ opacity: isPresentationMode ? 0 : 1 }}

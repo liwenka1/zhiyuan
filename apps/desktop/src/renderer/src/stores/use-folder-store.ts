@@ -3,11 +3,13 @@ import { create } from "zustand";
 import { produce } from "immer";
 import { Folder } from "@/types";
 import { useWorkspaceStore } from "./use-workspace-store";
-import { folderIpc, configIpc, watcherIpc } from "@/ipc";
+import { folderIpc, configIpc, watcherIpc, fileIpc } from "@/ipc";
 import { toast } from "sonner";
 import i18n from "@/lib/i18n";
 import { useNoteStore } from "./note-store";
-import { clearDebouncedSave, flushAllDebouncedSaves, setLastSavedContent } from "./note-store/persistence";
+import { setLastSavedContent } from "./note-store/persistence";
+import { saveNoteBeforePathChange } from "./note-store/path-change-persistence";
+import { parseGitHubMetadata } from "@/lib/github-metadata";
 import { isValidWorkspaceFolderName } from "@shared";
 
 interface FolderStore {
@@ -169,16 +171,15 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         if (isPublishingPath(workspacePath, folder.path, true)) toast.error(i18n.t("note:github.publishInProgress"));
         return;
       }
-      const noteStore = useNoteStore.getState();
-      const selectedNote = noteStore.selectedNoteId
-        ? noteStore.notes.find((n) => n.id === noteStore.selectedNoteId)
-        : null;
-
-      if (selectedNote?.folderId === folderId) {
-        clearDebouncedSave(selectedNote.id);
-        await noteStore.saveNoteToFileSystem(selectedNote.id, noteStore.editorContent);
+      const affectedNotes = useNoteStore
+        .getState()
+        .notes.filter((note) => note.filePath?.startsWith(oldFolderPathPrefix));
+      const savedContents = new Map<string, string>();
+      for (const note of affectedNotes) {
+        if (!isCurrentWorkspaceReady(workspacePath)) return;
+        const savedContent = await saveNoteBeforePathChange(useNoteStore.getState, note.id);
+        if (savedContent !== undefined) savedContents.set(note.id, savedContent);
       }
-      await flushAllDebouncedSaves(useNoteStore.getState);
       if (!isCurrentWorkspaceReady(workspacePath)) return;
 
       await watcherIpc.pause(workspacePath);
@@ -243,17 +244,34 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
         };
       });
 
-      useNoteStore.getState().notes.forEach((note) => {
-        if (note.folderId === newFolderId || note.folderId?.startsWith(`${newFolderId}/`)) {
-          setLastSavedContent(note.id, note.content);
-        }
-      });
+      for (const [noteId, content] of savedContents) {
+        setLastSavedContent(`${newNotePrefix}${noteId.slice(oldNotePrefix.length)}`, content);
+      }
 
       const pinnedNoteIds = useNoteStore
         .getState()
         .notes.filter((note) => note.isPinned)
         .map((note) => note.id);
       await configIpc.setPinnedNotes(workspacePath, pinnedNoteIds);
+
+      const movedNotes = useNoteStore.getState().notes.filter((note) => note.filePath?.startsWith(newFolderPathPrefix));
+      const reads = await Promise.allSettled(movedNotes.map((note) => fileIpc.read(note.filePath!)));
+      if (!isCurrentWorkspaceReady(workspacePath)) return;
+      const contents = new Map<string, string>();
+      reads.forEach((result, index) => {
+        if (result.status === "fulfilled") contents.set(movedNotes[index].id, result.value.content);
+      });
+      useNoteStore.setState((state) => ({
+        notes: state.notes.map((note) => {
+          const content = contents.get(note.id);
+          if (content === undefined) return note;
+          return { ...note, content, github: parseGitHubMetadata(content) };
+        }),
+        editorContent: (state.selectedNoteId && contents.get(state.selectedNoteId)) ?? state.editorContent
+      }));
+      contents.forEach((content, noteId) => setLastSavedContent(noteId, content));
+      const failedRead = reads.find((result) => result.status === "rejected");
+      if (failedRead?.status === "rejected") throw failedRead.reason;
     } catch (error) {
       toast.error(i18n.t("note:errors.renameFolderFailed"));
       throw error;

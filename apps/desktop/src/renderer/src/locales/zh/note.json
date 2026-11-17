@@ -152,6 +152,15 @@
     "importSuccess": "已导入 {{count}} 个文件",
     "importSuccessWithSkipped": "已导入 {{importedCount}} 个，跳过 {{skippedCount}} 个"
   },
+  "conflict": {
+    "title": "检测到外部修改冲突",
+    "description": "自动保存已暂停。保留本地草稿为一篇独立笔记，然后加载磁盘上的最新版本；原文件不会被覆盖。",
+    "local": "本地草稿",
+    "external": "外部版本",
+    "unavailable": "文件已删除或暂时无法读取，处理时会重新检查。",
+    "keepBoth": "保留本地副本并加载外部版本",
+    "resolved": "本地草稿已另存为冲突副本"
+  },
   "github": {
     "publishInProgress": "有笔记正在发布，请完成后重试。",
     "pushSuccess": "推送成功：{{url}}",

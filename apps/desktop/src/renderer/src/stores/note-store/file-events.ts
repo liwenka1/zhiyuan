@@ -2,7 +2,14 @@ import type { NoteStoreGet, NoteStoreSet } from "./types";
 import { handleFileAdded, handleFileChanged } from "@/lib/file-watcher";
 import { useWorkspaceStore } from "../use-workspace-store";
 import { useFolderStore } from "../use-folder-store";
-import { clearPendingSave, getLastSavedContent, setLastSavedContent } from "./persistence";
+import {
+  clearPendingSave,
+  getLastSavedContent,
+  hasPendingSave,
+  isOwnSaveContent,
+  recordSaveConflict,
+  setLastSavedContent
+} from "./persistence";
 import { parseGitHubMetadata } from "@/lib/github-metadata";
 import { toast } from "sonner";
 import i18n from "@/lib/i18n";
@@ -55,7 +62,12 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
 
       const lastSavedContent = getLastSavedContent(filePath) ?? note.content;
       const displayedContent = get().selectedNoteId === filePath ? get().editorContent : note.content;
-      if (note.content !== lastSavedContent || displayedContent !== lastSavedContent) {
+      if (
+        (note.filePath && hasPendingSave(note.filePath)) ||
+        note.content !== lastSavedContent ||
+        displayedContent !== lastSavedContent
+      ) {
+        recordSaveConflict(note.id, note.filePath!, displayedContent, null);
         toast.warning(i18n.t("note:errors.externalChangeConflict"));
         return;
       }
@@ -90,16 +102,7 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       const note = get().notes.find((n) => n.id === filePath);
       if (!workspacePath || !note || note.filePath !== fullPath) return;
 
-      const { selectedNoteId, editorContent } = get();
-      const originalContent = note.content;
-      const originalUpdatedAt = note.updatedAt;
-      const lastSavedContent = getLastSavedContent(filePath) ?? originalContent;
-      const displayedContent = selectedNoteId === filePath ? editorContent : originalContent;
-
-      if (originalContent !== lastSavedContent || displayedContent !== lastSavedContent) {
-        toast.warning(i18n.t("note:errors.externalChangeConflict"));
-        return;
-      }
+      const lastSavedContent = getLastSavedContent(filePath) ?? note.content;
 
       const readToken = Symbol("file-change-read");
       pendingFileReads.set(filePath, readToken);
@@ -120,20 +123,21 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
         const currentSavedContent = getLastSavedContent(filePath) ?? lastSavedContent;
         const currentDisplayedContent =
           current.selectedNoteId === filePath ? current.editorContent : currentNote.content;
+        // Read before deciding: dirty notes can also receive their own save notifications.
+        if (content === currentSavedContent || isOwnSaveContent(fullPath, content)) return;
+        if (currentSavedContent !== lastSavedContent) return;
         if (
-          currentNote.content !== originalContent ||
-          currentNote.updatedAt !== originalUpdatedAt ||
+          hasPendingSave(fullPath) ||
           currentNote.content !== currentSavedContent ||
           currentDisplayedContent !== currentSavedContent
         ) {
+          recordSaveConflict(filePath, fullPath, currentDisplayedContent, content);
           toast.warning(i18n.t("note:errors.externalChangeConflict"));
           return;
         }
 
         // A filesystem event may be our own atomic save or a real external write.
         // Compare bytes instead of dropping all changes within a time window.
-        if (content === currentSavedContent) return;
-
         set((state) => {
           const targetNote = state.notes.find((n) => n.id === filePath);
           if (targetNote) {

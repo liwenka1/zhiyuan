@@ -29,7 +29,8 @@ vi.mock("@/lib/github-metadata", () => ({
 
 import {
   applyPersistence,
-  flushAllDebouncedSaves
+  flushAllDebouncedSaves,
+  setLastSavedContent
 } from "../../apps/desktop/src/renderer/src/stores/note-store/persistence";
 
 interface TestNote {
@@ -66,6 +67,7 @@ function createTestStore(note: TestNote): TestStore {
     else Object.assign(state, update);
   };
   const get = () => state;
+  setLastSavedContent(note.id, note.content);
   const actions = applyPersistence(set as never, get as never);
   Object.assign(state, actions);
   return { state, get, actions };
@@ -151,7 +153,7 @@ describe("note persistence queue", () => {
     await flushAllDebouncedSaves(get as never);
 
     expect(state.editorContent).toBe("draft");
-    expect(writeMock).toHaveBeenCalledWith("/workspace/note.md", "draft");
+    expect(writeMock).toHaveBeenCalledWith("/workspace/note.md", "draft", "old");
   });
 
   it("drains edits queued during a flush and cancels their stale debounce callbacks", async () => {
@@ -172,7 +174,7 @@ describe("note persistence queue", () => {
       actions.updateNoteContent("second");
       writing.resolve();
       await flushing;
-      expect(writeMock).toHaveBeenLastCalledWith("/workspace/flush.md", "second");
+      expect(writeMock).toHaveBeenLastCalledWith("/workspace/flush.md", "second", "first");
       const count = writeMock.mock.calls.length;
       await vi.advanceTimersByTimeAsync(501);
       expect(writeMock).toHaveBeenCalledTimes(count);

@@ -102,6 +102,6 @@ describe("switching a selected note before a filesystem event arrives", () => {
     state.updateNoteContent("disk a");
     state.selectNote("b.md");
     await flushAllDebouncedSaves(() => state);
-    expect(write).toHaveBeenCalledWith(path.join(root, "a.md"), "disk a");
+    expect(write).toHaveBeenCalledWith(path.join(root, "a.md"), "disk a", "disk a");
   });
 });

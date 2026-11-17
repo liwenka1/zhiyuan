@@ -3,6 +3,15 @@ import path from "path";
 import crypto from "crypto";
 import { shell } from "electron";
 
+export class FileContentConflictError extends Error {
+  readonly code = "FILE_CONTENT_CONFLICT";
+
+  constructor() {
+    super("File content changed outside the editor");
+    this.name = "FileContentConflictError";
+  }
+}
+
 async function isCaseOnlyRename(oldPath: string, newPath: string): Promise<boolean> {
   const oldResolved = path.resolve(oldPath);
   const newResolved = path.resolve(newPath);
@@ -50,8 +59,8 @@ export const fileSystem = {
   /**
    * 写入文件内容
    */
-  async writeFile(filePath: string, content: string): Promise<{ mtime: number }> {
-    await this.writeFileAtomic(filePath, content);
+  async writeFile(filePath: string, content: string, expectedContent?: string): Promise<{ mtime: number }> {
+    await this.writeFileAtomic(filePath, content, expectedContent);
     const stats = await fs.promises.stat(filePath);
     return {
       mtime: stats.mtimeMs
@@ -73,7 +82,15 @@ export const fileSystem = {
    * 通过同目录临时文件 + rename 原子提交内容。
    * 同目录保证 rename 在同一文件系统内完成，崩溃时不会留下半个 Markdown 文件。
    */
-  async writeFileAtomic(filePath: string, content: string): Promise<void> {
+  async writeFileAtomic(filePath: string, content: string, expectedContent?: string): Promise<void> {
+    const checkContent = async (): Promise<boolean> => {
+      const currentContent = await fs.promises.readFile(filePath, "utf8");
+      if (currentContent === content) return true;
+      if (currentContent !== expectedContent) throw new FileContentConflictError();
+      return false;
+    };
+    // A missing file must not be recreated by a delayed editor save.
+    if (expectedContent !== undefined && (await checkContent())) return;
     const dir = path.dirname(filePath);
     await fs.promises.mkdir(dir, { recursive: true });
     const tempPath = path.join(
@@ -102,6 +119,9 @@ export const fileSystem = {
       } finally {
         await handle.close();
       }
+      // Check again after preparing the replacement, close to the actual commit.
+      // A watcher notification is asynchronous and cannot authorize a stale write.
+      if (expectedContent !== undefined && (await checkContent())) return;
       // rename 支持替换已有文件；若被权限或文件锁阻止，保留原文件并向调用方报告失败。
       // 不能先删除目标再重试，否则重试失败时原稿与临时文件会同时丢失。
       await fs.promises.rename(tempPath, filePath);
