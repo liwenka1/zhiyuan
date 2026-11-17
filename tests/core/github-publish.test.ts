@@ -1,25 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Note } from "../../apps/desktop/src/renderer/src/types";
 
-const { noteState, workspaceState, githubState, pushMock, updateContentMock, saveMock } = vi.hoisted(() => {
-  const updateContentMock = vi.fn();
-  const saveMock = vi.fn();
-  return {
-    noteState: {
-      notes: [] as Note[],
-      updateNoteContentById: updateContentMock,
-      saveNoteToFileSystem: saveMock,
-      deleteNote: vi.fn(),
-      duplicateNote: vi.fn(),
-      togglePinNote: vi.fn()
-    },
-    workspaceState: { workspacePath: "/workspace" },
-    githubState: { owner: "owner", repo: "repo", activeProjectKey: "project", isLoaded: true, load: vi.fn() },
-    pushMock: vi.fn(),
-    updateContentMock,
-    saveMock
-  };
-});
+const { noteState, workspaceState, githubState, pushMock, releaseMock, updateContentMock, saveMock } = vi.hoisted(
+  () => {
+    const updateContentMock = vi.fn();
+    const saveMock = vi.fn();
+    return {
+      noteState: {
+        notes: [] as Note[],
+        updateNoteContentById: updateContentMock,
+        saveNoteToFileSystem: saveMock,
+        deleteNote: vi.fn(),
+        duplicateNote: vi.fn(),
+        togglePinNote: vi.fn()
+      },
+      workspaceState: { workspacePath: "/workspace" },
+      githubState: { owner: "owner", repo: "repo", activeProjectKey: "project", isLoaded: true, load: vi.fn() },
+      pushMock: vi.fn(),
+      releaseMock: vi.fn(),
+      updateContentMock,
+      saveMock
+    };
+  }
+);
 
 vi.mock("@/stores", () => ({
   useNoteStore: Object.assign((selector: (state: typeof noteState) => unknown) => selector(noteState), {
@@ -33,7 +36,12 @@ vi.mock("@/stores", () => ({
 vi.mock("@/features/export", () => ({ useNoteExport: () => ({ exportNote: vi.fn(), copyToWechat: vi.fn() }) }));
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
-vi.mock("@/ipc", () => ({ githubIpc: { pushIssue: pushMock }, shellIpc: {}, fileIpc: {}, configIpc: {} }));
+vi.mock("@/ipc", () => ({
+  githubIpc: { pushIssue: pushMock, releasePublication: releaseMock },
+  shellIpc: {},
+  fileIpc: {},
+  configIpc: {}
+}));
 vi.mock("@/lib/markdown-assets", () => ({ collectLocalMarkdownAssets: () => [], replaceMarkdownAssetUrls: vi.fn() }));
 vi.mock("@/lib/github-assets", () => ({ uploadMarkdownAssets: vi.fn() }));
 vi.mock("@/stores/note-store/persistence", () => ({ clearDebouncedSave: vi.fn(), clearPendingSave: vi.fn() }));
@@ -52,16 +60,27 @@ function createHandlers() {
 }
 
 function holdPush() {
-  let resolve!: (value: { issueNumber: number; issueUrl: string; isNew: boolean }) => void;
+  let resolve!: (value: { issueNumber: number; issueUrl: string; isNew: boolean; publicationId: string }) => void;
   pushMock.mockReturnValueOnce(new Promise((complete) => (resolve = complete)));
-  return () => resolve({ issueNumber: 12, issueUrl: "https://github.com/owner/repo/issues/12", isNew: true });
+  return () =>
+    resolve({
+      issueNumber: 12,
+      issueUrl: "https://github.com/owner/repo/issues/12",
+      isNew: true,
+      publicationId: "publication-12"
+    });
 }
 
 describe("GitHub publishing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     pushMock.mockReset();
-    pushMock.mockResolvedValue({ issueNumber: 12, issueUrl: "https://github.com/owner/repo/issues/12", isNew: true });
+    pushMock.mockResolvedValue({
+      issueNumber: 12,
+      issueUrl: "https://github.com/owner/repo/issues/12",
+      isNew: true,
+      publicationId: "publication-12"
+    });
     noteState.notes = [
       { id: "note.md", fileName: "note.md", filePath: "/workspace/note.md", title: "note", content: "original" }
     ];
@@ -71,6 +90,7 @@ describe("GitHub publishing", () => {
     githubState.isLoaded = true;
     githubState.load.mockReset();
     saveMock.mockReset().mockResolvedValue(undefined);
+    releaseMock.mockReset().mockResolvedValue(undefined);
   });
 
   it("applies returned metadata to the latest local content after an in-flight edit", async () => {
@@ -166,8 +186,10 @@ describe("GitHub publishing", () => {
       "/workspace/note.md"
     );
     expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(true);
+    expect(releaseMock).not.toHaveBeenCalled();
     finishWriting();
     await publishing;
+    expect(releaseMock).toHaveBeenCalledExactlyOnceWith("publication-12");
     expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(false);
   });
 
@@ -186,6 +208,14 @@ describe("GitHub publishing", () => {
     expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(false);
     await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
     expect(pushMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("releases the main-process lease when the local metadata commit fails", async () => {
+    saveMock.mockRejectedValueOnce(new Error("disk changed"));
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+    expect(pushMock).toHaveBeenCalledWith(expect.objectContaining({ sourcePath: "/workspace/note.md" }));
+    expect(releaseMock).toHaveBeenCalledExactlyOnceWith("publication-12");
+    expect(isPublishingPath("/workspace", "/workspace/note.md")).toBe(false);
   });
 
   it("allows a different note to publish and perform file operations independently", async () => {

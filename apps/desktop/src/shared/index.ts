@@ -20,7 +20,7 @@ export {
 export type { IpcError, IpcResultDTO } from "./ipc";
 export type { GitHubConfig, GitHubProjectConfigMap, GitHubIssuePushRequest, GitHubIssuePushResult } from "./github";
 export type { GitHubMetadata } from "./github-metadata";
-export { parseGitHubMetadata } from "./github-metadata";
+export { parseGitHubMetadata, getGitHubIssueNumberForRepository } from "./github-metadata";
 export {
   isValidFileNameSegment,
   isValidWorkspaceEntryName,
