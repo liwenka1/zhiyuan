@@ -70,7 +70,19 @@ export function PreviewContent({ content, notePath, noteId, noteTitle }: Preview
   }, [content, exportLayout, exportThemeId, notePath, noteTitle, shouldRenderExportPreview, t]);
 
   return (
-    <ScrollArea className="h-full" id={noteId ? `preview-scroll-area-${noteId}` : "preview-scroll-area"}>
+    <ScrollArea
+      className="h-full"
+      id={noteId ? `preview-scroll-area-${noteId}` : "preview-scroll-area"}
+      viewportRender={(props) => (
+        <div
+          {...props}
+          data-note-preview
+          tabIndex={props.tabIndex ?? -1}
+          role="region"
+          aria-label={noteTitle || t("toolbar.preview")}
+        />
+      )}
+    >
       <div style={{ display: exportPreview ? "none" : "block" }}>
         <MarkdownPreview content={content} notePath={notePath} noteId={noteId} />
       </div>

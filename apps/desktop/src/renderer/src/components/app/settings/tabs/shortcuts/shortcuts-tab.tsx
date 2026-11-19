@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { SettingSection } from "../../shared/setting-section";
 import { SettingRow } from "../../shared/setting-row";
 import { useShortcutsStore } from "@/stores";
@@ -13,6 +14,7 @@ import {
   getShortcutBindingKey,
   resolveLabel,
   type ShortcutBinding,
+  type ShortcutId,
   type MenuLocale
 } from "@shared";
 import { shortcutsMeta, shortcutGroups, shortcutsMetaById } from "@/lib/shortcuts-meta";
@@ -25,19 +27,15 @@ export function ShortcutsTab() {
   const resetShortcut = useShortcutsStore((state) => state.resetShortcut);
   const [isRecording, setIsRecording] = useState(false);
   const [pendingBinding, setPendingBinding] = useState<ShortcutBinding | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [pendingShortcutId, setPendingShortcutId] = useState<(typeof shortcutsMeta)[number]["id"] | null>(null);
+  const [pendingShortcutId, setPendingShortcutId] = useState<ShortcutId | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const captureRef = useRef<HTMLDivElement>(null);
   const editButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  useEffect(() => {
-    if (!dialogOpen) return;
-    captureRef.current?.focus();
-  }, [dialogOpen]);
 
   const isMac = useMemo(() => navigator.userAgent.toLowerCase().includes("mac"), []);
   const activeShortcutId = pendingShortcutId ?? "toggleTerminal";
@@ -68,6 +66,7 @@ export function ShortcutsTab() {
           action: resolveLabel(reservedMenuConflict.label, menuLocale)
         })
       : null;
+  const canConfirm = Boolean(pendingBinding && pendingShortcutId && !conflictMessage && !isSaving);
   const grouped = useMemo(
     () =>
       shortcutGroups.map((group) => ({
@@ -77,52 +76,58 @@ export function ShortcutsTab() {
     []
   );
 
-  const resetDialogState = () => {
-    setIsRecording(false);
-    setPendingBinding(null);
-  };
-
-  const handleStartRecord = (event: React.MouseEvent<HTMLButtonElement>, id: string) => {
-    event.currentTarget.blur();
+  const startRecording = () => {
+    if (isSaving) return;
     setIsRecording(true);
     setPendingBinding(null);
-    setPendingShortcutId(id as (typeof shortcutsMeta)[number]["id"]);
-    setDialogOpen(true);
+    setSaveFailed(false);
   };
 
-  const handleCancelRecord = () => {
-    resetDialogState();
-    setPendingShortcutId(null);
-    setDialogOpen(false);
+  const handleStartRecord = (event: React.MouseEvent<HTMLButtonElement>, id: ShortcutId) => {
+    editButtonRef.current = event.currentTarget;
+    setPendingShortcutId(id);
+    startRecording();
   };
 
-  const handleReset = (id: string) => {
-    resetDialogState();
-    void resetShortcut(id as (typeof shortcutsMeta)[number]["id"]);
-  };
-
-  const handleConfirm = () => {
-    if (!pendingBinding || !pendingShortcutId) return;
-    void setShortcut(pendingShortcutId, pendingBinding);
+  const closeRecorder = () => {
+    setIsRecording(false);
     setPendingBinding(null);
     setPendingShortcutId(null);
-    setDialogOpen(false);
+    setSaveFailed(false);
+  };
+
+  const handleReset = async (id: ShortcutId) => {
+    if (!(await resetShortcut(id))) toast.error(t("settings.shortcutsSaveFailed"));
+  };
+
+  const handleConfirm = async () => {
+    if (!canConfirm || !pendingShortcutId || !pendingBinding) return;
+    setIsSaving(true);
+    setSaveFailed(false);
+    const saved = await setShortcut(pendingShortcutId, pendingBinding);
+    setIsSaving(false);
+    if (saved) {
+      closeRecorder();
+    } else {
+      setSaveFailed(true);
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Enter" && pendingBinding) {
       event.preventDefault();
       event.stopPropagation();
-      handleConfirm();
+      if (!event.repeat && !event.nativeEvent.isComposing) void handleConfirm();
       return;
     }
 
-    if (!isRecording) return;
+    if (!isRecording || event.nativeEvent.isComposing) return;
     event.preventDefault();
     event.stopPropagation();
+    if (event.repeat) return;
 
     if (event.key === "Escape") {
-      handleCancelRecord();
+      closeRecorder();
       return;
     }
 
@@ -156,18 +161,6 @@ export function ShortcutsTab() {
     setPendingBinding(next);
   };
 
-  const handleDialogOpenChange = (open: boolean) => {
-    setDialogOpen(open);
-    if (!open) {
-      resetDialogState();
-      setPendingShortcutId(null);
-      editButtonRef.current?.blur();
-    }
-  };
-
-  const handleStartRecordForId = (id: string) => (event: React.MouseEvent<HTMLButtonElement>) =>
-    handleStartRecord(event, id);
-
   return (
     <div>
       {grouped.map(({ group, items }) => (
@@ -187,16 +180,15 @@ export function ShortcutsTab() {
                     type="button"
                     size="xs"
                     variant="outline"
-                    onClick={handleStartRecordForId(item.id)}
+                    onClick={(event) => handleStartRecord(event, item.id)}
                     aria-pressed={isRecording && pendingShortcutId === item.id}
                     aria-label={t("settings.shortcutsEdit")}
-                    ref={editButtonRef}
                   >
                     {isRecording && pendingShortcutId === item.id
                       ? t("settings.shortcutsRecording")
                       : t("settings.shortcutsEdit")}
                   </Button>
-                  <Button type="button" size="xs" variant="ghost" onClick={() => handleReset(item.id)}>
+                  <Button type="button" size="xs" variant="ghost" onClick={() => void handleReset(item.id)}>
                     {t("settings.shortcutsReset")}
                   </Button>
                 </div>
@@ -206,16 +198,16 @@ export function ShortcutsTab() {
         </SettingSection>
       ))}
       <ShortcutRecorderDialog
-        open={dialogOpen}
-        onOpenChange={handleDialogOpenChange}
-        onKeyDown={handleKeyDown}
-        onStart={() => {
-          setIsRecording(true);
-          setPendingBinding(null);
+        open={pendingShortcutId !== null}
+        onOpenChange={(open) => {
+          if (!open && !isSaving) closeRecorder();
         }}
-        onCancel={handleCancelRecord}
-        onConfirm={handleConfirm}
+        onKeyDown={handleKeyDown}
+        onStart={startRecording}
+        onCancel={closeRecorder}
+        onConfirm={() => void handleConfirm()}
         captureRef={captureRef}
+        editButtonRef={editButtonRef}
         title={t("settings.shortcutsDialogTitle")}
         description={t("settings.shortcutsRecordingHint")}
         idleText={t("settings.shortcutsDialogIdle")}
@@ -225,9 +217,11 @@ export function ShortcutsTab() {
         confirmLabel={t("settings.shortcutsConfirm")}
         cancelLabel={t("settings.shortcutsCancel")}
         isRecording={isRecording}
-        pendingBinding={pendingBinding}
+        isSaving={isSaving}
+        hasPendingBinding={pendingBinding !== null}
+        canConfirm={canConfirm}
         parts={pendingParts}
-        errorText={conflictMessage}
+        errorText={conflictMessage ?? (saveFailed ? t("settings.shortcutsSaveFailed") : undefined)}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { useLanguageStore } from "@/stores/use-language-store";
 
 // 导入翻译文件
 import zhCommon from "@/locales/zh/common.json";
@@ -32,7 +33,7 @@ i18n.use(initReactI18next).init({
       ui: enUI
     }
   },
-  lng: "zh", // 默认语言
+  lng: useLanguageStore.getState().language,
   fallbackLng: "zh", // 回退语言
   ns: ["common", "sidebar", "note", "editor", "ui"], // 命名空间
   defaultNS: "common", // 默认命名空间

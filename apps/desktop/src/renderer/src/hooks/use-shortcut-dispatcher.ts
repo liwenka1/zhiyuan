@@ -6,6 +6,7 @@ import { createShortcutActions, type ShortcutActionContext } from "@/actions/sho
 interface ShortcutDispatcherOptions {
   context: ShortcutActionContext;
   enabled?: boolean;
+  allowedShortcuts?: ReadonlySet<ShortcutId>;
 }
 
 const MODIFIER_KEYS = new Set([
@@ -19,32 +20,41 @@ const MODIFIER_KEYS = new Set([
   "MetaRight"
 ]);
 
+const editorShortcutHandlers = new WeakMap<Window, (event: KeyboardEvent) => boolean>();
+
+export function dispatchEditorShortcut(event: KeyboardEvent): boolean {
+  return editorShortcutHandlers.get(window)?.(event) ?? false;
+}
+
 function shouldIgnoreEvent(target: EventTarget | null, event: KeyboardEvent) {
   if (!(target instanceof HTMLElement)) return false;
   if (target.closest?.(".xterm")) return false;
   const tag = target.tagName.toLowerCase();
   if (tag === "input" || tag === "textarea" || tag === "select") return true;
-  if (target.closest?.('[data-slot="dialog-content"]')) return true;
+  if (target.closest?.('[role="dialog"], [role="alertdialog"]')) return true;
   if (target.isContentEditable) {
     if (!event.ctrlKey && !event.metaKey && !event.altKey) return true;
   }
   return false;
 }
 
-export function useShortcutDispatcher({ context, enabled = true }: ShortcutDispatcherOptions) {
+export function useShortcutDispatcher({ context, enabled = true, allowedShortcuts }: ShortcutDispatcherOptions) {
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const actions = useMemo(() => createShortcutActions(context).actions, [context]);
 
   useEffect(() => {
     if (!enabled) return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (shouldIgnoreEvent(event.target, event)) return;
-      if (MODIFIER_KEYS.has(event.code)) return;
+    const handleKeyDown = (event: KeyboardEvent): boolean => {
+      if (event.defaultPrevented || event.isComposing || shouldIgnoreEvent(event.target, event)) {
+        return false;
+      }
+      if (MODIFIER_KEYS.has(event.code)) return false;
 
       const entries = Object.entries(shortcuts) as [ShortcutId, ShortcutConfig[ShortcutId]][];
       const isMac = navigator.userAgent.toLowerCase().includes("mac");
       for (const [id, binding] of entries) {
+        if (allowedShortcuts && !allowedShortcuts.has(id)) continue;
         const normalized = isMac ? normalizeShortcutBinding(binding, id, "mac") : binding;
         if (
           event.code === normalized.code &&
@@ -54,13 +64,18 @@ export function useShortcutDispatcher({ context, enabled = true }: ShortcutDispa
           event.metaKey === normalized.meta
         ) {
           event.preventDefault();
-          actions[id]?.();
-          return;
+          if (!event.repeat) actions[id]?.();
+          return true;
         }
       }
+      return false;
     };
 
+    editorShortcutHandlers.set(window, handleKeyDown);
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [actions, enabled, shortcuts]);
+    return () => {
+      editorShortcutHandlers.delete(window);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [actions, allowedShortcuts, enabled, shortcuts]);
 }

@@ -123,8 +123,7 @@ export function createLoaders(set: NoteStoreSet, get: NoteStoreGet) {
         editorContent: preserveUiState && selectedNote ? selectedNote.content : "",
         openNoteIds: preserveUiState ? current.openNoteIds.filter((id) => availableIds.has(id)) : [],
         playingNoteIds: preserveUiState ? current.playingNoteIds.filter((id) => availableIds.has(id)) : [],
-        isLoadingFromFileSystem: false,
-        searchKeyword: preserveUiState ? current.searchKeyword : ""
+        isLoadingFromFileSystem: false
       });
     }
   };

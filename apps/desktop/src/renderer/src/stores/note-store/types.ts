@@ -8,7 +8,6 @@ export interface NoteStoreState {
   playingNoteIds: string[];
   savingNoteIds: Set<string>;
   isLoadingFromFileSystem: boolean;
-  searchKeyword: string;
 }
 
 export interface MoveNoteOptions {
@@ -27,7 +26,7 @@ export type NoteLoadSnapshot = ReadonlyMap<string, { content: string; savedConte
 export interface NoteStore extends NoteStoreState {
   setNotes: (notes: Note[]) => void;
   selectNote: (noteId: string) => void;
-  createNote: (folderId?: string, title?: string) => Promise<void>;
+  createNote: (folderId?: string, title?: string) => Promise<string | undefined>;
   updateNoteContent: (content: string) => void;
   updateNoteContentById: (noteId: string, content: string) => void;
   formatCurrentNote: () => Promise<void>;
@@ -36,8 +35,6 @@ export interface NoteStore extends NoteStoreState {
   duplicateNote: (noteId: string) => Promise<void>;
   togglePinNote: (noteId: string) => Promise<void>;
   moveNote: (noteId: string, targetFolderId: string, options?: MoveNoteOptions) => Promise<MoveNoteResult>;
-
-  setSearchKeyword: (keyword: string) => void;
 
   loadFromFileSystem: (
     data: { notes: Note[] },

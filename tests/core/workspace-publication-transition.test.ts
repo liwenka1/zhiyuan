@@ -141,8 +141,7 @@ describe("publishing before committing a workspace transition", () => {
       openNoteIds: [],
       playingNoteIds: [],
       savingNoteIds: new Set(),
-      isLoadingFromFileSystem: false,
-      searchKeyword: ""
+      isLoadingFromFileSystem: false
     } as unknown as NoteStore;
     const get = () => harness.state;
     const set: NoteStoreSet = (update) => {

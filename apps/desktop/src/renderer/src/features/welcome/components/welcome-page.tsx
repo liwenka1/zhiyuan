@@ -1,20 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import { FolderOpen, FileText } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
-import { DropHoverMask, TitleBar, SettingsPopover } from "@/components/app";
+import { DropHoverMask } from "@/components/app";
 import { Logo } from "@/components/icons";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceStore } from "@/stores";
-import { useMarkdownFileDrop, usePlatform } from "@/hooks";
+import { useMarkdownFileDrop } from "@/hooks";
 import { workspaceIpc } from "@/ipc";
 
-export function WelcomePage() {
+export function WelcomePage({ settingsButton }: { settingsButton: ReactNode }) {
   const { t } = useTranslation("common");
   const { t: tEditor } = useTranslation("editor");
-  const { isMac, isWindows } = usePlatform();
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([]);
@@ -90,23 +89,13 @@ export function WelcomePage() {
 
   return (
     <div
-      className="bg-background relative flex h-screen w-full flex-col"
+      className="bg-background relative flex h-full w-full flex-col"
       onDragEnter={dragHandlers.onDragEnter}
       onDragOver={dragHandlers.onDragOver}
       onDragLeave={dragHandlers.onDragLeave}
       onDrop={dragHandlers.onDrop}
-      style={{
-        paddingTop: isMac
-          ? "var(--titlebar-height-mac)"
-          : isWindows
-            ? "calc(var(--titlebar-height-windows) + 1px)"
-            : "0px"
-      }}
     >
-      <TitleBar />
       <DropHoverMask visible={isFileDropHover} bottomGapPx={0} />
-
-      {isWindows && <div className="border-border border-t" />}
 
       <div className="flex flex-1 items-center justify-center select-none">
         <div className="relative flex w-full max-w-sm flex-col items-center">
@@ -208,15 +197,13 @@ export function WelcomePage() {
           )}
         </div>
       </div>
-
-      {/* 底部设置 */}
       <motion.div
         className="flex shrink-0 items-center justify-center pb-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3, delay: 0.4 }}
       >
-        <SettingsPopover />
+        {settingsButton}
       </motion.div>
     </div>
   );

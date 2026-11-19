@@ -1,5 +1,4 @@
 {
-  "search": "Search",
   "newNote": "New Note",
   "createFromUrl": "Create from URL",
   "toggleFolderSidebar": "Toggle Folder List",
@@ -9,9 +8,7 @@
   "pagesSuffix": "Pages",
   "copySuffix": "Copy",
   "emptyState": {
-    "noResults": "No matching notes found",
     "noNotes": "No notes yet",
-    "tryOtherKeywords": "Try using different keywords",
     "createOrSelect": "Select a folder or create a new note"
   },
   "contextMenu": {

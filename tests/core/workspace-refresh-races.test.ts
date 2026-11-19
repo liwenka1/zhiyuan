@@ -13,10 +13,11 @@ const {
   unsubscribeMock,
   folderDeleteMock,
   flushMock,
-  selectNoteMock,
+  createNoteMock,
+  openNoteMock,
   dismissMock
 } = vi.hoisted(() => ({
-  workspaceState: { workspacePath: "/workspace-a" },
+  workspaceState: { workspacePath: "/workspace-a", revision: 1, isLoading: false },
   scanMock: vi.fn(),
   loadMock: vi.fn(),
   foldersMock: vi.fn(),
@@ -27,7 +28,8 @@ const {
   unsubscribeMock: vi.fn(),
   folderDeleteMock: vi.fn(),
   flushMock: vi.fn(),
-  selectNoteMock: vi.fn(),
+  createNoteMock: vi.fn(),
+  openNoteMock: vi.fn(),
   dismissMock: vi.fn()
 }));
 
@@ -35,8 +37,7 @@ vi.mock("@/stores", () => {
   const noteState = {
     notes: [],
     loadFromFileSystem: loadMock,
-    selectNote: selectNoteMock,
-    createNote: vi.fn(),
+    createNote: createNoteMock,
     renameNote: vi.fn()
   };
   const folderState = {
@@ -93,16 +94,17 @@ function folderHandlers() {
   });
 }
 
-function importDialog(type: "rss" | "url") {
+function confirmDialog(type: "note" | "rss" | "url") {
   const noop = vi.fn();
   const element = NoteDialogs({
+    onOpenNote: openNoteMock,
     showCreateFolderDialog: false,
     onCloseCreateFolderDialog: noop,
-    showCreateNoteDialog: false,
+    showCreateNoteDialog: type === "note",
     onCloseCreateNoteDialog: noop,
-    showRssImportDialog: true,
+    showRssImportDialog: type === "rss",
     onCloseRssImportDialog: noop,
-    showUrlCreateDialog: true,
+    showUrlCreateDialog: type === "url",
     onCloseUrlCreateDialog: noop,
     showRenameNoteDialog: false,
     noteToRename: null,
@@ -110,9 +112,8 @@ function importDialog(type: "rss" | "url") {
     showRenameFolderDialog: false,
     folderToRename: null,
     onCloseRenameFolderDialog: noop
-  }) as ReactElement<{ children: Array<ReactElement<{ title: string; onConfirm: (url: string) => Promise<void> }>> }>;
-  const title = type === "rss" ? "dialog.importRss.title" : "dialog.createFromUrl.title";
-  return element.props.children.find((child) => child.props.title === title)!.props.onConfirm;
+  }) as ReactElement<{ children: Array<ReactElement<{ open: boolean; onConfirm: (value: string) => Promise<void> }>> }>;
+  return element.props.children.find((child) => child.props.open)!.props.onConfirm;
 }
 
 const folder = { id: "rss", name: "rss", path: "/workspace-a/rss", isRss: true };
@@ -122,6 +123,7 @@ describe("workspace refresh operation ownership", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     workspaceState.workspacePath = "/workspace-a";
+    workspaceState.revision = 1;
     flushMock.mockResolvedValue(undefined);
     rssUpdateMock.mockResolvedValue({ addedCount: 1 });
     scanMock.mockResolvedValue(scanData);
@@ -205,7 +207,7 @@ describe("workspace refresh operation ownership", () => {
     const importing = deferred<unknown>();
     const importer = type === "rss" ? rssImportMock : urlImportMock;
     importer.mockReturnValue(importing.promise);
-    const operation = importDialog(type)("https://example.com");
+    const operation = confirmDialog(type)("https://example.com");
     await vi.waitFor(() => expect(importer).toHaveBeenCalledOnce());
     workspaceState.workspacePath = "/workspace-b";
     importing.resolve({ folderName: "rss", noteId: "note.md" });
@@ -213,7 +215,54 @@ describe("workspace refresh operation ownership", () => {
 
     expect(scanMock).not.toHaveBeenCalled();
     expect(foldersMock).not.toHaveBeenCalled();
-    expect(selectNoteMock).not.toHaveBeenCalled();
+    expect(openNoteMock).not.toHaveBeenCalled();
     expect(dismissMock).toHaveBeenCalled();
+  });
+
+  it("opens the new note returned by ordinary creation", async () => {
+    createNoteMock.mockResolvedValueOnce("new.md");
+
+    await confirmDialog("note")("new");
+
+    expect(createNoteMock).toHaveBeenCalledExactlyOnceWith(undefined, "new");
+    expect(openNoteMock).toHaveBeenCalledExactlyOnceWith("new.md");
+  });
+
+  it("opens a URL-created note after its workspace data is loaded", async () => {
+    urlImportMock.mockResolvedValueOnce({ noteId: "article" });
+    const article = { id: "article.md" };
+    scanMock.mockResolvedValueOnce({ ...scanData, notes: [article] });
+    const loading = deferred<void>();
+    loadMock.mockReturnValueOnce(loading.promise);
+    const operation = confirmDialog("url")("https://example.com");
+
+    await vi.waitFor(() => expect(loadMock).toHaveBeenCalledOnce());
+    expect(openNoteMock).not.toHaveBeenCalled();
+    loading.resolve();
+    await operation;
+
+    expect(openNoteMock).toHaveBeenCalledExactlyOnceWith(article.id);
+  });
+
+  it("leaves navigation untouched when note creation fails", async () => {
+    createNoteMock.mockResolvedValueOnce(undefined);
+    urlImportMock.mockRejectedValueOnce(new Error("Import failed"));
+
+    await confirmDialog("note")("new");
+    await confirmDialog("url")("https://example.com");
+
+    expect(openNoteMock).not.toHaveBeenCalled();
+  });
+
+  it("does not navigate on completion from an earlier visit to the same workspace", async () => {
+    const creating = deferred<string>();
+    createNoteMock.mockReturnValueOnce(creating.promise);
+    const operation = confirmDialog("note")("new");
+
+    workspaceState.revision += 2;
+    creating.resolve("new.md");
+    await operation;
+
+    expect(openNoteMock).not.toHaveBeenCalled();
   });
 });

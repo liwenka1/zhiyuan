@@ -1,5 +1,9 @@
-import { keymap } from "@codemirror/view";
-import type { Extension } from "@codemirror/state";
+import { EditorView, keymap } from "@codemirror/view";
+import { Prec, type Extension } from "@codemirror/state";
+import { dispatchEditorShortcut } from "@/hooks/use-shortcut-dispatcher";
+
+// Let an enabled app binding handle the editor keydown before CodeMirror's own keymaps.
+const appShortcuts = Prec.highest(EditorView.domEventHandlers({ keydown: dispatchEditorShortcut }));
 
 /**
  * 创建自定义快捷键的 keymap
@@ -9,7 +13,7 @@ export function createCustomKeymapExtension(onOpenSearch?: () => void): Extensio
   // 创建一个通用的处理器，返回 true 表示已处理事件，阻止默认行为
   const disableHandler = () => true;
 
-  return keymap.of([
+  const editorKeymap = keymap.of([
     // 搜索快捷键 (Cmd+F / Ctrl+F) - 触发自定义搜索
     {
       key: "Mod-f",
@@ -29,4 +33,6 @@ export function createCustomKeymapExtension(onOpenSearch?: () => void): Extensio
     // 禁用 Alt+G (跳转到行)
     { key: "Alt-g", run: disableHandler }
   ]);
+
+  return [appShortcuts, editorKeymap];
 }

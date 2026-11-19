@@ -20,7 +20,7 @@ export function SettingRow({
     <Item
       variant="muted"
       size="sm"
-      className={`bg-muted/30 flex-nowrap gap-4 rounded-md ${hasDescription ? "items-start" : "items-center"}`}
+      className={`bg-muted/30 flex-col flex-nowrap items-stretch gap-2 rounded-md @lg:flex-row @lg:gap-4 ${hasDescription ? "@lg:items-start" : "@lg:items-center"}`}
     >
       <ItemContent className={`min-w-0 ${hasDescription ? "" : "gap-0"}`}>
         <ItemTitle className="text-foreground">{label}</ItemTitle>
@@ -29,7 +29,7 @@ export function SettingRow({
         ) : null}
       </ItemContent>
       <ItemActions
-        className={`w-[min(360px,45%)] max-w-full shrink-0 justify-end ${hasDescription ? "self-start" : "self-center"}`}
+        className={`w-full max-w-full shrink-0 @lg:w-[min(360px,45%)] @lg:justify-end ${hasDescription ? "@lg:self-start" : "@lg:self-center"}`}
       >
         {children}
       </ItemActions>

@@ -8,7 +8,6 @@ import {
   DialogHeader,
   DialogTitle
 } from "@/components/ui/dialog";
-import type { ShortcutBinding } from "@shared";
 
 function ShortcutKeys({ parts }: { parts: string[] }) {
   return (
@@ -31,7 +30,9 @@ export function ShortcutRecorderDialog({
   confirmLabel,
   cancelLabel,
   isRecording,
-  pendingBinding,
+  isSaving,
+  hasPendingBinding,
+  canConfirm,
   parts,
   errorText,
   onOpenChange,
@@ -39,7 +40,8 @@ export function ShortcutRecorderDialog({
   onStart,
   onCancel,
   onConfirm,
-  captureRef
+  captureRef,
+  editButtonRef
 }: {
   open: boolean;
   title: string;
@@ -51,7 +53,9 @@ export function ShortcutRecorderDialog({
   confirmLabel: string;
   cancelLabel: string;
   isRecording: boolean;
-  pendingBinding: ShortcutBinding | null;
+  isSaving: boolean;
+  hasPendingBinding: boolean;
+  canConfirm: boolean;
   parts: string[];
   errorText?: string | null;
   onOpenChange: (open: boolean) => void;
@@ -60,10 +64,17 @@ export function ShortcutRecorderDialog({
   onCancel: () => void;
   onConfirm: () => void;
   captureRef: React.RefObject<HTMLDivElement | null>;
+  editButtonRef: React.RefObject<HTMLButtonElement | null>;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent
+        className="sm:max-w-md"
+        initialFocus={captureRef}
+        finalFocus={editButtonRef}
+        showCloseButton={!isSaving}
+        aria-busy={isSaving}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -79,16 +90,18 @@ export function ShortcutRecorderDialog({
         </div>
         <div className="flex flex-col gap-1">
           <div className="flex min-h-4 items-center justify-between gap-3" aria-live="polite">
-            <span className="text-muted-foreground text-xs">{pendingBinding ? pendingLabel : currentLabel}</span>
-            <span className="text-destructive min-w-0 truncate text-right text-xs leading-4">{errorText ?? ""}</span>
+            <span className="text-muted-foreground shrink-0 text-xs">
+              {hasPendingBinding ? pendingLabel : currentLabel}
+            </span>
+            <span className="text-destructive min-w-0 text-right text-xs leading-4">{errorText}</span>
           </div>
           <ShortcutKeys parts={parts} />
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={isSaving}>
             {cancelLabel}
           </Button>
-          <Button onClick={onConfirm} disabled={!pendingBinding || !!errorText}>
+          <Button onClick={onConfirm} disabled={!canConfirm}>
             {confirmLabel}
           </Button>
         </DialogFooter>

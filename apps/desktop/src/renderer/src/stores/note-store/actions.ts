@@ -87,11 +87,9 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
       });
     },
 
-    setSearchKeyword: (keyword: string) => set({ searchKeyword: keyword }),
-
     createNote: async (folderId?: string, customTitle?: string) => {
-      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
-      const workspacePath = useWorkspaceStore.getState().workspacePath;
+      const { workspacePath, revision, isLoading } = useWorkspaceStore.getState();
+      if (isLoading || isEditingBlocked()) return;
 
       if (!workspacePath) {
         toast.error(i18n.t("note:errors.noWorkspace"));
@@ -142,12 +140,18 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
 
         await watcherIpc.pause(workspacePath);
         try {
-          if (!isCurrentWorkspaceReady(workspacePath)) return;
+          if (
+            !isCurrentWorkspaceReady(workspacePath) ||
+            useWorkspaceStore.getState().revision !== revision ||
+            isEditingBlocked()
+          ) {
+            return;
+          }
           await fileIpc.create(filePath, content);
         } finally {
           await watcherIpc.resume(workspacePath);
         }
-        if (!isCurrentWorkspaceReady(workspacePath)) return;
+        if (!isCurrentWorkspaceReady(workspacePath) || useWorkspaceStore.getState().revision !== revision) return;
 
         const newNote: Note = {
           id: filePath.replace(`${workspacePath}${pathSeparator}`, "").replaceAll("\\", "/"),
@@ -174,8 +178,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           state.editorContent = newNote.content;
         });
         setLastSavedContent(newNote.id, newNote.content);
+        return newNote.id;
       } catch {
         toast.error(i18n.t("note:errors.createNoteFailed"));
+        return undefined;
       }
     },
 

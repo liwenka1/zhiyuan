@@ -1,33 +1,140 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { Settings } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { NoteWorkspace } from "@/features/note-workspace";
 import { WelcomePage } from "@/features/welcome";
 import {
   useThemeStore,
   useViewStore,
   useWorkspaceStore,
+  useFolderStore,
   useNoteStore,
   useExportThemeStore,
   useExportLayoutStore,
   useShortcutsStore
 } from "@/stores";
 import { Toaster } from "@/components/ui/sonner";
+import { IconButton } from "@/components/ui/button";
 import { PresentationView } from "@/features/editor";
 import { workspaceIpc } from "@/ipc";
 import { useShortcutDispatcher } from "@/hooks/use-shortcut-dispatcher";
 import { useWindowClose } from "@/hooks/use-window-close";
 import { SaveConflictDialog } from "@/components/app/save-conflict-dialog";
+import { SettingsPage, TitleBar } from "@/components/app";
+import { WorkspaceSearch } from "@/components/app/workspace-search";
+import { isEditingBlocked, useOperationStore } from "@/stores/note-store/operation-guard";
+import type { ShortcutId } from "@shared";
+
+const WELCOME_SHORTCUTS: ReadonlySet<ShortcutId> = new Set(["openSettings"]);
+const SETTINGS_SHORTCUTS: ReadonlySet<ShortcutId> = new Set([
+  "openSettings",
+  "toggleNoteSearch",
+  "toggleFolderSidebar"
+]);
+
+interface SettingsSession {
+  returnFocusTo: HTMLElement | null;
+}
 
 function App(): React.JSX.Element {
   useWindowClose();
+  const { t } = useTranslation("common");
   const initTheme = useThemeStore((state) => state.initTheme);
   const cleanup = useThemeStore((state) => state.cleanup);
   const isPresentationMode = useViewStore((state) => state.isPresentationMode);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const isWorkspaceLoading = useWorkspaceStore((state) => state.isLoading);
+  const isOperationPending = useOperationStore((state) => state.fileOperationCount > 0 || state.closeRequestCount > 0);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
   const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
   const [showPresentation, setShowPresentation] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [settingsSession, setSettingsSession] = useState<SettingsSession | null>(null);
+  const [searchFocusRequest, setSearchFocusRequest] = useState(0);
+  const activeSettingsSession = useRef<SettingsSession | null>(null);
+  const settingsOpen = settingsSession !== null;
+
+  const dismissSettings = useCallback(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && active.closest("[data-settings-page]")) active.blur();
+    const returnTarget = activeSettingsSession.current?.returnFocusTo;
+    activeSettingsSession.current = null;
+    setSettingsSession(null);
+    return returnTarget;
+  }, []);
+
+  const closeSettings = useCallback(() => {
+    const returnTarget = dismissSettings();
+    requestAnimationFrame(() => {
+      if (activeSettingsSession.current) return;
+      if (returnTarget?.isConnected && returnTarget !== document.body && !returnTarget.closest("[inert]")) {
+        returnTarget.focus({ preventScroll: true });
+      } else {
+        const settingsToggle = document.querySelector<HTMLElement>("[data-settings-toggle]:enabled");
+        const fallback =
+          settingsToggle && !settingsToggle.closest("[inert]")
+            ? settingsToggle
+            : document.querySelector<HTMLElement>('button[aria-controls="workspace-folders"]');
+        fallback?.focus({ preventScroll: true });
+      }
+    });
+  }, [dismissSettings]);
+
+  const toggleSettings = () => {
+    if (activeSettingsSession.current) {
+      closeSettings();
+      return;
+    }
+    const session: SettingsSession = {
+      returnFocusTo: document.activeElement instanceof HTMLElement ? document.activeElement : null
+    };
+    activeSettingsSession.current = session;
+    setSettingsSession(session);
+  };
+
+  const openNote = useCallback(
+    (noteId: string) => {
+      if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return false;
+      const noteStore = useNoteStore.getState();
+      if (noteStore.selectedNoteId !== noteId) noteStore.selectNote(noteId);
+      if (useNoteStore.getState().selectedNoteId !== noteId) return false;
+      // Imports retain the callback from when they started.
+      if (settingsSession && activeSettingsSession.current === settingsSession) {
+        dismissSettings();
+      }
+      return true;
+    },
+    [dismissSettings, settingsSession]
+  );
+
+  const openSearchNote = useCallback(
+    (noteId: string) => {
+      if (!openNote(noteId)) return;
+      window.dispatchEvent(new Event("app:clear-note-selection"));
+      const previousFocus = document.activeElement;
+      requestAnimationFrame(() => {
+        if (useNoteStore.getState().selectedNoteId !== noteId || document.activeElement !== previousFocus) return;
+        const note = document.querySelector("[data-active-note]");
+        const editor = note?.querySelector<HTMLElement>(".cm-content");
+        const view = useViewStore.getState();
+        const editorCollapsed =
+          view.isSplitMode() && editor?.closest('[data-slot="resizable-panel"]')?.clientWidth === 0;
+        const destination =
+          view.isPreviewMode() || editorCollapsed ? note?.querySelector<HTMLElement>("[data-note-preview]") : editor;
+        destination?.focus({ preventScroll: true });
+      });
+    },
+    [openNote]
+  );
+
+  const openSearchFolder = useCallback((folderId: string) => {
+    if (useWorkspaceStore.getState().isLoading || isEditingBlocked()) return;
+    const folderStore = useFolderStore.getState();
+    if (!folderStore.folders.some((folder) => folder.id === folderId)) return;
+    folderStore.selectFolder(folderId);
+    useViewStore.getState().revealFolderSidebar();
+  }, []);
 
   // 打开文件夹（菜单触发）
   const handleMenuOpenFolder = useCallback(async () => {
@@ -35,11 +142,12 @@ function App(): React.JSX.Element {
       const selectedPath = await workspaceIpc.select();
       if (!selectedPath) return;
 
+      dismissSettings();
       setWorkspacePath(selectedPath);
     } catch {
       /* 静默处理 */
     }
-  }, [setWorkspacePath]);
+  }, [dismissSettings, setWorkspacePath]);
 
   // 打开文件（菜单触发）
   const handleMenuOpenFile = useCallback(async () => {
@@ -47,23 +155,25 @@ function App(): React.JSX.Element {
       const result = await workspaceIpc.openFile();
       if (!result) return;
 
+      dismissSettings();
       setPendingFilePath(result.filePath);
       setWorkspacePath(result.workspacePath);
     } catch {
       /* 静默处理 */
     }
-  }, [setPendingFilePath, setWorkspacePath]);
+  }, [dismissSettings, setPendingFilePath, setWorkspacePath]);
 
   const handleExternalOpen = useCallback(
     async (payload: { workspacePath: string; filePath?: string }) => {
       try {
+        dismissSettings();
         if (payload.filePath) setPendingFilePath(payload.filePath);
         setWorkspacePath(payload.workspacePath);
       } catch {
         /* 静默处理 */
       }
     },
-    [setPendingFilePath, setWorkspacePath]
+    [dismissSettings, setPendingFilePath, setWorkspacePath]
   );
 
   const initExportTheme = useExportThemeStore((state) => state.initExportTheme);
@@ -120,7 +230,9 @@ function App(): React.JSX.Element {
     if (isMac) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === "o") {
+      if (e.defaultPrevented || e.isComposing || e.repeat) return;
+      if (e.target instanceof HTMLElement && e.target.closest('[role="dialog"], [role="alertdialog"]')) return;
+      if (e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && e.key === "o") {
         e.preventDefault();
         handleMenuOpenFile();
       }
@@ -131,14 +243,15 @@ function App(): React.JSX.Element {
 
   useShortcutDispatcher({
     context: {
-      openSettings: () => window.dispatchEvent(new Event("app:open-settings")),
+      openSettings: toggleSettings,
       openCreateFolderDialog: () => window.dispatchEvent(new Event("app:open-create-folder")),
       openRssImportDialog: () => window.dispatchEvent(new Event("app:open-rss-import")),
       openUrlCreateDialog: () => window.dispatchEvent(new Event("app:open-url-create")),
-      toggleNoteSearch: () => window.dispatchEvent(new Event("app:toggle-note-search")),
+      toggleNoteSearch: () => setSearchFocusRequest((current) => current + 1),
       formatNote: () => useNoteStore.getState().formatCurrentNote()
     },
-    enabled: !isPresentationMode
+    enabled: isInitialized && !isPresentationMode && !isOperationPending && !isWorkspaceLoading,
+    allowedShortcuts: !workspacePath ? WELCOME_SHORTCUTS : settingsOpen ? SETTINGS_SHORTCUTS : undefined
   });
 
   // 检查是否有上次的工作区（快速判断，决定渲染哪个页面）
@@ -179,16 +292,22 @@ function App(): React.JSX.Element {
     return <div className="bg-background h-screen w-full" />;
   }
 
-  // 没有工作区时显示欢迎页
-  if (!workspacePath) {
-    return (
-      <>
-        <WelcomePage />
-        <SaveConflictDialog />
-        <Toaster position="bottom-right" />
-      </>
-    );
-  }
+  const settings = settingsOpen && <SettingsPage onBack={closeSettings} />;
+  const settingsButton = (
+    <IconButton
+      data-settings-toggle
+      aria-label={t("settings.title")}
+      aria-pressed={settingsOpen}
+      title={t("settings.title")}
+      disabled={isOperationPending}
+      onMouseDown={(event) => {
+        if (!settingsOpen) event.preventDefault();
+      }}
+      onClick={toggleSettings}
+    >
+      <Settings aria-hidden="true" />
+    </IconButton>
+  );
 
   return (
     <>
@@ -203,9 +322,28 @@ function App(): React.JSX.Element {
           // 退出演示模式（淡入完成）-> 隐藏演示视图
           setShowPresentation(isPresentationMode);
         }}
-        style={{ pointerEvents: isPresentationMode ? "none" : "auto" }}
+        inert={isPresentationMode}
+        className="bg-background flex h-screen min-h-0 w-full flex-col"
       >
-        <NoteWorkspace />
+        <TitleBar disabled={isOperationPending}>
+          {workspacePath && (
+            <WorkspaceSearch
+              focusRequest={searchFocusRequest}
+              disabled={isOperationPending || isPresentationMode}
+              onSelectFolder={openSearchFolder}
+              onSelectNote={openSearchNote}
+            />
+          )}
+        </TitleBar>
+        <div className="min-h-0 flex-1">
+          {workspacePath ? (
+            <NoteWorkspace mainOverlay={settings} onOpenNote={openNote} settingsButton={settingsButton} />
+          ) : settings ? (
+            <main className="h-full">{settings}</main>
+          ) : (
+            <WelcomePage settingsButton={settingsButton} />
+          )}
+        </div>
       </motion.div>
 
       {/* 演示视图：延迟显示，退出时自动淡出 */}

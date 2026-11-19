@@ -1,29 +1,28 @@
-import { ReactNode, CSSProperties, useEffect, useRef } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { IconButton } from "@/components/ui/button";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle, usePanelRef } from "@/components/ui/resizable";
 import type { PanelSize } from "@/components/ui/resizable";
-import { Button } from "@/components/ui/button";
-import { TitleBar } from "@/components/app";
-import { usePlatform } from "@/hooks";
 import { useViewStore } from "@/stores";
-import { cn } from "@/lib/utils";
 
 interface MainLayoutProps {
   inert?: boolean;
   leftSidebar: ReactNode;
   rightSidebar: ReactNode;
   mainContent: ReactNode;
+  mainOverlay?: ReactNode;
 }
 
 // 动画过渡样式
 const TRANSITION_STYLE = "flex-grow 0.25s cubic-bezier(0.32, 0.72, 0, 1)";
 
-export function MainLayout({ leftSidebar, rightSidebar, mainContent, inert = false }: MainLayoutProps) {
-  const { isMac, isWindows } = usePlatform();
+export function MainLayout({ leftSidebar, rightSidebar, mainContent, mainOverlay, inert = false }: MainLayoutProps) {
+  const { t } = useTranslation("common");
   const showFolderSidebar = useViewStore((state) => state.showFolderSidebar);
   const setShowFolderSidebar = useViewStore((state) => state.setShowFolderSidebar);
   const toggleFolderSidebar = useViewStore((state) => state.toggleFolderSidebar);
-  const isNoteSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
+  const sidebarLabel = t(showFolderSidebar ? "workspace.hideFolders" : "workspace.showFolders");
   const folderPanelRef = usePanelRef();
   const notePanelRef = usePanelRef();
 
@@ -37,9 +36,6 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent, inert = fal
 
   // 标记是否是编程触发的变化（用于区分拖拽和按钮点击）
   const isProgrammaticRef = useRef(false);
-
-  // 按钮是否应该显示：文件夹展开时显示，或者文件夹收起但搜索未展开时显示
-  const shouldShowToggleButton = showFolderSidebar || !isNoteSearchExpanded;
 
   // 设置过渡动画
   const enableTransitions = () => {
@@ -82,25 +78,7 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent, inert = fal
     return () => clearTimeout(timer);
   }, [showFolderSidebar, folderPanelRef, notePanelRef]);
 
-  // 外层容器样式（Windows 的 padding 在外层）
-  const outerStyle: CSSProperties = {
-    paddingTop: isWindows ? "calc(var(--titlebar-height-windows) + 1px)" : "0px"
-  };
-
-  // 内层容器样式（Mac 的 padding 在内层）
-  const innerStyle: CSSProperties = {
-    paddingTop: isMac ? "var(--titlebar-height-mac)" : "0px"
-  };
-
-  // 分割线样式（macOS 下延伸到顶部）
-  const handleClassName = cn(
-    "bg-divider hover:bg-highlight/50 w-px transition-colors duration-150",
-    isMac && "relative -top-(--titlebar-height-mac)"
-  );
-
-  const handleStyle: CSSProperties | undefined = isMac
-    ? { height: "calc(100% + var(--titlebar-height-mac))" }
-    : undefined;
+  const handleClassName = "bg-divider hover:bg-highlight/50 w-px transition-colors duration-150";
 
   // 分割线 pointerdown 事件处理 - 确保拖拽时没有动画
   const handlePointerDown = () => {
@@ -108,40 +86,18 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent, inert = fal
   };
 
   return (
-    <div
-      inert={inert}
-      aria-busy={inert}
-      className="bg-background relative flex h-screen w-full overflow-hidden"
-      style={outerStyle}
-    >
-      {/* 自定义标题栏（Windows 拖拽区域） */}
-      <TitleBar />
-
-      {/* 固定的文件夹切换按钮 - 文件夹收起且搜索展开时隐藏 */}
-      {shouldShowToggleButton && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="absolute z-10 h-7 w-7 shrink-0 p-0 transition-opacity duration-200"
-          style={{
-            top: isMac
-              ? "calc(var(--titlebar-height-mac) + 12px)"
-              : isWindows
-                ? "calc(var(--titlebar-height-windows) + 13px)"
-                : "12px",
-            left: "12px"
-          }}
-          onClick={toggleFolderSidebar}
-        >
-          {showFolderSidebar ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
-        </Button>
-      )}
-
-      <ResizablePanelGroup
-        orientation="horizontal"
-        className={cn("h-full", isWindows && "border-border border-t")}
-        style={innerStyle}
+    <div inert={inert} aria-busy={inert} className="bg-background relative flex h-full w-full overflow-hidden">
+      <IconButton
+        className="absolute top-[12px] left-[12px] z-10"
+        aria-label={sidebarLabel}
+        aria-expanded={showFolderSidebar}
+        aria-controls="workspace-folders"
+        title={sidebarLabel}
+        onClick={toggleFolderSidebar}
       >
+        {showFolderSidebar ? <PanelLeftClose /> : <PanelLeftOpen />}
+      </IconButton>
+      <ResizablePanelGroup orientation="horizontal" className="h-full">
         {/* 左侧文件夹树 - 使用 collapsible */}
         <ResizablePanel
           panelRef={folderPanelRef}
@@ -164,11 +120,13 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent, inert = fal
           }}
           className="bg-background overflow-hidden"
         >
-          <aside className="no-select h-full">{leftSidebar}</aside>
+          <aside id="workspace-folders" inert={!showFolderSidebar} className="no-select h-full">
+            {leftSidebar}
+          </aside>
         </ResizablePanel>
 
         {/* 分割线 */}
-        <ResizableHandle className={handleClassName} style={handleStyle} onPointerDown={handlePointerDown} />
+        <ResizableHandle className={handleClassName} onPointerDown={handlePointerDown} />
 
         {/* 中间笔记列表 - 保存并恢复宽度 */}
         <ResizablePanel
@@ -187,12 +145,15 @@ export function MainLayout({ leftSidebar, rightSidebar, mainContent, inert = fal
         </ResizablePanel>
 
         {/* 分割线 */}
-        <ResizableHandle className={handleClassName} style={handleStyle} onPointerDown={handlePointerDown} />
+        <ResizableHandle className={handleClassName} onPointerDown={handlePointerDown} />
 
         {/* 右侧编辑区 - 自动填充剩余空间 */}
         <ResizablePanel elementRef={mainPanelElementRef} className="bg-background">
-          <main className="allow-select h-full min-w-0 overflow-hidden">
-            <div className="h-full overflow-hidden">{mainContent}</div>
+          <main className="allow-select relative isolate h-full min-w-0 overflow-hidden">
+            <div inert={!!mainOverlay} className="h-full overflow-hidden">
+              {mainContent}
+            </div>
+            {mainOverlay && <div className="bg-background absolute inset-0 z-10">{mainOverlay}</div>}
           </main>
         </ResizablePanel>
       </ResizablePanelGroup>

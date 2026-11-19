@@ -4,12 +4,10 @@ import {
   SquarePen,
   Pin,
   PinOff,
-  Search,
   Trash2,
   Copy,
   Pencil,
   Download,
-  X,
   FolderOpen,
   Volume2,
   Link,
@@ -17,13 +15,12 @@ import {
   HardDrive,
   ListTree
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { useRef, useState, useEffect, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ListRow } from "@/components/app/list-row";
 import { DropHoverMask } from "@/components/app";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   ContextMenu,
@@ -38,7 +35,7 @@ import {
 import { cn, formatDateTime } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import { useDraggable } from "@dnd-kit/core";
-import { useViewStore, useNoteStore } from "@/stores";
+import { useNoteStore } from "@/stores";
 import { useExternalMarkdownDrop } from "@/hooks";
 import { workspaceIpc } from "@/ipc";
 import { toast } from "sonner";
@@ -122,15 +119,19 @@ function DraggableNoteRow({
   );
 }
 
+export interface NoteListSelection {
+  noteIds: string[];
+  anchorId: string | null;
+}
+
 interface NoteListProps {
   notes?: Note[];
   selectedNoteId?: string;
   selectedNoteIds?: string[];
-  searchKeyword?: string;
+  selectionAnchorId?: string | null;
   onSelectNote?: (noteId: string) => void;
   onCreateNote?: () => void;
   onCreateFromUrl?: () => void;
-  onSearchChange?: (keyword: string) => void;
   onShowNoteInExplorer?: (note: Note) => void;
   onCopyNoteRelativePath?: (note: Note) => void | Promise<void>;
   onCopyNoteAbsolutePath?: (note: Note) => void | Promise<void>;
@@ -147,18 +148,17 @@ interface NoteListProps {
   onCopyToWechat?: (note: Note) => void;
   onPushToGitHub?: (note: Note) => void;
   onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
-  onSelectedNoteIdsChange?: (noteIds: string[]) => void;
+  onSelectionChange?: (selection: NoteListSelection) => void;
 }
 
 export function NoteList({
   notes = [],
   selectedNoteId,
   selectedNoteIds = [],
-  searchKeyword = "",
+  selectionAnchorId = null,
   onSelectNote,
   onCreateNote,
   onCreateFromUrl,
-  onSearchChange,
   onShowNoteInExplorer,
   onCopyNoteRelativePath,
   onCopyNoteAbsolutePath,
@@ -175,13 +175,12 @@ export function NoteList({
   onCopyToWechat,
   onPushToGitHub,
   onImportExternalMarkdownFiles,
-  onSelectedNoteIdsChange
+  onSelectionChange
 }: NoteListProps) {
   const { t } = useTranslation("note");
   const rootRef = useRef<HTMLDivElement>(null);
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
-  const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(null);
   const dragOutSessionRef = useRef<{
     activeNote: Note | null;
     dragOutStarted: boolean;
@@ -189,23 +188,9 @@ export function NoteList({
     activeNote: null,
     dragOutStarted: false
   });
-  const inputRef = useRef<HTMLInputElement>(null);
-  const isSearchExpanded = useViewStore((state) => state.isNoteSearchExpanded);
-  const setIsSearchExpanded = useViewStore((state) => state.setNoteSearchExpanded);
   const { isFileDropHover, isImportingExternal, dragHandlers } = useExternalMarkdownDrop({
     onImportExternalMarkdownFiles
   });
-
-  const handleSearchToggle = useCallback(() => {
-    if (isSearchExpanded) {
-      // 收起时清空搜索
-      onSearchChange?.("");
-      setIsSearchExpanded(false);
-    } else {
-      // 展开
-      setIsSearchExpanded(true);
-    }
-  }, [isSearchExpanded, onSearchChange, setIsSearchExpanded]);
 
   useEffect(() => {
     const handleCreateFromUrl = () => onCreateFromUrl?.();
@@ -218,19 +203,6 @@ export function NoteList({
     };
   }, [onCreateFromUrl, onCreateNote]);
 
-  useEffect(() => {
-    const handleToggle = () => handleSearchToggle();
-    window.addEventListener("app:toggle-note-search", handleToggle);
-    return () => window.removeEventListener("app:toggle-note-search", handleToggle);
-  }, [handleSearchToggle]);
-
-  const handleSearchAnimationComplete = () => {
-    // 动画完成后自动聚焦
-    if (isSearchExpanded && inputRef.current) {
-      inputRef.current.focus();
-    }
-  };
-
   const parentRef = useRef<HTMLDivElement>(null);
   const selectedSet = useMemo(() => new Set(selectedNoteIds), [selectedNoteIds]);
   const notesById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
@@ -242,16 +214,14 @@ export function NoteList({
       const startIndex = orderedIds.indexOf(anchorId);
       const endIndex = orderedIds.indexOf(targetNoteId);
       if (startIndex === -1 || endIndex === -1) {
-        onSelectedNoteIdsChange?.([targetNoteId]);
-        setSelectionAnchorId(targetNoteId);
+        onSelectionChange?.({ noteIds: [targetNoteId], anchorId: targetNoteId });
         return;
       }
       const [from, to] = startIndex <= endIndex ? [startIndex, endIndex] : [endIndex, startIndex];
       const rangeIds = orderedIds.slice(from, to + 1);
-      onSelectedNoteIdsChange?.(rangeIds);
-      setSelectionAnchorId(anchorId);
+      onSelectionChange?.({ noteIds: rangeIds, anchorId });
     },
-    [notes, onSelectedNoteIdsChange, selectedNoteId, selectedNoteIds, selectionAnchorId]
+    [notes, onSelectionChange, selectedNoteId, selectedNoteIds, selectionAnchorId]
   );
 
   const handleNotePointerDown = useCallback(
@@ -259,10 +229,9 @@ export function NoteList({
       if (event.button !== 0) return;
       if (event.shiftKey || event.metaKey || event.ctrlKey) return;
       if (selectedSet.has(note.id)) return;
-      onSelectedNoteIdsChange?.([note.id]);
-      setSelectionAnchorId(note.id);
+      onSelectionChange?.({ noteIds: [note.id], anchorId: note.id });
     },
-    [onSelectedNoteIdsChange, selectedSet]
+    [onSelectionChange, selectedSet]
   );
 
   const handleNoteClick = useCallback(
@@ -285,40 +254,32 @@ export function NoteList({
         const nextSelected = baseSet.has(note.id)
           ? baseSelectedIds.filter((id) => id !== note.id)
           : [...baseSelectedIds, note.id];
-        onSelectedNoteIdsChange?.(nextSelected);
-        setSelectionAnchorId(note.id);
+        onSelectionChange?.({ noteIds: nextSelected, anchorId: note.id });
         event.preventDefault();
         return;
       }
 
-      onSelectedNoteIdsChange?.([note.id]);
-      setSelectionAnchorId(note.id);
+      onSelectionChange?.({ noteIds: [note.id], anchorId: note.id });
       onSelectNote?.(note.id);
     },
-    [handleSelectRange, notes, onSelectNote, onSelectedNoteIdsChange, selectedNoteId, selectedNoteIds]
+    [handleSelectRange, notes, onSelectNote, onSelectionChange, selectedNoteId, selectedNoteIds]
   );
 
   const handleNoteContextMenu = useCallback(
     (note: Note) => {
-      if (selectedSet.has(note.id)) {
-        setSelectionAnchorId(note.id);
-        return;
-      }
-      onSelectedNoteIdsChange?.([note.id]);
-      setSelectionAnchorId(note.id);
+      onSelectionChange?.({ noteIds: selectedSet.has(note.id) ? selectedNoteIds : [note.id], anchorId: note.id });
     },
-    [onSelectedNoteIdsChange, selectedSet]
+    [onSelectionChange, selectedNoteIds, selectedSet]
   );
 
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      onSelectedNoteIdsChange?.([]);
-      setSelectionAnchorId(null);
+      onSelectionChange?.({ noteIds: [], anchorId: null });
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [onSelectedNoteIdsChange]);
+  }, [onSelectionChange]);
 
   useEffect(() => {
     const handleDocumentMouseDown = (event: MouseEvent) => {
@@ -334,13 +295,12 @@ export function NoteList({
         const isClickingNoteItem = !!targetElement?.closest('[data-note-item="true"]');
         if (isClickingNoteItem) return;
       }
-      onSelectedNoteIdsChange?.([]);
-      setSelectionAnchorId(null);
+      onSelectionChange?.({ noteIds: [], anchorId: null });
     };
 
     document.addEventListener("mousedown", handleDocumentMouseDown, true);
     return () => document.removeEventListener("mousedown", handleDocumentMouseDown, true);
-  }, [onSelectedNoteIdsChange, selectedNoteIds.length]);
+  }, [onSelectionChange, selectedNoteIds.length]);
 
   const handleNoteDraggingChange = useCallback((note: Note, isDragging: boolean) => {
     if (isDragging) {
@@ -408,125 +368,25 @@ export function NoteList({
           会自动跟随面板的位置 / 尺寸变化，无需手动同步坐标 */}
       <DropHoverMask visible={isFileDropHover} bottomGapPx={8} />
 
-      {/* 顶部搜索栏 */}
-      <div className="flex h-12 shrink-0 items-center gap-2 overflow-hidden px-3">
-        <AnimatePresence mode="wait" initial={false}>
-          {isSearchExpanded ? (
-            // 展开的搜索框
-            <motion.div
-              key="search-input"
-              className="relative flex-1"
-              initial={{ opacity: 0, width: 0 }}
-              animate={{
-                opacity: 1,
-                width: "100%",
-                transition: {
-                  duration: 0.2,
-                  ease: [0.32, 0.72, 0, 1]
-                }
-              }}
-              exit={{
-                opacity: 0,
-                width: 0,
-                transition: {
-                  duration: 0.15,
-                  ease: [0.32, 0.72, 0, 1]
-                }
-              }}
-              onAnimationComplete={handleSearchAnimationComplete}
-            >
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{
-                  opacity: 1,
-                  transition: { delay: 0.08, duration: 0.15 }
-                }}
-                exit={{
-                  opacity: 0,
-                  transition: { duration: 0.08 }
-                }}
-              >
-                <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
-                <Input
-                  ref={inputRef}
-                  type="text"
-                  placeholder={t("search")}
-                  value={searchKeyword}
-                  onChange={(e) => onSearchChange?.(e.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Escape") return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    handleSearchToggle();
-                  }}
-                  className="bg-muted/50 h-8 pr-8 pl-8 text-sm [&::-webkit-search-cancel-button]:hidden"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute top-1/2 right-1 h-6 w-6 -translate-y-1/2 cursor-pointer p-0"
-                  onClick={handleSearchToggle}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </motion.div>
-            </motion.div>
-          ) : (
-            // 收起状态：按钮组
-            <motion.div
-              key="buttons"
-              className="flex w-full items-center justify-between gap-2"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{
-                opacity: 1,
-                x: 0,
-                transition: {
-                  duration: 0.18,
-                  ease: [0.32, 0.72, 0, 1]
-                }
-              }}
-              exit={{
-                opacity: 0,
-                x: 10,
-                transition: {
-                  duration: 0.15,
-                  ease: [0.32, 0.72, 0, 1]
-                }
-              }}
-            >
-              {/* 从 URL 新建 + 新建笔记 + 搜索按钮 */}
-              <div className="ml-auto flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 shrink-0 cursor-pointer p-0"
-                  aria-label={t("createFromUrl")}
-                  onClick={onCreateFromUrl}
-                >
-                  <Link className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 shrink-0 cursor-pointer p-0"
-                  aria-label={t("newNote")}
-                  onClick={onCreateNote}
-                >
-                  <SquarePen className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 w-7 shrink-0 cursor-pointer p-0"
-                  aria-label={t("search")}
-                  onClick={handleSearchToggle}
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <div className="flex h-12 shrink-0 items-center justify-end gap-2 px-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 shrink-0 p-0"
+          aria-label={t("createFromUrl")}
+          onClick={onCreateFromUrl}
+        >
+          <Link className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 shrink-0 p-0"
+          aria-label={t("newNote")}
+          onClick={onCreateNote}
+        >
+          <SquarePen className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* 笔记列表 */}
@@ -550,12 +410,8 @@ export function NoteList({
               transition={{ duration: 0.3 }}
             >
               <Inbox className="mb-3 h-10 w-10 opacity-20" />
-              <p className="text-sm font-medium">
-                {searchKeyword ? t("emptyState.noResults") : t("emptyState.noNotes")}
-              </p>
-              <p className="text-tertiary-foreground mt-1 text-xs">
-                {searchKeyword ? t("emptyState.tryOtherKeywords") : t("emptyState.createOrSelect")}
-              </p>
+              <p className="text-sm font-medium">{t("emptyState.noNotes")}</p>
+              <p className="text-tertiary-foreground mt-1 text-xs">{t("emptyState.createOrSelect")}</p>
             </motion.div>
           ) : (
             <div className="px-0" style={{ height: rowVirtualizer.getTotalSize() + 12, position: "relative" }}>

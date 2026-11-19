@@ -1,1 +1,1 @@
-export { SettingsPopover } from "./settings-popover";
+export { SettingsPage } from "./settings-page";

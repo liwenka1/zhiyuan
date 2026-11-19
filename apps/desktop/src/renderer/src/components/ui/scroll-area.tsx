@@ -8,10 +8,12 @@ function ScrollArea({
   children,
   viewportRef,
   viewportClassName,
+  viewportRender,
   ...props
 }: ScrollAreaPrimitive.Root.Props & {
   viewportRef?: RefObject<HTMLDivElement | null>;
   viewportClassName?: string;
+  viewportRender?: ScrollAreaPrimitive.Viewport.Props["render"];
 }) {
   return (
     <ScrollAreaPrimitive.Root
@@ -22,6 +24,7 @@ function ScrollArea({
       <ScrollAreaPrimitive.Viewport
         ref={viewportRef}
         data-slot="scroll-area-viewport"
+        render={viewportRender}
         className={cn(
           "focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1",
           viewportClassName

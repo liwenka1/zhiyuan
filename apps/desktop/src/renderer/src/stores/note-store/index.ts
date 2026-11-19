@@ -18,7 +18,6 @@ export const useNoteStore = create<NoteStore>()(
     playingNoteIds: [],
     savingNoteIds: new Set(),
     isLoadingFromFileSystem: false,
-    searchKeyword: "",
 
     ...createNoteActions(set, get),
     ...applyPersistence(set, get),

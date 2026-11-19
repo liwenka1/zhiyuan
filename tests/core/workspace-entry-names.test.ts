@@ -80,7 +80,7 @@ describe("created workspace entries remain discoverable", () => {
   afterEach(async () => rm(root, { recursive: true, force: true }));
 
   it("rejects hidden note titles at the real creation entry point", async () => {
-    await state.createNote(undefined, ".draft");
+    await expect(state.createNote(undefined, ".draft")).resolves.toBeUndefined();
 
     expect(create).not.toHaveBeenCalled();
     expect(state.notes).toEqual([]);
@@ -90,7 +90,8 @@ describe("created workspace entries remain discoverable", () => {
   });
 
   it("keeps a valid created note discoverable when a hidden rename is rejected", async () => {
-    await state.createNote(undefined, "draft");
+    await expect(state.createNote(undefined, "draft")).resolves.toBe("draft.md");
+    expect(state.selectedNoteId).toBe("draft.md");
     const originalContent = state.notes[0].content;
     await state.renameNote("draft.md", ".draft");
 

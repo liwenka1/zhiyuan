@@ -3,6 +3,7 @@ import { join, basename, resolve } from "path";
 import fs from "fs";
 import { randomBytes } from "node:crypto";
 import { is } from "@electron-toolkit/utils";
+import { DEFAULT_TITLE_BAR_HEIGHT, WINDOWS_TITLE_BAR_HEIGHT } from "@shared/title-bar";
 import icon from "../../../resources/icon.png?asset";
 import { themeManager } from "../theme";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "../theme/colors";
@@ -76,7 +77,7 @@ class WindowManager {
       return {
         color: getThemeBackgroundColor(theme),
         symbolColor: getThemeForegroundColor(theme),
-        height: 32
+        height: WINDOWS_TITLE_BAR_HEIGHT
       };
     };
 
@@ -100,7 +101,8 @@ class WindowManager {
       backgroundColor: getBackgroundColor(),
       ...(process.platform === "darwin"
         ? {
-            titleBarStyle: "hidden" as const
+            titleBarStyle: "hidden" as const,
+            titleBarOverlay: { height: DEFAULT_TITLE_BAR_HEIGHT }
           }
         : {}),
       ...(process.platform === "win32"

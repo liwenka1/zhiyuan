@@ -10,13 +10,22 @@
   },
   "workspace": {
     "loading": "正在打开工作区…",
+    "showFolders": "展开文件夹栏",
+    "hideFolders": "收起文件夹栏",
     "switch": "切换工作区",
     "selectFolder": "选择工作区文件夹",
     "selectButton": "选择",
     "selectFailed": "选择工作区失败，请重试"
   },
+  "workspaceSearch": {
+    "placeholder": "搜索文件夹名、文件名或相对路径",
+    "folders": "文件夹",
+    "files": "文件",
+    "noResults": "没有匹配的文件夹或文件"
+  },
   "settings": {
     "title": "设置",
+    "backToNotes": "返回",
     "general": "通用",
     "theme": "主题",
     "language": "语言",
@@ -101,7 +110,7 @@
     "shortcutsOpenSettings": "打开设置",
     "shortcutsCreateFromUrl": "从 URL 新建",
     "shortcutsCreateNote": "新建笔记",
-    "shortcutsToggleNoteSearch": "打开搜索",
+    "shortcutsToggleNoteSearch": "搜索工作区",
     "shortcutsTogglePreview": "预览模式",
     "shortcutsToggleSplit": "分栏模式",
     "shortcutsToggleExportPreview": "导出预览",
@@ -119,6 +128,7 @@
     "shortcutsDialogIdle": "点击此处开始录制",
     "shortcutsCancel": "取消",
     "shortcutsConfirm": "确认",
+    "shortcutsSaveFailed": "快捷键保存失败，请重试。",
     "shortcutsDialogCurrent": "当前快捷键",
     "shortcutsDialogPending": "待应用快捷键",
     "shortcutsConflict": "该快捷键已分配给 {{action}}",

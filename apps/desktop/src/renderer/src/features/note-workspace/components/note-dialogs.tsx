@@ -6,6 +6,8 @@ import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { workspaceIpc, watcherIpc, rssIpc, urlIpc } from "@/ipc";
 
 interface NoteDialogsProps {
+  onOpenNote: (noteId: string) => void;
+
   // 创建文件夹
   showCreateFolderDialog: boolean;
   onCloseCreateFolderDialog: () => void;
@@ -38,6 +40,7 @@ interface NoteDialogsProps {
  * 包含：创建文件夹、创建笔记、重命名文件夹、重命名笔记
  */
 export function NoteDialogs({
+  onOpenNote,
   showCreateFolderDialog,
   onCloseCreateFolderDialog,
   showCreateNoteDialog,
@@ -62,11 +65,11 @@ export function NoteDialogs({
   const renameNote = useNoteStore((state) => state.renameNote);
   const renameFolder = useFolderStore((state) => state.renameFolder);
   const workspacePath = useWorkspaceStore((state) => state.workspacePath);
+  const workspaceRevision = useWorkspaceStore((state) => state.revision);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
-  const selectNote = useNoteStore((state) => state.selectNote);
   const isCurrentWorkspace = () => {
     const current = useWorkspaceStore.getState();
-    return !current.isLoading && current.workspacePath === workspacePath;
+    return !current.isLoading && current.workspacePath === workspacePath && current.revision === workspaceRevision;
   };
 
   // 确认创建文件夹
@@ -78,7 +81,8 @@ export function NoteDialogs({
   // 确认创建笔记
   const handleConfirmCreateNote = async (noteTitle: string) => {
     if (!isCurrentWorkspace()) return;
-    await createNote(selectedFolderId || undefined, noteTitle || undefined);
+    const noteId = await createNote(selectedFolderId || undefined, noteTitle || undefined);
+    if (noteId && isCurrentWorkspace()) onOpenNote(noteId);
   };
 
   const handleConfirmRssImport = async (url: string) => {
@@ -117,7 +121,7 @@ export function NoteDialogs({
         return;
       }
       const firstImportedNote = data.notes.find((note) => note.folderId === result.folderName);
-      if (firstImportedNote) selectNote(firstImportedNote.id);
+      if (firstImportedNote) onOpenNote(firstImportedNote.id);
       toast.success(t("rss.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -166,7 +170,7 @@ export function NoteDialogs({
       const importedNote = data.notes.find(
         (note) => note.id === result.noteId || note.id.replace(/\.md$/i, "") === result.noteId
       );
-      if (importedNote) selectNote(importedNote.id);
+      if (importedNote) onOpenNote(importedNote.id);
       toast.success(t("url.success"), { id: toastId });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);

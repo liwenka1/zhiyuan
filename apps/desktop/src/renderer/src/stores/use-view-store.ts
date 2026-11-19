@@ -17,12 +17,10 @@ interface ViewStore {
 
   // 侧边栏显示控制（替代原来的 isFocusMode）
   showFolderSidebar: boolean;
+  folderRevealRequest: number;
   setShowFolderSidebar: (show: boolean) => void;
   toggleFolderSidebar: () => void;
-
-  // 笔记搜索状态
-  isNoteSearchExpanded: boolean;
-  setNoteSearchExpanded: (expanded: boolean) => void;
+  revealFolderSidebar: () => void;
 
   // 分栏布局比例
   splitLayout: [number, number];
@@ -54,7 +52,7 @@ export const useViewStore = create<ViewStore>()(
       editorMode: "edit",
       isPresentationMode: false,
       showFolderSidebar: true, // 默认显示文件夹侧边栏
-      isNoteSearchExpanded: false, // 笔记搜索默认收起
+      folderRevealRequest: 0,
       splitLayout: [50, 50],
       isTerminalOpen: false,
       terminalHeight: 240,
@@ -117,9 +115,8 @@ export const useViewStore = create<ViewStore>()(
       // 侧边栏控制
       setShowFolderSidebar: (show) => set({ showFolderSidebar: show }),
       toggleFolderSidebar: () => set((state) => ({ showFolderSidebar: !state.showFolderSidebar })),
-
-      // 笔记搜索状态
-      setNoteSearchExpanded: (expanded) => set({ isNoteSearchExpanded: expanded }),
+      revealFolderSidebar: () =>
+        set((state) => ({ showFolderSidebar: true, folderRevealRequest: state.folderRevealRequest + 1 })),
 
       // 分栏布局
       setSplitLayout: (layout) => set({ splitLayout: layout }),

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { SettingSection } from "../shared/setting-section";
@@ -55,8 +55,19 @@ export function GitHubTab() {
   const projectKeys = Object.keys(projectConfigs);
   const hasActiveProject = Boolean(activeProjectKey && projectConfigs[activeProjectKey]);
   const activeDraft = hasActiveProject ? (drafts[activeProjectKey] ?? { owner, repo, token }) : EMPTY_GITHUB_CONFIG;
+  const hasDraftChanges = activeDraft.owner !== owner || activeDraft.repo !== repo || activeDraft.token !== token;
 
-  const handleReset = () => {
+  const handleDraftKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (
+      !hasDraftChanges ||
+      event.key !== "Escape" ||
+      event.defaultPrevented ||
+      event.nativeEvent.isComposing ||
+      event.nativeEvent.keyCode === 229
+    ) {
+      return;
+    }
+    event.preventDefault();
     setDrafts((prev) => ({
       ...prev,
       [activeProjectKey]: { owner, repo, token }
@@ -64,7 +75,7 @@ export function GitHubTab() {
   };
 
   const handleBlur = async () => {
-    if (activeDraft.owner !== owner || activeDraft.repo !== repo || activeDraft.token !== token) {
+    if (hasDraftChanges) {
       const next = {
         owner: activeDraft.owner.trim(),
         repo: activeDraft.repo.trim(),
@@ -171,11 +182,7 @@ export function GitHubTab() {
               }))
             }
             onBlur={handleBlur}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                handleReset();
-              }
-            }}
+            onKeyDown={handleDraftKeyDown}
             placeholder={t("settings.githubOwnerPlaceholder")}
           />
         </SettingRow>
@@ -190,11 +197,7 @@ export function GitHubTab() {
               }))
             }
             onBlur={handleBlur}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                handleReset();
-              }
-            }}
+            onKeyDown={handleDraftKeyDown}
             placeholder={t("settings.githubRepoPlaceholder")}
           />
         </SettingRow>
@@ -210,11 +213,7 @@ export function GitHubTab() {
               }))
             }
             onBlur={handleBlur}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                handleReset();
-              }
-            }}
+            onKeyDown={handleDraftKeyDown}
             placeholder={t("settings.githubTokenPlaceholder")}
           />
         </SettingRow>

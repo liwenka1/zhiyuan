@@ -119,23 +119,10 @@ export function AppMenuBar() {
     };
   }, [openIndex, closeMenus]);
 
-  const barStyle: ElectronCSSProperties = {
-    height: "var(--titlebar-height-windows)",
-    WebkitAppRegion: "drag"
-  };
-
   return (
-    <div
-      ref={barRef}
-      data-titlebar
-      className="bg-background fixed inset-x-0 top-0 z-9999 flex items-center"
-      style={barStyle}
-    >
+    <div ref={barRef} className="flex shrink-0 items-center">
       {/* App Name */}
-      <div
-        className="flex h-full shrink-0 items-center px-3"
-        style={{ WebkitAppRegion: "no-drag" } as ElectronCSSProperties}
-      >
+      <div className="flex shrink-0 items-center px-2 select-none">
         <span className="text-foreground text-sm font-medium">{tEditor("appName")}</span>
       </div>
 

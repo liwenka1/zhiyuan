@@ -10,13 +10,22 @@
   },
   "workspace": {
     "loading": "Opening workspace…",
+    "showFolders": "Show folder sidebar",
+    "hideFolders": "Hide folder sidebar",
     "switch": "Switch Workspace",
     "selectFolder": "Select Workspace Folder",
     "selectButton": "Select",
     "selectFailed": "Failed to select workspace, please try again"
   },
+  "workspaceSearch": {
+    "placeholder": "Search folders, files, or relative paths",
+    "folders": "Folders",
+    "files": "Files",
+    "noResults": "No matching folders or files"
+  },
   "settings": {
     "title": "Settings",
+    "backToNotes": "Back",
     "general": "General",
     "theme": "Theme",
     "language": "Language",
@@ -101,7 +110,7 @@
     "shortcutsOpenSettings": "Open settings",
     "shortcutsCreateFromUrl": "Create from URL",
     "shortcutsCreateNote": "Create note",
-    "shortcutsToggleNoteSearch": "Open search",
+    "shortcutsToggleNoteSearch": "Search workspace",
     "shortcutsTogglePreview": "Preview mode",
     "shortcutsToggleSplit": "Split mode",
     "shortcutsToggleExportPreview": "Export preview",
@@ -119,6 +128,7 @@
     "shortcutsDialogIdle": "Click here to start",
     "shortcutsCancel": "Cancel",
     "shortcutsConfirm": "Confirm",
+    "shortcutsSaveFailed": "Couldn’t save the shortcut. Try again.",
     "shortcutsDialogCurrent": "Current shortcut",
     "shortcutsDialogPending": "Pending shortcut",
     "shortcutsConflict": "This shortcut is already assigned to {{action}}",

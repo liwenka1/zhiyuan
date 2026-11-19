@@ -1,5 +1,4 @@
 {
-  "search": "搜索",
   "newNote": "新建笔记",
   "createFromUrl": "从 URL 新建",
   "toggleFolderSidebar": "切换文件夹列表",
@@ -9,9 +8,7 @@
   "pagesSuffix": "分页",
   "copySuffix": "Copy",
   "emptyState": {
-    "noResults": "未找到相关笔记",
     "noNotes": "暂无笔记",
-    "tryOtherKeywords": "尝试使用其他关键词搜索",
     "createOrSelect": "选择文件夹或创建新笔记"
   },
   "contextMenu": {

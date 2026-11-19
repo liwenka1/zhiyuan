@@ -1,11 +1,11 @@
 import { captureNoteLoadSnapshot } from "@/stores/note-store/loaders";
 import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { flushAllDebouncedSaves } from "@/stores/note-store/persistence";
 import { waitForFileOperations } from "@/stores/note-store/operation-guard";
 import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
+import i18n from "@/lib/i18n";
 
 /**
  * 工作区初始化 Hook
@@ -14,7 +14,6 @@ import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
  * - 监听文件系统变化
  */
 export function useWorkspaceInit() {
-  const { t } = useTranslation("note");
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const notes = useNoteStore((state) => state.notes);
   const selectNote = useNoteStore((state) => state.selectNote);
@@ -96,9 +95,9 @@ export function useWorkspaceInit() {
           setWorkspacePath(null);
         }
         if (flushFailed && error instanceof Error) {
-          toast.error(`${t("errors.saveNoteFailed")}: ${error.message}`);
+          toast.error(`${i18n.t("note:errors.saveNoteFailed")}: ${error.message}`);
         } else {
-          toast.error(t("errors.initWorkspaceFailed"));
+          toast.error(i18n.t("note:errors.initWorkspaceFailed"));
         }
       } finally {
         if (
@@ -111,7 +110,7 @@ export function useWorkspaceInit() {
     };
 
     loadWorkspace();
-  }, [workspacePath, loadFromFileSystem, setFolders, setPendingFilePath, setWorkspacePath, setLoading, t]);
+  }, [workspacePath, loadFromFileSystem, setFolders, setPendingFilePath, setWorkspacePath, setLoading]);
 
   // 扫描完成后再根据待打开路径选中笔记，避免 pendingFilePath 清空触发第二次扫描。
   useEffect(() => {

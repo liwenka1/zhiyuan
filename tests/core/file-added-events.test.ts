@@ -47,8 +47,7 @@ function createStore(notes: Note[] = []) {
     openNoteIds: notes.map((item) => item.id),
     playingNoteIds: [],
     savingNoteIds: new Set(),
-    isLoadingFromFileSystem: false,
-    searchKeyword: ""
+    isLoadingFromFileSystem: false
   };
   const get = () => state as NoteStore;
   const set: NoteStoreSet = (update) => {

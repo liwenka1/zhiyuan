@@ -12,14 +12,13 @@ import {
 } from "@dnd-kit/core";
 import type { DragEndEvent, DragStartEvent } from "@dnd-kit/core";
 import { FileText } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { MainLayout } from "@/layouts/main-layout";
-import { TitleBar } from "@/components/app/title-bar";
 import { useOperationStore } from "@/stores/note-store/operation-guard";
 import { moveNotesInWorkspace } from "../lib/move-notes";
 import { ListRow } from "@/components/app/list-row";
 import { FolderTree } from "./folder-tree";
-import { NoteList } from "./note-list";
+import { NoteList, type NoteListSelection } from "./note-list";
 import { NoteDialogs } from "./note-dialogs";
 import { EditorArea } from "@/features/editor";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
@@ -31,6 +30,7 @@ import { useTranslation } from "react-i18next";
 const NOTE_DRAG_PREFIX = "note-";
 const FOLDER_DROP_PREFIX = "folder-";
 const EDITOR_DROP_OPEN_ID = "editor-drop-open";
+const EMPTY_NOTE_SELECTION: NoteListSelection = { noteIds: [], anchorId: null };
 
 /**
  * 笔记工作区
@@ -38,7 +38,15 @@ const EDITOR_DROP_OPEN_ID = "editor-drop-open";
  * - 组合各个子组件
  * - 协调业务逻辑
  */
-export function NoteWorkspace() {
+export function NoteWorkspace({
+  mainOverlay,
+  onOpenNote,
+  settingsButton
+}: {
+  mainOverlay?: ReactNode;
+  onOpenNote: (id: string) => void;
+  settingsButton: ReactNode;
+}) {
   // 初始化工作区和文件监听
   useWorkspaceInit();
 
@@ -55,15 +63,12 @@ export function NoteWorkspace() {
   const selectedNoteId = useNoteStore((state) => state.selectedNoteId);
   const editorContent = useNoteStore((state) => state.editorContent);
   const openNoteIds = useNoteStore((state) => state.openNoteIds);
-  const searchKeyword = useNoteStore((state) => state.searchKeyword);
   const notes = useNoteStore((state) => state.notes);
   const loadFromFileSystem = useNoteStore((state) => state.loadFromFileSystem);
   const folders = useFolderStore((state) => state.folders);
   const selectFolder = useFolderStore((state) => state.selectFolder);
   const setFolders = useFolderStore((state) => state.setFolders);
-  const selectNote = useNoteStore((state) => state.selectNote);
   const updateNoteContent = useNoteStore((state) => state.updateNoteContent);
-  const setSearchKeyword = useNoteStore((state) => state.setSearchKeyword);
 
   // 笔记操作 handlers
   const noteHandlers = useNoteHandlers({
@@ -82,29 +87,54 @@ export function NoteWorkspace() {
   const { formattedNotes, foldersWithCount } = useNoteData();
   const [draggingNoteId, setDraggingNoteId] = useState<string | null>(null);
   const [draggingNoteIds, setDraggingNoteIds] = useState<string[]>([]);
-  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+  const [noteSelection, setNoteSelection] = useState(EMPTY_NOTE_SELECTION);
+  const { noteIds: selectedNoteIds, anchorId: selectionAnchorId } = noteSelection;
+  const visibleNoteIds = useMemo(() => new Set(formattedNotes.map((note) => note.id)), [formattedNotes]);
 
-  useEffect(
-    () =>
-      useWorkspaceStore.subscribe((current, previous) => {
-        if (current.workspacePath === previous.workspacePath) return;
-        setDraggingNoteId(null);
-        setDraggingNoteIds([]);
-        setSelectedNoteIds([]);
-      }),
-    []
-  );
+  useEffect(() => {
+    const clearNoteSelection = () => setNoteSelection(EMPTY_NOTE_SELECTION);
+    const unsubscribeWorkspace = useWorkspaceStore.subscribe((current, previous) => {
+      if (current.workspacePath === previous.workspacePath) return;
+      setDraggingNoteId(null);
+      setDraggingNoteIds([]);
+      clearNoteSelection();
+    });
+    const unsubscribeFolder = useFolderStore.subscribe((current, previous) => {
+      if (current.selectedFolderId !== previous.selectedFolderId) clearNoteSelection();
+    });
+    const unsubscribeNote = useNoteStore.subscribe((current, previous) => {
+      if (current.selectedNoteId !== previous.selectedNoteId) clearNoteSelection();
+    });
+    window.addEventListener("app:clear-note-selection", clearNoteSelection);
+    return () => {
+      unsubscribeWorkspace();
+      unsubscribeFolder();
+      unsubscribeNote();
+      window.removeEventListener("app:clear-note-selection", clearNoteSelection);
+    };
+  }, []);
 
   const moveNote = useNoteStore((state) => state.moveNote);
 
-  const effectiveSelectedNoteIds = useMemo(() => {
-    const availableNoteIds = new Set(notes.map((note) => note.id));
-    const normalizedSelectedIds = selectedNoteIds.filter((id) => availableNoteIds.has(id));
-    if (selectedNoteId && availableNoteIds.has(selectedNoteId) && normalizedSelectedIds.length === 1) {
-      return [selectedNoteId];
-    }
-    return normalizedSelectedIds;
-  }, [notes, selectedNoteId, selectedNoteIds]);
+  const effectiveSelectedNoteIds = useMemo(
+    () => selectedNoteIds.filter((id) => visibleNoteIds.has(id)),
+    [selectedNoteIds, visibleNoteIds]
+  );
+
+  const isCurrentWorkspace = useCallback(() => {
+    const current = useWorkspaceStore.getState();
+    return !current.isLoading && current.workspacePath === workspacePath && current.revision === workspaceRevision;
+  }, [workspacePath, workspaceRevision]);
+
+  const getVisibleBatchNoteIds = useCallback(
+    (noteIds: string[]) => {
+      if (!isCurrentWorkspace() || useFolderStore.getState().selectedFolderId !== selectedFolderId) {
+        return [];
+      }
+      return [...new Set(noteIds)].filter((id) => visibleNoteIds.has(id));
+    },
+    [isCurrentWorkspace, selectedFolderId, visibleNoteIds]
+  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -117,14 +147,11 @@ export function NoteWorkspace() {
     if (!activeId.startsWith(NOTE_DRAG_PREFIX)) return;
     const noteId = activeId.slice(NOTE_DRAG_PREFIX.length);
     const isDraggingSelected = effectiveSelectedNoteIds.includes(noteId);
-    const visibleNoteIdSet = new Set(formattedNotes.map((note) => note.id));
-    const visibleSelectedNoteIds = effectiveSelectedNoteIds.filter((id) => visibleNoteIdSet.has(id));
-    const currentDraggingIds =
-      isDraggingSelected && visibleSelectedNoteIds.length > 0 ? visibleSelectedNoteIds : [noteId];
+    const currentDraggingIds = isDraggingSelected ? effectiveSelectedNoteIds : [noteId];
     setDraggingNoteId(noteId);
     setDraggingNoteIds(currentDraggingIds);
     if (!isDraggingSelected) {
-      setSelectedNoteIds([noteId]);
+      setNoteSelection({ noteIds: [noteId], anchorId: noteId });
     }
   };
 
@@ -147,7 +174,7 @@ export function NoteWorkspace() {
     const currentDraggingIds = draggingNoteIds.length > 0 ? draggingNoteIds : [noteId];
 
     if (overId === EDITOR_DROP_OPEN_ID) {
-      selectNote(noteId);
+      if (!mainOverlay) onOpenNote(noteId);
       return;
     }
 
@@ -215,64 +242,53 @@ export function NoteWorkspace() {
     },
     [folders, loadFromFileSystem, selectedFolderId, setFolders, workspacePath]
   );
-  const handleOpenImportedMarkdownNote = useCallback((noteId: string) => selectNote(noteId), [selectNote]);
   const handleDeleteSelectedNotes = useCallback(
     async (noteIds: string[]) => {
-      const uniqueNoteIds = Array.from(new Set(noteIds));
+      const uniqueNoteIds = getVisibleBatchNoteIds(noteIds);
+      if (uniqueNoteIds.length === 0) return;
       if (uniqueNoteIds.length > 1 && !window.confirm(t("confirmDeleteNotes", { count: uniqueNoteIds.length }))) {
         return;
       }
       const deletingSet = new Set(uniqueNoteIds);
 
       for (const noteId of uniqueNoteIds) {
-        const target = notes.find((note) => note.id === noteId);
+        if (!isCurrentWorkspace()) return;
+        const target = useNoteStore.getState().notes.find((note) => note.id === noteId);
         if (!target) continue;
-        await noteHandlers.handleDeleteNote(
-          {
-            id: target.id,
-            title: target.title,
-            updatedAt: target.updatedAt,
-            isPinned: target.isPinned
-          },
-          { skipConfirm: uniqueNoteIds.length > 1 }
-        );
+        await noteHandlers.handleDeleteNote(target, { skipConfirm: uniqueNoteIds.length > 1 });
       }
 
-      setSelectedNoteIds((prev) => prev.filter((id) => !deletingSet.has(id)));
+      if (!isCurrentWorkspace()) return;
+      setNoteSelection(({ noteIds, anchorId }) => ({
+        noteIds: noteIds.filter((id) => !deletingSet.has(id)),
+        anchorId: anchorId && deletingSet.has(anchorId) ? null : anchorId
+      }));
     },
-    [noteHandlers, notes, t]
+    [getVisibleBatchNoteIds, isCurrentWorkspace, noteHandlers, t]
   );
   const handlePinSelectedNotes = useCallback(
     async (noteIds: string[]) => {
-      const uniqueNoteIds = Array.from(new Set(noteIds));
+      const uniqueNoteIds = getVisibleBatchNoteIds(noteIds);
       for (const noteId of uniqueNoteIds) {
-        const target = notes.find((note) => note.id === noteId);
+        if (!isCurrentWorkspace()) return;
+        const target = useNoteStore.getState().notes.find((note) => note.id === noteId);
         if (!target || target.isPinned) continue;
-        await noteHandlers.handleTogglePinNote({
-          id: target.id,
-          title: target.title,
-          updatedAt: target.updatedAt,
-          isPinned: target.isPinned
-        });
+        await noteHandlers.handleTogglePinNote(target);
       }
     },
-    [noteHandlers, notes]
+    [getVisibleBatchNoteIds, isCurrentWorkspace, noteHandlers]
   );
   const handleDuplicateSelectedNotes = useCallback(
     async (noteIds: string[]) => {
-      const uniqueNoteIds = Array.from(new Set(noteIds));
+      const uniqueNoteIds = getVisibleBatchNoteIds(noteIds);
       for (const noteId of uniqueNoteIds) {
-        const target = notes.find((note) => note.id === noteId);
+        if (!isCurrentWorkspace()) return;
+        const target = useNoteStore.getState().notes.find((note) => note.id === noteId);
         if (!target) continue;
-        await noteHandlers.handleDuplicateNote({
-          id: target.id,
-          title: target.title,
-          updatedAt: target.updatedAt,
-          isPinned: target.isPinned
-        });
+        await noteHandlers.handleDuplicateNote(target);
       }
     },
-    [noteHandlers, notes]
+    [getVisibleBatchNoteIds, isCurrentWorkspace, noteHandlers]
   );
   const cursorOverlayModifier: Modifier = ({ transform, activeNodeRect, activatorEvent }) => {
     if (!activeNodeRect || !activatorEvent) return transform;
@@ -305,8 +321,7 @@ export function NoteWorkspace() {
 
   if (isLoading) {
     return (
-      <div className="bg-background flex h-screen items-center justify-center">
-        <TitleBar />
+      <div className="bg-background flex h-full items-center justify-center">
         <div role="status" aria-busy="true" className="text-muted-foreground text-sm">
           {t("common:workspace.loading")}
         </div>
@@ -337,11 +352,13 @@ export function NoteWorkspace() {
     >
       <MainLayout
         inert={isOperationPending}
+        mainOverlay={mainOverlay}
         leftSidebar={
           <FolderTree
             folders={foldersWithCount}
             selectedFolderId={selectedFolderId}
             totalNoteCount={notes.length}
+            settingsButton={settingsButton}
             onSelectFolder={selectFolder}
             onCreateFolder={folderHandlers.handleCreateFolder}
             onImportRss={folderHandlers.handleImportRss}
@@ -360,16 +377,21 @@ export function NoteWorkspace() {
             notes={formattedNotes}
             selectedNoteId={selectedNoteId ?? undefined}
             selectedNoteIds={effectiveSelectedNoteIds}
-            searchKeyword={searchKeyword}
-            onSelectNote={selectNote}
+            selectionAnchorId={selectionAnchorId}
+            onSelectNote={onOpenNote}
             onCreateNote={noteHandlers.handleCreateNote}
             onCreateFromUrl={dialogState.openUrlCreateDialog}
-            onSearchChange={setSearchKeyword}
             onShowNoteInExplorer={noteHandlers.handleShowNoteInExplorer}
             onCopyNoteRelativePath={noteHandlers.handleCopyNoteRelativePath}
             onCopyNoteAbsolutePath={noteHandlers.handleCopyNoteAbsolutePath}
-            onCopyNotesRelativePaths={noteHandlers.handleCopyNotesRelativePaths}
-            onCopyNotesAbsolutePaths={noteHandlers.handleCopyNotesAbsolutePaths}
+            onCopyNotesRelativePaths={(noteIds) => {
+              const visibleIds = getVisibleBatchNoteIds(noteIds);
+              return visibleIds.length ? noteHandlers.handleCopyNotesRelativePaths(visibleIds) : undefined;
+            }}
+            onCopyNotesAbsolutePaths={(noteIds) => {
+              const visibleIds = getVisibleBatchNoteIds(noteIds);
+              return visibleIds.length ? noteHandlers.handleCopyNotesAbsolutePaths(visibleIds) : undefined;
+            }}
             onDeleteNote={noteHandlers.handleDeleteNote}
             onDeleteNotes={handleDeleteSelectedNotes}
             onRenameNote={noteHandlers.handleRenameNote}
@@ -381,7 +403,7 @@ export function NoteWorkspace() {
             onCopyToWechat={noteHandlers.handleCopyToWechat}
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
-            onSelectedNoteIdsChange={setSelectedNoteIds}
+            onSelectionChange={setNoteSelection}
           />
         }
         mainContent={
@@ -399,13 +421,15 @@ export function NoteWorkspace() {
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onDeleteNote={noteHandlers.handleDeleteNote}
             onImportExternalMarkdownFiles={handleImportExternalMarkdownFiles}
-            onOpenImportedMarkdownNote={handleOpenImportedMarkdownNote}
+            onOpenImportedMarkdownNote={onOpenNote}
             noteDropTargetId={EDITOR_DROP_OPEN_ID}
+            disableNoteDrop={!!mainOverlay}
           />
         }
       />
 
       <NoteDialogs
+        onOpenNote={onOpenNote}
         showCreateFolderDialog={dialogState.showCreateFolderDialog}
         onCloseCreateFolderDialog={dialogState.closeCreateFolderDialog}
         showCreateNoteDialog={dialogState.showCreateNoteDialog}

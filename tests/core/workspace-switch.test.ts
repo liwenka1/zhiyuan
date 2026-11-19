@@ -22,6 +22,7 @@ const {
   harness: {
     state: null as unknown as NoteStore,
     effects: [] as Array<() => unknown>,
+    effectDependencies: [] as Array<readonly unknown[] | undefined>,
     refs: [] as unknown[],
     refIndex: 0
   },
@@ -43,7 +44,10 @@ const {
 
 vi.mock("react", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react")>()),
-  useEffect: (effect: () => unknown) => harness.effects.push(effect),
+  useEffect: (effect: () => unknown, dependencies?: readonly unknown[]) => {
+    harness.effectDependencies[harness.effects.length] = dependencies;
+    harness.effects.push(effect);
+  },
   useRef: (value: unknown) => {
     const index = harness.refIndex++;
     harness.refs[index] ??= { current: value };
@@ -256,8 +260,7 @@ describe("workspace switching edit isolation", () => {
       openNoteIds: [],
       playingNoteIds: [],
       savingNoteIds: new Set(),
-      isLoadingFromFileSystem: false,
-      searchKeyword: ""
+      isLoadingFromFileSystem: false
     } as unknown as NoteStore;
     const get = () => harness.state;
     const set: NoteStoreSet = (update) => {
@@ -290,6 +293,18 @@ describe("workspace switching edit isolation", () => {
     clearPendingSave("note.md");
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("keeps the scan dependencies stable when the translation function changes", async () => {
+    await openA();
+    const originalDependencies = harness.effectDependencies[0];
+
+    // The mocked translation hook returns a new t function for this render.
+    harness.effects = [];
+    harness.refIndex = 0;
+    useWorkspaceInit();
+
+    expect(harness.effectDependencies[0]).toStrictEqual(originalDependencies);
   });
 
   it("blocks the old editor and note operations after the old draft was flushed but before the new root is bound", async () => {

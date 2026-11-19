@@ -34,6 +34,7 @@ interface EditorAreaProps {
   onImportExternalMarkdownFiles?: (sourcePaths: string[]) => Promise<{ importedCount: number; skippedCount: number }>;
   onOpenImportedMarkdownNote?: (noteId: string) => void;
   noteDropTargetId?: string;
+  disableNoteDrop?: boolean;
 }
 
 export function EditorArea({
@@ -51,7 +52,8 @@ export function EditorArea({
   onPushToGitHub,
   onImportExternalMarkdownFiles,
   onOpenImportedMarkdownNote,
-  noteDropTargetId
+  noteDropTargetId,
+  disableNoteDrop = false
 }: EditorAreaProps) {
   const editorMode = useViewStore((state) => state.editorMode);
   const splitLayout = useViewStore((state) => state.splitLayout);
@@ -70,7 +72,8 @@ export function EditorArea({
     isOver: isEditorDropOver,
     active: editorDropActive
   } = useDroppable({
-    id: noteDropTargetId ?? "editor-drop-open"
+    id: noteDropTargetId ?? "editor-drop-open",
+    disabled: disableNoteDrop
   });
   const { isFileDropHover, dragHandlers } = useExternalMarkdownDrop({
     onImportExternalMarkdownFiles,
@@ -350,7 +353,7 @@ const OpenNotePanels = memo(
     const isSplit = editorMode === "split";
 
     return (
-      <div className={isActive ? "h-full" : "hidden"}>
+      <div data-active-note={isActive || undefined} className={isActive ? "h-full" : "hidden"}>
         <ResizablePanelGroup
           orientation="horizontal"
           className="h-full"

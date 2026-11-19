@@ -1,4 +1,4 @@
-import "./smoke-paths";
+import "./app-paths";
 import { app, BrowserWindow, ipcMain, protocol, net } from "electron";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
