@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, memo, useRef } from "react";
+import { useEffect, useMemo, useCallback, memo, useRef, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { EditorToolbar } from "./editor-toolbar";
 import { EditorContent } from "./editor-content";
@@ -59,6 +59,8 @@ export function EditorArea({
   const splitLayout = useViewStore((state) => state.splitLayout);
   const setSplitLayout = useViewStore((state) => state.setSplitLayout);
   const isTerminalOpen = useViewStore((state) => state.isTerminalOpen);
+  const [hasOpenedTerminal, setHasOpenedTerminal] = useState(isTerminalOpen);
+  if (isTerminalOpen && !hasOpenedTerminal) setHasOpenedTerminal(true);
   const terminalHeight = useViewStore((state) => state.terminalHeight);
   const setTerminalHeight = useViewStore((state) => state.setTerminalHeight);
   const playingNoteIds = useNoteStore((state) => state.playingNoteIds);
@@ -202,6 +204,7 @@ export function EditorArea({
       <div ref={editorShellRef} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <ResizablePanelGroup
           orientation="vertical"
+          disabled={!isTerminalOpen}
           className="h-full"
           groupRef={outerGroupRef}
           onLayoutChanged={handleOuterLayoutChanged}
@@ -210,13 +213,7 @@ export function EditorArea({
             <div className="h-full min-h-0 overflow-hidden">{editorMainContent}</div>
           </ResizablePanel>
 
-          <ResizableHandle
-            className={
-              isTerminalOpen
-                ? "bg-border hover:bg-primary h-px transition-colors"
-                : "pointer-events-none h-0 border-0 bg-transparent p-0 opacity-0"
-            }
-          />
+          {isTerminalOpen && <ResizableHandle className="bg-border hover:bg-primary h-px transition-colors" />}
 
           <ResizablePanel
             id={outerTerminalPanelId}
@@ -226,9 +223,7 @@ export function EditorArea({
             collapsible
             collapsedSize="0%"
           >
-            <div className="h-full overflow-hidden">
-              <TerminalPanel />
-            </div>
+            <div className="h-full overflow-hidden">{hasOpenedTerminal && <TerminalPanel />}</div>
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

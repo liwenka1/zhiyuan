@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module";
-import { mkdir, mkdtemp, readFile, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { once } from "node:events";
+import { mkdir, mkdtemp, open, readFile, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
@@ -17,6 +18,8 @@ const notePath = path.join(workspace, "smoke-note.md");
 const decoyPath = path.join(workspace, "000-decoy.md");
 const initialContent = "# Desktop smoke\n\nFixture before edit.\n";
 const expectedContent = "# Desktop smoke edited\n\nSaved through the real editor.\n";
+const readyMarker = "ZHIYUAN_SMOKE_READY: editor opened, edited and saved";
+const smokeTimeout = 25_000;
 
 function waitForExit(child) {
   if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
@@ -40,13 +43,13 @@ async function runSmokeCase(name, startupPath) {
   await utimes(decoyPath, newer, newer);
   const profileRoot = path.join(smokeRoot, `${name}-profile`);
   await mkdir(profileRoot);
-  const output = [];
-  let ready = false;
-  let finished = false;
-  let timeout;
+  const outputPath = path.join(profileRoot, "electron.log");
+  const log = await open(outputPath, "w");
+  let child;
+  let output;
 
-  await new Promise((resolve, reject) => {
-    const child = spawn(electronBinary, ["--no-sandbox", mainEntry, startupPath], {
+  try {
+    child = spawn(electronBinary, ["--no-sandbox", mainEntry, startupPath], {
       cwd: repoRoot,
       env: {
         ...process.env,
@@ -59,51 +62,36 @@ async function runSmokeCase(name, startupPath) {
         XDG_CACHE_HOME: path.join(profileRoot, "cache"),
         XDG_DATA_HOME: path.join(profileRoot, "data")
       },
-      stdio: ["ignore", "pipe", "pipe"]
+      // Chromium descendants can outlive Electron and keep inherited streams open.
+      stdio: ["ignore", log.fd, log.fd]
     });
 
-    const appendOutput = (chunk) => {
-      output.push(String(chunk));
-      if (output.length > 80) output.shift();
-    };
-    const finish = async (error) => {
-      if (finished) return;
-      finished = true;
-      clearTimeout(timeout);
-      if (child.exitCode === null && child.signalCode === null) child.kill();
+    const [code, signal] = await once(child, "exit", { signal: AbortSignal.timeout(smokeTimeout) }).catch((error) => {
+      if (error.name === "AbortError") throw new Error("Desktop editor smoke timed out after 25 seconds");
+      throw error;
+    });
+    output = await readFile(outputPath, "utf8");
+    const ready = output.split(/\r?\n/).includes(readyMarker);
+    if (!ready || code !== 0 || signal !== null) {
+      throw new Error(`Desktop editor smoke failed (code=${code}, signal=${signal}, ready=${ready})`);
+    }
+    if ((await readFile(notePath, "utf8")) !== expectedContent) {
+      throw new Error("Desktop smoke saved unexpected content");
+    }
+  } catch (error) {
+    if (child?.pid !== undefined && child.exitCode === null && child.signalCode === null) {
+      child.kill();
       await waitForExit(child);
       if (child.exitCode === null && child.signalCode === null) {
         child.kill("SIGKILL");
         await waitForExit(child);
       }
-      if (error) reject(new Error(`${name}: ${error.message}\n${output.join("")}`));
-      else resolve();
-    };
-
-    timeout = setTimeout(() => {
-      void finish(new Error("Desktop editor smoke timed out after 25 seconds"));
-    }, 25_000);
-    child.stdout.on("data", (chunk) => {
-      appendOutput(chunk);
-      if (output.join("").includes("ZHIYUAN_SMOKE_READY")) ready = true;
-    });
-    child.stderr.on("data", appendOutput);
-    child.once("error", (error) => void finish(error));
-    child.once("close", async (code, signal) => {
-      if (finished) return;
-      if (!ready || code !== 0) {
-        await finish(new Error(`Desktop editor smoke failed (code=${code}, signal=${signal}, ready=${ready})`));
-        return;
-      }
-      try {
-        if ((await readFile(notePath, "utf8")) !== expectedContent)
-          throw new Error("Desktop smoke saved unexpected content");
-        await finish();
-      } catch (error) {
-        await finish(error);
-      }
-    });
-  });
+    }
+    output ??= await readFile(outputPath, "utf8").catch(() => "");
+    throw new Error(`${name}: ${error.message}\n${output.slice(-32_000)}`);
+  } finally {
+    await log.close();
+  }
   console.log(`desktop editor smoke passed: ${name} startup automatically selected, edited and saved the note`);
 }
 

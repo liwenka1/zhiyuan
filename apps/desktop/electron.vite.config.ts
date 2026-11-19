@@ -37,6 +37,10 @@ export default defineConfig({
     }
   },
   renderer: {
+    build: {
+      // Keep fonts as separate files so they can load under the renderer's CSP.
+      assetsInlineLimit: (filePath) => (/\.(woff2?|ttf)$/i.test(filePath) ? false : undefined)
+    },
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version)
     },
