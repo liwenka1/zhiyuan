@@ -156,7 +156,10 @@
     "external": "外部版本",
     "unavailable": "文件已删除或暂时无法读取，处理时会重新检查。",
     "keepBoth": "保留本地副本并加载外部版本",
-    "resolved": "本地草稿已另存为冲突副本"
+    "saveAs": "另存草稿…",
+    "existingDraftDestination": "文件已存在，请为恢复的草稿选择一个新文件名。",
+    "resolved": "本地草稿已另存为冲突副本",
+    "originalReadFailed": "草稿已保存。原笔记暂时无法重新读取。"
   },
   "github": {
     "publishInProgress": "有笔记正在发布，请完成后重试。",

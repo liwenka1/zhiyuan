@@ -1,5 +1,6 @@
 import { BrowserWindow, shell, screen, app } from "electron";
 import { join, basename, resolve } from "path";
+import { pathToFileURL } from "node:url";
 import fs from "fs";
 import { randomBytes } from "node:crypto";
 import { is } from "@electron-toolkit/utils";
@@ -18,7 +19,9 @@ const CLOSE_FLUSH_TIMEOUT_MS = 10_000;
 interface WindowEntry {
   window: BrowserWindow;
   workspacePath: string | null;
+  scannedWorkspacePath: string | null;
   localResourceToken: string;
+  rendererUrl: string;
 }
 
 /**
@@ -28,10 +31,11 @@ interface WindowEntry {
 class WindowManager {
   private windows: Map<number, WindowEntry> = new Map();
   private readonly closeAttempts = new CloseAttemptTracker();
+  private quitRequested = false;
 
   private normalizeWorkspacePath(workspacePath: string): string {
     try {
-      return fs.realpathSync(workspacePath);
+      return fs.realpathSync.native(workspacePath);
     } catch {
       return resolve(workspacePath);
     }
@@ -67,6 +71,9 @@ class WindowManager {
   createWindow(workspacePath?: string): BrowserWindow {
     const localResourceToken = randomBytes(32).toString("hex");
     const normalizedWorkspacePath = workspacePath ? this.normalizeWorkspacePath(workspacePath) : null;
+    const rendererFile = join(__dirname, "../renderer/index.html");
+    const devRendererUrl = is.dev ? process.env.ELECTRON_RENDERER_URL : undefined;
+    const rendererUrl = new URL(devRendererUrl || pathToFileURL(rendererFile)).href;
     const getBackgroundColor = (): string => {
       const theme = themeManager.getTheme();
       return getThemeBackgroundColor(theme);
@@ -126,7 +133,9 @@ class WindowManager {
     this.windows.set(win.id, {
       window: win,
       workspacePath: normalizedWorkspacePath,
-      localResourceToken
+      scannedWorkspacePath: null,
+      localResourceToken,
+      rendererUrl: rendererUrl.split("#", 1)[0]
     });
 
     win.on("ready-to-show", () => {
@@ -156,6 +165,7 @@ class WindowManager {
           windowId: win.id
         });
         this.closeAttempts.cancel(win.id);
+        this.quitRequested = false;
         win.show();
       }, CLOSE_FLUSH_TIMEOUT_MS);
     });
@@ -178,16 +188,6 @@ class WindowManager {
       });
     });
 
-    // 监听主题变化，动态更新窗口背景色和标题栏
-    win.webContents.on("ipc-message", (_event, channel) => {
-      if (channel === "theme:changed") {
-        win.setBackgroundColor(getBackgroundColor());
-        if (process.platform === "win32") {
-          win.setTitleBarOverlay(getTitleBarOverlay());
-        }
-      }
-    });
-
     // 窗口关闭时清理
     win.on("closed", () => {
       this.closeAttempts.clear(win.id);
@@ -200,12 +200,8 @@ class WindowManager {
       this.windows.delete(win.id);
     });
 
-    // 加载页面
-    if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-      win.loadURL(process.env["ELECTRON_RENDERER_URL"]);
-    } else {
-      win.loadFile(join(__dirname, "../renderer/index.html"));
-    }
+    // Use the authorized URL for navigation so file path characters are encoded identically.
+    win.loadURL(rendererUrl);
 
     return win;
   }
@@ -215,7 +211,7 @@ class WindowManager {
    */
   getEntryByWebContents(webContents: Electron.WebContents): WindowEntry | undefined {
     const win = BrowserWindow.fromWebContents(webContents);
-    if (!win) return undefined;
+    if (!win || win.webContents !== webContents) return undefined;
     return this.windows.get(win.id);
   }
 
@@ -242,6 +238,23 @@ class WindowManager {
     entry.window.destroy();
   }
 
+  deferQuit(event: Pick<Electron.Event, "preventDefault">): void {
+    const entries = this.getAllEntries();
+    if (!entries.some((entry) => entry.workspacePath)) return;
+    // Electron forgets a native quit if a window cancels its close event for the async save handshake.
+    event.preventDefault();
+    this.quitRequested = true;
+    for (const { window } of entries) {
+      if (!window.isDestroyed() && !this.closeAttempts.isPending(window.id)) window.close();
+    }
+  }
+
+  takeQuitRequest(): boolean {
+    const requested = this.quitRequested;
+    this.quitRequested = false;
+    return requested;
+  }
+
   /**
    * 设置窗口的工作区路径
    */
@@ -254,6 +267,7 @@ class WindowManager {
         fileWatcherManager.stopWatching(entry.workspacePath, windowId);
       }
       entry.workspacePath = normalizedWorkspacePath;
+      entry.scannedWorkspacePath = workspacePath;
       this.applyWorkspaceIdentity(entry.window, normalizedWorkspacePath);
     }
   }
@@ -264,32 +278,26 @@ class WindowManager {
    * @param excludeWindowId 排除的窗口 ID（通常是调用方自身）
    */
   focusExistingWindow(workspacePath: string, excludeWindowId: number): boolean {
-    const normalizedWorkspacePath = this.normalizeWorkspacePath(workspacePath);
-    for (const [id, entry] of this.windows) {
-      if (id !== excludeWindowId && entry.workspacePath === normalizedWorkspacePath && !entry.window.isDestroyed()) {
-        // 聚焦已有窗口
-        if (entry.window.isMinimized()) {
-          entry.window.restore();
-        }
-        entry.window.focus();
-        return true;
-      }
+    const entry = this.findWorkspaceEntry(workspacePath, excludeWindowId);
+    if (!entry) return false;
+    if (entry.window.isMinimized()) {
+      entry.window.restore();
     }
-    return false;
+    entry.window.focus();
+    return true;
   }
 
   /**
-   * 获取绑定了指定工作区的所有窗口
+   * 用工作区的规范路径查找窗口，同时保留渲染端扫描时使用的路径。
    */
-  getWindowsForWorkspace(workspacePath: string): BrowserWindow[] {
+  findWorkspaceEntry(workspacePath: string, excludeWindowId?: number): WindowEntry | undefined {
     const normalizedWorkspacePath = this.normalizeWorkspacePath(workspacePath);
-    const result: BrowserWindow[] = [];
-    for (const entry of this.windows.values()) {
-      if (entry.workspacePath === normalizedWorkspacePath && !entry.window.isDestroyed()) {
-        result.push(entry.window);
+    for (const [id, entry] of this.windows) {
+      if (id !== excludeWindowId && entry.workspacePath === normalizedWorkspacePath && !entry.window.isDestroyed()) {
+        return entry;
       }
     }
-    return result;
+    return undefined;
   }
 
   /**

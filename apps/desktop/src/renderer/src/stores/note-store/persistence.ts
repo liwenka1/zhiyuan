@@ -122,7 +122,8 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
         setLastSavedContent(pending.noteId, pending.content);
       }
     } catch (error) {
-      if ((error as { code?: string })?.code === "FILE_CONTENT_CONFLICT") {
+      const code = (error as { code?: string })?.code;
+      if (code === "FILE_CONTENT_CONFLICT" || code === "FILE_NOT_FOUND") {
         const note = get().notes.find((item) => item.id === pending.noteId && item.filePath === pending.filePath);
         const localContent = note
           ? get().selectedNoteId === note.id
@@ -130,10 +131,16 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
             : note.content
           : (pendingContents.get(pending.filePath)?.content ?? pending.content);
         // Pause synchronously; an asynchronous read must not leave a writer free to retry.
-        recordSaveConflict(pending.noteId, pending.filePath, localContent, undefined);
-        const disk = await fileIpc.read(pending.filePath).catch(() => null);
-        const currentConflict = useSaveConflictStore.getState().conflicts[pending.filePath];
-        if (currentConflict) setSaveConflict({ ...currentConflict, diskContent: disk?.content });
+        const existingConflict = useSaveConflictStore.getState().conflicts[pending.filePath];
+        const diskContent = code === "FILE_NOT_FOUND" ? null : existingConflict?.diskContent;
+        recordSaveConflict(pending.noteId, pending.filePath, localContent, diskContent);
+        if (diskContent === undefined) {
+          const disk = await fileIpc.read(pending.filePath).catch(() => null);
+          const currentConflict = useSaveConflictStore.getState().conflicts[pending.filePath];
+          if (disk && currentConflict && currentConflict.diskContent === undefined) {
+            setSaveConflict({ ...currentConflict, diskContent: disk.content });
+          }
+        }
       }
       throw error;
     } finally {
@@ -251,71 +258,90 @@ export function applyPersistence(set: NoteStoreSet, get: NoteStoreGet) {
       }
     },
 
-    resolveSaveConflict: async (filePath: string) => {
+    resolveSaveConflict: async (filePath: string, saveAsTitle?: string, existingFileMessage?: string) => {
       const release = beginFileOperation();
       if (!release) throw new Error("Wait for the current file operation to finish");
       try {
         const conflict = useSaveConflictStore.getState().conflicts[filePath];
-        if (!conflict) return;
+        if (!conflict) return null;
         await Promise.allSettled([saveQueues.get(filePath)]);
         const note = get().notes.find((item) => item.filePath === filePath);
-        if (!note) throw new Error("The conflicted note is no longer available");
         if (!/\.md$/i.test(filePath)) throw new Error("Only Markdown notes can be recovered");
-        const localContent = get().selectedNoteId === note.id ? get().editorContent : note.content;
+        const localContent =
+          note && get().selectedNoteId === note.id ? get().editorContent : (note?.content ?? conflict.localContent);
         const backupContent = stripGitHubMetadata(localContent);
         const stamp = new Date().toISOString().replace(/[:.]/g, "-");
         const sourceFileName = filePath.split(/[\\/]/).pop()!;
         const directory = filePath.slice(0, -sourceFileName.length);
         // Leave room for the recovery suffix even when the original filename is near the filesystem limit.
         const stem = Array.from(sourceFileName.replace(/\.md$/i, "")).slice(0, 30).join("");
+        const backupName = (index: number) => `${stem} (conflict ${stamp}-${index}).md`;
         let backupPath = "";
-        for (let index = 1; !backupPath; index++) {
-          const candidate = `${directory}${stem} (conflict ${stamp}-${index}).md`;
-          try {
-            await fileIpc.create(candidate, backupContent);
-            backupPath = candidate;
-          } catch (error) {
-            if (!(await fileIpc.exists(candidate))) throw error;
+        if (saveAsTitle !== undefined) {
+          if (!(await fileIpc.saveDraftAs(backupName(1), backupContent, saveAsTitle, existingFileMessage))) return null;
+        } else {
+          if (!note) throw new Error("The conflicted note is no longer available");
+          for (let index = 1; !backupPath; index++) {
+            const candidate = `${directory}${backupName(index)}`;
+            try {
+              await fileIpc.create(candidate, backupContent);
+              backupPath = candidate;
+            } catch (error) {
+              if (!(await fileIpc.exists(candidate))) throw error;
+            }
           }
         }
         // Never write the external file. Re-read after the backup is durable.
-        const disk = await fileIpc.read(filePath).catch(async (error) => {
-          if (await fileIpc.exists(filePath)) throw error;
-          return null;
-        });
-        const fileName = backupPath.split(/[\\/]/).pop()!;
-        const backupId = `${note.id.slice(0, note.id.lastIndexOf("/") + 1)}${fileName}`;
-        clearPendingSave(note.id, filePath);
-        setLastSavedContent(backupId, backupContent);
-        if (disk) setLastSavedContent(note.id, disk.content);
+        let originalMissing = false;
+        let originalReadFailed = false;
+        let restoredContent: string | undefined;
+        try {
+          restoredContent = (await fileIpc.read(filePath)).content;
+        } catch (error) {
+          originalMissing = (error as { code?: string })?.code === "FILE_NOT_FOUND";
+          originalReadFailed = !originalMissing;
+          if (originalReadFailed && note) {
+            // Keep the tab on its last known baseline so selecting another note cannot save the recovered draft back.
+            restoredContent = conflict.diskContent ?? getLastSavedContent(note.id) ?? note.content;
+          }
+        }
+        const fileName = backupPath.split(/[\\/]/).pop() ?? "";
+        const backup =
+          note && backupPath
+            ? {
+                ...note,
+                id: `${note.id.slice(0, note.id.lastIndexOf("/") + 1)}${fileName}`,
+                filePath: backupPath,
+                fileName,
+                title: fileName.replace(/\.md$/i, ""),
+                content: backupContent,
+                github: undefined,
+                isPinned: false
+              }
+            : null;
+        clearPendingSave(conflict.noteId, filePath);
+        if (backup) setLastSavedContent(backup.id, backupContent);
+        if (note && restoredContent !== undefined) setLastSavedContent(note.id, restoredContent);
         set((state) => {
-          const source = state.notes.find((item) => item.id === note.id && item.filePath === filePath);
-          if (source && disk) {
-            source.content = disk.content;
-            source.github = parseGitHubMetadata(disk.content);
-            if (state.selectedNoteId === source.id) state.editorContent = disk.content;
-          } else if (source) {
+          const source = state.notes.find((item) => item.id === conflict.noteId && item.filePath === filePath);
+          if (source && restoredContent !== undefined) {
+            source.content = restoredContent;
+            source.github = parseGitHubMetadata(restoredContent);
+            if (state.selectedNoteId === source.id) state.editorContent = restoredContent;
+          } else if (source && originalMissing) {
             state.notes = state.notes.filter((item) => item.id !== source.id);
             state.openNoteIds = state.openNoteIds.filter((id) => id !== source.id);
+            state.playingNoteIds = state.playingNoteIds.filter((id) => id !== source.id);
           }
-          if (!state.notes.some((item) => item.filePath === backupPath))
-            state.notes.push({
-              ...note,
-              id: backupId,
-              filePath: backupPath,
-              fileName,
-              title: fileName.replace(/\.md$/i, ""),
-              content: backupContent,
-              github: undefined,
-              isPinned: false
-            });
-          if (!disk && state.selectedNoteId === note.id) {
-            state.selectedNoteId = backupId;
-            state.editorContent = backupContent;
-            state.openNoteIds.push(backupId);
+          if (backup && !state.notes.some((item) => item.filePath === backupPath)) state.notes.push(backup);
+          if (originalMissing && source && state.selectedNoteId === source.id) {
+            state.selectedNoteId = backup?.id ?? null;
+            state.editorContent = backup?.content ?? "";
+            if (backup && !state.openNoteIds.includes(backup.id)) state.openNoteIds.push(backup.id);
           }
         });
         clearSaveConflict(filePath);
+        return { originalReadFailed };
       } finally {
         release();
       }

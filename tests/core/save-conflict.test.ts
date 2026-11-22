@@ -4,7 +4,13 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NoteStore, NoteStoreSet } from "../../apps/desktop/src/renderer/src/stores/note-store/types";
 
-const io = vi.hoisted(() => ({ write: vi.fn(), read: vi.fn(), create: vi.fn(), exists: vi.fn() }));
+const io = vi.hoisted(() => ({
+  write: vi.fn(),
+  read: vi.fn(),
+  create: vi.fn(),
+  exists: vi.fn(),
+  saveDraftAs: vi.fn()
+}));
 vi.mock("electron", () => ({ shell: {} }));
 vi.mock("@/ipc", () => ({ fileIpc: io }));
 vi.mock("@/lib/i18n", () => ({ default: { t: (key: string) => key } }));
@@ -42,9 +48,22 @@ describe("external edit conflict preservation", () => {
     filePath = path.join(root, "note.md");
     await fs.writeFile(filePath, "baseline");
     io.write.mockReset().mockImplementation(writeExistingFile);
-    io.read.mockReset().mockImplementation((file: string) => fileSystem.readFile(file));
+    io.read.mockReset().mockImplementation(async (file: string) => {
+      try {
+        if ((await fs.stat(file)).isDirectory()) {
+          throw Object.assign(new Error("Target is a directory"), { code: "EISDIR" });
+        }
+        return await fileSystem.readFile(file);
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        throw Object.assign(error as Error, {
+          code: code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR" ? "FILE_NOT_FOUND" : "FILE_READ_FAILED"
+        });
+      }
+    });
     io.create.mockReset().mockImplementation((file: string, content: string) => fileSystem.createFile(file, content));
     io.exists.mockReset().mockImplementation((file: string) => fileSystem.exists(file));
+    io.saveDraftAs.mockReset();
     useWorkspaceStore.setState({ workspacePath: root, isLoading: false });
     useSaveConflictStore.setState({ conflicts: {} });
     state = {
@@ -146,6 +165,16 @@ describe("external edit conflict preservation", () => {
     expect(await fs.readFile(filePath, "utf8")).toBe("newer local edit");
   });
 
+  it("re-reads a known note when the watcher reports the same path added again", async () => {
+    await fs.writeFile(filePath, "replaced version");
+
+    await state.handleFileAddedEvent("note.md", filePath);
+
+    expect(state.notes).toHaveLength(1);
+    expect(state.editorContent).toBe("replaced version");
+    expect(getLastSavedContent("note.md")).toBe("replaced version");
+  });
+
   it("keeps the conflict and both drafts intact if the backup cannot be written", async () => {
     state.updateNoteContent("local draft");
     await fs.writeFile(filePath, "external draft");
@@ -156,6 +185,101 @@ describe("external edit conflict preservation", () => {
     expect(await fs.readFile(filePath, "utf8")).toBe("external draft");
     expect(hasPendingSave(filePath)).toBe(true);
     await expect(flushAllDebouncedSaves(() => state)).rejects.toThrow();
+  });
+
+  it("allows a deleted workspace's draft to be saved through an alternate destination", async () => {
+    const recovery = await fs.mkdtemp(path.join(os.tmpdir(), "zhiyuan-recovered-draft-"));
+    const backup = path.join(recovery, "backup.md");
+    try {
+      state.updateNoteContent("draft after workspace was moved");
+      await fs.rm(root, { recursive: true, force: true });
+      state.handleFileDeletedEvent("note.md");
+      io.saveDraftAs.mockResolvedValueOnce(false);
+      expect(await state.resolveSaveConflict(filePath, "Save draft as")).toBeNull();
+      expect(hasPendingSave(filePath)).toBe(true);
+      expect(useSaveConflictStore.getState().conflicts[filePath]).toBeDefined();
+      expect(state.editorContent).toBe("draft after workspace was moved");
+
+      io.saveDraftAs.mockImplementationOnce(async (_name: string, content: string) => {
+        await fs.writeFile(backup, content);
+        return true;
+      });
+      expect(await state.resolveSaveConflict(filePath, "Save draft as")).toEqual({ originalReadFailed: false });
+      expect(await fs.readFile(backup, "utf8")).toBe("draft after workspace was moved");
+      expect(io.exists).not.toHaveBeenCalled();
+      expect(state.openNoteIds).toEqual([]);
+      expect(state.selectedNoteId).toBeNull();
+      expect(hasPendingSave(filePath)).toBe(false);
+      expect(useSaveConflictStore.getState().conflicts).toEqual({});
+      await expect(flushAllDebouncedSaves(() => state)).resolves.toBeUndefined();
+    } finally {
+      await fs.rm(recovery, { recursive: true, force: true });
+    }
+  });
+
+  it("recovers a draft without using an unrelated selected note with the same ID", async () => {
+    state.updateNoteContent("draft to recover");
+    await fs.unlink(filePath);
+    state.handleFileDeletedEvent("note.md");
+    const otherPath = path.join(root, "other", "note.md");
+    state.notes[0] = { ...state.notes[0], filePath: otherPath, content: "other note" };
+    state.editorContent = "other note";
+    io.saveDraftAs.mockResolvedValueOnce(true);
+
+    expect(await state.resolveSaveConflict(filePath, "Save draft as")).toEqual({ originalReadFailed: false });
+
+    expect(io.saveDraftAs).toHaveBeenCalledWith(
+      expect.stringMatching(/\.md$/),
+      "draft to recover",
+      "Save draft as",
+      undefined
+    );
+    expect(state.openNoteIds).toEqual(["note.md"]);
+    expect(state.editorContent).toBe("other note");
+    expect(state.notes[0].filePath).toBe(otherPath);
+  });
+
+  it("keeps an unreadable original in its tab after saving the draft elsewhere", async () => {
+    state.updateNoteContent("draft to recover");
+    await fs.writeFile(filePath, "external version");
+    await state.handleFileChangedEvent("note.md", filePath);
+    io.saveDraftAs.mockResolvedValueOnce(true);
+    io.read.mockRejectedValueOnce(Object.assign(new Error("Temporarily unreadable"), { code: "FILE_READ_FAILED" }));
+
+    expect(await state.resolveSaveConflict(filePath, "Save draft as")).toEqual({ originalReadFailed: true });
+
+    expect(io.saveDraftAs).toHaveBeenCalledWith(
+      expect.stringMatching(/\.md$/),
+      "draft to recover",
+      "Save draft as",
+      undefined
+    );
+    expect(state.openNoteIds).toEqual(["note.md"]);
+    expect(state.selectedNoteId).toBe("note.md");
+    expect(state.editorContent).toBe("external version");
+    expect(getLastSavedContent("note.md")).toBe("external version");
+    expect(useSaveConflictStore.getState().conflicts).toEqual({});
+    await expect(flushAllDebouncedSaves(() => state)).resolves.toBeUndefined();
+    expect(io.write).not.toHaveBeenCalled();
+    expect(await fs.readFile(filePath, "utf8")).toBe("external version");
+  });
+
+  it("replaces a stale tab with the recovered draft when a directory occupies the original path", async () => {
+    state.updateNoteContent("draft to recover");
+    await fs.writeFile(filePath, "external version");
+    await state.handleFileChangedEvent("note.md", filePath);
+    await fs.unlink(filePath);
+    await fs.mkdir(filePath);
+
+    expect(await state.resolveSaveConflict(filePath)).toEqual({ originalReadFailed: false });
+    const [recovered] = state.notes;
+    expect(state.notes).toHaveLength(1);
+    expect(recovered.content).toBe("draft to recover");
+    expect(await fs.readFile(recovered.filePath!, "utf8")).toBe("draft to recover");
+    expect(await fs.readdir(filePath)).toEqual([]);
+    expect(state.openNoteIds).toEqual([recovered.id]);
+    expect(state.selectedNoteId).toBe(recovered.id);
+    expect(useSaveConflictStore.getState().conflicts).toEqual({});
   });
 
   it("reads the latest external version again after preserving the local draft", async () => {
@@ -181,6 +305,23 @@ describe("external edit conflict preservation", () => {
     const backup = state.notes.find((note) => note.filePath !== filePath)!;
     expect(await fs.readFile(backup.filePath!, "utf8")).toBe("local draft");
     expect(state.selectedNoteId).toBe(backup.id);
+  });
+
+  it("recovers a deleted file's draft even when the watcher has not reported the deletion", async () => {
+    state.updateNoteContent("unsaved draft");
+    await fs.unlink(filePath);
+    io.write.mockRejectedValueOnce(Object.assign(new Error("File is missing"), { code: "FILE_NOT_FOUND" }));
+
+    await expect(flushAllDebouncedSaves(() => state)).rejects.toMatchObject({ code: "FILE_NOT_FOUND" });
+    expect(useSaveConflictStore.getState().conflicts[filePath]).toMatchObject({
+      localContent: "unsaved draft",
+      diskContent: null
+    });
+
+    await state.resolveSaveConflict(filePath);
+    expect(await fileSystem.exists(filePath)).toBe(false);
+    const backup = state.notes.find((note) => note.filePath !== filePath)!;
+    expect(await fs.readFile(backup.filePath!, "utf8")).toBe("unsaved draft");
   });
 
   it("does not give the recovered copy the source note's GitHub association", async () => {

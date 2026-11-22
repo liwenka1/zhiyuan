@@ -58,27 +58,18 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Reset existing release to draft
-        if: github.event_name == 'workflow_dispatch'
+      - name: Verify package version matches a pushed tag
+        if: github.event_name == 'push'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          TAG: ${{ steps.vars.outputs.tag }}
+          VERSION: ${{ steps.vars.outputs.version }}
         run: |
-          set -euo pipefail
-
-          # 重发一个已经发布过的版本时先转回草稿：
-          # electron-builder 对「已发布的同名 release」会以
-          # "existing type not compatible with publishing type" 静默跳过上传。
-          state=$(gh api "repos/$REPO/releases/tags/$TAG" \
-            --jq 'if .draft then "draft" else "published" end' 2>/dev/null || echo "missing")
-
-          if [ "$state" = "published" ]; then
-            echo "::notice::Release $TAG 已发布，重发前先转回草稿"
-            gh release edit "$TAG" --draft
-          else
-            echo "Release $TAG 当前状态：$state，无需处理"
-          fi
+          node -e '
+            const version = require("./apps/desktop/package.json").version;
+            if (version !== process.env.VERSION) {
+              console.error(`::error::Tag version ${process.env.VERSION} does not match desktop package version ${version}`);
+              process.exit(1);
+            }
+          '
 
       - name: Bump desktop version, commit and push tag
         if: github.event_name == 'workflow_dispatch'
@@ -86,6 +77,8 @@ jobs:
           VERSION: ${{ steps.vars.outputs.version }}
           TAG: ${{ steps.vars.outputs.tag }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -123,6 +116,14 @@ jobs:
           else
             git commit -m "release: $TAG"
             git push origin "HEAD:$DEFAULT_BRANCH"
+          fi
+
+          # 重发时先隐藏旧产物，再移动标签。查询或转草稿失败时由 set -e 中止。
+          published_release=$(gh api --paginate "repos/$REPO/releases?per_page=100" \
+            --jq ".[] | select(.tag_name == \"$TAG\" and .draft == false) | .id")
+          if [ -n "$published_release" ]; then
+            echo "::notice::Release $TAG 已发布，移动标签前先转回草稿"
+            gh api --method PATCH "repos/$REPO/releases/$published_release" --field draft=true --silent
           fi
 
           # 同版本重发：tag 已存在时直接指向当前提交。
@@ -236,9 +237,13 @@ jobs:
       - name: Package and publish
         run: |
           cd apps/desktop
-          npx electron-builder ${{ matrix.build_flag }} --publish always
+          pnpm exec electron-builder ${{ matrix.build_flag }} --publish always
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run packaged macOS app and terminal
+        if: runner.os == 'macOS'
+        run: pnpm smoke:desktop apps/desktop/dist/mac*/纸鸢.app/Contents/MacOS/纸鸢
 
   # 三平台资产全部上传完成后，把草稿转正；转正成功后再同步发版入口的提示版本。
   # 任一平台失败时本 job 不会执行，release 保持草稿 —— 对外不可见，可重跑同一版本。

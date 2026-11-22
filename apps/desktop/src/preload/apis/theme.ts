@@ -20,9 +20,9 @@ export const themeApi = {
   /**
    * 监听主题变化（系统主题或用户设置变化）
    */
-  onChanged: (callback: (theme: Theme) => void): (() => void) => {
-    const listener = (_event: Electron.IpcRendererEvent, theme: Theme) => {
-      callback(theme);
+  onChanged: (callback: (theme: Theme, mode: ThemeMode) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, theme: Theme, mode: ThemeMode) => {
+      callback(theme, mode);
     };
     ipcRenderer.on("theme:changed", listener);
 

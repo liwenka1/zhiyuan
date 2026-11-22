@@ -206,6 +206,22 @@ describe("file watcher event handling", () => {
     expect(setLastSavedContentMock).toHaveBeenCalledTimes(1);
   });
 
+  it("re-reads an external change when a local save finishes before the first read returns", async () => {
+    const read = deferred<string>();
+    handleFileChangedMock.mockReturnValueOnce(read.promise).mockResolvedValueOnce("external edit after save");
+    const { state, handlers } = createTestStore();
+    const update = handlers.handleFileChangedEvent("note.md", "/workspace/note.md");
+    state.notes[0].content = "saved local edit";
+    getLastSavedContentMock.mockReturnValue("saved local edit");
+    read.resolve("external edit after save");
+
+    await update;
+
+    expect(handleFileChangedMock).toHaveBeenCalledTimes(2);
+    expect(state.notes[0].content).toBe("external edit after save");
+    expect(recordSaveConflictMock).not.toHaveBeenCalled();
+  });
+
   it("reads the actual external content before recording a dirty background note's conflict", async () => {
     const read = deferred<string>();
     handleFileChangedMock.mockReturnValue(read.promise);

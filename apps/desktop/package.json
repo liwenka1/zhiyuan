@@ -24,8 +24,8 @@
     "postinstall": "node scripts/ensure-app-deps.mjs",
     "build:unpack": "pnpm run build && electron-builder --dir",
     "build:win": "pnpm run build && electron-builder --win",
-    "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux",
+    "build:mac": "pnpm run build && electron-builder --mac",
+    "build:linux": "pnpm run build && electron-builder --linux",
     "release": "bash scripts/release.sh"
   },
   "dependencies": {
@@ -60,6 +60,7 @@
     "jsdom": "^28.1.0",
     "juice": "^12.2.1",
     "katex": "^0.18.2",
+    "koffi": "3.3.8",
     "lucide-react": "^0.563.0",
     "mermaid": "11.16.1",
     "motion": "^12.31.0",

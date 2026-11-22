@@ -1,10 +1,43 @@
-import { ipcRenderer } from "electron";
+import { ipcRenderer, webUtils } from "electron";
 import type { IpcResultDTO } from "@shared";
 
 type ExternalOpenPayload = { workspacePath: string; filePath?: string };
 const externalOpenListeners = new Set<(payload: ExternalOpenPayload) => void>();
 const pendingExternalOpens: ExternalOpenPayload[] = [];
 let deliveringExternalOpens = false;
+let droppedMarkdownPaths = new Set<string>();
+
+export function observeNativeMarkdownDrops(target: Window): void {
+  // Capture before the renderer handles the drop. Only the isolated preload can grant these paths.
+  target.addEventListener(
+    "drop",
+    (event) => {
+      if (!event.isTrusted) return;
+      const paths = new Set<string>();
+      for (const file of Array.from(event.dataTransfer?.files ?? [])) {
+        if (!file.name.toLowerCase().endsWith(".md")) continue;
+        const filePath = webUtils.getPathForFile(file);
+        if (filePath) paths.add(filePath);
+      }
+      droppedMarkdownPaths = paths;
+      setTimeout(() => paths.clear(), 0);
+    },
+    true
+  );
+}
+
+function consumeDroppedPaths(paths: unknown): boolean {
+  if (!Array.isArray(paths) || paths.length === 0 || !paths.every((filePath) => droppedMarkdownPaths.has(filePath))) {
+    return false;
+  }
+  for (const filePath of paths) droppedMarkdownPaths.delete(filePath);
+  return true;
+}
+
+const dropDenied = {
+  ok: false,
+  error: { message: "File path was not granted by a native drop", code: "WORKSPACE_DROP_NOT_AUTHORIZED" }
+} as const;
 
 function deliverPendingExternalOpens(): void {
   if (deliveringExternalOpens) return;
@@ -62,8 +95,10 @@ export const workspaceApi = {
   /**
    * 验证并批准从系统拖入的 Markdown 文件所在目录
    */
-  approveDroppedFile: (filePath: string): Promise<IpcResultDTO<{ filePath: string; workspacePath: string }>> =>
-    ipcRenderer.invoke("workspace:approveDroppedFile", filePath),
+  approveDroppedFile: async (
+    filePath: string
+  ): Promise<IpcResultDTO<{ filePath: string; workspacePath: string } | null>> =>
+    consumeDroppedPaths([filePath]) ? ipcRenderer.invoke("workspace:approveDroppedFile", filePath) : dropDenied,
 
   /**
    * 打开文件对话框，选择 .md 文件
@@ -82,7 +117,7 @@ export const workspaceApi = {
   /**
    * 导入外部 Markdown 文件到目标目录
    */
-  importMarkdownFiles: (
+  importMarkdownFiles: async (
     sourcePaths: string[],
     targetDir: string
   ): Promise<
@@ -91,7 +126,10 @@ export const workspaceApi = {
       skippedCount: number;
       importedPaths: string[];
     }>
-  > => ipcRenderer.invoke("workspace:importMarkdownFiles", sourcePaths, targetDir),
+  > =>
+    consumeDroppedPaths(sourcePaths)
+      ? ipcRenderer.invoke("workspace:importMarkdownFiles", sourcePaths, targetDir)
+      : dropDenied,
 
   /**
    * 将工作区内文件拖出到系统（Copy-out）

@@ -16,6 +16,7 @@ export async function writeExistingFile(
     .catch(() => {})
     .then(async () => {
       const stat = await fs.lstat(canonicalPath);
+      if (stat.isDirectory()) throw Object.assign(new Error("Target is a directory"), { code: "EISDIR" });
       if (!stat.isFile()) throw new Error("Target is not a regular file");
       // Older callers still get a baseline for the duration of this write.
       const baseline = expectedContent ?? (await fs.readFile(canonicalPath, "utf8"));

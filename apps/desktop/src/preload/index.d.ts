@@ -9,7 +9,9 @@ import type {
   GitHubIssuePushResult,
   GitHubAssetUploadRequest,
   GitHubAssetUploadResult,
-  ShortcutConfig
+  ShortcutBinding,
+  ShortcutConfig,
+  ShortcutId
 } from "@shared";
 
 /**
@@ -35,7 +37,7 @@ export interface ThemeAPI {
    * 监听主题变化（系统主题或用户设置变化）
    * @returns 取消监听函数
    */
-  onChanged: (callback: (theme: Theme) => void) => () => void;
+  onChanged: (callback: (theme: Theme, mode: ThemeMode) => void) => () => void;
 }
 
 // 工作区 API 接口
@@ -61,7 +63,7 @@ export interface WorkspaceAPI {
       }>;
     } | null>
   >;
-  approveDroppedFile: (filePath: string) => Promise<IpcResultDTO<{ filePath: string; workspacePath: string }>>;
+  approveDroppedFile: (filePath: string) => Promise<IpcResultDTO<{ filePath: string; workspacePath: string } | null>>;
   getRecent: () => Promise<IpcResultDTO<string[]>>;
   importMarkdownFiles: (
     sourcePaths: string[],
@@ -84,6 +86,12 @@ export interface FileAPI {
   read: (filePath: string) => Promise<IpcResultDTO<{ content: string; mtime: number }>>;
   write: (filePath: string, content: string, expectedContent?: string) => Promise<IpcResultDTO<{ mtime: number }>>;
   create: (filePath: string, content: string) => Promise<IpcResultDTO<void>>;
+  saveDraftAs: (
+    suggestedName: string,
+    content: string,
+    title: string,
+    existingFileMessage?: string
+  ) => Promise<IpcResultDTO<boolean>>;
   delete: (filePath: string) => Promise<IpcResultDTO<void>>;
   rename: (oldPath: string, newPath: string) => Promise<IpcResultDTO<void>>;
   copy: (sourcePath: string, destPath: string) => Promise<IpcResultDTO<void>>;
@@ -232,10 +240,8 @@ export interface ConfigAPI {
    */
   getShortcuts: () => Promise<IpcResultDTO<ShortcutConfig>>;
 
-  /**
-   * 设置快捷键配置（全量覆盖）
-   */
-  setShortcuts: (shortcuts: ShortcutConfig) => Promise<IpcResultDTO<void>>;
+  setShortcut: (id: ShortcutId, binding: ShortcutBinding) => Promise<IpcResultDTO<ShortcutConfig>>;
+  onShortcutsChanged: (callback: (config: ShortcutConfig) => void) => () => void;
 
   /**
    * 获取全部 GitHub 项目配置

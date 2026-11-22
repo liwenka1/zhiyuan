@@ -3,7 +3,8 @@ import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useNoteStore, useFolderStore, useWorkspaceStore } from "@/stores";
 import { flushAllDebouncedSaves } from "@/stores/note-store/persistence";
-import { waitForFileOperations } from "@/stores/note-store/operation-guard";
+import { isEditingBlocked, useOperationStore, waitForFileOperations } from "@/stores/note-store/operation-guard";
+import { normalizeWorkspacePath } from "@/lib/workspace-paths";
 import { workspaceIpc, fileIpc, folderIpc } from "@/ipc";
 import i18n from "@/lib/i18n";
 
@@ -22,10 +23,11 @@ export function useWorkspaceInit() {
   const isLoading = useWorkspaceStore((state) => state.isLoading);
   const setLoading = useWorkspaceStore((state) => state.setLoading);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
-  const pendingFilePath = useWorkspaceStore((state) => state.pendingFilePath);
-  const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
+  const pendingFilePaths = useWorkspaceStore((state) => state.pendingFilePaths);
+  const setPendingFilePaths = useWorkspaceStore((state) => state.setPendingFilePaths);
   const previousWorkspacePathRef = useRef<string | null>(null);
   const scanGenerationRef = useRef(0);
+  const pendingOpenLoadRef = useRef<{ paths: string[]; loading: boolean } | null>(null);
 
   // workspacePath 已由 App.tsx 设置，这里只负责扫描和加载工作区内容
   useEffect(() => {
@@ -61,7 +63,7 @@ export function useWorkspaceInit() {
           return;
         }
         if (!data) {
-          setPendingFilePath(null);
+          setPendingFilePaths([]);
           if (previousWorkspacePath && previousWorkspacePath !== workspacePath) {
             previousWorkspacePathRef.current = previousWorkspacePath;
             setWorkspacePath(previousWorkspacePath);
@@ -86,7 +88,7 @@ export function useWorkspaceInit() {
         ) {
           return;
         }
-        setPendingFilePath(null);
+        setPendingFilePaths([]);
         if (previousWorkspacePath && previousWorkspacePath !== workspacePath) {
           previousWorkspacePathRef.current = previousWorkspacePath;
           setWorkspacePath(previousWorkspacePath);
@@ -110,23 +112,70 @@ export function useWorkspaceInit() {
     };
 
     loadWorkspace();
-  }, [workspacePath, loadFromFileSystem, setFolders, setPendingFilePath, setWorkspacePath, setLoading]);
+  }, [workspacePath, loadFromFileSystem, setFolders, setPendingFilePaths, setWorkspacePath, setLoading]);
 
-  // 扫描完成后再根据待打开路径选中笔记，避免 pendingFilePath 清空触发第二次扫描。
+  // 扫描结束后补读未被索引的目标，再按请求顺序打开笔记。
   useEffect(() => {
-    if (isLoading || !workspacePath || !pendingFilePath) return;
-    const normalize = (value: string) => value.replaceAll("\\", "/").replace(/\/$/, "");
-    const target = notes.find((note) => note.filePath && normalize(note.filePath) === normalize(pendingFilePath));
-    if (!target) return;
-    window.setTimeout(() => {
+    if (isLoading || !workspacePath || pendingFilePaths.length === 0) return;
+    const selectPendingNotes = () => {
       const current = useWorkspaceStore.getState();
-      if (!current.isLoading && current.workspacePath === workspacePath) selectNote(target.id);
-    }, 0);
-    setPendingFilePath(null);
-  }, [isLoading, notes, pendingFilePath, selectNote, setPendingFilePath, workspacePath]);
+      if (
+        current.isLoading ||
+        current.workspacePath !== workspacePath ||
+        current.pendingFilePaths !== pendingFilePaths ||
+        isEditingBlocked()
+      ) {
+        return;
+      }
+      const noteStore = useNoteStore.getState();
+      const notesByPath = new Map(
+        noteStore.notes.filter((note) => note.filePath).map((note) => [normalizeWorkspacePath(note.filePath!), note])
+      );
+      const pendingLoad = pendingOpenLoadRef.current;
+      if (pendingLoad?.paths === pendingFilePaths) {
+        if (pendingLoad.loading) return;
+      } else {
+        const missing = pendingFilePaths.filter((filePath) => !notesByPath.has(normalizeWorkspacePath(filePath)));
+        if (missing.length > 0) {
+          const load = { paths: pendingFilePaths, loading: true };
+          pendingOpenLoadRef.current = load;
+          const rootLength = normalizeWorkspacePath(workspacePath).length;
+          void Promise.allSettled(
+            missing.map((filePath) => {
+              const relativePath = normalizeWorkspacePath(filePath).slice(rootLength + 1);
+              return noteStore.handleFileAddedEvent(relativePath, filePath);
+            })
+          ).then(() => {
+            load.loading = false;
+            selectPendingNotes();
+          });
+          return;
+        }
+      }
+
+      const remaining: string[] = [];
+      for (const filePath of pendingFilePaths) {
+        const target = notesByPath.get(normalizeWorkspacePath(filePath));
+        if (!target) continue;
+        if (useNoteStore.getState().selectedNoteId !== target.id) selectNote(target.id);
+        if (useNoteStore.getState().selectedNoteId !== target.id) remaining.push(filePath);
+      }
+      if (remaining.length !== pendingFilePaths.length) {
+        pendingOpenLoadRef.current = { paths: remaining, loading: false };
+        setPendingFilePaths(remaining);
+      }
+    };
+    const unsubscribe = useOperationStore.subscribe(selectPendingNotes);
+    selectPendingNotes();
+    return unsubscribe;
+  }, [isLoading, notes, pendingFilePaths, selectNote, setPendingFilePaths, workspacePath]);
 
   // 监听文件系统变化
   useEffect(() => {
+    const isCurrentWorkspaceEvent = (relativePath: string, fullPath: string) => {
+      const activeRoot = useWorkspaceStore.getState().workspacePath;
+      return activeRoot && normalizeWorkspacePath(fullPath) === `${normalizeWorkspacePath(activeRoot)}/${relativePath}`;
+    };
     // 获取处理方法
     const handleFileAdded = useNoteStore.getState().handleFileAddedEvent;
     const handleFileDeleted = useNoteStore.getState().handleFileDeletedEvent;
@@ -136,24 +185,24 @@ export function useWorkspaceInit() {
 
     // 注册文件监听器
     const unsubscribeAdded = fileIpc.onAdded((data) => {
-      handleFileAdded(data.filePath, data.fullPath);
+      if (isCurrentWorkspaceEvent(data.filePath, data.fullPath)) handleFileAdded(data.filePath, data.fullPath);
     });
 
     const unsubscribeDeleted = fileIpc.onDeleted((data) => {
-      handleFileDeleted(data.filePath);
+      if (isCurrentWorkspaceEvent(data.filePath, data.fullPath)) handleFileDeleted(data.filePath);
     });
 
     const unsubscribeChanged = fileIpc.onChanged((data) => {
-      handleFileChanged(data.filePath, data.fullPath);
+      if (isCurrentWorkspaceEvent(data.filePath, data.fullPath)) handleFileChanged(data.filePath, data.fullPath);
     });
 
     // 注册文件夹监听器
     const unsubscribeFolderAdded = folderIpc.onAdded((data) => {
-      handleFolderAdded(data.folderPath, data.fullPath);
+      if (isCurrentWorkspaceEvent(data.folderPath, data.fullPath)) handleFolderAdded(data.folderPath, data.fullPath);
     });
 
     const unsubscribeFolderDeleted = folderIpc.onDeleted((data) => {
-      handleFolderDeleted(data.folderPath);
+      if (isCurrentWorkspaceEvent(data.folderPath, data.fullPath)) handleFolderDeleted(data.folderPath);
     });
 
     // 清理监听器

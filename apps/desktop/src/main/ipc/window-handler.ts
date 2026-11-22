@@ -1,4 +1,5 @@
-import { ipcMain, BrowserWindow } from "electron";
+import { BrowserWindow } from "electron";
+import { handleAppIpc } from "../security/app-ipc";
 import { ipcOk, ipcErr } from "./ipc-result";
 import type { IpcResultDTO } from "@shared";
 import { windowManager } from "../window-manager";
@@ -7,7 +8,7 @@ import { windowManager } from "../window-manager";
  * 注册窗口相关的 IPC 处理器
  */
 export function registerWindowHandlers(): void {
-  ipcMain.handle("window:readyToClose", (event, closeAttempt: number): IpcResultDTO<void> => {
+  handleAppIpc("window:readyToClose", (event, closeAttempt: number): IpcResultDTO<void> => {
     try {
       if (!Number.isInteger(closeAttempt) || closeAttempt < 1) {
         return ipcErr("无效的关闭请求", "WINDOW_INVALID_CLOSE_ATTEMPT");
@@ -23,7 +24,7 @@ export function registerWindowHandlers(): void {
   });
 
   // 设置窗口全屏状态
-  ipcMain.handle("window:setFullScreen", (event, fullScreen: boolean): IpcResultDTO<void> => {
+  handleAppIpc("window:setFullScreen", (event, fullScreen: boolean): IpcResultDTO<void> => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) {
       return ipcErr("无法获取窗口实例", "WINDOW_NOT_FOUND");
@@ -33,7 +34,7 @@ export function registerWindowHandlers(): void {
   });
 
   // 获取窗口全屏状态
-  ipcMain.handle("window:isFullScreen", (event): IpcResultDTO<boolean> => {
+  handleAppIpc("window:isFullScreen", (event): IpcResultDTO<boolean> => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (!win) {
       return ipcErr("无法获取窗口实例", "WINDOW_NOT_FOUND");

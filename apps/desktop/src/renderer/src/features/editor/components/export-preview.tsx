@@ -100,7 +100,7 @@ export function ExportPreview({ previewDoc, isRendering, isActive }: ExportPrevi
               transition: hasMeasured ? "height 200ms ease-out" : "none",
               visibility: isReady ? "visible" : "hidden"
             }}
-            sandbox="allow-same-origin allow-scripts"
+            sandbox="allow-same-origin"
             scrolling="no"
           />
         ) : null}

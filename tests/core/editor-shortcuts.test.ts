@@ -53,9 +53,12 @@ it("gives configured app shortcuts priority over CodeMirror keymaps only when ap
     { EditorView },
     { EditorContent },
     { useShortcutDispatcher },
-    { useShortcutsStore }
+    { useNoteStore, useShortcutsStore }
   ] = editorModules;
   const { shortcuts } = useShortcutsStore.getState();
+  const { selectedNoteId } = useNoteStore.getState();
+  const noteId = "note.md";
+  useNoteStore.setState({ selectedNoteId: noteId });
   const openUrlCreateDialog = vi.fn();
   const openSettings = vi.fn();
   const context = {
@@ -75,7 +78,7 @@ it("gives configured app shortcuts priority over CodeMirror keymaps only when ap
   function Harness(options: HarnessOptions) {
     const [content, setContent] = useState("A note");
     useShortcutDispatcher({ context, ...options });
-    return createElement(EditorContent, { content, onChange: setContent });
+    return createElement(EditorContent, { content, onChange: setContent, noteId });
   }
 
   const host = document.body.appendChild(document.createElement("div"));
@@ -183,6 +186,7 @@ it("gives configured app shortcuts priority over CodeMirror keymaps only when ap
       await act(() => root.unmount());
     } finally {
       host.remove();
+      useNoteStore.setState({ selectedNoteId });
       useShortcutsStore.setState({ shortcuts });
     }
   }

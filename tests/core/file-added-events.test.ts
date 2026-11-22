@@ -107,6 +107,30 @@ describe("external note additions and deletions", () => {
     expect(setSavedMock).not.toHaveBeenCalled();
   });
 
+  it("waits for a newer watcher read before completing a superseded note addition", async () => {
+    const oldContent = deferred<Note>();
+    const newContent = deferred<Note>();
+    readAddedMock.mockReturnValueOnce(oldContent.promise).mockReturnValueOnce(newContent.promise);
+    const { state, handlers } = createStore();
+    const file = "/workspace/note.md";
+    let finished = false;
+    const first = handlers.handleFileAddedEvent("note.md", file).then(() => {
+      finished = true;
+    });
+    const second = handlers.handleFileAddedEvent("note.md", file);
+
+    oldContent.resolve(note("obsolete"));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(finished).toBe(false);
+    newContent.resolve(note("current"));
+    await Promise.all([first, second]);
+
+    expect(state.notes).toEqual([note("current")]);
+    expect(setSavedMock).toHaveBeenCalledExactlyOnceWith("note.md", "current");
+  });
+
   it("does not resurrect a file deleted before its addition read finishes", async () => {
     const read = deferred<Note>();
     readAddedMock.mockReturnValue(read.promise);

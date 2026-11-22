@@ -5,6 +5,7 @@ import { parseGitHubMetadata } from "@shared";
 import { configManager } from "../config";
 import { fileSystem } from "../file-system";
 import { isIgnoredWorkspaceDirectory, MAX_WORKSPACE_DEPTH } from "./policy";
+import { resolveMarkdownOpenTarget } from "./open-target";
 
 const NOTE_READ_CONCURRENCY = 8;
 
@@ -136,10 +137,7 @@ export const workspaceManager = {
       return null;
     }
 
-    const filePath = result.filePaths[0];
-    const workspacePath = path.dirname(filePath);
-    configManager.addRecentWorkspace(workspacePath);
-    return { filePath, workspacePath };
+    return resolveMarkdownOpenTarget(result.filePaths[0]);
   },
 
   /**

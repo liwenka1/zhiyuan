@@ -15,7 +15,6 @@ export function WelcomePage({ settingsButton }: { settingsButton: ReactNode }) {
   const { t } = useTranslation("common");
   const { t: tEditor } = useTranslation("editor");
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
-  const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
   const [recentWorkspaces, setRecentWorkspaces] = useState<string[]>([]);
 
   useEffect(() => {
@@ -26,11 +25,9 @@ export function WelcomePage({ settingsButton }: { settingsButton: ReactNode }) {
   }, []);
 
   const openResolvedFile = useCallback(
-    ({ filePath, workspacePath }: { filePath: string; workspacePath: string }) => {
-      setPendingFilePath(filePath);
-      setWorkspacePath(workspacePath);
-    },
-    [setPendingFilePath, setWorkspacePath]
+    ({ filePath, workspacePath }: { filePath: string; workspacePath: string }) =>
+      setWorkspacePath(workspacePath, filePath),
+    [setWorkspacePath]
   );
 
   const { isFileDropHover, dragHandlers } = useMarkdownFileDrop({
@@ -39,7 +36,7 @@ export function WelcomePage({ settingsButton }: { settingsButton: ReactNode }) {
       if (!filePath) return;
 
       const approved = await workspaceIpc.approveDroppedFile(filePath);
-      await openResolvedFile(approved);
+      if (approved) await openResolvedFile(approved);
     }
   });
 

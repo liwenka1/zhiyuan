@@ -19,12 +19,19 @@ export function SaveConflictDialog() {
   const conflicts = useSaveConflictStore((state) => state.conflicts);
   const conflict = Object.values(conflicts)[0];
   const [saving, setSaving] = useState(false);
-  const resolve = async () => {
+  const resolve = async (saveAs = false) => {
     if (!conflict || saving) return;
     setSaving(true);
     try {
-      await useNoteStore.getState().resolveSaveConflict(conflict.filePath);
-      toast.success(t("conflict.resolved"));
+      const resolved = await useNoteStore
+        .getState()
+        .resolveSaveConflict(
+          conflict.filePath,
+          saveAs ? t("conflict.saveAs") : undefined,
+          t("conflict.existingDraftDestination")
+        );
+      if (resolved?.originalReadFailed) toast.warning(t("conflict.originalReadFailed"));
+      else if (resolved) toast.success(t("conflict.resolved"));
     } catch (error) {
       toast.error(`${t("errors.saveNoteFailed")}: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -59,6 +66,9 @@ export function SaveConflictDialog() {
           </div>
         )}
         <DialogFooter>
+          <Button variant="outline" disabled={saving} onClick={() => void resolve(true)}>
+            {t("conflict.saveAs")}
+          </Button>
           <Button disabled={saving} onClick={() => void resolve()}>
             {t("conflict.keepBoth")}
           </Button>

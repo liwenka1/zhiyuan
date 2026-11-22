@@ -4,16 +4,14 @@ icon: resources/icon.png
 directories:
   buildResources: build
 files:
-  - "!**/.vscode/*"
-  - "!src/*"
-  - "!electron.vite.config.{js,ts,mjs,cjs}"
-  - "!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
-  - "!{.env,.env.*,.npmrc,pnpm-lock.yaml}"
-  - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
+  - package.json
+  - out/**/*
+  - resources/**/*
+  - "!**/node_modules/@koromix/koffi-*{,/**}"
 asarUnpack:
   - resources/**
   - "**/node-pty/**/{pty.node,spawn-helper}"
-extends: file:./scripts/fix-macos-pty-permissions.mjs
+extends: file:./scripts/package-native-dependencies.mjs
 win:
   executableName: zhiyuan
   fileAssociations:
@@ -28,6 +26,7 @@ nsis:
   createDesktopShortcut: always
 mac:
   artifactName: ${name}-${version}-${arch}.${ext}
+  x64ArchFiles: "**/node-pty/**/{pty.node,spawn-helper}"
   extendInfo:
     NSCameraUsageDescription: Application requests access to the device's camera.
     NSMicrophoneUsageDescription: Application requests access to the device's microphone.

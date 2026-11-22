@@ -63,6 +63,7 @@ class ThemeManager {
    * @param theme ThemeMode
    */
   setTheme(theme: ThemeMode): void {
+    if (theme !== "system" && theme !== "light" && theme !== "dark") throw new Error("Invalid theme mode");
     // 持久化用户的选择
     configManager.setTheme(theme);
 
@@ -78,6 +79,7 @@ class ThemeManager {
    */
   private notifyThemeChange(): void {
     const currentTheme = this.getTheme();
+    const mode = this.getMode();
     const windows = BrowserWindow.getAllWindows();
 
     windows.forEach((window) => {
@@ -94,7 +96,7 @@ class ThemeManager {
       }
 
       // 通知渲染进程主题已变化
-      window.webContents.send("theme:changed", currentTheme);
+      window.webContents.send("theme:changed", currentTheme, mode);
     });
   }
 }

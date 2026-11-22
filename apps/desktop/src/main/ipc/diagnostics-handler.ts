@@ -1,4 +1,5 @@
-import { BrowserWindow, ipcMain } from "electron";
+import { BrowserWindow } from "electron";
+import { onAppIpc } from "../security/app-ipc";
 import { recordDiagnostic } from "../diagnostics";
 
 type RendererErrorPayload = {
@@ -12,7 +13,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export function registerDiagnosticsHandlers(): void {
-  ipcMain.on("diagnostics:renderer-error", (event, payload: unknown) => {
+  onAppIpc("diagnostics:renderer-error", (event, payload: unknown) => {
     if (!isRecord(payload)) return;
 
     const data = payload as RendererErrorPayload;

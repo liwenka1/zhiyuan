@@ -16,42 +16,55 @@ import i18n from "@/lib/i18n";
 
 export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
   const pendingFileReads = new Map<string, symbol>();
-  const pendingFileAdds = new Map<string, symbol>();
+  const pendingFileAdds = new Map<string, { fullPath: string; revision: number; completion: Promise<void> }>();
 
-  return {
+  const handlers = {
     handleFileAddedEvent: async (filePath: string, fullPath: string) => {
-      const workspacePath = useWorkspaceStore.getState().workspacePath;
+      const { workspacePath, revision } = useWorkspaceStore.getState();
       if (!workspacePath) return;
-
-      const readToken = Symbol("file-add-read");
-      pendingFileAdds.set(filePath, readToken);
-      try {
-        const newNote = await handleFileAdded(filePath, fullPath, workspacePath, get().notes);
-        if (
-          !newNote ||
-          pendingFileAdds.get(filePath) !== readToken ||
-          useWorkspaceStore.getState().workspacePath !== workspacePath ||
-          get().notes.some((note) => note.id === newNote.id)
-        ) {
-          return;
-        }
-
-        set((state) => {
-          state.notes.push(newNote);
-        });
-        setLastSavedContent(newNote.id, newNote.content);
-
-        if (newNote.folderId) {
-          const folderStore = useFolderStore.getState();
-          folderStore.setFolders(
-            folderStore.folders.map((folder) =>
-              folder.id === newNote.folderId ? { ...folder, noteCount: (folder.noteCount || 0) + 1 } : folder
-            )
-          );
-        }
-      } finally {
-        if (pendingFileAdds.get(filePath) === readToken) pendingFileAdds.delete(filePath);
+      const currentNote = get().notes.find((note) => note.id === filePath && note.filePath === fullPath);
+      if (currentNote) {
+        await handlers.handleFileChangedEvent(filePath, fullPath);
+        return;
       }
+
+      const completion: Promise<void> = handleFileAdded(filePath, fullPath, get().notes)
+        .then(async (newNote) => {
+          const latest = pendingFileAdds.get(filePath);
+          if (latest?.completion !== completion) {
+            // An open request can be waiting for the newer read started by a watcher event.
+            if (latest?.fullPath === fullPath && latest.revision === revision) await latest.completion;
+            return;
+          }
+          const workspace = useWorkspaceStore.getState();
+          if (
+            !newNote ||
+            workspace.revision !== revision ||
+            workspace.workspacePath !== workspacePath ||
+            get().notes.some((note) => note.id === newNote.id)
+          ) {
+            return;
+          }
+
+          set((state) => {
+            state.notes.push(newNote);
+          });
+          setLastSavedContent(newNote.id, newNote.content);
+
+          if (newNote.folderId) {
+            const folderStore = useFolderStore.getState();
+            folderStore.setFolders(
+              folderStore.folders.map((folder) =>
+                folder.id === newNote.folderId ? { ...folder, noteCount: (folder.noteCount || 0) + 1 } : folder
+              )
+            );
+          }
+        })
+        .finally(() => {
+          if (pendingFileAdds.get(filePath)?.completion === completion) pendingFileAdds.delete(filePath);
+        });
+      pendingFileAdds.set(filePath, { fullPath, revision, completion });
+      await completion;
     },
 
     handleFileDeletedEvent: (filePath: string) => {
@@ -102,54 +115,59 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       const note = get().notes.find((n) => n.id === filePath);
       if (!workspacePath || !note || note.filePath !== fullPath) return;
 
-      const lastSavedContent = getLastSavedContent(filePath) ?? note.content;
+      let baseline = getLastSavedContent(filePath) ?? note.content;
 
       const readToken = Symbol("file-change-read");
       pendingFileReads.set(filePath, readToken);
       try {
-        const content = await handleFileChanged(filePath, fullPath);
-        if (content === null || pendingFileReads.get(filePath) !== readToken) return;
+        for (;;) {
+          const content = await handleFileChanged(filePath, fullPath);
+          if (content === null || pendingFileReads.get(filePath) !== readToken) return;
 
-        // 文件读取期间可能发生输入、切换工作区或重命名，迟到的结果不能覆盖新状态。
-        const current = get();
-        const currentNote = current.notes.find((item) => item.id === filePath);
-        if (
-          useWorkspaceStore.getState().workspacePath !== workspacePath ||
-          !currentNote ||
-          currentNote.filePath !== fullPath
-        ) {
-          return;
-        }
-        const currentSavedContent = getLastSavedContent(filePath) ?? lastSavedContent;
-        const currentDisplayedContent =
-          current.selectedNoteId === filePath ? current.editorContent : currentNote.content;
-        // Read before deciding: dirty notes can also receive their own save notifications.
-        if (content === currentSavedContent || isOwnSaveContent(fullPath, content)) return;
-        if (currentSavedContent !== lastSavedContent) return;
-        if (
-          hasPendingSave(fullPath) ||
-          currentNote.content !== currentSavedContent ||
-          currentDisplayedContent !== currentSavedContent
-        ) {
-          recordSaveConflict(filePath, fullPath, currentDisplayedContent, content);
-          toast.warning(i18n.t("note:errors.externalChangeConflict"));
-          return;
-        }
-
-        // A filesystem event may be our own atomic save or a real external write.
-        // Compare bytes instead of dropping all changes within a time window.
-        set((state) => {
-          const targetNote = state.notes.find((n) => n.id === filePath);
-          if (targetNote) {
-            targetNote.content = content;
-            targetNote.updatedAt = new Date().toISOString();
-            targetNote.github = parseGitHubMetadata(content);
-            if (state.selectedNoteId === filePath) {
-              state.editorContent = content;
-            }
-            setLastSavedContent(filePath, content);
+          // 文件读取期间可能发生输入、切换工作区或重命名，迟到的结果不能覆盖新状态。
+          const current = get();
+          const currentNote = current.notes.find((item) => item.id === filePath);
+          if (
+            useWorkspaceStore.getState().workspacePath !== workspacePath ||
+            !currentNote ||
+            currentNote.filePath !== fullPath
+          ) {
+            return;
           }
-        });
+          const currentSavedContent = getLastSavedContent(filePath) ?? baseline;
+          // Read again when another save completed during the read. The event may be an external write after that save.
+          if (currentSavedContent !== baseline) {
+            baseline = currentSavedContent;
+            continue;
+          }
+          // Read before deciding: dirty notes can also receive their own save notifications.
+          if (content === currentSavedContent || isOwnSaveContent(fullPath, content)) return;
+          const currentDisplayedContent =
+            current.selectedNoteId === filePath ? current.editorContent : currentNote.content;
+          if (
+            hasPendingSave(fullPath) ||
+            currentNote.content !== currentSavedContent ||
+            currentDisplayedContent !== currentSavedContent
+          ) {
+            recordSaveConflict(filePath, fullPath, currentDisplayedContent, content);
+            toast.warning(i18n.t("note:errors.externalChangeConflict"));
+            return;
+          }
+
+          set((state) => {
+            const targetNote = state.notes.find((n) => n.id === filePath);
+            if (targetNote) {
+              targetNote.content = content;
+              targetNote.updatedAt = new Date().toISOString();
+              targetNote.github = parseGitHubMetadata(content);
+              if (state.selectedNoteId === filePath) {
+                state.editorContent = content;
+              }
+              setLastSavedContent(filePath, content);
+            }
+          });
+          return;
+        }
       } finally {
         if (pendingFileReads.get(filePath) === readToken) {
           pendingFileReads.delete(filePath);
@@ -157,4 +175,5 @@ export function createFileEventHandlers(set: NoteStoreSet, get: NoteStoreGet) {
       }
     }
   };
+  return handlers;
 }

@@ -7,33 +7,33 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$PROJECT_DIR/../.." && pwd)"
 
 PACKAGE_JSON="$PROJECT_DIR/package.json"
-CURRENT_VERSION=$(node -p "require('$PACKAGE_JSON').version")
+CURRENT_VERSION=$(node -p 'require(process.argv[1]).version' "$PACKAGE_JSON")
 
 echo "Current version: $CURRENT_VERSION"
 echo ""
 echo "Enter new version (e.g. x.x.x or x.x.x-beta):"
 read -r NEW_VERSION
 
-if [ -z "$NEW_VERSION" ]; then
-  echo "Error: version cannot be empty"
+if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+  echo "Error: expected version x.y.z or x.y.z-suffix" >&2
   exit 1
 fi
 
 # Update version in package.json
-node -e "
-const fs = require('fs');
-const pkg = JSON.parse(fs.readFileSync('$PACKAGE_JSON', 'utf8'));
-pkg.version = '$NEW_VERSION';
-fs.writeFileSync('$PACKAGE_JSON', JSON.stringify(pkg, null, 2) + '\n');
-"
+node - "$PACKAGE_JSON" "$NEW_VERSION" <<'JS'
+const fs = require("node:fs");
+const [, , file, version] = process.argv;
+const pkg = JSON.parse(fs.readFileSync(file, "utf8"));
+pkg.version = version;
+fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + "\n");
+JS
 
 echo ""
 echo "Done: $CURRENT_VERSION -> $NEW_VERSION"
 
 # Commit, tag, push
 cd "$REPO_ROOT"
-git add "$PACKAGE_JSON"
-git commit -m "release: v$NEW_VERSION"
+git commit --only -m "release: v$NEW_VERSION" -- "$PACKAGE_JSON"
 git tag "v$NEW_VERSION"
 git push origin main
 git push origin "v$NEW_VERSION"

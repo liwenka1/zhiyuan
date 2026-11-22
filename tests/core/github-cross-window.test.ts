@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubIssuePushRequest, GitHubIssuePushResult, IpcResultDTO } from "@shared";
+import { RENDERER_URL, trustedIpcEvent } from "./helpers/trusted-ipc-event";
 
 const { handlers, createIssue, updateIssue, trash } = vi.hoisted(() => ({
   handlers: new Map<string, (event: unknown, ...args: unknown[]) => Promise<IpcResultDTO<unknown>>>(),
@@ -36,7 +37,12 @@ vi.mock("../../apps/desktop/src/main/security/window-context", () => ({
 }));
 
 vi.mock("../../apps/desktop/src/main/window-manager", () => ({
-  windowManager: { getEntryByWebContents: (sender: { workspace: string }) => ({ workspacePath: sender.workspace }) }
+  windowManager: {
+    getEntryByWebContents: (sender: { workspace: string }) => ({
+      workspacePath: sender.workspace,
+      rendererUrl: RENDERER_URL
+    })
+  }
 }));
 vi.mock("../../apps/desktop/src/main/file-watcher", () => ({ fileWatcherManager: {} }));
 vi.mock("../../apps/desktop/src/main/ipc/watcher-handler", () => ({ registerWatcherHandlers: vi.fn() }));
@@ -74,7 +80,7 @@ describe("main-process publication identity across windows", () => {
   let nested: string;
   let sourcePath: string;
   let alias: string;
-  let a: { sender: ReturnType<typeof sender>; workspace: string };
+  let a: ReturnType<typeof trustedIpcEvent<ReturnType<typeof sender>>> & { workspace: string };
   let b: typeof a;
   let payload: GitHubIssuePushRequest;
 
@@ -99,8 +105,8 @@ describe("main-process publication identity across windows", () => {
     alias = path.join(root, "alias");
     await fs.symlink(nested, alias, process.platform === "win32" ? "junction" : "dir");
     await fs.writeFile(sourcePath, "original");
-    a = { sender: sender(1, root), workspace: root };
-    b = { sender: sender(2, nested), workspace: nested };
+    a = { ...trustedIpcEvent(sender(1, root)), workspace: root };
+    b = { ...trustedIpcEvent(sender(2, nested)), workspace: nested };
     payload = {
       projectKey: "project",
       owner: "owner",

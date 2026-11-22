@@ -151,6 +151,7 @@ function buildItemKey(item: { guid?: string; link?: string; title?: string; publ
 
 async function loadRssMetadata(folderPath: string): Promise<RssMetadata> {
   const metadataPath = path.join(folderPath, ".rss.json");
+  if (!(await fs.lstat(metadataPath)).isFile()) throw new Error("RSS metadata must be a regular file");
   const { content } = await fileSystem.readFile(metadataPath);
   return JSON.parse(content) as RssMetadata;
 }
@@ -273,13 +274,17 @@ async function parseFeed(parser: Parser<RssItem>, url: string): Promise<Parser.O
   const { response } = await fetchSafeRemoteHttp(url, {
     headers: { "User-Agent": "zhiyuan-rss/1.0" }
   });
-  if (!response.ok) {
-    throw new Error(`Failed to fetch RSS feed: ${response.status} ${response.statusText}`);
+  try {
+    if (!response.ok) {
+      throw new Error(`Failed to fetch RSS feed: ${response.status} ${response.statusText}`);
+    }
+    const contentLength = Number(response.headers.get("content-length") || 0);
+    if (contentLength > MAX_RSS_BYTES) throw new Error("RSS feed is too large");
+    const body = await readLimitedBody(response, MAX_RSS_BYTES);
+    return (await parser.parseString(new TextDecoder().decode(body))) as Parser.Output<RssItem>;
+  } finally {
+    await response.body?.cancel().catch(() => {});
   }
-  const contentLength = Number(response.headers.get("content-length") || 0);
-  if (contentLength > MAX_RSS_BYTES) throw new Error("RSS feed is too large");
-  const body = await readLimitedBody(response, MAX_RSS_BYTES);
-  return (await parser.parseString(new TextDecoder().decode(body))) as Parser.Output<RssItem>;
 }
 
 export async function importRss(url: string, workspacePath: string): Promise<RssImportResult> {

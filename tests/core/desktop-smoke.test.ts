@@ -3,8 +3,12 @@ import { createRequire } from "node:module";
 import type { BrowserWindow } from "electron";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ exit: vi.fn(), readFile: vi.fn() }));
-vi.mock("electron", () => ({ app: { exit: mocks.exit } }));
+const mocks = vi.hoisted(() => ({ exit: vi.fn(), quit: vi.fn(), readFile: vi.fn(), loadImage: vi.fn() }));
+vi.mock("electron", () => ({
+  app: { exit: mocks.exit, quit: mocks.quit },
+  dialog: { showSaveDialog: vi.fn() },
+  nativeImage: { createFromPath: mocks.loadImage }
+}));
 vi.mock("node:fs/promises", () => ({ default: { readFile: mocks.readFile } }));
 
 import {
@@ -152,7 +156,9 @@ describe("desktop smoke lifecycle diagnostics", () => {
     vi.stubEnv("ZHIYUAN_SMOKE_TEST", "1");
     vi.stubEnv("ZHIYUAN_SMOKE_NOTE", "/tmp/fixture/workspace/smoke.md");
     vi.stubEnv("ZHIYUAN_SMOKE_USER_DATA", "/tmp/fixture/user-data");
+    vi.stubEnv("ZHIYUAN_SMOKE_EXPORT", "");
     mocks.exit.mockReset();
+    mocks.quit.mockReset();
     mocks.readFile.mockReset().mockResolvedValue(INITIAL_CONTENT);
     vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.spyOn(console, "log").mockImplementation(() => undefined);
@@ -231,7 +237,8 @@ describe("desktop smoke lifecycle diagnostics", () => {
     expect(webContents.focus).toHaveBeenCalledTimes(2);
     expect(webContents.insertText).toHaveBeenCalledExactlyOnceWith(EDITED_CONTENT);
     expect(mocks.readFile).toHaveBeenCalledTimes(2);
-    expect(mocks.exit).toHaveBeenCalledExactlyOnceWith(0);
+    expect(mocks.quit).toHaveBeenCalledOnce();
+    expect(mocks.exit).not.toHaveBeenCalled();
     expect(console.log).toHaveBeenCalledWith("ZHIYUAN_SMOKE_READY: editor opened, edited and saved");
     expect(console.error).not.toHaveBeenCalled();
     expect(webContents.eventNames()).toEqual([]);
@@ -252,6 +259,37 @@ describe("desktop smoke lifecycle diagnostics", () => {
     );
     expect(mocks.exit).toHaveBeenCalledExactlyOnceWith(1);
     expect(console.log).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { width: 640, height: 1200, fullPage: false },
+    { width: 640, height: 1800, fullPage: true },
+    { width: 320, height: 900, fullPage: true }
+  ])("checks whether a $width × $height export contains the full page", async ({ width, height, fullPage }) => {
+    vi.stubEnv("ZHIYUAN_SMOKE_EXPORT", "1");
+    mocks.loadImage.mockReturnValueOnce({ isEmpty: () => false, getSize: () => ({ width, height }) });
+    mocks.readFile
+      .mockResolvedValueOnce(INITIAL_CONTENT)
+      .mockResolvedValueOnce(EDITED_CONTENT)
+      .mockResolvedValueOnce("<p>Export fixture</p>");
+    const { window, webContents } = makeWindow();
+    webContents.executeJavaScript
+      .mockResolvedValueOnce({ ...emptyState, editorTextMatches: true })
+      .mockResolvedValue(true);
+
+    startDesktopSmokeTest(window);
+    await vi.advanceTimersByTimeAsync(0);
+
+    if (fullPage) {
+      expect(console.log).toHaveBeenCalledWith("ZHIYUAN_SMOKE_EXPORT_READY");
+      expect(mocks.quit).toHaveBeenCalledOnce();
+    } else {
+      expect(mocks.exit).toHaveBeenCalledExactlyOnceWith(1);
+      expect(console.error).toHaveBeenCalledWith(
+        "ZHIYUAN_SMOKE_FAILED",
+        expect.stringContaining("Export capture did not produce a full page")
+      );
+    }
   });
 
   it.each([false, { selectionReady: true }])(

@@ -12,6 +12,9 @@ export const fileIpc = {
 
   create: async (filePath: string, content: string) => unwrapIpcResult(await window.api.file.create(filePath, content)),
 
+  saveDraftAs: async (suggestedName: string, content: string, title: string, existingFileMessage?: string) =>
+    unwrapIpcResult(await window.api.file.saveDraftAs(suggestedName, content, title, existingFileMessage)),
+
   delete: async (filePath: string) => unwrapIpcResult(await window.api.file.delete(filePath)),
 
   rename: async (oldPath: string, newPath: string) => unwrapIpcResult(await window.api.file.rename(oldPath, newPath)),

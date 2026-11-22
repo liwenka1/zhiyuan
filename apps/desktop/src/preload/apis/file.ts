@@ -20,6 +20,14 @@ export const fileApi = {
   create: (filePath: string, content: string): Promise<IpcResultDTO<void>> =>
     ipcRenderer.invoke("file:create", filePath, content),
 
+  saveDraftAs: (
+    suggestedName: string,
+    content: string,
+    title: string,
+    existingFileMessage?: string
+  ): Promise<IpcResultDTO<boolean>> =>
+    ipcRenderer.invoke("file:saveDraftAs", suggestedName, content, title, existingFileMessage),
+
   /**
    * 删除文件
    */

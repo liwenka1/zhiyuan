@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { handleAppIpc } from "../security/app-ipc";
 import { themeManager } from "../theme";
 import type { ThemeMode } from "@shared";
 import { wrapIpcHandler } from "./ipc-result";
@@ -8,7 +8,7 @@ import { wrapIpcHandler } from "./ipc-result";
  */
 export function registerThemeHandlers(): void {
   // 获取当前主题
-  ipcMain.handle(
+  handleAppIpc(
     "theme:get",
     wrapIpcHandler(async () => {
       return themeManager.getTheme();
@@ -16,7 +16,7 @@ export function registerThemeHandlers(): void {
   );
 
   // 获取主题模式（用户偏好：light / dark / system）
-  ipcMain.handle(
+  handleAppIpc(
     "theme:getMode",
     wrapIpcHandler(async () => {
       return themeManager.getMode();
@@ -24,7 +24,7 @@ export function registerThemeHandlers(): void {
   );
 
   // 设置主题
-  ipcMain.handle(
+  handleAppIpc(
     "theme:set",
     wrapIpcHandler(async (theme: ThemeMode) => {
       themeManager.setTheme(theme);

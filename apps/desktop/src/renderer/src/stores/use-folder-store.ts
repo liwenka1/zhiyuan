@@ -102,21 +102,7 @@ export const useFolderStore = create<FolderStore>((set, get) => ({
       }
       if (!isCurrentWorkspaceReady(workspacePath)) return;
 
-      const newFolder: Folder = {
-        id: folderName, // 使用文件夹名作为 ID
-        name: folderName,
-        path: folderPath,
-        noteCount: 0,
-        isRss: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      set(
-        produce((draft) => {
-          draft.folders.push(newFolder);
-        })
-      );
+      get().handleFolderAdded(folderName, folderPath);
     } catch {
       toast.error(i18n.t("note:errors.createFolderFailed"));
     }

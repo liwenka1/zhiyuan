@@ -66,8 +66,14 @@ async function readLimitedBody(response: Response, maxBytes: number): Promise<Ui
  */
 function cleanHTML(html: string): string {
   const dom = new JSDOM(html);
-  const document = dom.window.document;
+  try {
+    return cleanDocument(dom.window.document);
+  } finally {
+    dom.window.close();
+  }
+}
 
+function cleanDocument(document: Document): string {
   // 1. 移除 HTML 注释
   const removeComments = (node: Node) => {
     const iterator = document.createNodeIterator(node, 128); // NodeFilter.SHOW_COMMENT = 128
@@ -244,38 +250,40 @@ export async function fetchArticleFromUrl(url: string): Promise<ArticleContent> 
   // 2. 抓取网页内容
   const { response, finalUrl } = await fetchHtml(urlObj);
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
-  }
+  let html: string;
+  try {
+    if (!response.ok) {
+      throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
+    }
 
-  const contentLength = Number(response.headers.get("content-length") || 0);
-  if (contentLength > MAX_HTML_BYTES) {
-    throw new Error("Web page is too large");
+    const contentLength = Number(response.headers.get("content-length") || 0);
+    if (contentLength > MAX_HTML_BYTES) {
+      throw new Error("Web page is too large");
+    }
+    const contentType = response.headers.get("content-type")?.toLowerCase() || "";
+    if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
+      throw new Error("URL does not point to an HTML page");
+    }
+    html = new TextDecoder().decode(await readLimitedBody(response, MAX_HTML_BYTES));
+  } finally {
+    await response.body?.cancel().catch(() => {});
   }
-  const contentType = response.headers.get("content-type")?.toLowerCase() || "";
-  if (contentType && !contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
-    throw new Error("URL does not point to an HTML page");
-  }
-
-  const html = new TextDecoder().decode(await readLimitedBody(response, MAX_HTML_BYTES));
 
   // 3. 使用 Readability 提取正文
   const dom = new JSDOM(html, { url: finalUrl.toString() });
-  const reader = new Readability(dom.window.document);
-  const article = reader.parse();
+  try {
+    const article = new Readability(dom.window.document).parse();
+    if (!article) {
+      throw new Error("Failed to extract article content from URL");
+    }
 
-  if (!article) {
-    throw new Error("Failed to extract article content from URL");
+    return {
+      title: article.title || finalUrl.hostname,
+      content: cleanHTML(article.content || ""),
+      textContent: article.textContent || "",
+      excerpt: article.excerpt || ""
+    };
+  } finally {
+    dom.window.close();
   }
-
-  // 4. 清理 HTML 内容
-  const cleanedContent = cleanHTML(article.content || "");
-
-  // 5. 返回提取的内容
-  return {
-    title: article.title || finalUrl.hostname,
-    content: cleanedContent,
-    textContent: article.textContent || "",
-    excerpt: article.excerpt || ""
-  };
 }

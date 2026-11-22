@@ -3,7 +3,7 @@
  */
 
 import { unwrapIpcResult } from "@/lib/ipc-utils";
-import type { ExportLayoutConfig, GitHubConfig, GitHubProjectConfigMap, ShortcutConfig } from "@shared";
+import type { ExportLayoutConfig, GitHubConfig, GitHubProjectConfigMap, ShortcutBinding, ShortcutId } from "@shared";
 
 export const configIpc = {
   getPinnedNotes: async (workspacePath: string) =>
@@ -23,7 +23,10 @@ export const configIpc = {
 
   getShortcuts: async () => unwrapIpcResult(await window.api.config.getShortcuts()),
 
-  setShortcuts: async (shortcuts: ShortcutConfig) => unwrapIpcResult(await window.api.config.setShortcuts(shortcuts)),
+  setShortcut: async (id: ShortcutId, binding: ShortcutBinding) =>
+    unwrapIpcResult(await window.api.config.setShortcut(id, binding)),
+
+  onShortcutsChanged: window.api.config.onShortcutsChanged,
 
   getGitHubProjectConfigs: async (): Promise<{ projectConfigs: GitHubProjectConfigMap; activeProjectKey: string }> =>
     unwrapIpcResult(await window.api.config.getGitHubProjectConfigs()),

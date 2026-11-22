@@ -9,30 +9,41 @@ import fs from "fs";
 /**
  * 规范化路径，解析符号链接和相对路径
  * @param targetPath 目标路径
- * @returns 规范化后的绝对路径；新建文件会解析最近存在的父目录
+ * @returns 规范化后的绝对路径；缺失的路径会解析到最近存在的祖先
  */
-function normalizePath(targetPath: string): string {
-  const absolutePath = path.resolve(targetPath);
-
-  // realpathSync 只能解析已经存在的路径。对于新建文件，逐级回溯到
-  // 最近存在的父目录，再把不存在的部分拼回去，避免父目录符号链接绕过边界。
+function normalizePath(targetPath: string): { normalizedPath: string; blockedByFile: boolean } {
+  let existingPath = path.resolve(targetPath);
   const missingParts: string[] = [];
-  let existingPath = absolutePath;
-
-  while (!fs.existsSync(existingPath)) {
-    const parent = path.dirname(existingPath);
-    if (parent === existingPath) {
-      return absolutePath;
+  let blockedByFile = false;
+  while (true) {
+    try {
+      // lstat sees dangling links, which must fail realpath rather than count as new entries.
+      fs.lstatSync(existingPath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "ENOTDIR") throw error;
+      blockedByFile ||= code === "ENOTDIR";
+      const parent = path.dirname(existingPath);
+      if (parent === existingPath) throw error;
+      missingParts.unshift(path.basename(existingPath));
+      existingPath = parent;
+      continue;
     }
-    missingParts.unshift(path.basename(existingPath));
-    existingPath = parent;
+    const realPath = fs.realpathSync.native(existingPath);
+    return {
+      normalizedPath: path.join(realPath, ...missingParts),
+      blockedByFile: blockedByFile || (missingParts.length > 0 && !fs.statSync(realPath).isDirectory())
+    };
   }
+}
 
-  try {
-    return path.join(fs.realpathSync(existingPath), ...missingParts);
-  } catch {
-    return absolutePath;
-  }
+function isAbsoluteFilePath(value: unknown): value is string {
+  return typeof value === "string" && !value.includes("\0") && path.isAbsolute(value);
+}
+
+function isNormalizedPathInside(basePath: string, targetPath: string): boolean {
+  const prefix = basePath.endsWith(path.sep) ? basePath : `${basePath}${path.sep}`;
+  return targetPath === basePath || targetPath.startsWith(prefix);
 }
 
 /**
@@ -42,12 +53,7 @@ function normalizePath(targetPath: string): string {
  * @returns 是否在基准目录内
  */
 export function isPathInside(basePath: string, targetPath: string): boolean {
-  const normalizedBase = normalizePath(basePath);
-  const normalizedTarget = normalizePath(targetPath);
-  const relative = path.relative(normalizedBase, normalizedTarget);
-
-  // relative 为空表示自身；以 .. 开头或绝对路径都表示越出基准目录。
-  return relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+  return validatePathInWorkspace(basePath, targetPath).isValid;
 }
 
 /**
@@ -60,6 +66,7 @@ export interface PathValidationResult {
   normalizedPath: string;
   /** 如果不合法，说明原因 */
   reason?: string;
+  code?: "ENOTDIR";
 }
 
 /**
@@ -69,7 +76,7 @@ export interface PathValidationResult {
  * @returns 校验结果
  */
 export function validatePathInWorkspace(workspacePath: string, targetPath: string): PathValidationResult {
-  if (typeof workspacePath !== "string" || typeof targetPath !== "string" || !workspacePath || !targetPath) {
+  if (!isAbsoluteFilePath(workspacePath) || !isAbsoluteFilePath(targetPath)) {
     return {
       isValid: false,
       normalizedPath: "",
@@ -77,20 +84,24 @@ export function validatePathInWorkspace(workspacePath: string, targetPath: strin
     };
   }
 
-  const normalizedTarget = normalizePath(targetPath);
-
-  if (isPathInside(workspacePath, targetPath)) {
+  try {
+    const normalizedBase = fs.realpathSync.native(path.resolve(workspacePath));
+    if (!fs.statSync(normalizedBase).isDirectory()) throw new Error("Invalid workspace directory");
+    const { normalizedPath, blockedByFile } = normalizePath(targetPath);
+    if (isNormalizedPathInside(normalizedBase, normalizedPath)) {
+      if (blockedByFile) {
+        return { isValid: false, normalizedPath, reason: "Parent path is not a directory", code: "ENOTDIR" };
+      }
+      return { isValid: true, normalizedPath };
+    }
     return {
-      isValid: true,
-      normalizedPath: normalizedTarget
+      isValid: false,
+      normalizedPath,
+      reason: `Path "${normalizedPath}" is outside workspace "${workspacePath}"`
     };
+  } catch {
+    return { isValid: false, normalizedPath: "", reason: "Cannot resolve path" };
   }
-
-  return {
-    isValid: false,
-    normalizedPath: normalizedTarget,
-    reason: `Path "${normalizedTarget}" is outside workspace "${workspacePath}"`
-  };
 }
 
 /**
@@ -100,21 +111,15 @@ export function validatePathInWorkspace(workspacePath: string, targetPath: strin
  * @returns 校验结果
  */
 export function validatePathInAllowedDirs(allowedPaths: string[], targetPath: string): PathValidationResult {
-  const normalizedTarget = normalizePath(targetPath);
-
   for (const allowedPath of allowedPaths) {
-    if (isPathInside(allowedPath, targetPath)) {
-      return {
-        isValid: true,
-        normalizedPath: normalizedTarget
-      };
-    }
+    const validation = validatePathInWorkspace(allowedPath, targetPath);
+    if (validation.isValid) return validation;
   }
 
   return {
     isValid: false,
-    normalizedPath: normalizedTarget,
-    reason: `Path "${normalizedTarget}" is not in any allowed directory`
+    normalizedPath: "",
+    reason: "Path is not in any allowed directory"
   };
 }
 

@@ -5,12 +5,7 @@ import { parseGitHubMetadata } from "@/lib/github-metadata";
 /**
  * 处理外部添加的文件
  */
-export async function handleFileAdded(
-  filePath: string,
-  fullPath: string,
-  _workspacePath: string,
-  existingNotes: Note[]
-): Promise<Note | null> {
+export async function handleFileAdded(filePath: string, fullPath: string, existingNotes: Note[]): Promise<Note | null> {
   // 检查是否已存在（避免重复添加）
   const existingNote = existingNotes.find((n) => n.id === filePath);
   if (existingNote) return null;
@@ -20,8 +15,7 @@ export async function handleFileAdded(
     const { content } = await fileIpc.read(fullPath);
 
     // 解析文件路径，确定所属文件夹
-    const normalizedFilePath = filePath.replaceAll("\\", "/");
-    const pathParts = normalizedFilePath.split("/");
+    const pathParts = filePath.split("/");
     let folderId: string | null = null;
 
     if (pathParts.length > 1) {
@@ -35,7 +29,7 @@ export async function handleFileAdded(
     // 创建新笔记对象
     const githubMetadata = parseGitHubMetadata(content);
     const newNote: Note = {
-      id: normalizedFilePath,
+      id: filePath,
       title: fileName.replace(/\.md$/i, ""),
       content,
       fileName,

@@ -1,5 +1,13 @@
 import { ipcRenderer } from "electron";
-import type { ExportLayoutConfig, GitHubConfig, GitHubProjectConfigMap, IpcResultDTO, ShortcutConfig } from "@shared";
+import type {
+  ExportLayoutConfig,
+  GitHubConfig,
+  GitHubProjectConfigMap,
+  IpcResultDTO,
+  ShortcutBinding,
+  ShortcutConfig,
+  ShortcutId
+} from "@shared";
 
 export const configApi = {
   /**
@@ -41,11 +49,14 @@ export const configApi = {
    */
   getShortcuts: (): Promise<IpcResultDTO<ShortcutConfig>> => ipcRenderer.invoke("config:getShortcuts"),
 
-  /**
-   * 设置快捷键配置（全量覆盖）
-   */
-  setShortcuts: (shortcuts: ShortcutConfig): Promise<IpcResultDTO<void>> =>
-    ipcRenderer.invoke("config:setShortcuts", shortcuts),
+  setShortcut: (id: ShortcutId, binding: ShortcutBinding): Promise<IpcResultDTO<ShortcutConfig>> =>
+    ipcRenderer.invoke("config:setShortcut", id, binding),
+
+  onShortcutsChanged: (callback: (config: ShortcutConfig) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, config: ShortcutConfig) => callback(config);
+    ipcRenderer.on("config:shortcutsChanged", listener);
+    return () => ipcRenderer.removeListener("config:shortcutsChanged", listener);
+  },
 
   /**
    * 获取 GitHub 配置

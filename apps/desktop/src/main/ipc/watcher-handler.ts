@@ -1,4 +1,5 @@
-import { ipcMain, BrowserWindow } from "electron";
+import { BrowserWindow } from "electron";
+import { handleAppIpc } from "../security/app-ipc";
 import type { IpcResultDTO } from "@shared";
 import { fileWatcherManager } from "../file-watcher";
 import { windowManager } from "../window-manager";
@@ -8,7 +9,7 @@ import path from "path";
 
 function normalizeWorkspacePath(workspacePath: string): string {
   try {
-    return fs.realpathSync(workspacePath);
+    return fs.realpathSync.native(workspacePath);
   } catch {
     return path.resolve(workspacePath);
   }
@@ -21,7 +22,7 @@ function resolveExpectedWorkspacePath(expectedPath: unknown, currentPath?: strin
 }
 
 export function registerWatcherHandlers(): void {
-  ipcMain.handle("watcher:pause", (event, expectedWorkspacePath?: string): IpcResultDTO<void> => {
+  handleAppIpc("watcher:pause", (event, expectedWorkspacePath?: string): IpcResultDTO<void> => {
     try {
       const entry = windowManager.getEntryByWebContents(event.sender);
       const windowId = BrowserWindow.fromWebContents(event.sender)?.id;
@@ -39,14 +40,14 @@ export function registerWatcherHandlers(): void {
     }
   });
 
-  ipcMain.handle("watcher:resume", (event, expectedWorkspacePath?: string): IpcResultDTO<void> => {
+  handleAppIpc("watcher:resume", async (event, expectedWorkspacePath?: string): Promise<IpcResultDTO<void>> => {
     try {
       const entry = windowManager.getEntryByWebContents(event.sender);
       const windowId = BrowserWindow.fromWebContents(event.sender)?.id;
       const workspacePath = resolveExpectedWorkspacePath(expectedWorkspacePath, entry?.workspacePath);
       if (workspacePath && windowId !== undefined) {
         // 旧工作区操作的 finally 只能恢复它自己的计数，不能减少新工作区的暂停计数。
-        fileWatcherManager.resumeWatching(workspacePath, windowId);
+        await fileWatcherManager.resumeWatching(workspacePath, windowId);
       }
       return ipcOk(undefined);
     } catch (error) {

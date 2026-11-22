@@ -1,4 +1,4 @@
-import { access, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -58,6 +58,16 @@ describe("RSS imports and subscription updates", () => {
     expect(metadata.items[0].published).toBeUndefined();
   });
 
+  it("cancels an oversized response before creating any files", async () => {
+    const cancel = vi.fn();
+    fetchMock.mockResolvedValueOnce({
+      response: new Response(new ReadableStream({ cancel }), { headers: { "content-length": "50000000" } })
+    });
+    await expect(importRss("https://example.com/feed", workspacePath)).rejects.toThrow("feed is too large");
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(await readdir(workspacePath)).toEqual([]);
+  });
+
   it.each(["dist", "build", "node_modules"])("imports a feed named %s into a discoverable directory", async (title) => {
     fetchMock.mockImplementation(async () => ({
       response: new Response(feed().replace("<title>Test Feed</title>", `<title>${title}</title>`))
@@ -78,6 +88,14 @@ describe("RSS imports and subscription updates", () => {
 
     await expect(updateRss(imported.folderPath)).resolves.toEqual({ addedCount: 0 });
     expect((await readdir(imported.folderPath)).filter((name) => name.endsWith(".md"))).toHaveLength(1);
+  });
+
+  it("rejects non-file subscription metadata before fetching a feed", async () => {
+    const folder = path.join(workspacePath, "Invalid RSS Metadata");
+    await mkdir(path.join(folder, ".rss.json"), { recursive: true });
+
+    await expect(updateRss(folder)).rejects.toThrow("RSS metadata must be a regular file");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("preserves real publication dates while deduplicating later updates", async () => {

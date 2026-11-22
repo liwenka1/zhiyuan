@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("electron", async () => {
   const { EventEmitter } = await import("node:events");
-  return { ipcRenderer: Object.assign(new EventEmitter(), { invoke: vi.fn() }) };
+  return {
+    ipcRenderer: Object.assign(new EventEmitter(), { invoke: vi.fn() }),
+    webUtils: { getPathForFile: (file: { sourcePath: string }) => file.sourcePath }
+  };
 });
 
 describe("external opening across preload and renderer startup", () => {
@@ -115,5 +118,30 @@ describe("external opening across preload and renderer startup", () => {
     send(second);
 
     expect(callback.mock.calls).toEqual([[first], [second]]);
+  });
+});
+
+describe("native Markdown drop grants in preload", () => {
+  it("only forwards paths from a current trusted drop and consumes them once", async () => {
+    const { ipcRenderer } = await import("electron");
+    const { observeNativeMarkdownDrops, workspaceApi } = await import("../../apps/desktop/src/preload/apis/workspace");
+    const invoke = vi.mocked(ipcRenderer.invoke);
+    invoke.mockReset().mockResolvedValue({ ok: true });
+    const target = { addEventListener: vi.fn() };
+    observeNativeMarkdownDrops(target as unknown as Window);
+    const nativeDrop = target.addEventListener.mock.lastCall?.[1];
+    const file = { name: "native.MD", sourcePath: "/dropped/native.MD" };
+    const otherPath = "/elsewhere/other.md";
+    const drop = (isTrusted: boolean) => nativeDrop({ isTrusted, dataTransfer: { files: [file] } });
+
+    drop(false);
+    expect(await workspaceApi.approveDroppedFile(file.sourcePath)).toMatchObject({ ok: false });
+    drop(true);
+    expect(await workspaceApi.importMarkdownFiles([file.sourcePath, otherPath], "/workspace")).toMatchObject({
+      ok: false
+    });
+    expect(await workspaceApi.importMarkdownFiles([file.sourcePath], "/workspace")).toMatchObject({ ok: true });
+    expect(await workspaceApi.approveDroppedFile(file.sourcePath)).toMatchObject({ ok: false });
+    expect(invoke).toHaveBeenCalledExactlyOnceWith("workspace:importMarkdownFiles", [file.sourcePath], "/workspace");
   });
 });

@@ -13,18 +13,21 @@ const { captureState } = vi.hoisted(() => ({
     documentUrl: "",
     contentsId: 0,
     loadedHtml: "",
+    documentHeight: 80,
+    captureHeight: 0,
+    loadError: undefined as Error | undefined,
+    destroyCount: 0,
     decisions: [] as boolean[]
   }
 }));
 vi.mock("electron", async () => {
   const { EventEmitter } = await import("node:events");
   const { readFile } = await import("node:fs/promises");
-  const { pathToFileURL } = await import("node:url");
   class Contents extends EventEmitter {
     id = 73;
     setWindowOpenHandler() {}
     async executeJavaScript(script: string) {
-      return script.startsWith("Math.max") ? 80 : true;
+      return script.startsWith("Math.max") ? captureState.documentHeight : true;
     }
     async capturePage() {
       return { captured: true };
@@ -42,10 +45,14 @@ vi.mock("electron", async () => {
     },
     BrowserWindow: class extends EventEmitter {
       webContents = new Contents();
-      async loadFile(file: string) {
-        captureState.documentUrl = pathToFileURL(file).href;
+      constructor(private options: Electron.BrowserWindowConstructorOptions) {
+        super();
+      }
+      async loadURL(url: string) {
+        captureState.documentUrl = url;
         captureState.contentsId = this.webContents.id;
-        captureState.loadedHtml = await readFile(file, "utf8");
+        if (captureState.loadError) throw captureState.loadError;
+        captureState.loadedHtml = await readFile(new URL(url), "utf8");
         const requests = [
           { url: captureState.documentUrl, resourceType: "mainFrame", webContentsId: this.webContents.id },
           { url: captureState.documentUrl, resourceType: "mainFrame", webContentsId: 999 },
@@ -63,13 +70,16 @@ vi.mock("electron", async () => {
         });
         this.webContents.emit("dom-ready");
       }
-      setContentSize() {
+      setContentSize(_width: number, height: number) {
+        captureState.captureHeight = this.options.enableLargerThanScreen ? height : Math.min(height, 600);
         queueMicrotask(() => this.emit("resize"));
       }
       isDestroyed() {
         return false;
       }
-      close() {}
+      destroy() {
+        captureState.destroyCount++;
+      }
     }
   };
 });
@@ -84,6 +94,10 @@ const imageContents =
   '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="blue"/></svg>';
 
 beforeEach(async () => {
+  captureState.loadError = undefined;
+  captureState.destroyCount = 0;
+  captureState.documentHeight = 80;
+  captureState.captureHeight = 0;
   root = await fs.mkdtemp(path.join(os.tmpdir(), "zhiyuan-export-boundary-"));
   workspace = path.join(root, "workspace");
   await fs.mkdir(workspace);
@@ -124,6 +138,38 @@ describe("export local CSS resources", () => {
       }
     );
     expect(cancel).toBe(true);
+    expect(captureState.destroyCount).toBe(1);
     await expect(fs.access(new URL(captureState.documentUrl))).rejects.toThrow();
+  });
+
+  it("propagates a navigation failure immediately and cleans up before allowing a retry", async () => {
+    captureState.loadError = new Error("injected load failure");
+    await expect(captureHtmlAsImage("<p>Export</p>")).rejects.toThrow("injected load failure");
+    expect(captureState.destroyCount).toBe(1);
+    await expect(fs.access(new URL(captureState.documentUrl))).rejects.toThrow();
+    captureState.loadError = undefined;
+    await expect(captureHtmlAsImage("<p>Retry</p>")).resolves.toEqual({ captured: true });
+    expect(captureState.destroyCount).toBe(2);
+  });
+
+  it("captures the whole document when it is taller than the screen", async () => {
+    captureState.documentHeight = 900;
+
+    await expect(captureHtmlAsImage("<p>Tall export</p>")).resolves.toEqual({ captured: true });
+
+    expect(captureState.captureHeight).toBe(900);
+  });
+
+  it("loads the authorized document URL when the temporary directory contains brackets", async () => {
+    const temporary = path.join(root, "temp [test]");
+    await fs.mkdir(temporary);
+    vi.stubEnv(process.platform === "win32" ? "TEMP" : "TMPDIR", temporary);
+    try {
+      await expect(captureHtmlAsImage("<p>Tall export</p>")).resolves.toEqual({ captured: true });
+      expect(captureState.documentUrl).toContain("%5Btest%5D");
+      expect(captureState.decisions[0]).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

@@ -47,7 +47,7 @@ function App(): React.JSX.Element {
   const isWorkspaceLoading = useWorkspaceStore((state) => state.isLoading);
   const isOperationPending = useOperationStore((state) => state.fileOperationCount > 0 || state.closeRequestCount > 0);
   const setWorkspacePath = useWorkspaceStore((state) => state.setWorkspacePath);
-  const setPendingFilePath = useWorkspaceStore((state) => state.setPendingFilePath);
+  const receivedExternalOpen = useRef(false);
   const [showPresentation, setShowPresentation] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [settingsSession, setSettingsSession] = useState<SettingsSession | null>(null);
@@ -156,24 +156,23 @@ function App(): React.JSX.Element {
       if (!result) return;
 
       dismissSettings();
-      setPendingFilePath(result.filePath);
-      setWorkspacePath(result.workspacePath);
+      await setWorkspacePath(result.workspacePath, result.filePath);
     } catch {
       /* 静默处理 */
     }
-  }, [dismissSettings, setPendingFilePath, setWorkspacePath]);
+  }, [dismissSettings, setWorkspacePath]);
 
   const handleExternalOpen = useCallback(
     async (payload: { workspacePath: string; filePath?: string }) => {
+      receivedExternalOpen.current = true;
       try {
         dismissSettings();
-        if (payload.filePath) setPendingFilePath(payload.filePath);
-        setWorkspacePath(payload.workspacePath);
+        await setWorkspacePath(payload.workspacePath, payload.filePath);
       } catch {
         /* 静默处理 */
       }
     },
-    [dismissSettings, setPendingFilePath, setWorkspacePath]
+    [dismissSettings, setWorkspacePath]
   );
 
   const initExportTheme = useExportThemeStore((state) => state.initExportTheme);
@@ -198,10 +197,13 @@ function App(): React.JSX.Element {
   }, [initExportLayout]);
 
   const loadShortcuts = useShortcutsStore((state) => state.load);
+  const subscribeToShortcutChanges = useShortcutsStore((state) => state.subscribeToChanges);
 
   useEffect(() => {
+    const unsubscribe = subscribeToShortcutChanges();
     void loadShortcuts();
-  }, [loadShortcuts]);
+    return unsubscribe;
+  }, [loadShortcuts, subscribeToShortcutChanges]);
 
   // 监听菜单「打开文件夹/文件」事件（macOS 原生菜单 + Windows 自定义菜单栏）
   useEffect(() => {
@@ -256,17 +258,21 @@ function App(): React.JSX.Element {
 
   // 检查是否有上次的工作区（快速判断，决定渲染哪个页面）
   useEffect(() => {
+    let cancelled = false;
     workspaceIpc
       .getCurrent()
       .then((saved) => {
-        if (saved) {
+        if (!cancelled && saved && !receivedExternalOpen.current) {
           setWorkspacePath(saved);
         }
       })
       .catch(() => {})
       .finally(() => {
-        setIsInitialized(true);
+        if (!cancelled) setIsInitialized(true);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [setWorkspacePath]);
 
   // 阻止 Electron 默认的文件拖放导航行为

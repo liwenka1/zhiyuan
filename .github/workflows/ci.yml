@@ -119,4 +119,8 @@ jobs:
       - name: Package without publishing
         run: |
           cd apps/desktop
-          npx electron-builder ${{ matrix.build_flag }} --publish never
+          pnpm exec electron-builder ${{ matrix.build_flag }} --publish never
+
+      - name: Run packaged macOS app and terminal
+        if: runner.os == 'macOS'
+        run: pnpm smoke:desktop apps/desktop/dist/mac*/纸鸢.app/Contents/MacOS/纸鸢

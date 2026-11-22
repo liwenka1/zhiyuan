@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Note } from "@/types";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
@@ -29,17 +29,19 @@ export function useNoteExport(): UseNoteExportReturn {
   const exportThemeId = useExportThemeStore((state) => state.exportThemeId);
   const exportLayout = useExportLayoutStore((state) => state.exportLayout);
   const [isExporting, setIsExporting] = useState(false);
+  const exportInFlight = useRef(false);
 
   /**
    * 导出笔记
    */
   const exportNote = async (note: Note, format: ExportFormat) => {
     // 防止重复导出
-    if (isExporting) {
+    if (exportInFlight.current) {
       toast.info(t("export.exportingWait"));
       return;
     }
 
+    exportInFlight.current = true;
     setIsExporting(true);
     toast.loading(t("export.exporting"), { id: "exporting" });
 
@@ -69,8 +71,12 @@ export function useNoteExport(): UseNoteExportReturn {
         toast.dismiss("exporting");
         return;
       }
-      toast.error(t("export.failed"), { id: "exporting" });
+      toast.error(t("export.failed"), {
+        id: "exporting",
+        description: error instanceof Error ? error.message : undefined
+      });
     } finally {
+      exportInFlight.current = false;
       setIsExporting(false);
     }
   };

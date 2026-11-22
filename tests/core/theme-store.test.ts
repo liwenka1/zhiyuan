@@ -1,15 +1,18 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { themeSetMock } = vi.hoisted(() => ({
-  themeSetMock: vi.fn()
+const { themeSetMock, themeGetMock, themeModeMock, themeChangedMock } = vi.hoisted(() => ({
+  themeSetMock: vi.fn(),
+  themeGetMock: vi.fn(),
+  themeModeMock: vi.fn(),
+  themeChangedMock: vi.fn(() => vi.fn())
 }));
 
 vi.mock("@/ipc", () => ({
   themeIpc: {
     set: themeSetMock,
-    get: vi.fn(),
-    getMode: vi.fn(),
-    onChanged: vi.fn(() => vi.fn())
+    get: themeGetMock,
+    getMode: themeModeMock,
+    onChanged: themeChangedMock
   }
 }));
 
@@ -32,9 +35,11 @@ beforeAll(async () => {
 
 describe("theme persistence", () => {
   beforeEach(() => {
-    themeSetMock.mockReset();
+    vi.clearAllMocks();
     useThemeStore.setState({ theme: "light", themeMode: "system" });
   });
+
+  afterEach(() => useThemeStore.getState().cleanup());
 
   it("rolls back the optimistic theme when persistence fails", async () => {
     themeSetMock.mockRejectedValueOnce(new Error("disk full"));
@@ -48,6 +53,20 @@ describe("theme persistence", () => {
     themeSetMock.mockResolvedValueOnce(undefined);
 
     await useThemeStore.getState().setTheme("dark");
+
+    expect(useThemeStore.getState()).toMatchObject({ theme: "dark", themeMode: "dark" });
+  });
+
+  it("synchronizes the preference and appearance even before the initial read returns", async () => {
+    let finishRead!: (theme: "light") => void;
+    themeGetMock.mockReturnValueOnce(new Promise((resolve) => (finishRead = resolve)));
+    themeModeMock.mockResolvedValueOnce("system");
+
+    const read = useThemeStore.getState().initTheme();
+    const [notify] = themeChangedMock.mock.calls[0] as unknown as [(theme: "dark", mode: "dark") => void];
+    notify("dark", "dark");
+    finishRead("light");
+    await read;
 
     expect(useThemeStore.getState()).toMatchObject({ theme: "dark", themeMode: "dark" });
   });

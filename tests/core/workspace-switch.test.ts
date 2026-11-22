@@ -68,9 +68,18 @@ vi.mock("@/ipc", () => ({
     delete: deleteMock,
     copy: copyMock,
     exists: vi.fn().mockResolvedValue(false),
-    read: vi.fn()
+    read: vi.fn(),
+    onAdded: vi.fn(() => vi.fn()),
+    onDeleted: vi.fn(() => vi.fn()),
+    onChanged: vi.fn(() => vi.fn())
   },
-  folderIpc: { create: folderCreateMock, rename: folderRenameMock, delete: folderDeleteMock },
+  folderIpc: {
+    create: folderCreateMock,
+    rename: folderRenameMock,
+    delete: folderDeleteMock,
+    onAdded: vi.fn(() => vi.fn()),
+    onDeleted: vi.fn(() => vi.fn())
+  },
   watcherIpc: { pause: pauseMock, resume: resumeMock },
   configIpc: { getPinnedNotes: vi.fn().mockResolvedValue([]), setPinnedNotes: pinsMock },
   shellIpc: {},
@@ -122,11 +131,11 @@ import {
 import { useWindowClose } from "../../apps/desktop/src/renderer/src/hooks/use-window-close";
 import {
   beginBackgroundSave,
+  beginFileOperation,
   useOperationStore
 } from "../../apps/desktop/src/renderer/src/stores/note-store/operation-guard";
 import { moveNotesInWorkspace } from "../../apps/desktop/src/renderer/src/features/note-workspace/lib/move-notes";
-import { configIpc } from "@/ipc";
-import { fileIpc } from "@/ipc";
+import { configIpc, fileIpc, folderIpc } from "@/ipc";
 import { createFileEventHandlers } from "../../apps/desktop/src/renderer/src/stores/note-store/file-events";
 import {
   getGitHubIssueNumberForRepository,
@@ -251,7 +260,7 @@ describe("workspace switching edit isolation", () => {
     savedFiles.clear();
     harness.refs = [];
     harness.refIndex = 0;
-    useWorkspaceStore.setState({ workspacePath: null, pendingFilePath: null, isLoading: false });
+    useWorkspaceStore.setState({ workspacePath: null, pendingFilePaths: [], isLoading: false });
     useFolderStore.setState({ folders: [], selectedFolderId: null });
     harness.state = {
       notes: [] as Note[],
@@ -305,6 +314,205 @@ describe("workspace switching edit isolation", () => {
     useWorkspaceInit();
 
     expect(harness.effectDependencies[0]).toStrictEqual(originalDependencies);
+  });
+
+  it("ignores queued deletions from an old workspace with the same relative paths", async () => {
+    await openA();
+    const unsubscribe = harness.effects[2]() as () => void;
+    const onFileDeleted = vi.mocked(fileIpc.onDeleted).mock.calls[0][0];
+    const onFolderDeleted = vi.mocked(folderIpc.onDeleted).mock.calls[0][0];
+    await useWorkspaceStore.getState().setWorkspacePath(rootB);
+    renderWorkspaceLoad();
+    await settle();
+
+    onFileDeleted({ filePath: "note.md", fullPath: `${rootA}/note.md` });
+    onFolderDeleted({ folderPath: "folder", fullPath: `${rootA}/folder` });
+    expect(harness.state.notes[0].filePath).toBe(`${rootB}/note.md`);
+    expect(useFolderStore.getState().folders[0].path).toBe(`${rootB}/folder`);
+
+    onFileDeleted({ filePath: "note.md", fullPath: `${rootB}/note.md` });
+    onFolderDeleted({ folderPath: "folder", fullPath: `${rootB}/folder` });
+    expect(harness.state.notes).toEqual([]);
+    expect(useFolderStore.getState().folders).toEqual([]);
+    unsubscribe();
+  });
+
+  it("keeps one folder when the watcher replays its addition before createFolder resumes", async () => {
+    await openA();
+    const unsubscribe = harness.effects[2]() as () => void;
+    const onFolderAdded = vi.mocked(folderIpc.onAdded).mock.calls[0][0];
+    const event = { folderPath: "new-folder", fullPath: `${rootA}/new-folder` };
+    resumeMock.mockImplementationOnce(async () => onFolderAdded(event));
+    try {
+      await useFolderStore.getState().createFolder(event.folderPath);
+
+      expect(folderCreateMock).toHaveBeenCalledExactlyOnceWith(event.fullPath);
+      expect(useFolderStore.getState().folders.filter(({ id }) => id === event.folderPath)).toMatchObject([
+        { id: event.folderPath, path: event.fullPath }
+      ]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("selects the single note already indexed when a new note arrives during watcher replay", async () => {
+    await openA();
+    const id = "new.md";
+    const filePath = `${rootA}/${id}`;
+    const observed = "latest contents from disk";
+    resumeMock.mockImplementationOnce(async () => {
+      savedFiles.set(filePath, observed);
+      await harness.state.handleFileAddedEvent(id, filePath);
+    });
+
+    expect(await harness.state.createNote(undefined, "new")).toBe(id);
+
+    expect(createMock).toHaveBeenCalledExactlyOnceWith(filePath, expect.any(String));
+    expect(harness.state.notes.filter((note) => note.id === id)).toMatchObject([{ filePath, content: observed }]);
+    expect(harness.state.openNoteIds.filter((noteId) => noteId === id)).toEqual([id]);
+    expect(harness.state.selectedNoteId).toBe(id);
+    expect(harness.state.editorContent).toBe(observed);
+    expect(getLastSavedContent(id)).toBe(observed);
+  });
+
+  it("opens requested notes in order after a shared scan and expires an unreadable request", async () => {
+    const data = scanData(rootA);
+    const [first] = data.notes;
+    const second = { ...first, id: "nested/second.md", filePath: `${rootA}/nested/second.md` };
+    const missingPath = `${rootA}/missing.md`;
+    data.notes.push(second);
+    const scan = deferred<typeof data>();
+    scanMock.mockReturnValueOnce(scan.promise);
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, first.filePath);
+    renderWorkspaceLoad();
+    await settle();
+    expect(useWorkspaceStore.getState().isLoading).toBe(true);
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, missingPath);
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, second.filePath);
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, second.filePath);
+    vi.mocked(fileIpc.read).mockRejectedValueOnce(Object.assign(new Error("Missing"), { code: "FILE_NOT_FOUND" }));
+    scan.resolve(data);
+    await settle();
+    harness.effects = [];
+    harness.refIndex = 0;
+    useWorkspaceInit();
+    const unsubscribe = harness.effects[1]() as () => void;
+    try {
+      await settle();
+      expect(scanMock).toHaveBeenCalledExactlyOnceWith(rootA);
+      expect(harness.state.openNoteIds).toEqual([first.id, second.id]);
+      expect(harness.state.selectedNoteId).toBe(second.id);
+      expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([]);
+
+      savedFiles.set(missingPath, "replacement");
+      await harness.state.handleFileAddedEvent("missing.md", missingPath);
+      harness.effects = [];
+      harness.refIndex = 0;
+      useWorkspaceInit();
+      harness.effects[1]();
+      expect(harness.state.notes.some((note) => note.filePath === missingPath)).toBe(true);
+      expect(harness.state.selectedNoteId).toBe(second.id);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("reads a requested nested note that arrived too late for the scan", async () => {
+    const filePath = `${rootA}/folder/late.md`;
+    const data = scanData(rootA);
+    const scan = deferred<typeof data>();
+    scanMock.mockReturnValueOnce(scan.promise);
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, filePath);
+    renderWorkspaceLoad();
+    await settle();
+    savedFiles.set(filePath, "late note");
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, data.notes[0].filePath);
+    scan.resolve(data);
+    await settle();
+    harness.effects = [];
+    harness.refIndex = 0;
+    useWorkspaceInit();
+    const unsubscribe = harness.effects[1]() as () => void;
+    try {
+      await settle();
+      expect(fileIpc.read).toHaveBeenCalledExactlyOnceWith(filePath);
+      expect(harness.state.notes).toContainEqual(
+        expect.objectContaining({ id: "folder/late.md", filePath, content: "late note", folderId: "folder" })
+      );
+      expect(harness.state.openNoteIds).toEqual(["folder/late.md", "note.md"]);
+      expect(harness.state.selectedNoteId).toBe("note.md");
+      expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([]);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("opens distinct case-sensitive filenames in a Windows workspace", async () => {
+    const workspace = "C:\\workspace";
+    const upper = { id: "Note.md", title: "Note", content: "first", filePath: `${workspace}\\Note.md` };
+    const lower = { id: "note.md", title: "note", content: "second", filePath: `${workspace}\\note.md` };
+    harness.state.notes = [upper, lower];
+    await useWorkspaceStore.getState().setWorkspacePath(workspace, upper.filePath);
+    await useWorkspaceStore.getState().setWorkspacePath(workspace, lower.filePath);
+    useWorkspaceStore.getState().setLoading(false);
+    harness.effects = [];
+    harness.refIndex = 0;
+    useWorkspaceInit();
+    const unsubscribe = harness.effects[1]() as () => void;
+    try {
+      expect(harness.state.openNoteIds).toEqual(["Note.md", "note.md"]);
+      expect(harness.state.editorContent).toBe("second");
+      expect(fileIpc.read).not.toHaveBeenCalled();
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it.each([false, true])("opens literal Unix backslashes separately from slashes with indexed=%s", async (indexed) => {
+    const literalId = "a\\b.md";
+    const literal = { id: literalId, title: "a\\b", content: "literal", filePath: `${rootA}/${literalId}` };
+    const nested = { id: "a/b.md", title: "b", content: "nested", filePath: `${rootA}/a/b.md` };
+    harness.state.notes = indexed ? [literal, nested] : [nested];
+    savedFiles.set(literal.filePath, literal.content);
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, literal.filePath);
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, nested.filePath);
+    useWorkspaceStore.getState().setLoading(false);
+    harness.effects = [];
+    harness.refIndex = 0;
+    useWorkspaceInit();
+    const unsubscribe = harness.effects[1]() as () => void;
+    try {
+      await settle();
+      expect(harness.state.openNoteIds).toEqual([literal.id, nested.id]);
+      expect(harness.state.notes).toContainEqual(expect.objectContaining(literal));
+      expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([]);
+      if (indexed) expect(fileIpc.read).not.toHaveBeenCalled();
+      else expect(fileIpc.read).toHaveBeenCalledExactlyOnceWith(literal.filePath);
+    } finally {
+      unsubscribe();
+    }
+  });
+
+  it("retains an external selection until an in-flight file operation releases the editor", async () => {
+    await openA();
+    const target = { ...harness.state.notes[0], id: "other.md", filePath: `${rootA}/other.md` };
+    harness.state.notes.push(target);
+    const release = beginFileOperation()!;
+    await useWorkspaceStore.getState().setWorkspacePath(rootA, target.filePath);
+    harness.effects = [];
+    harness.refIndex = 0;
+    useWorkspaceInit();
+    const unsubscribe = harness.effects[1]() as () => void;
+    try {
+      expect(harness.state.selectedNoteId).toBe("note.md");
+      expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([target.filePath]);
+      release();
+      expect(harness.state.selectedNoteId).toBe(target.id);
+      expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([]);
+    } finally {
+      release();
+      unsubscribe();
+    }
   });
 
   it("blocks the old editor and note operations after the old draft was flushed but before the new root is bound", async () => {

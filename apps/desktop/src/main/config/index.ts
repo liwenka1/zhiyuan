@@ -13,6 +13,55 @@ import {
 } from "@shared";
 
 const LEGACY_DEFAULT_GITHUB_PROJECT_KEY = "__default__";
+const LEGACY_PIN_LOOKUP_TIMEOUT_MS = 200;
+const MAX_PENDING_PIN_LOOKUPS = 2;
+const pendingLegacyPinLookups = new Map<string, Promise<string | null>>();
+
+function resolveLegacyPinPath(legacyPath: string): Promise<string | null> | undefined {
+  const pending = pendingLegacyPinLookups.get(legacyPath);
+  if (pending || pendingLegacyPinLookups.size >= MAX_PENDING_PIN_LOOKUPS) return pending;
+
+  const lookup = new Promise<string | null>((resolve) => {
+    const timeout = setTimeout(() => resolve(null), LEGACY_PIN_LOOKUP_TIMEOUT_MS);
+    // Keep the slot occupied until the filesystem finishes, even after the caller times out.
+    void fs.promises
+      .realpath(legacyPath)
+      .catch(() => null)
+      .then((result) => {
+        clearTimeout(timeout);
+        pendingLegacyPinLookups.delete(legacyPath);
+        resolve(result);
+      });
+  });
+  pendingLegacyPinLookups.set(legacyPath, lookup);
+  return lookup;
+}
+
+async function findLegacyPinKey(workspacePath: string, legacyPaths: string[]): Promise<string | undefined> {
+  if (legacyPaths.length === 0) return undefined;
+  let next = 0;
+  let stopped = false;
+  let timeout: NodeJS.Timeout | undefined;
+
+  try {
+    return await new Promise<string | undefined>((resolve, reject) => {
+      timeout = setTimeout(() => resolve(undefined), LEGACY_PIN_LOOKUP_TIMEOUT_MS);
+      const search = async () => {
+        while (!stopped && next < legacyPaths.length) {
+          const candidate = legacyPaths[next++];
+          if ((await resolveLegacyPinPath(candidate)) === workspacePath) {
+            resolve(candidate);
+            return;
+          }
+        }
+      };
+      void Promise.all([search(), search()]).then(() => resolve(undefined), reject);
+    });
+  } finally {
+    stopped = true;
+    clearTimeout(timeout);
+  }
+}
 
 function isSecureTokenStorageAvailable(): boolean {
   try {
@@ -143,9 +192,14 @@ export const configManager = {
   /**
    * 获取工作区的置顶笔记列表
    */
-  getPinnedNotes(workspacePath: string): string[] {
+  async getPinnedNotes(workspacePath: string): Promise<string[]> {
     const pinnedNotes = store.get("pinnedNotes");
-    return pinnedNotes[workspacePath] || [];
+    if (Object.hasOwn(pinnedNotes, workspacePath)) return pinnedNotes[workspacePath];
+
+    // Older versions could save pins under another spelling or a symlink to this workspace.
+    const legacyPath = await findLegacyPinKey(workspacePath, Object.keys(pinnedNotes));
+    const current = store.get("pinnedNotes");
+    return current[workspacePath] ?? (legacyPath === undefined ? [] : (current[legacyPath] ?? []));
   },
 
   /**

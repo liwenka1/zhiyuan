@@ -1,6 +1,11 @@
 packages:
   - apps/*
 
+# Include the prebuilt filesystem binding for each desktop packaging target.
+supportedArchitectures:
+  os: [current, darwin, linux, win32]
+  cpu: [current, x64, arm64]
+
 # 允许执行安装脚本的依赖（node-pty 需要它来放置预编译产物 / 在 Linux 上编译）
 onlyBuiltDependencies:
   - electron

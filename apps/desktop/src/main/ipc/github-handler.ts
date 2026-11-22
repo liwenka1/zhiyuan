@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { handleAppIpc } from "../security/app-ipc";
 import { ipcOk, ipcErr } from "./ipc-result";
 import type { IpcResultDTO, GitHubIssuePushRequest, GitHubIssuePushResult } from "@shared";
 import { createIssue, getContentSha, getRepositoryDefaultBranch, updateIssue, uploadContent } from "../github";
@@ -36,7 +36,7 @@ function resolveSelectedGitHubProject(payload: { projectKey?: string; owner: str
 }
 
 export function registerGitHubHandlers(): void {
-  ipcMain.handle(
+  handleAppIpc(
     "github:pushIssue",
     async (event, payload: GitHubIssuePushRequest): Promise<IpcResultDTO<GitHubIssuePushResult>> => {
       let lease: ReturnType<PublicationLeases["acquire"]> | undefined;
@@ -105,7 +105,7 @@ export function registerGitHubHandlers(): void {
     }
   );
 
-  ipcMain.handle("github:releasePublication", async (event, publicationId: string): Promise<IpcResultDTO<void>> => {
+  handleAppIpc("github:releasePublication", async (event, publicationId: string): Promise<IpcResultDTO<void>> => {
     try {
       const lease = publications.owned(String(publicationId), event.sender);
       if (lease) {
@@ -118,7 +118,7 @@ export function registerGitHubHandlers(): void {
     }
   });
 
-  ipcMain.handle(
+  handleAppIpc(
     "github:uploadAsset",
     async (event, payload: GitHubAssetUploadRequest): Promise<IpcResultDTO<GitHubAssetUploadResult>> => {
       try {
@@ -143,22 +143,22 @@ export function registerGitHubHandlers(): void {
           return ipcErr("Invalid note id", "GITHUB_UPLOAD_NOTE_ID_INVALID");
         }
 
-        const branch = payload.branch?.trim() || (await getRepositoryDefaultBranch({ owner, repo, token }));
-
         const workspacePath = getCallerWorkspace(event);
-        if (!validatePathInWorkspace(workspacePath, localPath).isValid) {
+        const validation = validatePathInWorkspace(workspacePath, localPath);
+        if (!validation.isValid) {
           return ipcErr("Asset path is outside workspace", "GITHUB_UPLOAD_PATH_INVALID");
         }
 
-        const stat = await fs.stat(localPath).catch(() => null);
-        if (!stat) {
+        const stat = await fs.stat(validation.normalizedPath).catch(() => null);
+        if (!stat?.isFile()) {
           return ipcOk({ skipped: true, reason: "missing" });
         }
         if (stat.size > maxBytes) {
           return ipcOk({ skipped: true, reason: "too_large" });
         }
 
-        const buffer = await fs.readFile(localPath);
+        const buffer = await fs.readFile(validation.normalizedPath);
+        const branch = payload.branch?.trim() || (await getRepositoryDefaultBranch({ owner, repo, token }));
         const hash = crypto.createHash("sha256").update(buffer).digest("hex");
         const ext = path.extname(localPath);
         const assetPath = `${assetsFolder}/${noteId}/${hash}${ext}`;

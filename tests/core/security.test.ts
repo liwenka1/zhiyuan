@@ -45,6 +45,11 @@ describe("workspace path policy", () => {
       await symlink(outside, path.join(workspace, "linked"), "dir");
       expect(validatePathInWorkspace(workspace, path.join(workspace, "linked", "new.md")).isValid).toBe(false);
       expect(validatePathInWorkspace(workspace, path.join(workspace, "notes", "new.md")).isValid).toBe(true);
+      const dangling = path.join(workspace, "unavailable");
+      await symlink(path.join(outside, "missing"), dangling, "dir");
+      expect(validatePathInWorkspace(workspace, dangling).isValid).toBe(false);
+      expect(validatePathInWorkspace(workspace, path.join(dangling, "new.md")).isValid).toBe(false);
+      expect(validatePathInWorkspace(workspace, "notes/new.md").isValid).toBe(false);
       expect(isPathInside(workspace, workspace)).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });

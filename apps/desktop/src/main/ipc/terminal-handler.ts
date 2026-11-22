@@ -1,14 +1,13 @@
-import { app, ipcMain } from "electron";
-import { randomUUID } from "node:crypto";
-import { spawn, type IPty } from "node-pty";
+import { app } from "electron";
+import { handleAppIpc } from "../security/app-ipc";
+import { spawn, type IDisposable, type IPty } from "node-pty";
 import { ipcErr, ipcOk } from "./ipc-result";
 import type { IpcResultDTO } from "@shared";
 import { getCallerWorkspace } from "../security/window-context";
 
 interface TerminalSession {
-  id: string;
   pty: IPty;
-  senderId: number;
+  subscriptions: IDisposable[];
 }
 
 interface TerminalDataPayload {
@@ -22,7 +21,12 @@ interface TerminalExitPayload {
   signal?: number;
 }
 
-const sessions = new Map<string, TerminalSession>();
+interface SenderSessions {
+  sessions: Map<string, TerminalSession>;
+  detachListeners: () => void;
+}
+
+const sessionsBySender = new Map<Electron.WebContents, SenderSessions>();
 
 function safeSend(
   sender: Electron.WebContents,
@@ -81,26 +85,52 @@ function buildTerminalEnv(): Record<string, string> {
   return env;
 }
 
-function safeDisposeSession(sessionId: string): void {
-  const session = sessions.get(sessionId);
-  if (!session) return;
+function disposeSession(sender: Electron.WebContents, id: string, kill: boolean): void {
+  const owner = sessionsBySender.get(sender);
+  const session = owner?.sessions.get(id);
+  if (!owner || !session) return;
+  owner.sessions.delete(id);
+  if (owner.sessions.size === 0) {
+    sessionsBySender.delete(sender);
+    owner.detachListeners();
+  }
+  session.subscriptions.forEach((subscription) => subscription.dispose());
+  if (!kill) return;
   try {
     session.pty.kill();
   } catch {
-    // 忽略 kill 异常，确保 session 释放
+    // Shell may already have exited.
   }
-  sessions.delete(sessionId);
 }
 
-function disposeSenderSessions(senderId: number): void {
-  const sessionIds = [...sessions.values()]
-    .filter((session) => session.senderId === senderId)
-    .map((session) => session.id);
-  sessionIds.forEach((id) => safeDisposeSession(id));
+function getSenderSessions(sender: Electron.WebContents): Map<string, TerminalSession> {
+  const owner = sessionsBySender.get(sender);
+  if (owner) return owner.sessions;
+  const sessions = new Map<string, TerminalSession>();
+  const dispose = () => {
+    for (const id of sessions.keys()) disposeSession(sender, id, true);
+  };
+  const detachListeners = () => {
+    sender.removeListener("destroyed", dispose);
+    sender.removeListener("render-process-gone", dispose);
+    sender.removeListener("did-navigate", dispose);
+  };
+  sessionsBySender.set(sender, { sessions, detachListeners });
+  sender.on("destroyed", dispose);
+  sender.on("render-process-gone", dispose);
+  sender.on("did-navigate", dispose);
+  return sessions;
 }
 
 export function registerTerminalHandlers(): void {
-  ipcMain.handle("terminal:create", (event, _workspacePath?: string): IpcResultDTO<{ id: string }> => {
+  handleAppIpc("terminal:create", (event, id: string): IpcResultDTO<void> => {
+    const { sender } = event;
+    if (typeof id !== "string" || !/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(id)) {
+      return ipcErr("Invalid terminal session ID", "TERMINAL_CREATE_FAILED");
+    }
+    if (sessionsBySender.get(sender)?.sessions.has(id)) {
+      return ipcErr("Terminal session already exists", "TERMINAL_CREATE_FAILED");
+    }
     try {
       const { shell, args } = getPlatformShellCommand();
       const workspacePath = getCallerWorkspace(event);
@@ -108,37 +138,37 @@ export function registerTerminalHandlers(): void {
         name: "xterm-256color",
         cols: 80,
         rows: 24,
-        cwd: workspacePath ?? process.env.HOME ?? process.cwd(),
+        cwd: workspacePath,
         env: buildTerminalEnv()
       });
 
-      const id = randomUUID();
-      sessions.set(id, { id, pty, senderId: event.sender.id });
+      const terminal: TerminalSession = { pty, subscriptions: [] };
+      getSenderSessions(sender).set(id, terminal);
 
-      pty.onData((data) => {
-        safeSend(event.sender, "terminal:data", { id, data } satisfies TerminalDataPayload);
-      });
+      terminal.subscriptions.push(
+        pty.onData((data) => {
+          safeSend(sender, "terminal:data", { id, data } satisfies TerminalDataPayload);
+        })
+      );
+      terminal.subscriptions.push(
+        pty.onExit(({ exitCode, signal }) => {
+          disposeSession(sender, id, false);
+          safeSend(sender, "terminal:exit", { id, exitCode, signal } satisfies TerminalExitPayload);
+        })
+      );
 
-      pty.onExit(({ exitCode, signal }) => {
-        safeSend(event.sender, "terminal:exit", { id, exitCode, signal } satisfies TerminalExitPayload);
-        safeDisposeSession(id);
-      });
-
-      event.sender.once("destroyed", () => {
-        disposeSenderSessions(event.sender.id);
-      });
-
-      return ipcOk({ id });
+      return ipcOk(undefined);
     } catch (error) {
+      disposeSession(sender, id, true);
       const message = error instanceof Error ? error.message : String(error);
       return ipcErr(message, "TERMINAL_CREATE_FAILED", error);
     }
   });
 
-  ipcMain.handle("terminal:input", (event, id: string, data: string): IpcResultDTO<void> => {
+  handleAppIpc("terminal:input", (event, id: string, data: string): IpcResultDTO<void> => {
     try {
-      const session = sessions.get(id);
-      if (!session || session.senderId !== event.sender.id) {
+      const session = sessionsBySender.get(event.sender)?.sessions.get(id);
+      if (!session) {
         return ipcErr("Terminal session not found", "TERMINAL_SESSION_NOT_FOUND");
       }
       session.pty.write(data);
@@ -149,10 +179,10 @@ export function registerTerminalHandlers(): void {
     }
   });
 
-  ipcMain.handle("terminal:resize", (event, id: string, cols: number, rows: number): IpcResultDTO<void> => {
+  handleAppIpc("terminal:resize", (event, id: string, cols: number, rows: number): IpcResultDTO<void> => {
     try {
-      const session = sessions.get(id);
-      if (!session || session.senderId !== event.sender.id) {
+      const session = sessionsBySender.get(event.sender)?.sessions.get(id);
+      if (!session) {
         return ipcErr("Terminal session not found", "TERMINAL_SESSION_NOT_FOUND");
       }
       const safeCols = Math.max(2, Math.floor(cols));
@@ -165,13 +195,9 @@ export function registerTerminalHandlers(): void {
     }
   });
 
-  ipcMain.handle("terminal:dispose", (event, id: string): IpcResultDTO<void> => {
+  handleAppIpc("terminal:dispose", (event, id: string): IpcResultDTO<void> => {
     try {
-      const session = sessions.get(id);
-      if (session && session.senderId !== event.sender.id) {
-        return ipcErr("Terminal session not found", "TERMINAL_SESSION_NOT_FOUND");
-      }
-      safeDisposeSession(id);
+      disposeSession(event.sender, id, true);
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

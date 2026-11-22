@@ -37,10 +37,11 @@ describe("real Markdown editor initialization", () => {
       vi.stubGlobal("requestAnimationFrame", browser.requestAnimationFrame.bind(browser));
       vi.stubGlobal("cancelAnimationFrame", browser.cancelAnimationFrame.bind(browser));
 
-      const { EditorState, EditorView } = await import("@uiw/react-codemirror");
+      const { EditorState, EditorView, ExternalChange } = await import("@uiw/react-codemirror");
       const { useCodemirrorExtensions } =
         await import("../../apps/desktop/src/renderer/src/features/editor/hooks/use-codemirror-extensions");
-      const { extensions, theme } = useCodemirrorExtensions({ isDark });
+      let editingAllowed = true;
+      const { extensions, theme } = useCodemirrorExtensions({ isDark, canEdit: () => editingAllowed });
       const original = "# Temporary note\n\n```python\nprint('hello')\n```";
       const state = EditorState.create({ doc: original, extensions: [...extensions, theme] });
       const view = new EditorView({ state, parent: browser.document.getElementById("editor")! });
@@ -52,6 +53,19 @@ describe("real Markdown editor initialization", () => {
       view.dispatch({ changes: { from: state.doc.length, insert: "\n\nEdited" } });
       expect(view.state.doc.toString()).toBe(`${original}\n\nEdited`);
       expect(view.contentDOM.textContent).toContain("Edited");
+
+      editingAllowed = false;
+      view.dispatch({ changes: { from: view.state.doc.length, insert: "blocked change" } });
+      expect(view.state.doc.toString()).toBe(`${original}\n\nEdited`);
+      view.dispatch({
+        changes: { from: 0, to: view.state.doc.length, insert: "refreshed from disk" },
+        annotations: ExternalChange.of(true)
+      });
+      expect(view.state.doc.toString()).toBe("refreshed from disk");
+
+      editingAllowed = true;
+      view.dispatch({ changes: { from: view.state.doc.length, insert: " and edited again" } });
+      expect(view.state.doc.toString()).toBe("refreshed from disk and edited again");
     }
   );
 });

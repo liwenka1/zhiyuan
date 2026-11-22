@@ -174,7 +174,7 @@ describe("publishing before committing a workspace transition", () => {
         }
       }
     });
-    useWorkspaceStore.setState({ workspacePath: null, isLoading: false, pendingFilePath: null });
+    useWorkspaceStore.setState({ workspacePath: null, isLoading: false, pendingFilePaths: [] });
     useFolderStore.setState({ folders: [], selectedFolderId: null });
     await useWorkspaceStore.getState().setWorkspacePath(rootA);
     await loadCurrentWorkspace();
@@ -213,26 +213,27 @@ describe("publishing before committing a workspace transition", () => {
     expect(harness.state.notes[0].content).toContain("edited A while the response was pending");
   });
 
-  it("keeps only the latest deferred workspace and its pending file request", async () => {
+  it("keeps all file requests for the latest deferred workspace", async () => {
+    const secondPath = path.join(rootC, "second.md");
+    await fs.writeFile(secondPath, "second note");
     const response = deferred<typeof published>();
     push.mockReturnValueOnce(response.promise);
     const publishing = handlers().handlePushToGitHub({ id: "note.md", title: "note" });
-    useWorkspaceStore.getState().setPendingFilePath(path.join(rootB, "note.md"));
-    const toB = useWorkspaceStore.getState().setWorkspacePath(rootB);
-    useWorkspaceStore.getState().setPendingFilePath(path.join(rootC, "note.md"));
-    const toC = useWorkspaceStore.getState().setWorkspacePath(rootC);
+    const toB = useWorkspaceStore.getState().setWorkspacePath(rootB, path.join(rootB, "note.md"));
+    const toC = useWorkspaceStore.getState().setWorkspacePath(rootC, path.join(rootC, "note.md"));
+    const openSecond = useWorkspaceStore.getState().setWorkspacePath(rootC, secondPath);
     const whilePublishing = useWorkspaceStore.getState().workspacePath;
     response.resolve(published);
     await publishing;
-    await Promise.all([toB, toC]);
+    await Promise.all([toB, toC, openSecond]);
     expect(whilePublishing).toBe(rootA);
     expect(useWorkspaceStore.getState().workspacePath).toBe(rootC);
-    expect(useWorkspaceStore.getState().pendingFilePath).toBe(path.join(rootC, "note.md"));
+    expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([path.join(rootC, "note.md"), secondPath]);
     await loadCurrentWorkspace();
     renderInit();
     harness.effects[1]();
-    await vi.waitFor(() => expect(harness.state.selectedNoteId).toBe("note.md"));
-    expect(harness.state.notes[0].filePath).toBe(path.join(rootC, "note.md"));
+    await vi.waitFor(() => expect(harness.state.selectedNoteId).toBe("second.md"));
+    expect(harness.state.openNoteIds).toEqual(["note.md", "second.md"]);
     expect(scan.mock.calls.map(([root]) => root)).not.toContain(rootB);
   });
 
@@ -246,22 +247,21 @@ describe("publishing before committing a workspace transition", () => {
     push.mockReturnValueOnce(response.promise);
     const publishing = handlers().handlePushToGitHub({ id: "note.md", title: "note" });
     const target = path.join(rootB, "note.md");
-    useWorkspaceStore.getState().setPendingFilePath(target);
-    const switching = useWorkspaceStore.getState().setWorkspacePath(rootB);
+    const switching = useWorkspaceStore.getState().setWorkspacePath(rootB, target);
     renderInit();
     harness.effects[1]();
-    expect(useWorkspaceStore.getState()).toMatchObject({ workspacePath: rootA, pendingFilePath: null });
+    expect(useWorkspaceStore.getState()).toMatchObject({ workspacePath: rootA, pendingFilePaths: [] });
     expect(harness.state.selectedNoteId).toBe("note.md");
     response.resolve(published);
     await publishing;
     await switching;
-    expect(useWorkspaceStore.getState().pendingFilePath).toBe(target);
+    expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([target]);
     await loadCurrentWorkspace();
     renderInit();
     harness.effects[1]();
     await vi.waitFor(() => expect(harness.state.selectedNoteId).toBe("note.md"));
     expect(harness.state.notes[0]).toMatchObject({ filePath: target, content: "nested B original" });
-    expect(useWorkspaceStore.getState().pendingFilePath).toBeNull();
+    expect(useWorkspaceStore.getState().pendingFilePaths).toEqual([]);
     expect(parseGitHubMetadata(await fs.readFile(path.join(rootA, "note.md"), "utf8"))).toMatchObject({
       issueNumber: 12
     });
@@ -294,8 +294,7 @@ describe("publishing before committing a workspace transition", () => {
     const response = deferred<typeof published>();
     push.mockReturnValueOnce(response.promise);
     const publishing = handlers().handlePushToGitHub({ id: "note.md", title: "note" });
-    useWorkspaceStore.getState().setPendingFilePath(path.join(rootB, "note.md"));
-    const toB = useWorkspaceStore.getState().setWorkspacePath(rootB);
+    const toB = useWorkspaceStore.getState().setWorkspacePath(rootB, path.join(rootB, "note.md"));
     await useWorkspaceStore.getState().setWorkspacePath(rootA);
     response.resolve(published);
     await publishing;
@@ -303,7 +302,7 @@ describe("publishing before committing a workspace transition", () => {
     expect(useWorkspaceStore.getState()).toMatchObject({
       workspacePath: rootA,
       isLoading: false,
-      pendingFilePath: null
+      pendingFilePaths: []
     });
     expect(parseGitHubMetadata(await fs.readFile(path.join(rootA, "note.md"), "utf8"))).toMatchObject({
       issueNumber: 12

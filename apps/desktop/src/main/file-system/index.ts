@@ -29,7 +29,7 @@ async function isCaseOnlyRename(oldPath: string, newPath: string): Promise<boole
 async function renameCaseOnly(oldPath: string, newPath: string): Promise<void> {
   const tempPath = path.join(
     path.dirname(oldPath),
-    `.${path.basename(oldPath)}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.case-tmp`
+    `.zhiyuan-${process.pid}-${crypto.randomBytes(6).toString("hex")}.case-tmp`
   );
   await fs.promises.rename(oldPath, tempPath);
   try {
@@ -93,10 +93,7 @@ export const fileSystem = {
     if (expectedContent !== undefined && (await checkContent())) return;
     const dir = path.dirname(filePath);
     await fs.promises.mkdir(dir, { recursive: true });
-    const tempPath = path.join(
-      dir,
-      `.${path.basename(filePath)}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.tmp`
-    );
+    const tempPath = path.join(dir, `.zhiyuan-${process.pid}-${crypto.randomBytes(6).toString("hex")}.tmp`);
 
     let existingMode: number | undefined;
     if (process.platform !== "win32") {

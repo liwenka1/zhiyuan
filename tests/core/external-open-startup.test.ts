@@ -1,15 +1,16 @@
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { state, createWindow, send, recent, addRecent } = vi.hoisted(() => ({
+const { state, createWindow, findWorkspaceEntry, send, recent, addRecent } = vi.hoisted(() => ({
   state: {
     ready: false,
     finishReady: () => {},
     handlers: new Map<string, (...args: unknown[]) => unknown>()
   },
   createWindow: vi.fn(),
+  findWorkspaceEntry: vi.fn(),
   send: vi.fn(),
   recent: vi.fn(),
   addRecent: vi.fn()
@@ -39,7 +40,7 @@ vi.mock("@electron-toolkit/utils", () => ({
   optimizer: { watchWindowShortcuts: vi.fn() }
 }));
 vi.mock("../../apps/desktop/src/main/window-manager", () => ({
-  windowManager: { createWindow, getWindowsForWorkspace: () => [] }
+  windowManager: { createWindow, findWorkspaceEntry }
 }));
 vi.mock("../../apps/desktop/src/main/config", () => ({
   configManager: { getRecentWorkspaces: recent, addRecentWorkspace: addRecent }
@@ -76,6 +77,7 @@ describe("external file opening at application startup", () => {
     vi.stubEnv("ZHIYUAN_SMOKE_TEST", "");
     state.ready = false;
     state.handlers.clear();
+    findWorkspaceEntry.mockReset();
     previousListeners = new Map(
       ["uncaughtExceptionMonitor", "unhandledRejection"].map((event) => [
         event,
@@ -174,6 +176,48 @@ describe("external file opening at application startup", () => {
     expect(send).toHaveBeenCalledWith("workspace:external-open", { workspacePath: root, filePath: notePath });
   });
 
+  it("delivers both a root note and a nested note to the same startup window", async () => {
+    const nested = path.join(root, "subfolder");
+    await mkdir(nested);
+    const secondNote = path.join(nested, "second.md");
+    await writeFile(secondNote, "# second");
+    findWorkspaceEntry.mockImplementation((workspace) =>
+      workspace === root && createWindow.mock.results.length
+        ? { window: createWindow.mock.results[0].value }
+        : undefined
+    );
+    process.argv = ["Zhiyuan.exe", notePath];
+    await import("../../apps/desktop/src/main/index");
+    state.handlers.get("open-file")?.({ preventDefault: vi.fn() }, secondNote);
+    await finishStartup();
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith(root);
+    expect(send).toHaveBeenNthCalledWith(1, "workspace:external-open", { workspacePath: root, filePath: notePath });
+    expect(send).toHaveBeenNthCalledWith(2, "workspace:external-open", { workspacePath: root, filePath: secondNote });
+  });
+
+  it("routes a nested file to its open workspace and restores that window", async () => {
+    const nested = path.join(oldWorkspace, "subfolder");
+    await mkdir(nested);
+    const filePath = path.join(nested, "target.md");
+    await writeFile(filePath, "# nested file");
+    process.argv = ["Zhiyuan.exe"];
+    await import("../../apps/desktop/src/main/index");
+    await finishStartup();
+    const existing = createWindow.mock.results[0].value;
+    existing.isMinimized = () => true;
+    existing.restore = vi.fn();
+    findWorkspaceEntry.mockImplementation((workspace) =>
+      workspace === oldWorkspace ? { window: existing } : undefined
+    );
+
+    state.handlers.get("second-instance")?.({}, ["Zhiyuan.exe", filePath], root);
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith(oldWorkspace);
+    expect(existing.restore).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith("workspace:external-open", { workspacePath: oldWorkspace, filePath });
+  });
+
   it("resolves relative second-instance file arguments against that instance's working directory", async () => {
     process.argv = ["Zhiyuan.exe"];
     await import("../../apps/desktop/src/main/index");
@@ -219,6 +263,22 @@ describe("external file opening at application startup", () => {
       filePath: fixture.target
     });
     expect(addRecent).toHaveBeenCalledWith(fixture.workspace);
+  });
+
+  it("uses the note's actual filename when a cold open uses different casing", async ({ skip }) => {
+    const actual = path.join(root, "Note.md");
+    const alternate = path.join(root, "note.md");
+    await writeFile(actual, "# case-sensitive ID");
+    if (!(await stat(alternate).catch(() => null))) {
+      skip("Requires a case-insensitive filesystem");
+      return;
+    }
+    process.argv = ["Zhiyuan.exe", alternate];
+    await import("../../apps/desktop/src/main/index");
+    await finishStartup();
+
+    expect(createWindow).toHaveBeenCalledExactlyOnceWith(root);
+    expect(send).toHaveBeenCalledWith("workspace:external-open", { workspacePath: root, filePath: actual });
   });
 
   it("canonicalizes a second-instance relative alias against the caller's working directory", async () => {

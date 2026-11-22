@@ -1,8 +1,14 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IpcResultDTO } from "../../apps/desktop/src/shared";
+import { RENDERER_URL, trustedIpcEvent } from "./helpers/trusted-ipc-event";
+
+type Handler = (
+  event: Electron.IpcMainInvokeEvent,
+  expectedPath?: unknown
+) => IpcResultDTO<void> | Promise<IpcResultDTO<void>>;
 
 const { handlers, pauseMock, resumeMock, callerState, pauseCounts, invokeMock } = vi.hoisted(() => ({
-  handlers: new Map<string, (event: Electron.IpcMainInvokeEvent, expectedPath?: unknown) => IpcResultDTO<void>>(),
+  handlers: new Map<string, Handler>(),
   pauseMock: vi.fn(),
   resumeMock: vi.fn(),
   invokeMock: vi.fn(),
@@ -12,14 +18,13 @@ const { handlers, pauseMock, resumeMock, callerState, pauseCounts, invokeMock } 
 
 vi.mock("electron", () => ({
   ipcMain: {
-    handle: (channel: string, handler: (event: Electron.IpcMainInvokeEvent) => IpcResultDTO<void>) =>
-      handlers.set(channel, handler)
+    handle: (channel: string, handler: Handler) => handlers.set(channel, handler)
   },
   ipcRenderer: { invoke: invokeMock },
   BrowserWindow: { fromWebContents: () => ({ id: 7 }) }
 }));
 vi.mock("../../apps/desktop/src/main/window-manager", () => ({
-  windowManager: { getEntryByWebContents: () => callerState }
+  windowManager: { getEntryByWebContents: () => ({ ...callerState, rendererUrl: RENDERER_URL }) }
 }));
 vi.mock("../../apps/desktop/src/main/file-watcher", () => ({
   fileWatcherManager: { pauseWatching: pauseMock, resumeWatching: resumeMock }
@@ -31,7 +36,7 @@ beforeAll(async () => {
 });
 
 function call(channel: string, expectedPath?: unknown) {
-  return handlers.get(channel)!({ sender: {} } as Electron.IpcMainInvokeEvent, expectedPath);
+  return handlers.get(channel)!(trustedIpcEvent({}) as unknown as Electron.IpcMainInvokeEvent, expectedPath);
 }
 
 describe("workspace-scoped watcher IPC", () => {
@@ -49,34 +54,34 @@ describe("workspace-scoped watcher IPC", () => {
     });
   });
 
-  it("does not let workspace A cleanup resume workspace B's watcher", () => {
-    expect(call("watcher:pause", "/workspace-a").ok).toBe(true);
+  it("does not let workspace A cleanup resume workspace B's watcher", async () => {
+    expect((await call("watcher:pause", "/workspace-a")).ok).toBe(true);
     callerState.workspacePath = "/workspace-b";
-    expect(call("watcher:pause", "/workspace-b").ok).toBe(true);
+    expect((await call("watcher:pause", "/workspace-b")).ok).toBe(true);
 
-    expect(call("watcher:resume", "/workspace-a").ok).toBe(true);
+    expect((await call("watcher:resume", "/workspace-a")).ok).toBe(true);
 
     expect(resumeMock).toHaveBeenCalledWith("/workspace-a", 7);
     expect(pauseCounts.get("7:/workspace-b")).toBe(1);
   });
 
-  it("rejects a stale pause request after switching workspaces", () => {
+  it("rejects a stale pause request after switching workspaces", async () => {
     callerState.workspacePath = "/workspace-b";
 
-    expect(call("watcher:pause", "/workspace-a").ok).toBe(false);
+    expect((await call("watcher:pause", "/workspace-a")).ok).toBe(false);
     expect(pauseMock).not.toHaveBeenCalled();
   });
 
-  it("keeps no-argument callers scoped to the current workspace", () => {
-    expect(call("watcher:pause").ok).toBe(true);
-    expect(call("watcher:resume").ok).toBe(true);
+  it("keeps no-argument callers scoped to the current workspace", async () => {
+    expect((await call("watcher:pause")).ok).toBe(true);
+    expect((await call("watcher:resume")).ok).toBe(true);
 
     expect(pauseMock).toHaveBeenCalledWith("/workspace-a", 7);
     expect(resumeMock).toHaveBeenCalledWith("/workspace-a", 7);
   });
 
-  it("accepts equivalent normalized paths", () => {
-    expect(call("watcher:pause", "/workspace-a/.").ok).toBe(true);
+  it("accepts equivalent normalized paths", async () => {
+    expect((await call("watcher:pause", "/workspace-a/.")).ok).toBe(true);
     expect(pauseMock).toHaveBeenCalledWith("/workspace-a", 7);
   });
 
@@ -91,9 +96,9 @@ describe("workspace-scoped watcher IPC", () => {
     expect(invokeMock).toHaveBeenNthCalledWith(2, "watcher:resume", "/workspace-a");
   });
 
-  it.each(["", 12, null])("rejects invalid workspace context %s", (expectedPath) => {
-    expect(call("watcher:pause", expectedPath).ok).toBe(false);
-    expect(call("watcher:resume", expectedPath).ok).toBe(false);
+  it.each(["", 12, null])("rejects invalid workspace context %s", async (expectedPath) => {
+    expect((await call("watcher:pause", expectedPath)).ok).toBe(false);
+    expect((await call("watcher:resume", expectedPath)).ok).toBe(false);
     expect(pauseMock).not.toHaveBeenCalled();
     expect(resumeMock).not.toHaveBeenCalled();
   });

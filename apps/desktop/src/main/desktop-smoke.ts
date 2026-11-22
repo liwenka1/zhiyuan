@@ -1,7 +1,10 @@
-import { app, type BrowserWindow } from "electron";
+import { app, dialog, nativeImage, type BrowserWindow } from "electron";
 import fs from "node:fs/promises";
+import path from "node:path";
 
 const EDITED_CONTENT = "# Desktop smoke edited\n\nSaved through the real editor.\n";
+const EXPORT_WIDTH = 320;
+const EXPORT_HEIGHT = 900;
 
 interface SmokeDomState {
   readyState: string;
@@ -59,6 +62,84 @@ export function buildDesktopSmokeSelectionScript(expectedText: string): string {
       return document.hasFocus() && document.activeElement === editor && window.getSelection()?.toString() === ${JSON.stringify(expectedText)};
     })()
   `;
+}
+
+function runTerminalSmoke(window: BrowserWindow): Promise<boolean> {
+  return window.webContents.executeJavaScript(`
+    (async () => {
+      const terminal = window.api.terminal;
+      const id = crypto.randomUUID();
+      let complete;
+      const result = new Promise(resolve => { complete = resolve; });
+      const timeout = setTimeout(() => complete(false), 5000);
+      const marker = "zhiyuan-pty-ready";
+      let tail = "";
+      const stopData = terminal.onData(({ id: sessionId, data }) => {
+        if (sessionId !== id) return;
+        const output = tail + data;
+        if (output.includes(marker)) complete(true);
+        tail = output.slice(1 - marker.length);
+      });
+      const stopExit = terminal.onExit(({ id: sessionId }) => {
+        if (sessionId === id) complete(false);
+      });
+      try {
+        const create = await terminal.create(id);
+        if (!create.ok) throw new Error(create.error.message);
+        const write = await terminal.write(id, "printf '%s%s\\\\n' 'zhiyuan-pty-' 'ready'\\r");
+        if (!write.ok) throw new Error(write.error.message);
+        return await result;
+      } finally {
+        clearTimeout(timeout);
+        stopData();
+        stopExit();
+        await terminal.dispose(id);
+      }
+    })()
+  `);
+}
+
+async function runExportSmoke(window: BrowserWindow, notePath: string): Promise<void> {
+  const profile = process.env.ZHIYUAN_SMOKE_USER_DATA;
+  if (!profile) throw new Error("Export smoke requires an isolated profile");
+  const outputPath = path.join(profile, "capture.png");
+  const packagePath = path.join(profile, "HTML package");
+  const originalShowSaveDialog = dialog.showSaveDialog;
+  let selectedPath = outputPath;
+  // Supply the fixture destination where the native picker would return the user's selection.
+  dialog.showSaveDialog = async () => ({ canceled: false, filePath: selectedPath });
+  try {
+    await window.webContents.executeJavaScript(`
+      (async () => {
+        const api = window.api.export;
+        const selection = await api.showSaveDialog({ title: "Smoke capture", defaultPath: "capture.png", filters: [] });
+        if (!selection.ok || !selection.value) throw new Error("Smoke export destination was not selected");
+        const html = '<!doctype html><body style="margin:0"><div style="height:${EXPORT_HEIGHT}px">Export fixture</div></body>';
+        const result = await api.exportAsImage(html, selection.value, ${JSON.stringify(notePath)}, { width: ${EXPORT_WIDTH} });
+        if (!result.ok) throw new Error(result.error.message);
+      })()
+    `);
+    const image = nativeImage.createFromPath(outputPath);
+    const { width, height } = image.getSize();
+    if (image.isEmpty() || width <= 0 || height * EXPORT_WIDTH < width * EXPORT_HEIGHT) {
+      throw new Error("Export capture did not produce a full page");
+    }
+    selectedPath = packagePath;
+    await window.webContents.executeJavaScript(`
+      (async () => {
+        const api = window.api.export;
+        const selection = await api.showSaveDialog({ title: "Smoke HTML package", defaultPath: "HTML package", filters: [] });
+        if (!selection.ok || !selection.value) throw new Error("Smoke package destination was not selected");
+        const result = await api.exportHTMLPackage("<p>Export fixture</p>", selection.value, undefined);
+        if (!result.ok) throw new Error(result.error.message);
+      })()
+    `);
+    if (!(await fs.readFile(path.join(packagePath, "index.html"), "utf8")).includes("<p>Export fixture</p>")) {
+      throw new Error("Export did not publish the HTML package");
+    }
+  } finally {
+    dialog.showSaveDialog = originalShowSaveDialog;
+  }
 }
 
 /** Exercise the production renderer, CodeMirror input, and the real persistence pipeline. */
@@ -122,7 +203,7 @@ export function startDesktopSmokeTest(window?: BrowserWindow): void {
       app.exit(1);
     } else {
       console.log("ZHIYUAN_SMOKE_READY: editor opened, edited and saved");
-      app.exit(0);
+      app.quit();
     }
   };
   const timeout = setTimeout(() => {
@@ -174,6 +255,18 @@ export function startDesktopSmokeTest(window?: BrowserWindow): void {
       }
       if (finished) return;
       if (!saved) throw new Error("CodeMirror input was not persisted to the fixture note");
+      if (process.env.ZHIYUAN_SMOKE_TERMINAL === "1") {
+        stage = "starting-terminal";
+        if ((await runTerminalSmoke(window)) !== true) throw new Error("The terminal did not return shell output");
+        if (finished) return;
+        console.log("ZHIYUAN_SMOKE_TERMINAL_READY");
+      }
+      if (process.env.ZHIYUAN_SMOKE_EXPORT === "1") {
+        stage = "exporting-image";
+        await runExportSmoke(window, notePath);
+        if (finished) return;
+        console.log("ZHIYUAN_SMOKE_EXPORT_READY");
+      }
       finish({ success: true });
     } catch (error) {
       finish({ error });

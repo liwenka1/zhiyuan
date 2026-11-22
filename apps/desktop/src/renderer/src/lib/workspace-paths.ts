@@ -2,6 +2,12 @@ function normSlashes(p: string): string {
   return p.replaceAll("\\", "/");
 }
 
+export function normalizeWorkspacePath(filePath: string): string {
+  // Electron provides absolute native paths. A backslash is part of a filename on POSIX.
+  const isWindowsPath = /^[a-z]:[\\/]|^\\\\/i.test(filePath);
+  return (isWindowsPath ? normSlashes(filePath) : filePath).replace(/\/+$/, "");
+}
+
 function isAbsoluteFsPath(filePath: string): boolean {
   const n = normSlashes(filePath);
   return n.startsWith("/") || /^[A-Za-z]:\//.test(n);

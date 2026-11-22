@@ -2,8 +2,7 @@ import { ipcRenderer } from "electron";
 import type { IpcResultDTO } from "@shared";
 
 export const terminalApi = {
-  create: (workspacePath?: string): Promise<IpcResultDTO<{ id: string }>> =>
-    ipcRenderer.invoke("terminal:create", workspacePath),
+  create: (id: string): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("terminal:create", id),
 
   write: (id: string, data: string): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("terminal:input", id, data),
 

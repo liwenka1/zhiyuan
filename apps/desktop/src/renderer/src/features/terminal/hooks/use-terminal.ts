@@ -3,7 +3,6 @@ import { Terminal, type ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { terminalIpc } from "@/ipc";
-import { useWorkspaceStore } from "@/stores";
 
 interface UseTerminalOptions {
   containerRef: RefObject<HTMLDivElement | null>;
@@ -36,7 +35,9 @@ export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
     if (!containerRef.current) return;
 
     let mounted = true;
-    let terminalId: string | null = null;
+    let created = false;
+    const sessionId = crypto.randomUUID();
+    let terminalId: string | null = sessionId;
     const fitAddon = new FitAddon();
     const terminal = new Terminal({
       cursorBlink: true,
@@ -79,7 +80,7 @@ export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
     };
 
     const applyResize = () => {
-      if (!isActiveRef.current || !terminalId || !containerRef.current) return;
+      if (!mounted || !isActiveRef.current || !containerRef.current) return;
       const width = containerRef.current.clientWidth;
       const height = containerRef.current.clientHeight;
       // Guard against transient zero/small sizes during tab visibility switch.
@@ -89,7 +90,7 @@ export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
       if (terminal.cols < 2 || terminal.rows < 1) return;
       hasStableLayoutRef.current = true;
       flushPendingOutput();
-      void terminalIpc.resize(terminalId, terminal.cols, terminal.rows).catch(() => {});
+      if (created && terminalId) void terminalIpc.resize(terminalId, terminal.cols, terminal.rows).catch(() => {});
     };
     applyResizeRef.current = applyResize;
 
@@ -104,6 +105,8 @@ export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
 
     const stopExitSubscription = terminalIpc.onExit(({ id, exitCode }) => {
       if (id !== terminalId) return;
+      terminalId = null;
+      flushPendingOutput();
       terminal.writeln("");
       terminal.writeln(`[shell exited: ${exitCode}]`);
     });
@@ -135,20 +138,20 @@ export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
 
     const init = async () => {
       try {
-        const { workspacePath } = useWorkspaceStore.getState();
-        const { id } = await terminalIpc.create(workspacePath ?? undefined);
+        await terminalIpc.create(sessionId);
+        created = true;
         if (!mounted) {
-          void terminalIpc.dispose(id).catch(() => {});
+          if (terminalId) void terminalIpc.dispose(terminalId).catch(() => {});
           return;
         }
-        terminalId = id;
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             applyResize();
           });
         });
       } catch {
-        terminal.writeln("[failed to start shell]");
+        terminalId = null;
+        if (mounted) terminal.writeln("[failed to start shell]");
       }
     };
     void init();
@@ -166,9 +169,7 @@ export function useTerminal({ containerRef, isActive }: UseTerminalOptions) {
       stopTerminalInput.dispose();
       resizeObserver.disconnect();
       themeObserver.disconnect();
-      if (terminalId) {
-        void terminalIpc.dispose(terminalId).catch(() => {});
-      }
+      if (created && terminalId) void terminalIpc.dispose(terminalId).catch(() => {});
       terminal.dispose();
     };
   }, [containerRef]);

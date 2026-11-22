@@ -6,17 +6,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useThemeStore } from "@/stores";
 import { useTranslation } from "react-i18next";
 import { EditorView } from "@codemirror/view";
+import { useNoteStore, useWorkspaceStore } from "@/stores";
+import { isEditingBlocked, useOperationStore } from "@/stores/note-store/operation-guard";
 
 interface EditorContentProps {
   content: string;
   onChange: (content: string) => void;
-  noteId?: string;
+  noteId: string;
 }
 
 export function EditorContent({ content, onChange, noteId }: EditorContentProps) {
   const theme = useThemeStore((state) => state.theme);
   const { t } = useTranslation("editor");
   const [editorView, setEditorView] = useState<EditorView | null>(null);
+  const isLoading = useWorkspaceStore((state) => state.isLoading);
+  const isSelected = useNoteStore((state) => state.selectedNoteId === noteId);
+  const isOperationPending = useOperationStore((state) => state.fileOperationCount > 0 || state.closeRequestCount > 0);
+  const canEdit = useCallback(
+    () =>
+      useNoteStore.getState().selectedNoteId === noteId &&
+      !useWorkspaceStore.getState().isLoading &&
+      !isEditingBlocked(),
+    [noteId]
+  );
 
   // 搜索功能
   const search = useEditorSearch(editorView);
@@ -28,7 +40,8 @@ export function EditorContent({ content, onChange, noteId }: EditorContentProps)
 
   const { extensions, theme: editorTheme } = useCodemirrorExtensions({
     isDark: theme === "dark",
-    onOpenSearch: search.open
+    onOpenSearch: search.open,
+    canEdit
   });
 
   return (
@@ -41,6 +54,7 @@ export function EditorContent({ content, onChange, noteId }: EditorContentProps)
           height="auto"
           theme={editorTheme}
           extensions={extensions}
+          readOnly={!isSelected || isLoading || isOperationPending}
           onChange={onChange}
           onCreateEditor={handleCreateEditor}
           placeholder={t("placeholder")}

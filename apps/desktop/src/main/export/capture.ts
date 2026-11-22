@@ -34,37 +34,36 @@ async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10
   const startTime = Date.now();
 
   const checkLoadComplete = async (): Promise<boolean> => {
-    try {
-      const isComplete = await webContents.executeJavaScript(`
+    return await webContents.executeJavaScript(`
         (function() {
           if (document.readyState !== 'complete') {
             return false;
           }
 
           const images = Array.from(document.images);
-          const allImagesLoaded = images.every(img => img.complete && (img.naturalHeight !== 0 || !img.currentSrc));
+          for (const image of images) {
+            if (image.loading === 'lazy') image.loading = 'eager';
+          }
+          const allImagesLoaded = images.every(img => img.complete);
           if (!allImagesLoaded) {
             return false;
           }
 
           const videos = Array.from(document.querySelectorAll('video'));
           const allVideosReady = videos.every(video => !video.currentSrc || video.readyState >= 2);
-          if (!allVideosReady) {
+          if (!allVideosReady || document.fonts.status !== 'loaded') {
             return false;
           }
 
           return true;
         })();
       `);
-
-      return isComplete;
-    } catch {
-      return false;
-    }
   };
 
   while (Date.now() - startTime < timeoutMs) {
-    if (await checkLoadComplete()) {
+    if (
+      await withTimeout(checkLoadComplete(), timeoutMs - (Date.now() - startTime), "Export page stopped responding")
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 100));
       return;
     }
@@ -105,6 +104,7 @@ export async function captureHtmlAsImage(
 
     tempDirectory = await fs.mkdtemp(path.join(tmpdir(), "zhiyuan-export-"));
     const tempHtmlPath = path.join(tempDirectory, "index.html");
+    const documentUrl = pathToFileURL(tempHtmlPath).href;
     await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
 
     getExportSession();
@@ -112,6 +112,7 @@ export async function captureHtmlAsImage(
       width,
       height: 600,
       show: false,
+      enableLargerThanScreen: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -119,18 +120,13 @@ export async function captureHtmlAsImage(
       }
     });
     windowId = window.webContents.id;
-    exportMainDocuments.set(windowId, pathToFileURL(tempHtmlPath).href);
+    exportMainDocuments.set(windowId, documentUrl);
     window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     window.webContents.on("will-navigate", (event, url) => {
-      if (url !== pathToFileURL(tempHtmlPath).href) event.preventDefault();
+      if (url !== documentUrl) event.preventDefault();
     });
 
-    const domReadyPromise = new Promise<void>((resolve) => {
-      window!.webContents.once("dom-ready", () => resolve());
-    });
-
-    window.loadFile(tempHtmlPath);
-    await withTimeout(domReadyPromise, DOM_READY_TIMEOUT, `DOM 加载超时 (${DOM_READY_TIMEOUT}ms)`);
+    await withTimeout(window.loadURL(documentUrl), DOM_READY_TIMEOUT, `页面加载超时 (${DOM_READY_TIMEOUT}ms)`);
 
     await waitForPageLoad(window.webContents);
 
@@ -142,24 +138,29 @@ export async function captureHtmlAsImage(
       `获取页面高度超时 (${EXECUTE_JS_TIMEOUT}ms)`
     );
 
-    window.setContentSize(width, contentHeight);
-
+    const captureWindow = window;
     await new Promise<void>((resolve) => {
-      const timeout = setTimeout(resolve, 1000);
-      window!.once("resize", () => {
+      const onResize = () => {
         clearTimeout(timeout);
         setTimeout(resolve, 50);
-      });
+      };
+      const timeout = setTimeout(() => {
+        captureWindow.removeListener("resize", onResize);
+        resolve();
+      }, 1000);
+      captureWindow.once("resize", onResize);
+      captureWindow.setContentSize(width, contentHeight);
     });
 
     return await withTimeout(window.webContents.capturePage(), CAPTURE_TIMEOUT, `页面截图超时 (${CAPTURE_TIMEOUT}ms)`);
   } finally {
     if (windowId !== null) exportMainDocuments.delete(windowId);
-    if (window && !window.isDestroyed()) {
-      window.close();
-    }
-    if (tempDirectory) {
-      await fs.rm(tempDirectory, { recursive: true, force: true }).catch(() => {});
+    try {
+      if (window && !window.isDestroyed()) window.destroy();
+    } finally {
+      if (tempDirectory) {
+        await fs.rm(tempDirectory, { recursive: true, force: true }).catch(() => {});
+      }
     }
   }
 }

@@ -1,5 +1,6 @@
 import "./app-paths";
-import { app, BrowserWindow, ipcMain, protocol, net } from "electron";
+import { app, BrowserWindow, protocol, net } from "electron";
+import { handleAppIpc } from "./security/app-ipc";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { themeManager } from "./theme";
@@ -24,12 +25,14 @@ import { resolveAuthorizedLocalResource } from "./security/local-resource";
 import { initializeDiagnostics, recordDiagnostic } from "./diagnostics";
 import { registerDiagnosticsHandlers } from "./ipc/diagnostics-handler";
 import { getExternalOpenCandidates } from "./external-open-args";
+import {
+  findOpenTargetWindow,
+  focusAndSendExternalOpen,
+  sendExternalOpen,
+  type ExternalOpenPayload
+} from "./external-open";
+import { resolveMarkdownOpenTarget } from "./workspace/open-target";
 import { startDesktopSmokeTest } from "./desktop-smoke";
-
-type ExternalOpenPayload = {
-  workspacePath: string;
-  filePath?: string;
-};
 
 const pendingExternalOpens: ExternalOpenPayload[] = [];
 
@@ -43,36 +46,30 @@ process.on("unhandledRejection", (reason) => {
 
 function resolveExternalOpenTarget(targetPath: string): ExternalOpenPayload | null {
   try {
-    // Use the same identity as WindowManager and workspace scanning, including symlink aliases.
-    targetPath = fs.realpathSync(path.resolve(targetPath));
     const stat = fs.statSync(targetPath);
     if (stat.isDirectory()) {
-      return { workspacePath: targetPath };
+      return { workspacePath: fs.realpathSync.native(targetPath) };
     }
-    if (stat.isFile() && targetPath.toLowerCase().endsWith(".md")) {
-      return { workspacePath: path.dirname(targetPath), filePath: targetPath };
-    }
+    if (stat.isFile()) return resolveMarkdownOpenTarget(targetPath);
   } catch {
     // The path can disappear or become inaccessible while resolving or reading it.
   }
   return null;
 }
 
-function sendExternalOpen(win: BrowserWindow, payload: ExternalOpenPayload): void {
-  if (win.webContents.isLoadingMainFrame()) {
-    win.webContents.once("did-finish-load", () => {
-      win.webContents.send("workspace:external-open", payload);
-    });
+function deliverExternalOpen(payload: ExternalOpenPayload): void {
+  const existing = findOpenTargetWindow(payload);
+  configManager.addRecentWorkspace(existing?.payload.workspacePath ?? payload.workspacePath);
+  if (existing) {
+    focusAndSendExternalOpen(existing.window, existing.payload);
   } else {
-    win.webContents.send("workspace:external-open", payload);
+    sendExternalOpen(windowManager.createWindow(payload.workspacePath), payload);
   }
 }
 
 function handleExternalOpenPath(targetPath: string): boolean {
   const payload = resolveExternalOpenTarget(targetPath);
   if (!payload) return false;
-
-  configManager.addRecentWorkspace(payload.workspacePath);
 
   if (!app.isReady()) {
     const target = payload.filePath ?? payload.workspacePath;
@@ -82,19 +79,7 @@ function handleExternalOpenPath(targetPath: string): boolean {
     return true;
   }
 
-  const existingWindows = windowManager.getWindowsForWorkspace(payload.workspacePath);
-  if (existingWindows.length > 0) {
-    const win = existingWindows[0];
-    if (win.isMinimized()) {
-      win.restore();
-    }
-    win.focus();
-    sendExternalOpen(win, payload);
-    return true;
-  }
-
-  const win = windowManager.createWindow(payload.workspacePath);
-  sendExternalOpen(win, payload);
+  deliverExternalOpen(payload);
   return true;
 }
 
@@ -205,7 +190,7 @@ app.whenReady().then(() => {
   registerDiagnosticsHandlers();
 
   // 注册新建窗口 IPC
-  ipcMain.handle("window:new", (): IpcResultDTO<void> => {
+  handleAppIpc("window:new", (): IpcResultDTO<void> => {
     try {
       windowManager.createWindow();
       return ipcOk(undefined);
@@ -217,10 +202,7 @@ app.whenReady().then(() => {
 
   // 创建第一个窗口，尝试恢复上次的工作区
   if (pendingExternalOpens.length > 0) {
-    for (const payload of pendingExternalOpens) {
-      const win = windowManager.createWindow(payload.workspacePath);
-      sendExternalOpen(win, payload);
-    }
+    for (const payload of pendingExternalOpens) deliverExternalOpen(payload);
     pendingExternalOpens.length = 0;
   } else {
     const lastWorkspace = configManager.getRecentWorkspaces()[0];
@@ -245,8 +227,10 @@ app.whenReady().then(() => {
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
+app.on("before-quit", (event) => windowManager.deferQuit(event));
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+  const quitRequested = windowManager.takeQuitRequest();
+  if (process.platform !== "darwin" || quitRequested) {
     app.quit();
   }
 });

@@ -161,7 +161,10 @@
     "external": "External version",
     "unavailable": "The file was deleted or could not be read. It will be checked again when resolving.",
     "keepBoth": "Keep local copy and load external version",
-    "resolved": "Local draft preserved as a conflict copy"
+    "saveAs": "Save draft as…",
+    "existingDraftDestination": "This file already exists. Choose a new name for the recovered draft.",
+    "resolved": "Local draft preserved as a conflict copy",
+    "originalReadFailed": "Draft saved. The original note could not be reloaded."
   },
   "github": {
     "publishInProgress": "A note is being published. Try again after it finishes.",

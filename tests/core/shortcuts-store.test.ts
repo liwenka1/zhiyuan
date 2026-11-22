@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DEFAULT_SHORTCUTS } from "../../apps/desktop/src/shared/shortcuts";
 
-const { getShortcuts, setShortcuts } = vi.hoisted(() => ({
+const { getShortcuts, setShortcut, onShortcutsChanged } = vi.hoisted(() => ({
   getShortcuts: vi.fn(),
-  setShortcuts: vi.fn()
+  setShortcut: vi.fn(),
+  onShortcutsChanged: vi.fn()
 }));
 
-vi.mock("@/ipc", () => ({ configIpc: { getShortcuts, setShortcuts } }));
+vi.mock("@/ipc", () => ({ configIpc: { getShortcuts, setShortcut, onShortcutsChanged } }));
 
 import { useShortcutsStore } from "../../apps/desktop/src/renderer/src/stores/use-shortcuts-store";
 
@@ -20,7 +21,10 @@ describe("shortcut persistence", () => {
   });
 
   it("reports failed saves and allows the same binding to be retried", async () => {
-    setShortcuts.mockRejectedValueOnce(new Error("disk full")).mockResolvedValueOnce(undefined);
+    setShortcut.mockRejectedValueOnce(new Error("disk full")).mockResolvedValueOnce({
+      ...DEFAULT_SHORTCUTS,
+      toggleNoteSearch: searchShortcut
+    });
 
     expect(await useShortcutsStore.getState().setShortcut("toggleNoteSearch", searchShortcut)).toBe(false);
     expect(useShortcutsStore.getState().shortcuts.toggleNoteSearch).toBe(DEFAULT_SHORTCUTS.toggleNoteSearch);
@@ -29,37 +33,44 @@ describe("shortcut persistence", () => {
     expect(useShortcutsStore.getState().shortcuts.toggleNoteSearch).toEqual(searchShortcut);
   });
 
-  it("saves full configs in order without carrying forward an earlier failed write", async () => {
+  it("saves individual bindings in order and recovers after a failed write", async () => {
     let failFirstSave!: (error: Error) => void;
     const firstSave = new Promise<void>((_, reject) => {
       failFirstSave = reject;
     });
-    setShortcuts.mockReturnValueOnce(firstSave).mockResolvedValueOnce(undefined);
+    setShortcut.mockReturnValueOnce(firstSave).mockResolvedValueOnce({
+      ...DEFAULT_SHORTCUTS,
+      openSettings: settingsShortcut
+    });
 
-    const { setShortcut } = useShortcutsStore.getState();
-    const saveSearch = setShortcut("toggleNoteSearch", searchShortcut);
-    const saveSettings = setShortcut("openSettings", settingsShortcut);
+    const { setShortcut: saveShortcut } = useShortcutsStore.getState();
+    const saveSearch = saveShortcut("toggleNoteSearch", searchShortcut);
+    const saveSettings = saveShortcut("openSettings", settingsShortcut);
 
-    await vi.waitFor(() => expect(setShortcuts).toHaveBeenCalledOnce());
+    await vi.waitFor(() => expect(setShortcut).toHaveBeenCalledOnce());
     failFirstSave(new Error("shortcut conflict"));
     expect(await Promise.all([saveSearch, saveSettings])).toEqual([false, true]);
-    expect(setShortcuts).toHaveBeenLastCalledWith({ ...DEFAULT_SHORTCUTS, openSettings: settingsShortcut });
+    expect(setShortcut).toHaveBeenLastCalledWith("openSettings", settingsShortcut);
     expect(useShortcutsStore.getState().shortcuts.openSettings).toEqual(settingsShortcut);
   });
 
-  it("loads existing bindings before overwriting stored config", async () => {
+  it("preserves bindings sourced from another window when a startup read is stale", async () => {
     useShortcutsStore.setState({ isLoaded: false });
-    getShortcuts.mockResolvedValue({ ...DEFAULT_SHORTCUTS, openSettings: settingsShortcut });
-    setShortcuts.mockResolvedValue(undefined);
+    let resolveRead!: (config: typeof DEFAULT_SHORTCUTS) => void;
+    getShortcuts.mockReturnValue(new Promise((resolve) => (resolveRead = resolve)));
+    const unsubscribe = vi.fn();
+    onShortcutsChanged.mockReturnValue(unsubscribe);
 
-    const { load, setShortcut } = useShortcutsStore.getState();
-    await Promise.all([setShortcut("toggleNoteSearch", searchShortcut), load()]);
+    const { load, subscribeToChanges } = useShortcutsStore.getState();
+    const cleanup = subscribeToChanges();
+    const read = load();
+    const newConfig = { ...DEFAULT_SHORTCUTS, openSettings: settingsShortcut };
+    onShortcutsChanged.mock.calls[0][0](newConfig);
+    resolveRead(DEFAULT_SHORTCUTS);
+    await read;
 
-    expect(getShortcuts).toHaveBeenCalledOnce();
-    expect(setShortcuts).toHaveBeenCalledWith({
-      ...DEFAULT_SHORTCUTS,
-      openSettings: settingsShortcut,
-      toggleNoteSearch: searchShortcut
-    });
+    expect(useShortcutsStore.getState().shortcuts).toEqual(newConfig);
+    cleanup();
+    expect(unsubscribe).toHaveBeenCalledOnce();
   });
 });

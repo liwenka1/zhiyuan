@@ -165,8 +165,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
           updatedAt: new Date().toISOString()
         };
 
+        const watchedNote = get().notes.find((note) => note.id === newNote.id);
+        const selectedNote = watchedNote ?? newNote;
         set((state) => {
-          state.notes.push(newNote);
+          if (!watchedNote) state.notes.push(newNote);
           state.openNoteIds = state.openNoteIds.filter((id) => id !== newNote.id);
           state.openNoteIds.push(newNote.id);
 
@@ -174,10 +176,10 @@ export function createNoteActions(set: NoteStoreSet, get: NoteStoreGet) {
             state.openNoteIds.shift();
           }
 
-          state.selectedNoteId = newNote.id;
-          state.editorContent = newNote.content;
+          state.selectedNoteId = selectedNote.id;
+          state.editorContent = selectedNote.content;
         });
-        setLastSavedContent(newNote.id, newNote.content);
+        if (!watchedNote) setLastSavedContent(newNote.id, newNote.content);
         return newNote.id;
       } catch {
         toast.error(i18n.t("note:errors.createNoteFailed"));

@@ -20,6 +20,7 @@ interface ThemeState {
 
 // 保存取消监听函数
 let unsubscribeThemeChange: (() => void) | null = null;
+let themeRevision = 0;
 
 // 应用主题到 document
 const applyThemeToDocument = (theme: Theme) => {
@@ -57,6 +58,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
   setTheme: async (mode: ThemeMode) => {
     const previousState = get();
+    const revision = ++themeRevision;
     // 1. 立即更新本地状态（响应快）
     // 预测实际主题：system 模式使用系统主题，否则直接使用指定值
     const resolvedTheme: Theme = mode === "system" ? getSystemTheme() : mode;
@@ -67,6 +69,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     try {
       await themeIpc.set(mode);
     } catch {
+      if (revision !== themeRevision) return;
       set({ themeMode: previousState.themeMode, theme: previousState.theme });
       applyThemeToDocument(previousState.theme);
     }
@@ -78,27 +81,22 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   initTheme: async () => {
-    try {
-      // 先清理旧的监听器（防止重复监听）
-      unsubscribeThemeChange?.();
-
-      // 从主进程获取当前主题和模式
-      const [theme, themeMode] = await Promise.all([themeIpc.get(), themeIpc.getMode()]);
-
-      // 更新状态并应用到 document
+    unsubscribeThemeChange?.();
+    const revision = themeRevision;
+    const unsubscribe = themeIpc.onChanged((theme, themeMode) => {
+      themeRevision += 1;
       set({ theme, themeMode });
       applyThemeToDocument(theme);
+    });
+    unsubscribeThemeChange = unsubscribe;
 
-      // 监听主进程的主题变化
-      // 触发场景：
-      // - 系统主题变化（且用户没有手动设置固定主题）
-      // - 其他窗口修改了主题
-      unsubscribeThemeChange = themeIpc.onChanged((newTheme) => {
-        set({ theme: newTheme });
-        applyThemeToDocument(newTheme);
-      });
+    try {
+      const [theme, themeMode] = await Promise.all([themeIpc.get(), themeIpc.getMode()]);
+      if (unsubscribe !== unsubscribeThemeChange || revision !== themeRevision) return;
+      set({ theme, themeMode });
+      applyThemeToDocument(theme);
     } catch {
-      // 出错时回退到系统主题
+      if (unsubscribe !== unsubscribeThemeChange || revision !== themeRevision) return;
       const systemTheme = getSystemTheme();
       set({ theme: systemTheme, themeMode: "system" });
       applyThemeToDocument(systemTheme);

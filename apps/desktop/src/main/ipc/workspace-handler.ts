@@ -1,9 +1,11 @@
-import { ipcMain, shell, BrowserWindow, app } from "electron";
+import { shell, BrowserWindow, app, dialog } from "electron";
+import { handleAppIpc } from "../security/app-ipc";
 import fs from "fs";
 import path from "path";
 import { workspaceManager } from "../workspace";
 import { FileContentConflictError, fileSystem } from "../file-system";
 import { writeExistingFile } from "../file-system/guarded-write";
+import { writeStagedFile } from "../file-system/staged-output";
 import { fileWatcherManager } from "../file-watcher";
 import { windowManager } from "../window-manager";
 import { configManager } from "../config";
@@ -18,7 +20,9 @@ import {
   getShortcutBindingKey,
   type ExportLayoutConfig,
   type IpcResultDTO,
+  type ShortcutBinding,
   type ShortcutConfig,
+  type ShortcutId,
   DEFAULT_SHORTCUTS,
   type GitHubConfig,
   type GitHubProjectConfigMap,
@@ -28,6 +32,8 @@ import {
 import { isIgnoredWorkspaceDirectory } from "../workspace/policy";
 import { registerWatcherHandlers } from "./watcher-handler";
 import { publicationLeases } from "../github/publication-leases";
+import { findOpenTargetWindow, focusAndSendExternalOpen } from "../external-open";
+import { resolveMarkdownOpenTarget, type MarkdownOpenTarget } from "../workspace/open-target";
 
 const pendingWorkspaceScans = new Map<number, symbol>();
 
@@ -39,7 +45,7 @@ function cancelWorkspaceScan(windowId: number): void {
  * 校验文件路径是否在当前窗口的工作区内
  * 通过 event.sender 获取窗口绑定的工作区路径
  */
-function assertPathInWorkspace(event: Electron.IpcMainInvokeEvent, filePath: string, operation: string): void {
+function assertPathInWorkspace(event: Electron.IpcMainInvokeEvent, filePath: string, operation: string): string {
   const entry = windowManager.getEntryByWebContents(event.sender);
   const workspacePath = entry?.workspacePath;
   if (!workspacePath) {
@@ -48,8 +54,31 @@ function assertPathInWorkspace(event: Electron.IpcMainInvokeEvent, filePath: str
 
   const validation = validatePathInWorkspace(workspacePath, filePath);
   if (!validation.isValid) {
+    if (validation.code === "ENOTDIR") {
+      throw Object.assign(new Error("The note's parent path is no longer a directory"), { code: validation.code });
+    }
     throw new Error(`Access denied (${operation}): path is outside workspace`);
   }
+  return validation.normalizedPath;
+}
+
+function getWorkspaceEntryPath(event: Electron.IpcMainInvokeEvent, filePath: string, operation: string): string {
+  assertPathInWorkspace(event, filePath, operation);
+  const absolutePath = path.resolve(filePath);
+  const parent = assertPathInWorkspace(event, path.dirname(absolutePath), operation);
+  // Keep the requested final name, including casing on a case-only rename.
+  return path.join(parent, path.basename(absolutePath));
+}
+
+function assertWorkspaceAvailable(event: Electron.IpcMainInvokeEvent): void {
+  if (!fs.statSync(getCallerWorkspace(event)).isDirectory()) {
+    throw Object.assign(new Error("The workspace directory is no longer available"), { code: "ENOTDIR" });
+  }
+}
+
+function isMissingFileError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | null)?.code;
+  return code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR";
 }
 
 function getCallerWorkspaceRoot(event: Electron.IpcMainInvokeEvent): string {
@@ -58,9 +87,7 @@ function getCallerWorkspaceRoot(event: Electron.IpcMainInvokeEvent): string {
 }
 
 function getWorkspaceRelativePath(event: Electron.IpcMainInvokeEvent, targetPath: string, operation: string): string {
-  assertPathInWorkspace(event, targetPath, operation);
-  const validation = validatePathInWorkspace(getCallerWorkspace(event), targetPath);
-  return path.relative(getCallerWorkspaceRoot(event), validation.normalizedPath);
+  return path.relative(getCallerWorkspaceRoot(event), assertPathInWorkspace(event, targetPath, operation));
 }
 
 function assertNotWorkspaceRoot(event: Electron.IpcMainInvokeEvent, targetPath: string, operation: string): void {
@@ -74,7 +101,7 @@ function assertWorkspaceFolderPath(
   folderPath: string,
   operation: string,
   allowMissing = false
-): void {
+): string {
   const relativePath = getWorkspaceRelativePath(event, folderPath, operation);
   const segments = relativePath.split(path.sep).filter(Boolean);
   if (segments.length === 0 || segments.some((segment) => !isValidFileNameSegment(segment))) {
@@ -83,14 +110,28 @@ function assertWorkspaceFolderPath(
   if (segments.some((segment) => isIgnoredWorkspaceDirectory(segment))) {
     throw new Error(`Access denied (${operation}): generated or hidden folders are not allowed`);
   }
+  const authorizedPath = getWorkspaceEntryPath(event, folderPath, operation);
   if (!allowMissing) {
-    const stat = fs.lstatSync(folderPath);
+    const stat = fs.lstatSync(authorizedPath);
     if (!stat.isDirectory()) throw new Error(`Access denied (${operation}): target is not a directory`);
   }
+  return authorizedPath;
+}
+
+async function resolveDroppedMarkdownPath(filePath: string): Promise<string> {
+  if (typeof filePath !== "string" || !path.isAbsolute(filePath) || !filePath.toLowerCase().endsWith(".md")) {
+    throw new Error("Only markdown files can be opened");
+  }
+  const resolved = await fs.promises.realpath(filePath);
+  if (!resolved.toLowerCase().endsWith(".md") || !(await fs.promises.stat(resolved)).isFile()) {
+    throw new Error("Invalid markdown file");
+  }
+  return resolved;
 }
 
 function assertRegularFilePath(filePath: string, operation: string): void {
   const stat = fs.lstatSync(filePath);
+  if (stat.isDirectory()) throw Object.assign(new Error("Target is a directory"), { code: "EISDIR" });
   if (!stat.isFile()) throw new Error(`Access denied (${operation}): target is not a regular file`);
 }
 
@@ -105,10 +146,21 @@ function getCallerWindow(event: Electron.IpcMainInvokeEvent): BrowserWindow {
   return win;
 }
 
+function routeMarkdownOpen(win: BrowserWindow, target: MarkdownOpenTarget): MarkdownOpenTarget | null {
+  const existing = findOpenTargetWindow(target);
+  const workspacePath = existing?.payload.workspacePath ?? target.workspacePath;
+  configManager.addRecentWorkspace(workspacePath);
+  if (existing && existing.window.id !== win.id) {
+    focusAndSendExternalOpen(existing.window, existing.payload);
+    return null;
+  }
+  return { workspacePath, filePath: existing?.payload.filePath ?? target.filePath };
+}
+
 function isApprovedWorkspacePath(workspacePath: string): boolean {
   const normalize = (candidate: string) => {
     try {
-      return fs.realpathSync(candidate);
+      return fs.realpathSync.native(candidate);
     } catch {
       return path.resolve(candidate);
     }
@@ -122,24 +174,22 @@ function isApprovedWorkspacePath(workspacePath: string): boolean {
     .some((entry) => entry.workspacePath && normalize(entry.workspacePath) === normalized);
 }
 
-async function resolveAvailableMarkdownPath(
+async function copyImportedMarkdown(
   event: Electron.IpcMainInvokeEvent,
+  sourcePath: string,
   targetDir: string,
   fileName: string
 ): Promise<string> {
-  const parsed = path.parse(fileName);
-  const ext = parsed.ext || ".md";
-  const baseName = parsed.name;
-  let candidate = path.join(targetDir, `${baseName}${ext}`);
-  assertPathInWorkspace(event, candidate, "workspace:importMarkdownFiles (candidate)");
-  if (!(await fileSystem.exists(candidate))) return candidate;
-
-  let index = 1;
-  while (index < 10_000) {
-    candidate = path.join(targetDir, `${baseName} (${index})${ext}`);
+  const { name, ext } = path.parse(fileName);
+  for (let index = 0; index < 10_000; index++) {
+    const candidate = path.join(targetDir, index === 0 ? fileName : `${name} (${index})${ext}`);
     assertPathInWorkspace(event, candidate, "workspace:importMarkdownFiles (candidate)");
-    if (!(await fileSystem.exists(candidate))) return candidate;
-    index += 1;
+    try {
+      await fs.promises.copyFile(sourcePath, candidate, fs.constants.COPYFILE_EXCL);
+      return candidate;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
   }
   throw new Error("Cannot resolve unique target file name");
 }
@@ -149,7 +199,7 @@ async function resolveAvailableMarkdownPath(
  */
 export function registerWorkspaceHandlers(): void {
   // 选择工作区
-  ipcMain.handle(
+  handleAppIpc(
     "workspace:select",
     wrapIpcHandlerWithEvent(async (event, options?: { title?: string; buttonLabel?: string }) => {
       const win = getCallerWindow(event);
@@ -165,7 +215,7 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 获取当前窗口的工作区
-  ipcMain.handle("workspace:getCurrent", (event): IpcResultDTO<string | null> => {
+  handleAppIpc("workspace:getCurrent", (event): IpcResultDTO<string | null> => {
     try {
       const entry = windowManager.getEntryByWebContents(event.sender);
       return ipcOk(entry?.workspacePath ?? null);
@@ -176,7 +226,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 扫描工作区
-  ipcMain.handle(
+  handleAppIpc(
     "workspace:scan",
     wrapIpcHandlerWithEvent(async (event, workspacePath: string) => {
       const win = getCallerWindow(event);
@@ -209,42 +259,28 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 欢迎页拖入 Markdown 时，文件夹尚未进入“最近工作区”，先由主进程验证并批准该目录。
-  ipcMain.handle(
+  handleAppIpc(
     "workspace:approveDroppedFile",
-    wrapIpcHandlerWithEvent(async (_event, filePath: string) => {
-      if (typeof filePath !== "string" || !filePath.toLowerCase().endsWith(".md")) {
-        throw new Error("Only markdown files can be opened");
-      }
-      const stat = await fs.promises.stat(filePath);
-      if (!stat.isFile()) {
-        throw new Error("Invalid markdown file");
-      }
-      const workspacePath = path.dirname(filePath);
-      configManager.addRecentWorkspace(workspacePath);
-      return { filePath, workspacePath };
+    wrapIpcHandlerWithEvent(async (event, filePath: string) => {
+      if (typeof filePath !== "string" || !path.isAbsolute(filePath)) throw new Error("Invalid dropped file path");
+      return routeMarkdownOpen(getCallerWindow(event), resolveMarkdownOpenTarget(filePath));
     }, "WORKSPACE_APPROVE_DROPPED_FILE_FAILED")
   );
 
   registerWatcherHandlers();
 
   // 打开文件
-  ipcMain.handle(
+  handleAppIpc(
     "workspace:openFile",
     wrapIpcHandlerWithEvent(async (event, options?: { title?: string; buttonLabel?: string }) => {
       const win = getCallerWindow(event);
       const result = await workspaceManager.openFile(win, options);
-      if (result) {
-        // 如果其他窗口已打开该工作区，聚焦过去，当前窗口不变
-        if (windowManager.focusExistingWindow(result.workspacePath, win.id)) {
-          return null;
-        }
-      }
-      return result;
+      return result ? routeMarkdownOpen(win, result) : null;
     }, "WORKSPACE_OPEN_FILE_FAILED")
   );
 
   // 获取最近打开的工作区
-  ipcMain.handle("workspace:getRecent", (): IpcResultDTO<string[]> => {
+  handleAppIpc("workspace:getRecent", (): IpcResultDTO<string[]> => {
     try {
       return ipcOk(workspaceManager.getRecentWorkspaces());
     } catch (error) {
@@ -254,10 +290,10 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 导入外部 Markdown 文件到工作区内目标目录
-  ipcMain.handle(
+  handleAppIpc(
     "workspace:importMarkdownFiles",
     wrapIpcHandlerWithEvent(async (event, sourcePaths: string[], targetDir: string) => {
-      assertPathInWorkspace(event, targetDir, "workspace:importMarkdownFiles (targetDir)");
+      const authorizedTargetDir = assertPathInWorkspace(event, targetDir, "workspace:importMarkdownFiles (targetDir)");
       if (!Array.isArray(sourcePaths)) {
         throw new Error("Invalid sourcePaths");
       }
@@ -265,7 +301,7 @@ export function registerWorkspaceHandlers(): void {
       const importedPaths: string[] = [];
       let skippedCount = 0;
 
-      await fs.promises.mkdir(targetDir, { recursive: true });
+      await fs.promises.mkdir(authorizedTargetDir, { recursive: true });
 
       for (const sourcePath of sourcePaths) {
         try {
@@ -280,15 +316,11 @@ export function registerWorkspaceHandlers(): void {
             continue;
           }
 
-          const stat = await fs.promises.stat(sourcePath);
-          if (!stat.isFile()) {
-            skippedCount += 1;
-            continue;
-          }
+          const authorizedSource = await resolveDroppedMarkdownPath(sourcePath);
 
-          const targetPath = await resolveAvailableMarkdownPath(event, targetDir, fileName);
-          await fs.promises.copyFile(sourcePath, targetPath, fs.constants.COPYFILE_EXCL);
-          importedPaths.push(targetPath);
+          const targetPath = await copyImportedMarkdown(event, authorizedSource, authorizedTargetDir, fileName);
+          // The renderer derives note IDs from the workspace path used by its scan.
+          importedPaths.push(path.join(targetDir, path.basename(targetPath)));
         } catch {
           skippedCount += 1;
         }
@@ -303,76 +335,121 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 从应用拖出文件到系统（Copy-out）
-  ipcMain.handle(
+  handleAppIpc(
     "workspace:startDragOut",
     wrapIpcHandlerWithEvent(async (event, filePath: string) => {
-      assertPathInWorkspace(event, filePath, "workspace:startDragOut");
-      if (typeof filePath !== "string" || !filePath.toLowerCase().endsWith(".md")) {
+      const authorizedPath = assertPathInWorkspace(event, filePath, "workspace:startDragOut");
+      if (!authorizedPath.toLowerCase().endsWith(".md")) {
         throw new Error("Only markdown file drag-out is supported");
       }
-      const stat = await fs.promises.stat(filePath);
+      const stat = await fs.promises.stat(authorizedPath);
       if (!stat.isFile()) {
         throw new Error("Invalid file to drag out");
       }
 
-      const icon = await app.getFileIcon(filePath, { size: "normal" });
+      const icon = await app.getFileIcon(authorizedPath, { size: "normal" });
       event.sender.startDrag({
-        file: filePath,
+        file: authorizedPath,
         icon
       });
     }, "WORKSPACE_START_DRAG_OUT_FAILED")
   );
 
   // 读取文件（校验路径在工作区内）
-  ipcMain.handle(
-    "file:read",
-    wrapIpcHandlerWithEvent(async (event, filePath: string) => {
-      assertPathInWorkspace(event, filePath, "file:read");
-      assertRegularFilePath(filePath, "file:read");
-      return await fileSystem.readFile(filePath);
-    }, "FILE_READ_FAILED")
-  );
+  handleAppIpc("file:read", async (event, filePath: string) => {
+    try {
+      assertWorkspaceAvailable(event);
+      const authorizedPath = getWorkspaceEntryPath(event, filePath, "file:read");
+      assertRegularFilePath(authorizedPath, "file:read");
+      return ipcOk(await fileSystem.readFile(authorizedPath));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ipcErr(message, isMissingFileError(error) ? "FILE_NOT_FOUND" : "FILE_READ_FAILED", error);
+    }
+  });
 
   // 写入文件（校验路径在工作区内）
-  ipcMain.handle("file:write", async (event, filePath: string, content: string, expectedContent?: string) => {
+  handleAppIpc("file:write", async (event, filePath: string, content: string, expectedContent?: string) => {
     try {
       if (typeof content !== "string" || (expectedContent !== undefined && typeof expectedContent !== "string")) {
         throw new Error("Invalid file content");
       }
-      assertPathInWorkspace(event, filePath, "file:write");
+      assertWorkspaceAvailable(event);
       assertNotWorkspaceRoot(event, filePath, "file:write");
-      assertRegularFilePath(filePath, "file:write");
-      return ipcOk(await writeExistingFile(filePath, content, expectedContent));
+      const authorizedPath = getWorkspaceEntryPath(event, filePath, "file:write");
+      assertRegularFilePath(authorizedPath, "file:write");
+      return ipcOk(await writeExistingFile(authorizedPath, content, expectedContent));
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return ipcErr(
-        message,
-        error instanceof FileContentConflictError ? "FILE_CONTENT_CONFLICT" : "FILE_WRITE_FAILED",
-        error
-      );
+      if (error instanceof FileContentConflictError) return ipcErr(message, "FILE_CONTENT_CONFLICT", error);
+      if (isMissingFileError(error)) return ipcErr(message, "FILE_NOT_FOUND", error);
+      return ipcErr(message, "FILE_WRITE_FAILED", error);
     }
   });
 
   // 创建文件（校验路径在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "file:create",
     wrapIpcHandlerWithEvent(async (event, filePath: string, content: string) => {
-      assertPathInWorkspace(event, filePath, "file:create");
-      return await fileSystem.createFile(filePath, content);
+      const authorizedPath = getWorkspaceEntryPath(event, filePath, "file:create");
+      return await fileSystem.createFile(authorizedPath, content);
     }, "FILE_CREATE_FAILED")
   );
 
+  handleAppIpc(
+    "file:saveDraftAs",
+    wrapIpcHandlerWithEvent(
+      async (
+        event,
+        suggestedName: string,
+        content: string,
+        title: string,
+        existingFileMessage = "This file already exists. Choose a new name for the recovered draft."
+      ) => {
+        if (
+          typeof suggestedName !== "string" ||
+          typeof content !== "string" ||
+          typeof title !== "string" ||
+          typeof existingFileMessage !== "string"
+        ) {
+          throw new Error("Invalid draft");
+        }
+        const fileName = isValidFileNameSegment(suggestedName) ? suggestedName : "Recovered draft.md";
+        const window = getCallerWindow(event);
+        let defaultPath = path.join(app.getPath("documents"), fileName);
+        for (;;) {
+          const result = await dialog.showSaveDialog(window, {
+            title,
+            defaultPath,
+            filters: [{ name: "Markdown", extensions: ["md"] }],
+            properties: ["createDirectory"]
+          });
+          if (result.canceled || !result.filePath) return false;
+          try {
+            await writeStagedFile(result.filePath, content);
+            return true;
+          } catch (error) {
+            if ((error as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw error;
+            await dialog.showMessageBox(window, { type: "info", title, message: existingFileMessage });
+            defaultPath = path.join(path.dirname(result.filePath), fileName);
+          }
+        }
+      },
+      "FILE_SAVE_DRAFT_FAILED"
+    )
+  );
+
   // 删除文件（校验路径在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "file:delete",
     wrapIpcHandlerWithEvent(async (event, filePath: string) => {
-      assertPathInWorkspace(event, filePath, "file:delete");
       assertNotWorkspaceRoot(event, filePath, "file:delete");
-      assertRegularFilePath(filePath, "file:delete");
-      const sourcePath = fs.realpathSync.native(filePath);
+      const authorizedPath = getWorkspaceEntryPath(event, filePath, "file:delete");
+      assertRegularFilePath(authorizedPath, "file:delete");
+      const sourcePath = fs.realpathSync.native(authorizedPath);
       const finishChange = publicationLeases.beginPathChange(sourcePath);
       try {
-        const result = await fileSystem.deleteFile(filePath);
+        const result = await fileSystem.deleteFile(authorizedPath);
         publicationLeases.completePathChange(sourcePath);
         return result;
       } finally {
@@ -382,13 +459,13 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 重命名文件（校验源路径和目标路径都在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "file:rename",
     wrapIpcHandlerWithEvent(async (event, oldPath: string, newPath: string) => {
-      assertPathInWorkspace(event, oldPath, "file:rename (source)");
-      assertPathInWorkspace(event, newPath, "file:rename (dest)");
       assertNotWorkspaceRoot(event, oldPath, "file:rename (source)");
       assertNotWorkspaceRoot(event, newPath, "file:rename (dest)");
+      oldPath = getWorkspaceEntryPath(event, oldPath, "file:rename (source)");
+      newPath = getWorkspaceEntryPath(event, newPath, "file:rename (dest)");
       assertRegularFilePath(oldPath, "file:rename (source)");
       const sourcePath = fs.realpathSync.native(oldPath);
       const finishChange = publicationLeases.beginPathChange(sourcePath);
@@ -404,43 +481,43 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 复制文件（校验源路径和目标路径都在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "file:copy",
     wrapIpcHandlerWithEvent(async (event, sourcePath: string, destPath: string) => {
-      assertPathInWorkspace(event, sourcePath, "file:copy (source)");
-      assertPathInWorkspace(event, destPath, "file:copy (dest)");
+      sourcePath = getWorkspaceEntryPath(event, sourcePath, "file:copy (source)");
+      destPath = getWorkspaceEntryPath(event, destPath, "file:copy (dest)");
       assertRegularFilePath(sourcePath, "file:copy (source)");
       return await fileSystem.copyFile(sourcePath, destPath);
     }, "FILE_COPY_FAILED")
   );
 
   // 检查文件是否存在（校验路径在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "file:exists",
     wrapIpcHandlerWithEvent(async (event, filePath: string) => {
-      assertPathInWorkspace(event, filePath, "file:exists");
-      return await fileSystem.exists(filePath);
+      const authorizedPath = assertPathInWorkspace(event, filePath, "file:exists");
+      return await fileSystem.exists(authorizedPath);
     }, "FILE_EXISTS_FAILED")
   );
 
   // 创建文件夹（校验路径在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "folder:create",
     wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
-      assertWorkspaceFolderPath(event, folderPath, "folder:create", true);
-      return await fileSystem.createFolder(folderPath);
+      const authorizedPath = assertWorkspaceFolderPath(event, folderPath, "folder:create", true);
+      return await fileSystem.createFolder(authorizedPath);
     }, "FOLDER_CREATE_FAILED")
   );
 
   // 删除文件夹（校验路径在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "folder:delete",
     wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
-      assertWorkspaceFolderPath(event, folderPath, "folder:delete");
-      const sourcePath = fs.realpathSync.native(folderPath);
+      const authorizedPath = assertWorkspaceFolderPath(event, folderPath, "folder:delete");
+      const sourcePath = fs.realpathSync.native(authorizedPath);
       const finishChange = publicationLeases.beginPathChange(sourcePath, true);
       try {
-        const result = await fileSystem.deleteFolder(folderPath);
+        const result = await fileSystem.deleteFolder(authorizedPath);
         publicationLeases.completePathChange(sourcePath, undefined, true);
         return result;
       } finally {
@@ -450,11 +527,11 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 重命名文件夹（校验源路径和目标路径都在工作区内）
-  ipcMain.handle(
+  handleAppIpc(
     "folder:rename",
     wrapIpcHandlerWithEvent(async (event, oldPath: string, newPath: string) => {
-      assertWorkspaceFolderPath(event, oldPath, "folder:rename (source)");
-      assertWorkspaceFolderPath(event, newPath, "folder:rename (dest)", true);
+      oldPath = assertWorkspaceFolderPath(event, oldPath, "folder:rename (source)");
+      newPath = assertWorkspaceFolderPath(event, newPath, "folder:rename (dest)", true);
       const sourcePath = fs.realpathSync.native(oldPath);
       const finishChange = publicationLeases.beginPathChange(sourcePath, true);
       try {
@@ -469,10 +546,10 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 在文件管理器中显示文件
-  ipcMain.handle("shell:showItemInFolder", (event, fullPath: string): IpcResultDTO<void> => {
+  handleAppIpc("shell:showItemInFolder", (event, fullPath: string): IpcResultDTO<void> => {
     try {
-      assertPathInWorkspace(event, fullPath, "shell:showItemInFolder");
-      shell.showItemInFolder(fullPath);
+      const authorizedPath = assertPathInWorkspace(event, fullPath, "shell:showItemInFolder");
+      shell.showItemInFolder(authorizedPath);
       return ipcOk(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -481,11 +558,11 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 在文件管理器中打开文件夹
-  ipcMain.handle(
+  handleAppIpc(
     "shell:openPath",
     wrapIpcHandlerWithEvent(async (event, fullPath: string) => {
-      assertPathInWorkspace(event, fullPath, "shell:openPath");
-      const errorMessage = await shell.openPath(fullPath);
+      const authorizedPath = assertPathInWorkspace(event, fullPath, "shell:openPath");
+      const errorMessage = await shell.openPath(authorizedPath);
       if (errorMessage) {
         throw new Error(errorMessage);
       }
@@ -493,7 +570,7 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 在系统默认浏览器中打开链接
-  ipcMain.handle(
+  handleAppIpc(
     "shell:openExternal",
     wrapIpcHandler(async (url: string) => {
       if (!isSafeUrl(url)) {
@@ -505,9 +582,9 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 获取工作区的置顶笔记
-  ipcMain.handle("config:getPinnedNotes", (event, _workspacePath: string): IpcResultDTO<string[]> => {
+  handleAppIpc("config:getPinnedNotes", async (event, _workspacePath: string): Promise<IpcResultDTO<string[]>> => {
     try {
-      const pinnedNotes = configManager.getPinnedNotes(getCallerWorkspace(event));
+      const pinnedNotes = await configManager.getPinnedNotes(getCallerWorkspace(event));
       return ipcOk(pinnedNotes);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -516,7 +593,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 设置工作区的置顶笔记
-  ipcMain.handle("config:setPinnedNotes", (event, _workspacePath: string, noteIds: string[]): IpcResultDTO<void> => {
+  handleAppIpc("config:setPinnedNotes", (event, _workspacePath: string, noteIds: string[]): IpcResultDTO<void> => {
     try {
       configManager.setPinnedNotes(getCallerWorkspace(event), noteIds);
       return ipcOk(undefined);
@@ -527,7 +604,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 获取导出主题预设 ID
-  ipcMain.handle("config:getExportThemeId", (): IpcResultDTO<string> => {
+  handleAppIpc("config:getExportThemeId", (): IpcResultDTO<string> => {
     try {
       return ipcOk(configManager.getExportThemeId());
     } catch (error) {
@@ -538,7 +615,7 @@ export function registerWorkspaceHandlers(): void {
 
   // 设置导出主题预设 ID
   // themeId 格式约定：仅允许小写字母、数字和连字符（如 "tech-blue"），与主题文件命名一致
-  ipcMain.handle("config:setExportThemeId", (_, themeId: string): IpcResultDTO<void> => {
+  handleAppIpc("config:setExportThemeId", (_, themeId: string): IpcResultDTO<void> => {
     try {
       if (typeof themeId !== "string" || themeId.length === 0 || themeId.length > 64 || !/^[a-z0-9-]+$/.test(themeId)) {
         return ipcErr("Invalid themeId", "CONFIG_SET_EXPORT_THEME_INVALID");
@@ -552,7 +629,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 获取导出布局配置
-  ipcMain.handle("config:getExportLayout", (): IpcResultDTO<ExportLayoutConfig> => {
+  handleAppIpc("config:getExportLayout", (): IpcResultDTO<ExportLayoutConfig> => {
     try {
       return ipcOk(configManager.getExportLayout());
     } catch (error) {
@@ -562,7 +639,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 设置导出布局配置（允许部分字段更新）
-  ipcMain.handle("config:setExportLayout", (_, patch: Partial<ExportLayoutConfig>): IpcResultDTO<void> => {
+  handleAppIpc("config:setExportLayout", (_, patch: Partial<ExportLayoutConfig>): IpcResultDTO<void> => {
     try {
       if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
         return ipcErr("Invalid export layout patch", "CONFIG_SET_EXPORT_LAYOUT_INVALID");
@@ -583,7 +660,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 获取快捷键配置
-  ipcMain.handle("config:getShortcuts", (): IpcResultDTO<ShortcutConfig> => {
+  handleAppIpc("config:getShortcuts", (): IpcResultDTO<ShortcutConfig> => {
     try {
       return ipcOk(configManager.getShortcuts());
     } catch (error) {
@@ -592,10 +669,19 @@ export function registerWorkspaceHandlers(): void {
     }
   });
 
-  // 设置快捷键配置（全量覆盖）
-  ipcMain.handle("config:setShortcuts", (_, next: ShortcutConfig): IpcResultDTO<void> => {
+  handleAppIpc("config:setShortcut", (_, id: ShortcutId, binding: ShortcutBinding): IpcResultDTO<ShortcutConfig> => {
     try {
-      const normalized = { ...DEFAULT_SHORTCUTS, ...next };
+      if (
+        typeof id !== "string" ||
+        !Object.hasOwn(DEFAULT_SHORTCUTS, id) ||
+        !binding ||
+        typeof binding.code !== "string" ||
+        !binding.code ||
+        ![binding.ctrl, binding.shift, binding.alt, binding.meta].every((value) => typeof value === "boolean")
+      ) {
+        throw new Error("Invalid shortcut binding");
+      }
+      const normalized = { ...configManager.getShortcuts(), [id]: binding };
       const shortcutPlatform = process.platform === "darwin" ? "mac" : "default";
       const menuShortcutPlatform = process.platform === "darwin" ? "mac" : "win";
       const conflicts = findShortcutConflicts(normalized, shortcutPlatform);
@@ -620,7 +706,10 @@ export function registerWorkspaceHandlers(): void {
       }
 
       configManager.setShortcuts(normalized);
-      return ipcOk(undefined);
+      for (const { window } of windowManager.getAllEntries()) {
+        if (!window.isDestroyed()) window.webContents.send("config:shortcutsChanged", normalized);
+      }
+      return ipcOk(normalized);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       return ipcErr(message, "CONFIG_SET_SHORTCUTS_FAILED");
@@ -628,7 +717,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 获取全部 GitHub 项目配置
-  ipcMain.handle(
+  handleAppIpc(
     "config:getGitHubProjectConfigs",
     (): IpcResultDTO<{ projectConfigs: GitHubProjectConfigMap; activeProjectKey: string }> => {
       try {
@@ -644,7 +733,7 @@ export function registerWorkspaceHandlers(): void {
   );
 
   // 获取 GitHub 配置
-  ipcMain.handle("config:getGitHubConfig", (_, projectKey?: string): IpcResultDTO<GitHubConfig> => {
+  handleAppIpc("config:getGitHubConfig", (_, projectKey?: string): IpcResultDTO<GitHubConfig> => {
     try {
       return ipcOk({ ...configManager.getGitHubConfig(projectKey), token: "" });
     } catch (error) {
@@ -654,7 +743,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 设置 GitHub 配置
-  ipcMain.handle("config:setGitHubConfig", (_, config: GitHubConfig, projectKey?: string): IpcResultDTO<void> => {
+  handleAppIpc("config:setGitHubConfig", (_, config: GitHubConfig, projectKey?: string): IpcResultDTO<void> => {
     try {
       if (!config || typeof config !== "object") {
         return ipcErr("Invalid GitHub config", "CONFIG_SET_GITHUB_INVALID");
@@ -668,7 +757,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 设置 GitHub 当前选中的项目键
-  ipcMain.handle("config:setGitHubActiveProjectKey", (_, projectKey: string): IpcResultDTO<void> => {
+  handleAppIpc("config:setGitHubActiveProjectKey", (_, projectKey: string): IpcResultDTO<void> => {
     try {
       configManager.setGitHubActiveProjectKey(projectKey);
       return ipcOk(undefined);
@@ -679,7 +768,7 @@ export function registerWorkspaceHandlers(): void {
   });
 
   // 删除指定 GitHub 项目配置
-  ipcMain.handle("config:removeGitHubProjectConfig", (_, projectKey: string): IpcResultDTO<void> => {
+  handleAppIpc("config:removeGitHubProjectConfig", (_, projectKey: string): IpcResultDTO<void> => {
     try {
       const normalizedKey = String(projectKey || "").trim();
       if (!normalizedKey) {

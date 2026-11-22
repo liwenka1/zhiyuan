@@ -1,4 +1,5 @@
 import { contextBridge } from "electron";
+import { observeNativeMarkdownDrops } from "./apis/workspace";
 import {
   themeApi,
   workspaceApi,
@@ -36,11 +37,7 @@ const api = {
   diagnostics: diagnosticsApi
 };
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
+if (process.isMainFrame && process.contextIsolated) {
+  observeNativeMarkdownDrops(window);
   contextBridge.exposeInMainWorld("api", api);
-} else {
-  Object.assign(window, { api });
 }

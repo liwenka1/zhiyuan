@@ -4,6 +4,7 @@ import path from "node:path";
 import { EventEmitter } from "node:events";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { GitHubAssetUploadRequest, GitHubConfig, GitHubIssuePushRequest, IpcResultDTO } from "@shared";
+import { RENDERER_URL, trustedIpcEvent } from "./helpers/trusted-ipc-event";
 
 const { handlers, fixture, projectState, updateMock, createMock, branchMock, uploadMock } = vi.hoisted(() => ({
   handlers: new Map<string, (event: unknown, payload: unknown) => Promise<IpcResultDTO<unknown>>>(),
@@ -29,6 +30,9 @@ vi.mock("../../apps/desktop/src/main/github", () => ({
   uploadContent: uploadMock
 }));
 vi.mock("../../apps/desktop/src/main/security/window-context", () => ({ getCallerWorkspace: () => fixture.root }));
+vi.mock("../../apps/desktop/src/main/window-manager", () => ({
+  windowManager: { getEntryByWebContents: () => ({ rendererUrl: RENDERER_URL }) }
+}));
 
 import { registerGitHubHandlers } from "../../apps/desktop/src/main/ipc/github-handler";
 
@@ -53,7 +57,7 @@ const upload: GitHubAssetUploadRequest = {
 
 describe("GitHub project request snapshots", () => {
   const sender = Object.assign(new EventEmitter(), { id: 1, isDestroyed: () => false });
-  const event = { sender };
+  const event = trustedIpcEvent(sender);
   beforeEach(async () => {
     fixture.root = await fs.mkdtemp(path.join(os.tmpdir(), "zhiyuan-github-config-"));
     push.sourcePath = path.join(fixture.root, "note.md");

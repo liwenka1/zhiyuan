@@ -15,19 +15,20 @@ export interface UrlFetchResult {
 }
 
 /**
- * 获取可用的文件名（避免重名）
+ * 使用独占创建分配文件名，允许同标题文章并发导入。
  */
-async function getAvailableFileName(folderPath: string, baseName: string): Promise<string> {
+async function createAvailableFile(folderPath: string, baseName: string, content: string): Promise<string> {
   const normalizedBase = sanitizeName(baseName) || "untitled";
-  let candidate = `${normalizedBase}.md`;
-  let counter = 2;
-
-  while (await fileSystem.exists(path.join(folderPath, candidate))) {
-    candidate = `${normalizedBase}-${counter}.md`;
-    counter += 1;
+  for (let index = 1; index < 10_000; index++) {
+    const fileName = index === 1 ? `${normalizedBase}.md` : `${normalizedBase}-${index}.md`;
+    try {
+      await fileSystem.createFile(path.join(folderPath, fileName), content);
+      return fileName;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
   }
-
-  return candidate;
+  throw new Error("Cannot resolve unique target file name");
 }
 
 /**
@@ -69,10 +70,8 @@ export async function createNoteFromUrl(
   // 4. 生成文件名并保存
   const datePrefix = formatDate() || "undated";
   const fileBaseName = `${datePrefix}-${title}`;
-  const fileName = await getAvailableFileName(targetFolder, fileBaseName);
+  const fileName = await createAvailableFile(targetFolder, fileBaseName, markdown);
   const filePath = path.join(targetFolder, fileName);
-
-  await fileSystem.createFile(filePath, markdown);
 
   // 5. 返回结果
   const noteId = folderId ? `${folderId}/${fileName}` : fileName;
