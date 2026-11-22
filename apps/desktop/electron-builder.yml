@@ -12,6 +12,8 @@ files:
   - "!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}"
 asarUnpack:
   - resources/**
+  - "**/node-pty/**/{pty.node,spawn-helper}"
+extends: file:./scripts/fix-macos-pty-permissions.mjs
 win:
   executableName: zhiyuan
   fileAssociations:
