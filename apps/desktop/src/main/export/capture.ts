@@ -4,30 +4,51 @@ import * as path from "path";
 import { tmpdir } from "os";
 import { BrowserWindow, session } from "electron";
 import { pathToFileURL } from "node:url";
-import { embedLocalImages } from "./assets";
-import { embedLocalCssImages } from "./css-assets";
+import { embedExportImages, embedLocalImages } from "./assets";
+import type { ExportResourceReview } from "./resource-review";
+import type { WorkspacePathScope } from "../security/path-validator";
 
 const EXPORT_PARTITION = "export-capture";
 let exportSession: Electron.Session | null = null;
-const exportMainDocuments = new Map<number, string>();
+const exportDocuments = new Map<number, { url: string; imageFiles: ReadonlySet<string> }>();
 
 function getExportSession(): Electron.Session {
   if (exportSession) return exportSession;
   exportSession = session.fromPartition(EXPORT_PARTITION);
   exportSession.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
-    const ownDocument =
-      details.webContentsId === undefined ? undefined : exportMainDocuments.get(details.webContentsId);
-    const isOwnDocument = details.resourceType === "mainFrame" && details.url === ownDocument;
-    // All local subresources must have been workspace-validated and embedded first.
-    callback({ cancel: !isOwnDocument && !details.url.startsWith("data:") && details.url !== "about:blank" });
+    const ownDocument = details.webContentsId === undefined ? undefined : exportDocuments.get(details.webContentsId);
+    const isOwnDocument = details.resourceType === "mainFrame" && details.url === ownDocument?.url;
+    const isReviewedImage = details.resourceType === "image" && ownDocument?.imageFiles.has(details.url);
+    callback({
+      cancel: !isOwnDocument && !isReviewedImage && !details.url.startsWith("data:") && details.url !== "about:blank"
+    });
   });
   return exportSession;
 }
 
-function stripRemoteMediaSources(html: string): string {
-  return html.replace(/<(img|video|audio|source)\b[^>]*>/gi, (tag) =>
-    tag.replace(/\s(?:src|poster)\s*=\s*(["'])(?:https?:|\/\/)[^"']*\1/gi, "")
-  );
+function createOfflineExportWindow(documentUrl: string, width: number, height: number, imageFiles = new Set<string>()) {
+  getExportSession();
+  const window = new BrowserWindow({
+    width,
+    height,
+    show: false,
+    enableLargerThanScreen: true,
+    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: EXPORT_PARTITION }
+  });
+  const windowId = window.webContents.id;
+  exportDocuments.set(windowId, { url: documentUrl, imageFiles });
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event, url) => {
+    if (url !== documentUrl) event.preventDefault();
+  });
+
+  return {
+    window,
+    dispose() {
+      exportDocuments.delete(windowId);
+      if (!window.isDestroyed()) window.destroy();
+    }
+  };
 }
 
 async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10000): Promise<void> {
@@ -83,14 +104,72 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: st
   });
 }
 
+export async function validateExportImages(images: string[]): Promise<boolean[]> {
+  const valid = Array<boolean>(images.length).fill(false);
+  if (!images.length) return valid;
+
+  const imageFiles = new Set(images.filter((source) => source.startsWith("file:")));
+  const deadline = Date.now() + 8_000;
+  let decoder: ReturnType<typeof createOfflineExportWindow> | undefined;
+  let tempDirectory: string | undefined;
+  try {
+    let documentUrl = "about:blank";
+    if (imageFiles.size) {
+      tempDirectory = await fs.mkdtemp(path.join(tmpdir(), "zhiyuan-image-review-"));
+      const documentPath = path.join(tempDirectory, "index.html");
+      await fs.writeFile(
+        documentPath,
+        '<!doctype html><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: file:">'
+      );
+      documentUrl = pathToFileURL(documentPath).href;
+    }
+    decoder = createOfflineExportWindow(documentUrl, 1, 1, imageFiles);
+    const { window } = decoder;
+    await withTimeout(window.loadURL(documentUrl), deadline - Date.now(), "Image decoder failed to start");
+    let nextImage = 0;
+    async function decodeImages(): Promise<void> {
+      while (nextImage < images.length) {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) return;
+        const index = nextImage++;
+        try {
+          const decoded = await withTimeout(
+            window.webContents.executeJavaScript(`(async () => {
+              const image = new Image();
+              image.src = ${JSON.stringify(images[index])};
+              await image.decode();
+              return image.naturalWidth > 0 && image.naturalHeight > 0;
+            })()`),
+            remaining,
+            "Image decoding timed out"
+          );
+          valid[index] = decoded === true;
+        } catch {
+          // A failed or stalled decode only affects its own image.
+        }
+      }
+    }
+    await Promise.all(Array.from({ length: Math.min(images.length, 4) }, decodeImages));
+  } catch {
+    // A stopped decoder leaves the remaining images unavailable for this export.
+  } finally {
+    try {
+      decoder?.dispose();
+    } finally {
+      if (tempDirectory) await fs.rm(tempDirectory, { recursive: true, force: true }).catch(() => {});
+    }
+  }
+  return valid;
+}
+
 export async function captureHtmlAsImage(
   htmlContent: string,
   notePath?: string,
   width = 800,
-  workspacePath?: string
+  workspace?: string | WorkspacePathScope,
+  review?: ExportResourceReview
 ): Promise<NativeImage> {
-  let window: BrowserWindow | null = null;
-  let windowId: number | null = null;
+  let capture: ReturnType<typeof createOfflineExportWindow> | undefined;
   let tempDirectory: string | null = null;
 
   const DOM_READY_TIMEOUT = 30000;
@@ -98,37 +177,30 @@ export async function captureHtmlAsImage(
   const CAPTURE_TIMEOUT = 30000;
 
   try {
-    const processedHtml = stripRemoteMediaSources(
-      await embedLocalCssImages(await embedLocalImages(htmlContent, notePath, workspacePath), notePath, workspacePath)
-    );
+    const processedHtml = review
+      ? await embedExportImages(htmlContent, review.assets, review.includeExternal, review.missingLabel)
+      : await embedLocalImages(htmlContent, notePath, workspace);
 
     tempDirectory = await fs.mkdtemp(path.join(tmpdir(), "zhiyuan-export-"));
     const tempHtmlPath = path.join(tempDirectory, "index.html");
     const documentUrl = pathToFileURL(tempHtmlPath).href;
     await fs.writeFile(tempHtmlPath, processedHtml, "utf-8");
 
-    getExportSession();
-    window = new BrowserWindow({
-      width,
-      height: 600,
-      show: false,
-      enableLargerThanScreen: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        partition: EXPORT_PARTITION
-      }
-    });
-    windowId = window.webContents.id;
-    exportMainDocuments.set(windowId, documentUrl);
-    window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-    window.webContents.on("will-navigate", (event, url) => {
-      if (url !== documentUrl) event.preventDefault();
-    });
+    capture = createOfflineExportWindow(documentUrl, width, 600);
+    const { window } = capture;
 
     await withTimeout(window.loadURL(documentUrl), DOM_READY_TIMEOUT, `页面加载超时 (${DOM_READY_TIMEOUT}ms)`);
 
     await waitForPageLoad(window.webContents);
+
+    const brokenImages: string[] = await withTimeout(
+      window.webContents.executeJavaScript(`Array.from(document.images).flatMap((image, index) =>
+        image.getAttribute('src')?.trim() && !image.naturalWidth ? [image.alt || image.title || String(index + 1)] : []
+      )`),
+      EXECUTE_JS_TIMEOUT,
+      "Export images stopped responding"
+    );
+    if (brokenImages.length) throw new Error(`Could not render export images: ${brokenImages.join(", ")}`);
 
     const contentHeight = await withTimeout(
       window.webContents.executeJavaScript(
@@ -154,9 +226,8 @@ export async function captureHtmlAsImage(
 
     return await withTimeout(window.webContents.capturePage(), CAPTURE_TIMEOUT, `页面截图超时 (${CAPTURE_TIMEOUT}ms)`);
   } finally {
-    if (windowId !== null) exportMainDocuments.delete(windowId);
     try {
-      if (window && !window.isDestroyed()) window.destroy();
+      capture?.dispose();
     } finally {
       if (tempDirectory) {
         await fs.rm(tempDirectory, { recursive: true, force: true }).catch(() => {});

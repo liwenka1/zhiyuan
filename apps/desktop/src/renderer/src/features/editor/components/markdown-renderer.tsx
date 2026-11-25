@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "katex/dist/katex.min.css";
 import { decodeLocalResourceUrl } from "@shared";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useNoteStore, useThemeStore } from "@/stores";
+import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { shellIpc } from "@/ipc";
 import { markdownToHTML } from "@/lib/markdown-processor";
 
@@ -43,8 +44,12 @@ export function MarkdownRenderer({
 }: MarkdownRendererProps) {
   const { t } = useTranslation("editor");
   const theme = useThemeStore((state) => state.theme);
+  const workspacePath = useWorkspaceStore((state) => state.workspacePath);
   const isDark = theme === "dark";
+  const httpImageWarning = t("errors.httpImage");
   const [htmlContent, setHtmlContent] = useState("");
+  const renderedHtml = useMemo(() => ({ __html: htmlContent }), [htmlContent]);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let isCancelled = false;
@@ -53,8 +58,10 @@ export function MarkdownRenderer({
       try {
         const html = await markdownToHTML(content, {
           notePath,
+          workspacePath,
           isDarkTheme: isDark,
-          enableCopyButton: true
+          enableCopyButton: true,
+          allowExternalMedia: true
         });
         if (!isCancelled) {
           setHtmlContent(html);
@@ -71,7 +78,7 @@ export function MarkdownRenderer({
     return () => {
       isCancelled = true;
     };
-  }, [content, notePath, isDark]);
+  }, [content, notePath, workspacePath, isDark]);
 
   useEffect(() => {
     if (!noteId) return;
@@ -104,17 +111,26 @@ export function MarkdownRenderer({
   }, [noteId, htmlContent]);
 
   useEffect(() => {
-    if (!noteId) return;
-    const root = document.getElementById(`preview-scroll-area-${noteId}`);
+    const root = contentRef.current;
     if (!root) return;
 
     const images = Array.from(root.querySelectorAll("img"));
     images.forEach((img) => {
+      if (/^http:\/\//i.test(img.getAttribute("src") ?? "")) {
+        const placeholder = document.createElement("span");
+        placeholder.dataset.httpImageAlt = img.alt;
+        img.replaceWith(placeholder);
+        return;
+      }
       if (!img.getAttribute("loading")) {
         img.setAttribute("loading", "lazy");
       }
     });
-  }, [noteId, htmlContent]);
+    for (const placeholder of root.querySelectorAll<HTMLElement>("span[data-http-image-alt]")) {
+      const alt = placeholder.dataset.httpImageAlt;
+      placeholder.textContent = alt ? `${alt} (${httpImageWarning})` : httpImageWarning;
+    }
+  }, [htmlContent, httpImageWarning]);
 
   // 空内容处理
   if (!content.trim() && showEmptyState) {
@@ -128,6 +144,7 @@ export function MarkdownRenderer({
   return (
     <div className={cn("prose dark:prose-invert", className)}>
       <div
+        ref={contentRef}
         onClick={async (e) => {
           const target = e.target as HTMLElement | null;
           if (!target) return;
@@ -165,15 +182,16 @@ export function MarkdownRenderer({
 
           if (href.startsWith("local-resource://")) {
             e.preventDefault();
+            if (!e.nativeEvent.isTrusted) return;
             const localPath = decodeLocalResourceUrl(href);
             try {
-              await shellIpc.openPath(localPath);
+              await shellIpc.openNoteLink(localPath);
             } catch {
               toast.error(t("errors.openLocalFileFailed"));
             }
           }
         }}
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
+        dangerouslySetInnerHTML={renderedHtml}
       />
     </div>
   );

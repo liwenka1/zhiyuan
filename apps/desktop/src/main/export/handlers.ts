@@ -6,17 +6,23 @@ import { PDFDocument } from "pdf-lib";
 import { wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "../ipc/ipc-result";
 import { isValidFileNameSegment, normalizeFileNameSegment, type IpcResultDTO } from "@shared";
 import { captureHtmlAsImage } from "./capture";
-import { collectAndCopyAssets } from "./assets";
-import { getCallerWorkspace } from "../security/window-context";
+import { collectAndCopyAssets, inspectExportAssets, renderHtmlExportPreview } from "./assets";
+import { reviewExportResources } from "./resource-review";
+import { getCallerResourceToken, getCallerWorkspace, getCallerWorkspaceScope } from "../security/window-context";
 import { validatePathInWorkspace } from "../security/path-validator";
 import { inspectExportDestination, writeExportDirectory, writeExportFile, type ExportDestination } from "./output";
 
-const approvedExportPaths = new WeakMap<Electron.WebFrameMain, ExportDestination>();
+interface ApprovedExportPath {
+  destination: ExportDestination;
+  language: "zh" | "en";
+}
 
-function takeApprovedExportPath(event: Electron.IpcMainInvokeEvent, filePath: string): ExportDestination {
+const approvedExportPaths = new WeakMap<Electron.WebFrameMain, ApprovedExportPath>();
+
+function takeApprovedExportPath(event: Electron.IpcMainInvokeEvent, filePath: string): ApprovedExportPath {
   const frame = event.senderFrame;
   const approved = frame && approvedExportPaths.get(frame);
-  if (!frame || !approved || approved.outputPath !== path.resolve(filePath)) {
+  if (!frame || !approved || approved.destination.outputPath !== path.resolve(filePath)) {
     throw new Error("Export path was not selected by the application");
   }
   approvedExportPaths.delete(frame);
@@ -33,6 +39,7 @@ export function registerExportHandlers(): void {
           title: string;
           defaultPath: string;
           filters: Array<{ name: string; extensions: string[] }>;
+          language?: "zh" | "en";
         }
       ) => {
         const frame = event.senderFrame;
@@ -47,7 +54,14 @@ export function registerExportHandlers(): void {
         });
 
         if (result.canceled || !result.filePath) return null;
-        approvedExportPaths.set(frame, await inspectExportDestination(path.resolve(result.filePath)));
+        const language =
+          options.language === "zh" || options.language === "en"
+            ? options.language
+            : app.getLocale().startsWith("zh")
+              ? "zh"
+              : "en";
+        const destination = await inspectExportDestination(path.resolve(result.filePath));
+        approvedExportPaths.set(frame, { destination, language });
         return result.filePath;
       },
       "EXPORT_SHOW_SAVE_DIALOG_FAILED"
@@ -57,8 +71,21 @@ export function registerExportHandlers(): void {
   handleAppIpc(
     "export:save-html-file",
     wrapIpcHandlerWithEvent(async (event, filePath: string, htmlContent: string) => {
-      await writeExportFile(takeApprovedExportPath(event, filePath), htmlContent);
+      await writeExportFile(takeApprovedExportPath(event, filePath).destination, htmlContent);
     }, "EXPORT_SAVE_HTML_FAILED")
+  );
+
+  handleAppIpc(
+    "export:prepare-html-preview",
+    wrapIpcHandlerWithEvent(async (event, html: string, notePath: string | undefined, missingLabel: string) => {
+      const workspace = getCallerWorkspaceScope(event);
+      if (notePath && !validatePathInWorkspace(workspace, notePath).isValid) {
+        throw new Error("Note path is outside workspace");
+      }
+      const assets = await inspectExportAssets([html], notePath, workspace, "html");
+      if (getCallerWorkspace(event) !== workspace.workspacePath) throw new Error("The export workspace changed");
+      return renderHtmlExportPreview(html, assets, missingLabel, getCallerResourceToken(event));
+    }, "EXPORT_PREVIEW_FAILED")
   );
 
   handleAppIpc("export:get-downloads-path", (): IpcResultDTO<string> => {
@@ -73,12 +100,13 @@ export function registerExportHandlers(): void {
   handleAppIpc(
     "export:export-as-pdf",
     wrapIpcHandlerWithEvent(async (event, htmlContent: string, filePath: string, notePath?: string) => {
-      const workspacePath = getCallerWorkspace(event);
-      const destination = takeApprovedExportPath(event, filePath);
-      if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+      const workspace = getCallerWorkspaceScope(event);
+      const { destination, language } = takeApprovedExportPath(event, filePath);
+      if (notePath && !validatePathInWorkspace(workspace, notePath).isValid) {
         throw new Error("Note path is outside workspace");
       }
-      const image = await captureHtmlAsImage(htmlContent, notePath, 800, workspacePath);
+      const review = await reviewExportResources(event, [htmlContent], notePath, workspace, "capture", language);
+      const image = await captureHtmlAsImage(htmlContent, notePath, 800, workspace, review);
       const pngData = image.toPNG();
 
       const pdfDoc = await PDFDocument.create();
@@ -102,13 +130,14 @@ export function registerExportHandlers(): void {
     "export:export-as-image",
     wrapIpcHandlerWithEvent(
       async (event, htmlContent: string, filePath: string, notePath?: string, options?: { width?: number }) => {
-        const workspacePath = getCallerWorkspace(event);
-        const destination = takeApprovedExportPath(event, filePath);
-        if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+        const workspace = getCallerWorkspaceScope(event);
+        const { destination, language } = takeApprovedExportPath(event, filePath);
+        if (notePath && !validatePathInWorkspace(workspace, notePath).isValid) {
           throw new Error("Note path is outside workspace");
         }
         const width = options?.width || 800;
-        const image = await captureHtmlAsImage(htmlContent, notePath, width, workspacePath);
+        const review = await reviewExportResources(event, [htmlContent], notePath, workspace, "capture", language);
+        const image = await captureHtmlAsImage(htmlContent, notePath, width, workspace, review);
 
         const ext = path.extname(destination.outputPath).toLowerCase();
         let imageData: Buffer;
@@ -145,20 +174,29 @@ export function registerExportHandlers(): void {
         notePath: string | undefined,
         assetsFolder: string = "assets"
       ) => {
-        const workspacePath = getCallerWorkspace(event);
-        const { outputPath } = takeApprovedExportPath(event, folderPath);
+        const workspace = getCallerWorkspaceScope(event);
+        const {
+          destination: { outputPath },
+          language
+        } = takeApprovedExportPath(event, folderPath);
         if (!isValidFileNameSegment(assetsFolder)) {
           throw new Error("Invalid assets folder");
         }
-        if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+        if (notePath && !validatePathInWorkspace(workspace, notePath).isValid) {
           throw new Error("Note path is outside workspace");
         }
+        const review = await reviewExportResources(event, [htmlContent], notePath, workspace, "html", language);
         return writeExportDirectory(outputPath, async (stagingDirectory) => {
           const assetsDir = path.join(stagingDirectory, assetsFolder);
           await fs.mkdir(assetsDir);
-          const { processedHtml, copiedFiles } = notePath
-            ? await collectAndCopyAssets(htmlContent, notePath, assetsDir, assetsFolder, workspacePath)
-            : { processedHtml: htmlContent, copiedFiles: [] };
+          const { processedHtml, copiedFiles } = await collectAndCopyAssets(
+            htmlContent,
+            notePath,
+            assetsDir,
+            assetsFolder,
+            workspace,
+            review
+          );
           await fs.writeFile(path.join(stagingDirectory, "index.html"), processedHtml, "utf-8");
           return {
             filesCount: copiedFiles.length + 1,
@@ -173,15 +211,16 @@ export function registerExportHandlers(): void {
   handleAppIpc(
     "export:export-as-pdf-pages",
     wrapIpcHandlerWithEvent(async (event, htmlContents: string[], filePath: string, notePath?: string) => {
-      const workspacePath = getCallerWorkspace(event);
-      const destination = takeApprovedExportPath(event, filePath);
-      if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+      const workspace = getCallerWorkspaceScope(event);
+      const { destination, language } = takeApprovedExportPath(event, filePath);
+      if (notePath && !validatePathInWorkspace(workspace, notePath).isValid) {
         throw new Error("Note path is outside workspace");
       }
       const pdfDoc = await PDFDocument.create();
+      const review = await reviewExportResources(event, htmlContents, notePath, workspace, "capture", language);
 
       for (let i = 0; i < htmlContents.length; i++) {
-        const image = await captureHtmlAsImage(htmlContents[i], notePath, 800, workspacePath);
+        const image = await captureHtmlAsImage(htmlContents[i], notePath, 800, workspace, review);
         const pngData = image.toPNG();
         const pngImage = await pdfDoc.embedPng(pngData);
 
@@ -212,19 +251,23 @@ export function registerExportHandlers(): void {
         notePath?: string,
         options?: { width?: number }
       ) => {
-        const workspacePath = getCallerWorkspace(event);
-        const { outputPath } = takeApprovedExportPath(event, folderPath);
-        if (notePath && !validatePathInWorkspace(workspacePath, notePath).isValid) {
+        const workspace = getCallerWorkspaceScope(event);
+        const {
+          destination: { outputPath },
+          language
+        } = takeApprovedExportPath(event, folderPath);
+        if (notePath && !validatePathInWorkspace(workspace, notePath).isValid) {
           throw new Error("Note path is outside workspace");
         }
         const width = options?.width || 800;
         const safeBaseFileName = normalizeFileNameSegment(baseFileName) || "export";
         if (htmlContents.length === 0) throw new Error("No pages to export");
+        const review = await reviewExportResources(event, htmlContents, notePath, workspace, "capture", language);
         return writeExportDirectory(outputPath, async (stagingDirectory) => {
           const filePaths: string[] = [];
           for (const [index, html] of htmlContents.entries()) {
             const fileName = `${safeBaseFileName}-${index + 1}.png`;
-            const image = await captureHtmlAsImage(html, notePath, width, workspacePath);
+            const image = await captureHtmlAsImage(html, notePath, width, workspace, review);
             await fs.writeFile(path.join(stagingDirectory, fileName), image.toPNG());
             filePaths.push(path.join(outputPath, fileName));
           }

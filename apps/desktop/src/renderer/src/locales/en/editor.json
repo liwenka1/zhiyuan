@@ -44,6 +44,7 @@
     "close": "Close"
   },
   "errors": {
+    "httpImage": "Network images require an HTTPS URL",
     "openExternalFailed": "Failed to open external link, please try again",
     "openLocalFileFailed": "Failed to open local file, please try again",
     "fullscreenFailed": "Failed to toggle fullscreen, please try again",

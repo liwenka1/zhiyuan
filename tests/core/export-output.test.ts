@@ -5,22 +5,29 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import type { IpcResultDTO } from "../../apps/desktop/src/shared";
 
 type Handler = (event: Electron.IpcMainInvokeEvent, ...args: unknown[]) => Promise<IpcResultDTO<unknown>>;
-const { handlers, capture, saveDialog } = vi.hoisted(() => ({
+const { handlers, capture, saveDialog, reviewDialog, current } = vi.hoisted(() => ({
   handlers: new Map<string, Handler>(),
   capture: vi.fn(),
-  saveDialog: vi.fn()
+  saveDialog: vi.fn(),
+  reviewDialog: vi.fn(),
+  current: { workspace: "/test-workspace" }
 }));
 vi.mock("../../apps/desktop/src/main/security/app-ipc", () => ({
   handleAppIpc: (channel: string, handler: Handler) => handlers.set(channel, handler)
 }));
 vi.mock("../../apps/desktop/src/main/security/window-context", () => ({
-  getCallerWorkspace: () => "/test-workspace"
+  getCallerWorkspace: () => current.workspace,
+  getCallerWorkspaceScope: () => ({ workspacePath: current.workspace }),
+  getCallerResourceToken: () => "window-token"
 }));
-vi.mock("../../apps/desktop/src/main/export/capture", () => ({ captureHtmlAsImage: capture }));
+vi.mock("../../apps/desktop/src/main/export/capture", () => ({
+  captureHtmlAsImage: capture,
+  validateExportImages: vi.fn()
+}));
 vi.mock("electron", () => ({
   BrowserWindow: { fromWebContents: () => ({}) },
-  dialog: { showSaveDialog: saveDialog },
-  app: {},
+  dialog: { showSaveDialog: saveDialog, showMessageBox: reviewDialog },
+  app: { getLocale: () => "en" },
   clipboard: {}
 }));
 
@@ -42,9 +49,9 @@ describe("export output", () => {
     return handlers.get(`export:${channel}`)!(event, ...args);
   }
 
-  async function select(outputPath: string) {
+  async function select(outputPath: string, language?: "en" | "zh") {
     saveDialog.mockResolvedValueOnce({ canceled: false, filePath: outputPath });
-    await expect(invoke("show-save-dialog", { defaultPath: outputPath })).resolves.toEqual({
+    await expect(invoke("show-save-dialog", { defaultPath: outputPath, language })).resolves.toEqual({
       ok: true,
       value: outputPath
     });
@@ -52,7 +59,9 @@ describe("export output", () => {
 
   beforeEach(async () => {
     root = await mkdtemp(path.join(os.tmpdir(), "zhiyuan-export-output-"));
+    current.workspace = path.join(root, "workspace");
     capture.mockReset();
+    reviewDialog.mockReset();
     capture.mockImplementation(async (html: string) => ({ toPNG: () => Buffer.from(html) }));
   });
   afterEach(async () => {
@@ -95,6 +104,95 @@ describe("export output", () => {
     });
     expect(await readFile(index, "utf8")).toBe("original HTML");
     expect(await readdir(output)).toEqual(["index.html"]);
+  });
+
+  it("reviews external resources once for each HTML export and removes unshipped local URLs", async () => {
+    await mkdir(current.workspace);
+    const source = path.join(root, "external.svg");
+    await writeFile(source, "<svg></svg>");
+    const notePath = path.join(current.workspace, "note.md");
+    const html = `<img alt="Figure" src="../external.svg"><a href="../private.txt">Private</a><img src="https://example.com/figure.png">`;
+
+    for (const include of [true, false]) {
+      const output = path.join(root, include ? "with-figure" : "without-figure");
+      await select(output);
+      reviewDialog.mockResolvedValueOnce({ response: 0, checkboxChecked: include });
+      expect(await invoke("export-html-package", html, output, notePath)).toMatchObject({ ok: true });
+      expect(reviewDialog).toHaveBeenLastCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          detail: expect.stringContaining("external.svg"),
+          checkboxChecked: false
+        })
+      );
+      const exported = await readFile(path.join(output, "index.html"), "utf8");
+      expect(exported).not.toContain("../external.svg");
+      expect(exported).not.toContain("private.txt");
+      expect(exported).toContain("https://example.com/figure.png");
+      expect(await readdir(path.join(output, "assets"))).toEqual(include ? ["external.svg"] : []);
+      expect(exported).toContain(include ? "./assets/external.svg" : "Figure (Omitted from export)");
+    }
+    expect(reviewDialog).toHaveBeenCalledTimes(2);
+  });
+
+  it("publishes no HTML package if the external file is replaced during confirmation", async () => {
+    await mkdir(current.workspace);
+    const source = path.join(root, "external.svg");
+    const output = path.join(root, "package");
+    const notePath = path.join(current.workspace, "note.md");
+    const html = '<img src="../external.svg">';
+    await writeFile(source, "reviewed file");
+    await select(output);
+    reviewDialog.mockImplementationOnce(async () => {
+      await rename(source, path.join(root, "reviewed.svg"));
+      await writeFile(source, "replacement file");
+      return { response: 0, checkboxChecked: true };
+    });
+
+    expect(await invoke("export-html-package", html, output, notePath)).toMatchObject({
+      ok: false,
+      error: { message: "Export asset changed: external.svg" }
+    });
+    await expect(stat(output)).rejects.toMatchObject({ code: "ENOENT" });
+
+    await select(output);
+    reviewDialog.mockResolvedValueOnce({ response: 0, checkboxChecked: true });
+    expect(await invoke("export-html-package", html, output, notePath)).toMatchObject({ ok: true });
+    expect(await readFile(path.join(output, "assets", "external.svg"), "utf8")).toBe("replacement file");
+  });
+
+  it("reports an unreadable file before saving, using the selected app language in the dialog and output", async () => {
+    await mkdir(current.workspace);
+    const workspace = await fs.realpath(current.workspace);
+    const blocked = path.join(workspace, "blocked.svg");
+    await writeFile(blocked, "unreadable fixture");
+    await writeFile(path.join(workspace, "readable.svg"), "<svg></svg>");
+    const actualOpen = fs.open;
+    vi.spyOn(fs, "open").mockImplementation((file, ...options) =>
+      file === blocked
+        ? Promise.reject(Object.assign(new Error("Permission denied"), { code: "EACCES" }))
+        : actualOpen(file, ...options)
+    );
+    const html = '<img alt="Blocked" src="./blocked.svg"><img alt="Available" src="./readable.svg">';
+    const notePath = path.join(workspace, "note.md");
+    const output = path.join(root, "reviewed");
+    await select(output, "zh");
+    reviewDialog.mockResolvedValueOnce({ response: 0, checkboxChecked: false });
+
+    expect(await invoke("export-html-package", html, output, notePath)).toMatchObject({ ok: true });
+    expect(reviewDialog).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        title: "检查导出资源",
+        detail: expect.stringContaining("blocked.svg (无法读取文件)")
+      })
+    );
+    expect(await readdir(path.join(output, "assets"))).toEqual(["readable.svg"]);
+    expect(await readFile(path.join(output, "index.html"), "utf8")).toContain("Blocked (未纳入导出)");
+    expect(await invoke("prepare-html-preview", html, notePath, "未纳入导出")).toMatchObject({
+      ok: true,
+      value: expect.stringContaining("Blocked (未纳入导出)")
+    });
   });
 
   it.skipIf(process.platform === "win32")(

@@ -33,7 +33,8 @@ vi.mock("../../apps/desktop/src/main/github", () => ({
   uploadContent: vi.fn()
 }));
 vi.mock("../../apps/desktop/src/main/security/window-context", () => ({
-  getCallerWorkspace: (event: { workspace: string }) => event.workspace
+  getCallerWorkspace: (event: { workspace: string }) => event.workspace,
+  getCallerWorkspaceScope: (event: { workspace: string }) => ({ workspacePath: event.workspace })
 }));
 
 vi.mock("../../apps/desktop/src/main/window-manager", () => ({

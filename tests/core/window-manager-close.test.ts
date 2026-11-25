@@ -176,10 +176,16 @@ describe("managed windows", () => {
     const secondToken = windowManager.getEntryById(second.id)!.localResourceToken;
     expect(firstToken).toMatch(/^[a-f0-9]{64}$/);
     expect(secondToken).not.toBe(firstToken);
-    expect(windowManager.getWorkspaceForResourceToken(firstToken)).toBe("/workspace-a");
+    expect(windowManager.getWorkspaceForResourceToken(firstToken)).toEqual({
+      workspacePath: "/workspace-a",
+      scannedWorkspacePath: null
+    });
     first.emit("closed");
     expect(windowManager.getWorkspaceForResourceToken(firstToken)).toBeNull();
-    expect(windowManager.getWorkspaceForResourceToken(secondToken)).toBe("/workspace-b");
+    expect(windowManager.getWorkspaceForResourceToken(secondToken)).toEqual({
+      workspacePath: "/workspace-b",
+      scannedWorkspacePath: null
+    });
     vi.mocked(second.isDestroyed).mockReturnValue(true);
     expect(windowManager.getWorkspaceForResourceToken(secondToken)).toBeNull();
   });

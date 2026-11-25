@@ -117,6 +117,7 @@ export interface FolderAPI {
 
 // Shell API 接口
 export interface ShellAPI {
+  openNoteLink: (fullPath: string) => Promise<IpcResultDTO<void>>;
   showItemInFolder: (fullPath: string) => Promise<IpcResultDTO<void>>;
   openPath: (fullPath: string) => Promise<IpcResultDTO<void>>;
   openExternal: (url: string) => Promise<IpcResultDTO<void>>;
@@ -148,8 +149,14 @@ export interface ExportAPI {
     title: string;
     defaultPath: string;
     filters: Array<{ name: string; extensions: string[] }>;
+    language?: "zh" | "en";
   }) => Promise<IpcResultDTO<string | null>>;
   saveHTMLFile: (filePath: string, htmlContent: string) => Promise<IpcResultDTO<void>>;
+  prepareHtmlPreview: (
+    html: string,
+    notePath: string | undefined,
+    missingLabel: string
+  ) => Promise<IpcResultDTO<string>>;
   exportAsPDF: (htmlContent: string, filePath: string, notePath?: string) => Promise<IpcResultDTO<void>>;
   exportAsImage: (
     htmlContent: string,

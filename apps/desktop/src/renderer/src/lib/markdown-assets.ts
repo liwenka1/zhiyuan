@@ -1,88 +1,43 @@
-import { decodeLocalResourceUrl, isLocalAbsolutePath, isRelativePath, resolveLocalPath } from "@shared";
+import { createUrlTransformer, decodeLocalResourceUrl } from "@shared";
+import { getInlineMarkdownDestinations, rewriteMarkdownDestinations } from "./markdown-links";
 
 export interface MarkdownAsset {
   originalUrl: string;
   localPath: string;
+  start: number;
+  end: number;
 }
 
-const LINK_REGEX = /(!?\[[^\]]*\]\()([^)]+)(\))/g;
-
-export function collectLocalMarkdownAssets(markdown: string, notePath?: string): MarkdownAsset[] {
+export function collectLocalMarkdownAssets(
+  markdown: string,
+  notePath?: string,
+  workspacePath?: string | null
+): MarkdownAsset[] {
   const assets: MarkdownAsset[] = [];
-  if (!markdown) return assets;
+  const resolve = createUrlTransformer(notePath, { syntax: "markdown", workspacePath });
+  const resolveNative = createUrlTransformer(notePath, { workspacePath });
 
-  const matches = markdown.matchAll(LINK_REGEX);
-  for (const match of matches) {
-    const rawUrl = match[2];
-    if (!rawUrl) continue;
-
-    const normalized = rawUrl.trim();
-    if (!normalized) continue;
-
-    if (
-      (normalized.startsWith('"') && normalized.endsWith('"')) ||
-      (normalized.startsWith("'") && normalized.endsWith("'"))
-    ) {
-      const unquoted = normalized.slice(1, -1).trim();
-      if (!unquoted) continue;
-      if (/^(https?:|data:|blob:|mailto:|#)/i.test(unquoted)) continue;
-
-      if (unquoted.startsWith("local-resource://")) {
-        const localPath = decodeLocalResourceUrl(unquoted);
-        assets.push({ originalUrl: rawUrl, localPath });
-        continue;
-      }
-
-      if (unquoted.startsWith("file://")) {
-        const localPath = decodeURIComponent(unquoted.replace(/^file:\/\//, ""));
-        assets.push({ originalUrl: rawUrl, localPath });
-        continue;
-      }
-
-      if (isLocalAbsolutePath(unquoted)) {
-        assets.push({ originalUrl: rawUrl, localPath: unquoted });
-        continue;
-      }
-
-      if (notePath && isRelativePath(unquoted)) {
-        assets.push({ originalUrl: rawUrl, localPath: resolveLocalPath(unquoted, notePath) });
-      }
-
-      continue;
-    }
-
-    if (/^(https?:|data:|blob:|mailto:|#)/i.test(normalized)) continue;
-
-    if (normalized.startsWith("local-resource://")) {
-      const localPath = decodeLocalResourceUrl(normalized);
-      assets.push({ originalUrl: rawUrl, localPath });
-      continue;
-    }
-
-    if (normalized.startsWith("file://")) {
-      const localPath = decodeURIComponent(normalized.replace(/^file:\/\//, ""));
-      assets.push({ originalUrl: rawUrl, localPath });
-      continue;
-    }
-
-    if (isLocalAbsolutePath(normalized)) {
-      assets.push({ originalUrl: rawUrl, localPath: normalized });
-      continue;
-    }
-
-    if (notePath && isRelativePath(normalized)) {
-      assets.push({ originalUrl: rawUrl, localPath: resolveLocalPath(normalized, notePath) });
+  for (const destination of getInlineMarkdownDestinations(markdown, workspacePath)) {
+    const { originalUrl, start, end, url } = destination;
+    // Repaired local destinations are already encoded. An intact wrapper can still enclose an external URL.
+    const quoted = /^["']/.test(url) ? originalUrl.match(/^(["'])(.*)\1$/) : null;
+    const resource = quoted ? resolveNative(quoted[2].trim()) : resolve(url);
+    if (!resource.startsWith("local-resource://")) continue;
+    try {
+      assets.push({ originalUrl, localPath: decodeLocalResourceUrl(resource), start, end });
+    } catch {
+      // Ignore malformed resource URLs.
     }
   }
-
   return assets;
 }
 
-export function replaceMarkdownAssetUrls(markdown: string, replacements: Map<string, string>): string {
-  let result = markdown;
-  replacements.forEach((nextUrl, originalUrl) => {
-    const escaped = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    result = result.replace(new RegExp(escaped, "g"), nextUrl);
-  });
-  return result;
+export function replaceMarkdownAssetUrls(
+  markdown: string,
+  assets: readonly MarkdownAsset[],
+  replacements: ReadonlyMap<string, string>
+): string {
+  return rewriteMarkdownDestinations(markdown, assets, ({ originalUrl }) =>
+    replacements.get(originalUrl)?.replaceAll("(", "%28").replaceAll(")", "%29")
+  );
 }

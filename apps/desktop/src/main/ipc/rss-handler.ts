@@ -1,7 +1,7 @@
 import { handleAppIpc } from "../security/app-ipc";
 import { importRss, updateRss, unsubscribeRss } from "../rss";
 import { wrapIpcHandlerWithEvent } from "./ipc-result";
-import { getCallerWorkspace } from "../security/window-context";
+import { getCallerWorkspace, getCallerWorkspaceScope } from "../security/window-context";
 import { validatePathInWorkspace } from "../security/path-validator";
 
 export function registerRssHandlers(): void {
@@ -15,8 +15,7 @@ export function registerRssHandlers(): void {
   handleAppIpc(
     "rss:update",
     wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
-      const workspacePath = getCallerWorkspace(event);
-      const validation = validatePathInWorkspace(workspacePath, folderPath);
+      const validation = validatePathInWorkspace(getCallerWorkspaceScope(event), folderPath);
       if (!validation.isValid) {
         throw new Error("RSS folder is outside workspace");
       }
@@ -27,8 +26,7 @@ export function registerRssHandlers(): void {
   handleAppIpc(
     "rss:unsubscribe",
     wrapIpcHandlerWithEvent(async (event, folderPath: string) => {
-      const workspacePath = getCallerWorkspace(event);
-      const validation = validatePathInWorkspace(workspacePath, folderPath);
+      const validation = validatePathInWorkspace(getCallerWorkspaceScope(event), folderPath);
       if (!validation.isValid) {
         throw new Error("RSS folder is outside workspace");
       }

@@ -1,7 +1,7 @@
 import { authorizeLocalResourceUrl } from "@shared";
 
 /** 只为最终预览/导出 HTML 加入窗口凭证，笔记正文保持可移植的路径。 */
-export function authorizeLocalResourcesInHtml(html: string, token: string): string {
+export function authorizeLocalResourcesInHtml(html: string, token: string, allowExternalMedia = false): string {
   if (!token || !html.includes("local-resource://")) return html;
   const document = new DOMParser().parseFromString(html, "text/html");
   for (const element of document.querySelectorAll("[src], [href], [poster], [srcset], [style]")) {
@@ -9,7 +9,12 @@ export function authorizeLocalResourcesInHtml(html: string, token: string): stri
       const value = element.getAttribute(attribute);
       if (!value?.startsWith("local-resource://")) continue;
       try {
-        element.setAttribute(attribute, authorizeLocalResourceUrl(value, token));
+        const authorized = authorizeLocalResourceUrl(value, token);
+        const isMedia = attribute !== "href" && element.matches("img, audio, video, source");
+        element.setAttribute(
+          attribute,
+          allowExternalMedia && isMedia ? authorized.replace(/^local-resource:/, "local-media:") : authorized
+        );
       } catch {
         element.removeAttribute(attribute);
       }
@@ -35,7 +40,8 @@ export function authorizeLocalResourcesInHtml(html: string, token: string): stri
           const url = (double ?? single ?? bare).trim();
           if (!url.startsWith("local-resource://")) return match;
           try {
-            return `url("${authorizeLocalResourceUrl(url, token)}")`;
+            const authorized = authorizeLocalResourceUrl(url, token);
+            return `url("${allowExternalMedia ? authorized.replace(/^local-resource:/, "local-media:") : authorized}")`;
           } catch {
             return 'url("")';
           }

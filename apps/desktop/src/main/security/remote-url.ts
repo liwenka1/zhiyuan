@@ -195,12 +195,16 @@ function requestPinnedTarget(target: ResolvedRemoteTarget, init: RequestInit): P
 
 export async function fetchSafeRemoteHttp(
   input: string | URL,
-  init: RequestInit = {}
+  init: RequestInit = {},
+  options: { httpsOnly?: boolean } = {}
 ): Promise<{ response: Response; finalUrl: URL }> {
   let currentUrl = typeof input === "string" ? new URL(input) : input;
 
   for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt += 1) {
+    init.signal?.throwIfAborted();
+    if (options.httpsOnly && currentUrl.protocol !== "https:") throw new Error("HTTPS is required");
     const target = await resolveSafeRemoteTarget(currentUrl);
+    init.signal?.throwIfAborted();
     const response = await requestPinnedTarget(target, init);
 
     if (REDIRECT_STATUSES.has(response.status)) {

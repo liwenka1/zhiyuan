@@ -3,8 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { authorizeLocalResourceUrl, createUrlTransformer, decodeLocalResourceUrl } from "@shared";
-import { resolveAuthorizedLocalResource } from "../../apps/desktop/src/main/security/local-resource";
+import { authorizeLocalResourceUrl, createUrlTransformer, decodeLocalResourceUrl, localResourceUrl } from "@shared";
+import {
+  resolveAuthorizedLocalResource,
+  resolveLocalMediaPreview
+} from "../../apps/desktop/src/main/security/local-resource";
 import { collectAndCopyAssets, embedLocalImages } from "../../apps/desktop/src/main/export/assets";
 
 describe("window-bound local resources", () => {
@@ -43,6 +46,21 @@ describe("window-bound local resources", () => {
     expect(resolveAuthorizedLocalResource(resourceUrl(imageA, "window-a"), workspaceForToken)).toBe(imageA);
     expect(resolveAuthorizedLocalResource(resourceUrl(imageB, "window-a"), workspaceForToken)).toBeNull();
     expect(resolveAuthorizedLocalResource(resourceUrl(imageB, "window-b"), workspaceForToken)).toBe(imageB);
+  });
+
+  it("permits only recognized external media through the preview protocol", async () => {
+    const document = path.join(workspaceB, "private.txt");
+    await fs.writeFile(document, "private text");
+    const previewUrl = (file: string, token = "window-a") =>
+      resourceUrl(file, token).replace("local-resource:", "local-media:");
+
+    expect(resolveLocalMediaPreview(previewUrl(imageB), workspaceForToken)).toEqual({
+      filePath: imageB,
+      mimeType: "image/png"
+    });
+    expect(resolveLocalMediaPreview(previewUrl(imageB, "unknown"), workspaceForToken)).toBeNull();
+    expect(resolveLocalMediaPreview(previewUrl(document), workspaceForToken)).toBeNull();
+    expect(resolveAuthorizedLocalResource(resourceUrl(imageB, "window-a"), workspaceForToken)).toBeNull();
   });
 
   it("requires a valid window token and rejects directories and escaped symlinks", async () => {
@@ -96,6 +114,19 @@ describe("window-bound local resources", () => {
 });
 
 describe("local resource URL compatibility", () => {
+  it("keeps Windows drives and UNC shares in the encoded path under a fixed host", () => {
+    const cases = [
+      ["D:\\Pictures\\a #100%.png", "D:/Pictures/a #100%.png"],
+      ["\\\\server\\share\\Pictures\\photo.png", "//server/share/Pictures/photo.png"]
+    ];
+    for (const [input, expected] of cases) {
+      const url = authorizeLocalResourceUrl(localResourceUrl(input), "window");
+      const parsed = new URL(url);
+      expect(parsed.hostname).toBe("file");
+      expect(parsed.pathname.slice(1)).not.toContain("/");
+      expect(decodeLocalResourceUrl(url)).toBe(expected);
+    }
+  });
   it("preserves fragments and non-capability query parameters while replacing foreign tokens", () => {
     const signed = authorizeLocalResourceUrl(
       "local-resource:///workspace/icons.svg?size=large&__window=foreign#symbol-1",

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Note } from "../../apps/desktop/src/renderer/src/types";
 
-const { noteState, workspaceState, githubState, pushMock, releaseMock, updateContentMock, saveMock } = vi.hoisted(
-  () => {
+const { noteState, workspaceState, githubState, pushMock, uploadMock, releaseMock, updateContentMock, saveMock } =
+  vi.hoisted(() => {
     const updateContentMock = vi.fn();
     const saveMock = vi.fn();
     return {
@@ -17,12 +17,12 @@ const { noteState, workspaceState, githubState, pushMock, releaseMock, updateCon
       workspaceState: { workspacePath: "/workspace" },
       githubState: { owner: "owner", repo: "repo", activeProjectKey: "project", isLoaded: true, load: vi.fn() },
       pushMock: vi.fn(),
+      uploadMock: vi.fn(),
       releaseMock: vi.fn(),
       updateContentMock,
       saveMock
     };
-  }
-);
+  });
 
 vi.mock("@/stores", () => ({
   useNoteStore: Object.assign((selector: (state: typeof noteState) => unknown) => selector(noteState), {
@@ -37,13 +37,11 @@ vi.mock("@/features/export", () => ({ useNoteExport: () => ({ exportNote: vi.fn(
 vi.mock("react-i18next", () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("@/ipc", () => ({
-  githubIpc: { pushIssue: pushMock, releasePublication: releaseMock },
+  githubIpc: { pushIssue: pushMock, uploadAsset: uploadMock, releasePublication: releaseMock },
   shellIpc: {},
   fileIpc: {},
   configIpc: {}
 }));
-vi.mock("@/lib/markdown-assets", () => ({ collectLocalMarkdownAssets: () => [], replaceMarkdownAssetUrls: vi.fn() }));
-vi.mock("@/lib/github-assets", () => ({ uploadMarkdownAssets: vi.fn() }));
 vi.mock("@/stores/note-store/persistence", () => ({ clearDebouncedSave: vi.fn(), clearPendingSave: vi.fn() }));
 
 import { useNoteHandlers } from "../../apps/desktop/src/renderer/src/features/note-workspace/hooks/use-note-handlers";
@@ -74,6 +72,7 @@ function holdPush() {
 describe("GitHub publishing", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    uploadMock.mockReset();
     pushMock.mockReset();
     pushMock.mockResolvedValue({
       issueNumber: 12,
@@ -102,6 +101,94 @@ describe("GitHub publishing", () => {
 
     expect(updateContentMock).toHaveBeenCalledWith("note.md", expect.stringContaining("typed while publishing"));
     expect(updateContentMock.mock.calls[0][1]).toContain("github-issue-number: 12");
+  });
+
+  it("uploads UNC attachments from the selected workspace and changes only those link destinations", async () => {
+    const image = "//server/share/My Notes/figure (1).png";
+    const encoded = "//server/share/My%20Notes/figure%20(1).png";
+    const web = "//server/share/My%20Notes-other/figure.png";
+    const publicImage = `https:${encoded}`;
+    const rawUrl = "https://raw.githubusercontent.com/owner/repo/main/assets/figure.png";
+    const example = `\`\`\`md\n![Example](${image})\n\`\`\``;
+    workspaceState.workspacePath = "\\\\server\\share\\My Notes";
+    noteState.notes = [
+      {
+        ...noteState.notes[0],
+        filePath: "\\\\server\\share\\My Notes\\note.md",
+        content: `[![Figure\ncaption](${image})](https://example.com)\n\n![Encoded\ncaption](${encoded})\n\n![Wrapped](\n  ${encoded}\n  "Title\ncaption"\n)\n\n![Quoted]("${image}")\n\n[Web](${web})\n\n[Public](${publicImage})\n\n${example}`
+      }
+    ];
+    uploadMock.mockResolvedValueOnce({ rawUrl });
+
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+
+    expect(uploadMock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ localPath: image }));
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        body: `[![Figure\ncaption](${rawUrl})](https://example.com)\n\n![Encoded\ncaption](${rawUrl})\n\n![Wrapped](\n  ${rawUrl}\n  "Title\ncaption"\n)\n\n![Quoted](${rawUrl})\n\n[Web](${web})\n\n[Public](${publicImage})\n\n${example}`
+      })
+    );
+  });
+
+  it("publishes both the image and click destinations of a linked local image", async () => {
+    const rawUrl = "https://raw.githubusercontent.com/owner/repo/main/assets/chart.png";
+    noteState.notes[0].content = '[![Preview](./chart.png)](./chart.png "Open full size")';
+    uploadMock.mockResolvedValueOnce({ rawUrl });
+
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+
+    expect(uploadMock).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ localPath: "/workspace/chart.png" }));
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ body: `[![Preview](${rawUrl})](${rawUrl} "Open full size")` })
+    );
+  });
+
+  it("uploads quoted local destinations with spaces after literal filename delimiters", async () => {
+    const filename = "figure#version two.png";
+    const rawUrl = "https://raw.githubusercontent.com/owner/repo/main/assets/figure%23version%20two.png";
+    const webLink = '[Documentation]("https://example.com/guide")';
+    noteState.notes[0].content = [
+      `![Figure]("/workspace/${filename}")`,
+      `[Download]('./${filename}' "Open full size")`,
+      '[Legacy]("local-resource:///workspace/figure%23version two.png")',
+      webLink
+    ].join("\n\n");
+    uploadMock.mockResolvedValueOnce({ rawUrl });
+
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+
+    expect(uploadMock).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ localPath: `/workspace/${filename}` })
+    );
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        body: `![Figure](${rawUrl})\n\n[Download](${rawUrl} "Open full size")\n\n[Legacy](${rawUrl})\n\n${webLink}`
+      })
+    );
+  });
+
+  it("keeps a linked image parseable when its uploaded paths contain unmatched parentheses", async () => {
+    const prefix = "https://raw.githubusercontent.com/owner/repo/main/assets/draft(1).md)/";
+    const encoded = "https://raw.githubusercontent.com/owner/repo/main/assets/draft%281%29.md%29/";
+    noteState.notes[0].content = '[![Preview](./chart `draft`.png)](/workspace/chart (full).png "Open full size")';
+    uploadMock
+      .mockResolvedValueOnce({ rawUrl: `${prefix}preview.png` })
+      .mockResolvedValueOnce({ rawUrl: `${prefix}full.png` });
+
+    await createHandlers().handlePushToGitHub({ id: "note.md", title: "note" });
+
+    expect(uploadMock).toHaveBeenCalledTimes(2);
+    expect(uploadMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ localPath: "/workspace/chart `draft`.png" })
+    );
+    expect(uploadMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ localPath: "/workspace/chart (full).png" })
+    );
+    expect(pushMock).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ body: `[![Preview](${encoded}preview.png)](${encoded}full.png "Open full size")` })
+    );
   });
 
   it("does not apply a late result to the same note ID in another workspace", async () => {

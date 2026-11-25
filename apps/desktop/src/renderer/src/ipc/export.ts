@@ -3,16 +3,23 @@
  */
 
 import { unwrapIpcResult } from "@/lib/ipc-utils";
+import { useLanguageStore } from "@/stores/use-language-store";
 
 export const exportIpc = {
   showSaveDialog: async (options: {
     title: string;
     defaultPath: string;
     filters: Array<{ name: string; extensions: string[] }>;
-  }) => unwrapIpcResult(await window.api.export.showSaveDialog(options)),
+  }) =>
+    unwrapIpcResult(
+      await window.api.export.showSaveDialog({ ...options, language: useLanguageStore.getState().language })
+    ),
 
   saveHTMLFile: async (filePath: string, htmlContent: string) =>
     unwrapIpcResult(await window.api.export.saveHTMLFile(filePath, htmlContent)),
+
+  prepareHtmlPreview: async (html: string, notePath: string | undefined, missingLabel: string) =>
+    unwrapIpcResult(await window.api.export.prepareHtmlPreview(html, notePath, missingLabel)),
 
   exportAsPDF: async (htmlContent: string, filePath: string, notePath?: string) =>
     unwrapIpcResult(await window.api.export.exportAsPDF(htmlContent, filePath, notePath)),

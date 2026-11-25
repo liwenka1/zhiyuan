@@ -21,7 +21,8 @@ import fs from "fs";
 import path from "path";
 import { ipcOk, ipcErr } from "./ipc/ipc-result";
 import type { IpcResultDTO } from "@shared";
-import { resolveAuthorizedLocalResource } from "./security/local-resource";
+import { resolveAuthorizedLocalResource, resolveLocalMediaPreview } from "./security/local-resource";
+import { createLocalMediaResponse } from "./security/local-media-response";
 import { initializeDiagnostics, recordDiagnostic } from "./diagnostics";
 import { registerDiagnosticsHandlers } from "./ipc/diagnostics-handler";
 import { getExternalOpenCandidates } from "./external-open-args";
@@ -116,6 +117,10 @@ protocol.registerSchemesAsPrivileged([
       standard: true,
       secure: true
     }
+  },
+  {
+    scheme: "local-media",
+    privileges: { stream: true, standard: true, secure: true }
   }
 ]);
 
@@ -139,6 +144,21 @@ app.whenReady().then(() => {
       return net.fetch(fileUrl);
     } catch {
       return new Response("File not found", { status: 404 });
+    }
+  });
+  protocol.handle("local-media", async (request) => {
+    try {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response(null, { status: 405, headers: { allow: "GET, HEAD" } });
+      }
+      const preview = resolveLocalMediaPreview(request.url, (token) =>
+        windowManager.getWorkspaceForResourceToken(token)
+      );
+      if (!preview) return new Response(null, { status: 404 });
+
+      return await createLocalMediaResponse(request, preview);
+    } catch {
+      return new Response(null, { status: 404 });
     }
   });
 

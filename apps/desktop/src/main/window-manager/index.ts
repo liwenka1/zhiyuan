@@ -9,6 +9,7 @@ import icon from "../../../resources/icon.png?asset";
 import { themeManager } from "../theme";
 import { getThemeBackgroundColor, getThemeForegroundColor } from "../theme/colors";
 import { isSafeUrl } from "../security/url-validator";
+import type { WorkspacePathScope } from "../security/path-validator";
 import { fileWatcherManager } from "../file-watcher";
 import { configManager } from "../config";
 import { recordDiagnostic } from "../diagnostics";
@@ -222,9 +223,11 @@ class WindowManager {
     return this.windows.get(windowId);
   }
 
-  getWorkspaceForResourceToken(token: string): string | null {
+  getWorkspaceForResourceToken(token: string): WorkspacePathScope | null {
     for (const entry of this.windows.values()) {
-      if (entry.localResourceToken === token && !entry.window.isDestroyed()) return entry.workspacePath;
+      if (entry.localResourceToken === token && entry.workspacePath && !entry.window.isDestroyed()) {
+        return { workspacePath: entry.workspacePath, scannedWorkspacePath: entry.scannedWorkspacePath };
+      }
     }
     return null;
   }

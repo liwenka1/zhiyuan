@@ -1,6 +1,7 @@
-import { app, dialog, nativeImage, type BrowserWindow } from "electron";
+import { app, dialog, nativeImage, net, type BrowserWindow } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { decodeLocalResourceUrl } from "@shared";
 
 const EDITED_CONTENT = "# Desktop smoke edited\n\nSaved through the real editor.\n";
 const EXPORT_WIDTH = 320;
@@ -62,6 +63,45 @@ export function buildDesktopSmokeSelectionScript(expectedText: string): string {
       return document.hasFocus() && document.activeElement === editor && window.getSelection()?.toString() === ${JSON.stringify(expectedText)};
     })()
   `;
+}
+
+async function runLocalMediaSmoke(window: BrowserWindow, fixture: string): Promise<void> {
+  let source: string | null = null;
+  const deadline = Date.now() + 4_000;
+  while (!source && Date.now() < deadline) {
+    source = await window.webContents.executeJavaScript(`
+      (() => {
+        const markdownImage = document.querySelector('img[alt^="Smoke media"]');
+        const htmlImage = document.querySelector('img[alt="Smoke encoded media"]');
+        if (!markdownImage || !htmlImage) return null;
+        markdownImage.loading = htmlImage.loading = 'eager';
+        if (!markdownImage.naturalWidth || !htmlImage.naturalWidth) return null;
+        const htmlSource = new URL(htmlImage.currentSrc);
+        if (htmlSource.searchParams.get('size') !== 'large' || htmlSource.hash !== '#detail') return null;
+        htmlSource.searchParams.delete('size');
+        htmlSource.hash = '';
+        return htmlSource.href === markdownImage.currentSrc ? markdownImage.currentSrc : null;
+      })()
+    `);
+    if (!source) await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+  if (!source) throw new Error("The renderer could not load the local media fixture");
+  const url = new URL(source);
+  const decoded = decodeLocalResourceUrl(source.replace(/^local-media:/, "local-resource:"));
+  if (url.protocol !== "local-media:" || url.hostname !== "file" || path.resolve(decoded) !== path.resolve(fixture)) {
+    throw new Error("The local media request changed the native file path");
+  }
+
+  const expected = await fs.readFile(fixture);
+  const response = await net.fetch(source, { headers: { range: "bytes=1-4" } });
+  if (
+    response.status !== 206 ||
+    response.headers.get("content-range") !== `bytes 1-4/${expected.length}` ||
+    response.headers.get("content-length") !== "4" ||
+    !Buffer.from(await response.arrayBuffer()).equals(expected.subarray(1, 5))
+  ) {
+    throw new Error("The local media protocol did not return the requested byte range");
+  }
 }
 
 function runTerminalSmoke(window: BrowserWindow): Promise<boolean> {
@@ -229,6 +269,12 @@ export function startDesktopSmokeTest(window?: BrowserWindow): void {
       }
       if (finished) return;
       if (!editorReady) throw new Error("The startup file was not automatically selected in a working Markdown editor");
+      if (process.env.ZHIYUAN_SMOKE_MEDIA) {
+        stage = "checking-local-media";
+        await runLocalMediaSmoke(window, process.env.ZHIYUAN_SMOKE_MEDIA);
+        if (finished) return;
+        console.log("ZHIYUAN_SMOKE_MEDIA_READY");
+      }
       stage = "focusing-editor";
       let selectionReady = false;
       while (!finished && Date.now() < deadline) {

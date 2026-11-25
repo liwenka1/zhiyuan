@@ -3,11 +3,7 @@
  * 在渲染进程中直接使用 unified 处理 Markdown
  */
 
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import remarkMath from "remark-math";
 import remarkRehype from "remark-rehype";
 import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
@@ -16,11 +12,13 @@ import rehypePrettyCode from "rehype-pretty-code";
 import rehypeKatex from "rehype-katex";
 import rehypeStringify from "rehype-stringify";
 import type { Root, Element } from "hast";
+import type { Root as MarkdownRoot } from "mdast";
 import { visit } from "unist-util-visit";
 import { iconButtonVariants } from "@/components/ui/button";
 import { markdownSanitizeSchema } from "./markdown-sanitize-config";
-import { normalizeMarkdownPaths, resolveResourcePath, isRelativePath } from "@shared";
+import { createUrlTransformer } from "@shared";
 import { authorizeLocalResourcesInHtml } from "./local-resource";
+import { markdownParser, normalizeMarkdownPaths } from "./markdown-links";
 
 type MermaidApi = typeof import("mermaid").default;
 let mermaidPromise: Promise<MermaidApi> | null = null;
@@ -192,30 +190,41 @@ async function renderMermaidBlocks(html: string, isDarkTheme = false): Promise<s
   return result;
 }
 
-/**
- * 解析 HTML 中的相对路径（img src, a href 等）
- * 将相对路径转换为 local-resource:// 协议的绝对路径
- */
-function resolveRelativePathsInHTML(html: string, notePath: string): string {
-  const document = new DOMParser().parseFromString(html, "text/html");
-  for (const element of document.querySelectorAll("img[src], a[href], video[src], audio[src], source[src]")) {
-    const attribute = element.tagName.toLowerCase() === "a" ? "href" : "src";
-    const source = element.getAttribute(attribute);
-    if (source && isRelativePath(source)) {
-      // Read HTML entities once, resolve URL path escapes once, then let the DOM serialize the attribute.
-      element.setAttribute(attribute, resolveResourcePath(source, notePath));
-    }
-  }
-  return document.body.innerHTML;
+function remarkResolveResourcePaths(notePath?: string, workspacePath?: string | null) {
+  const resolve = createUrlTransformer(notePath, { syntax: "markdown", workspacePath });
+  return (tree: MarkdownRoot) => {
+    visit(tree, ["link", "image", "definition"] as const, (node) => {
+      // Resolve before remark-rehype begins percent-encoding Markdown destinations.
+      node.url = resolve(node.url);
+    });
+  };
+}
+
+function rehypeResolveResourcePaths(notePath?: string, workspacePath?: string | null) {
+  const resolve = createUrlTransformer(notePath, { syntax: "html", workspacePath });
+  return (tree: Root) => {
+    visit(tree, "element", (node) => {
+      const attributes = node.tagName === "a" ? ["href"] : node.tagName === "video" ? ["src", "poster"] : ["src"];
+      if (!["a", "img", "audio", "video", "source"].includes(node.tagName)) return;
+      for (const attribute of attributes) {
+        const source = node.properties[attribute];
+        if (typeof source !== "string" || !source) continue;
+        node.properties[attribute] = resolve(source);
+      }
+    });
+  };
 }
 
 export interface MarkdownToHTMLOptions {
   /** 笔记文件路径（可选），用于解析相对资源路径 */
   notePath?: string;
+  /** 当前工作区，用于识别从 UNC 工作区复制的绝对路径 */
+  workspacePath?: string | null;
   /** 是否为深色主题（影响 Mermaid 图表配色） */
   isDarkTheme?: boolean;
   /** 是否为代码块注入复制按钮（仅预览） */
   enableCopyButton?: boolean;
+  allowExternalMedia?: boolean;
 }
 
 /**
@@ -227,19 +236,18 @@ export interface MarkdownToHTMLOptions {
 export async function markdownToHTML(markdown: string, options?: MarkdownToHTMLOptions | string): Promise<string> {
   // 兼容旧版 API：第二个参数可以是字符串（notePath）或对象
   const opts: MarkdownToHTMLOptions = typeof options === "string" ? { notePath: options } : (options ?? {});
-  const { notePath, isDarkTheme, enableCopyButton = true } = opts;
+  const { notePath, workspacePath, isDarkTheme, enableCopyButton = true, allowExternalMedia = false } = opts;
   // 预处理：规范化本地路径
   // normalizeMarkdownPaths 会将本地绝对路径（/Users/...）转换为 local-resource:// 协议
   // 这样导出和预览的行为才能保持一致
-  const normalized = normalizeMarkdownPaths(markdown);
+  const normalized = normalizeMarkdownPaths(markdown, workspacePath);
   const buildProcessor = (usePrettyCode: boolean) => {
-    const processor = unified()
-      .use(remarkParse) // 解析 Markdown
-      .use(remarkGfm) // 支持 GitHub Flavored Markdown
+    const processor = markdownParser()
       .use(remarkBreaks) // 支持换行
-      .use(remarkMath) // 支持数学公式语法
+      .use(remarkResolveResourcePaths, notePath, workspacePath)
       .use(remarkRehype, { allowDangerousHtml: true }) // 转换为 HTML AST
       .use(rehypeRaw) // 支持原始 HTML
+      .use(rehypeResolveResourcePaths, notePath, workspacePath)
       .use(rehypeSanitize, markdownSanitizeSchema) // 安全过滤：移除恶意脚本，保留安全的 HTML
       .use(rehypeSlug); // 为标题添加 id
 
@@ -261,13 +269,7 @@ export async function markdownToHTML(markdown: string, options?: MarkdownToHTMLO
   const file = await buildProcessor(true).process(normalized);
 
   // 处理 Mermaid 图表
-  let html = await renderMermaidBlocks(String(file), isDarkTheme);
-
-  // 如果提供了 notePath，处理 HTML 中的相对路径
-  if (notePath) {
-    html = resolveRelativePathsInHTML(html, notePath);
-  }
-
+  const html = await renderMermaidBlocks(String(file), isDarkTheme);
   const resourceToken = typeof window === "undefined" ? "" : (window.api?.utils?.getLocalResourceToken?.() ?? "");
-  return authorizeLocalResourcesInHtml(html, resourceToken);
+  return authorizeLocalResourcesInHtml(html, resourceToken, allowExternalMedia);
 }

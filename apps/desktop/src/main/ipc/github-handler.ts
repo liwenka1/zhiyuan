@@ -6,7 +6,7 @@ import type { GitHubAssetUploadRequest, GitHubAssetUploadResult } from "@shared"
 import fs from "fs/promises";
 import path from "path";
 import crypto from "crypto";
-import { getCallerWorkspace } from "../security/window-context";
+import { getCallerWorkspaceScope } from "../security/window-context";
 import { validatePathInWorkspace } from "../security/path-validator";
 import { configManager } from "../config";
 import { isValidFileNameSegment } from "@shared";
@@ -57,12 +57,12 @@ export function registerGitHubHandlers(): void {
           return ipcErr("Missing issue title", "GITHUB_PUSH_TITLE_MISSING");
         }
 
-        const workspacePath = getCallerWorkspace(event);
         if (typeof payload.sourcePath !== "string" || !path.isAbsolute(payload.sourcePath)) {
           return ipcErr("Missing source file path", "GITHUB_PUSH_SOURCE_INVALID");
         }
-        const sourcePath = await fs.realpath(payload.sourcePath);
-        if (!validatePathInWorkspace(workspacePath, sourcePath).isValid || !(await fs.stat(sourcePath)).isFile()) {
+        const validation = validatePathInWorkspace(getCallerWorkspaceScope(event), payload.sourcePath);
+        const sourcePath = validation.normalizedPath;
+        if (!validation.isValid || !(await fs.stat(sourcePath)).isFile()) {
           return ipcErr("Source file is outside workspace", "GITHUB_PUSH_SOURCE_INVALID");
         }
         lease = publications.acquire(sourcePath, owner, repo, event.sender);
@@ -143,8 +143,7 @@ export function registerGitHubHandlers(): void {
           return ipcErr("Invalid note id", "GITHUB_UPLOAD_NOTE_ID_INVALID");
         }
 
-        const workspacePath = getCallerWorkspace(event);
-        const validation = validatePathInWorkspace(workspacePath, localPath);
+        const validation = validatePathInWorkspace(getCallerWorkspaceScope(event), localPath);
         if (!validation.isValid) {
           return ipcErr("Asset path is outside workspace", "GITHUB_UPLOAD_PATH_INVALID");
         }

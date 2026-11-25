@@ -9,6 +9,7 @@ export const exportApi = {
     title: string;
     defaultPath: string;
     filters: Array<{ name: string; extensions: string[] }>;
+    language?: "zh" | "en";
   }): Promise<IpcResultDTO<string | null>> => ipcRenderer.invoke("export:show-save-dialog", options),
 
   /**
@@ -16,6 +17,12 @@ export const exportApi = {
    */
   saveHTMLFile: (filePath: string, htmlContent: string): Promise<IpcResultDTO<void>> =>
     ipcRenderer.invoke("export:save-html-file", filePath, htmlContent),
+
+  prepareHtmlPreview: (
+    html: string,
+    notePath: string | undefined,
+    missingLabel: string
+  ): Promise<IpcResultDTO<string>> => ipcRenderer.invoke("export:prepare-html-preview", html, notePath, missingLabel),
 
   /**
    * 导出为 PDF

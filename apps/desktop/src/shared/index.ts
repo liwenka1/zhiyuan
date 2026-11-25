@@ -35,7 +35,7 @@ export {
   resolveResourcePath,
   resolveLocalPath,
   createUrlTransformer,
-  normalizeMarkdownPaths,
+  localResourceUrl,
   decodeLocalResourceUrl,
   authorizeLocalResourceUrl
 } from "./resource-path";

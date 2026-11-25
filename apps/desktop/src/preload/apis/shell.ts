@@ -13,6 +13,8 @@ export const shellApi = {
    */
   openPath: (fullPath: string): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("shell:openPath", fullPath),
 
+  openNoteLink: (fullPath: string): Promise<IpcResultDTO<void>> => ipcRenderer.invoke("shell:openNoteLink", fullPath),
+
   /**
    * 在系统默认浏览器中打开链接
    */

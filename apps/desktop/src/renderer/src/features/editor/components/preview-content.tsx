@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ExportPreview } from "./export-preview";
@@ -11,6 +11,7 @@ interface PreviewContentProps {
   notePath?: string;
   noteId?: string;
   noteTitle?: string;
+  isActive?: boolean;
 }
 
 /**
@@ -19,55 +20,47 @@ interface PreviewContentProps {
  * - 导出预览模式：使用 ExportPreview（iframe 渲染完整导出样式）
  * - 普通预览模式：使用 MarkdownPreview（直接渲染 Markdown）
  */
-export function PreviewContent({ content, notePath, noteId, noteTitle }: PreviewContentProps) {
+export function PreviewContent({ content, notePath, noteId, noteTitle, isActive = true }: PreviewContentProps) {
   const { t } = useTranslation("editor");
-  const exportPreview = useViewStore((state) => state.previewConfig.exportPreview);
+  const exportPreview = useViewStore((state) => state.previewConfig.exportPreview) && isActive;
   const exportThemeId = useExportThemeStore((state) => state.exportThemeId);
   const exportLayout = useExportLayoutStore((state) => state.exportLayout);
-  const [shouldRenderExportPreview, setShouldRenderExportPreview] = useState(exportPreview);
   const [exportPreviewDoc, setExportPreviewDoc] = useState("");
   const [isPreparingExportPreview, setIsPreparingExportPreview] = useState(false);
-  const renderVersionRef = useRef(0);
 
   useEffect(() => {
-    if (exportPreview) {
-      setShouldRenderExportPreview(true);
-    }
-  }, [exportPreview]);
+    if (!exportPreview) return;
 
-  useEffect(() => {
-    if (!shouldRenderExportPreview) return;
-
-    let isCancelled = false;
+    const controller = new AbortController();
+    const { signal } = controller;
     const timer = window.setTimeout(async () => {
-      const version = renderVersionRef.current + 1;
-      renderVersionRef.current = version;
       setIsPreparingExportPreview(true);
 
       try {
-        const html = await renderNoteExportPreviewHtml({
-          title: noteTitle || t("toolbar.exportPreview"),
-          markdown: content,
-          themeId: exportThemeId,
-          layout: exportLayout,
-          notePath
-        });
+        const html = await renderNoteExportPreviewHtml(
+          {
+            title: noteTitle || t("toolbar.exportPreview"),
+            markdown: content,
+            themeId: exportThemeId,
+            layout: exportLayout,
+            notePath
+          },
+          signal
+        );
 
-        if (!isCancelled && renderVersionRef.current === version) {
-          setExportPreviewDoc(html);
-        }
+        if (!signal.aborted) setExportPreviewDoc(html);
+      } catch {
+        if (!signal.aborted) setExportPreviewDoc("");
       } finally {
-        if (!isCancelled && renderVersionRef.current === version) {
-          setIsPreparingExportPreview(false);
-        }
+        if (!signal.aborted) setIsPreparingExportPreview(false);
       }
     }, 120);
 
     return () => {
-      isCancelled = true;
+      controller.abort();
       window.clearTimeout(timer);
     };
-  }, [content, exportLayout, exportThemeId, notePath, noteTitle, shouldRenderExportPreview, t]);
+  }, [content, exportLayout, exportThemeId, notePath, noteTitle, exportPreview, t]);
 
   return (
     <ScrollArea
@@ -87,7 +80,7 @@ export function PreviewContent({ content, notePath, noteId, noteTitle }: Preview
         <MarkdownPreview content={content} notePath={notePath} noteId={noteId} />
       </div>
 
-      {shouldRenderExportPreview ? (
+      {exportPreview || exportPreviewDoc ? (
         <div
           aria-hidden={!exportPreview}
           style={

@@ -5,6 +5,7 @@
 
 import path from "path";
 import fs from "fs";
+import { isWindowsNetworkPath } from "./local-file";
 
 /**
  * 规范化路径，解析符号链接和相对路径
@@ -69,13 +70,29 @@ export interface PathValidationResult {
   code?: "ENOTDIR";
 }
 
+export interface WorkspacePathScope {
+  readonly workspacePath: string;
+  readonly scannedWorkspacePath?: string | null;
+}
+
+function isWithinWindowsShare(root: string | null | undefined, target: string): boolean {
+  if (!root || !isWindowsNetworkPath(root)) return false;
+  const relative = path.win32.relative(root, target);
+  return !path.win32.isAbsolute(relative) && relative !== ".." && !relative.startsWith("..\\");
+}
+
 /**
  * 校验路径是否在工作区内
  * @param workspacePath 工作区路径
  * @param targetPath 目标路径
  * @returns 校验结果
  */
-export function validatePathInWorkspace(workspacePath: string, targetPath: string): PathValidationResult {
+export function validatePathInWorkspace(
+  workspace: string | WorkspacePathScope,
+  targetPath: string
+): PathValidationResult {
+  const workspacePath = typeof workspace === "string" ? workspace : workspace.workspacePath;
+  const scannedPath = typeof workspace === "string" ? null : workspace.scannedWorkspacePath;
   if (!isAbsoluteFilePath(workspacePath) || !isAbsoluteFilePath(targetPath)) {
     return {
       isValid: false,
@@ -84,9 +101,18 @@ export function validatePathInWorkspace(workspacePath: string, targetPath: strin
     };
   }
 
+  // A Windows share can initiate a connection during realpath or even lstat.
+  const throughShareAlias = isWindowsNetworkPath(targetPath) && !isWithinWindowsShare(workspacePath, targetPath);
+  if (throughShareAlias && !isWithinWindowsShare(scannedPath, targetPath)) {
+    return { isValid: false, normalizedPath: "", reason: "Network path is outside the workspace" };
+  }
+
   try {
     const normalizedBase = fs.realpathSync.native(path.resolve(workspacePath));
     if (!fs.statSync(normalizedBase).isDirectory()) throw new Error("Invalid workspace directory");
+    if (throughShareAlias && scannedPath && fs.realpathSync.native(path.resolve(scannedPath)) !== normalizedBase) {
+      return { isValid: false, normalizedPath: "", reason: "The selected workspace alias has changed" };
+    }
     const { normalizedPath, blockedByFile } = normalizePath(targetPath);
     if (isNormalizedPathInside(normalizedBase, normalizedPath)) {
       if (blockedByFile) {

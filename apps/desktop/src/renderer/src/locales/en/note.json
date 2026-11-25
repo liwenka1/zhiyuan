@@ -47,6 +47,7 @@
     "failed": "Operation failed, please try again"
   },
   "export": {
+    "assetOmitted": "Omitted from export",
     "exporting": "Exporting...",
     "exportingWait": "Export in progress, please wait...",
     "success": "Export successful",

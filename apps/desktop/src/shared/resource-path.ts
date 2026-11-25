@@ -5,27 +5,35 @@
 
 export function isRelativePath(src: string): boolean {
   if (!src) return false;
-  if (/^(https?:|data:|file:|blob:|#|mailto:|local-resource:)/.test(src)) return false;
-  if (/^(\/|[A-Za-z]:)/.test(src)) return false;
-  return true;
+  return !/^(\/|\\\\|#|[a-z][a-z\d+.-]*:)/i.test(src);
 }
 
 export function isLocalAbsolutePath(src: string): boolean {
   if (!src) return false;
-  return /^(\/|[A-Za-z]:[/\\])/.test(src);
+  return /^(\/(?!\/)|\\\\|[A-Za-z]:[/\\])/.test(src);
 }
 
 function normalizePath(pathValue: string): string {
-  return pathValue.replace(/\\/g, "/");
+  return /^(?:[A-Za-z]:[/\\]|\\\\)/.test(pathValue) ? pathValue.replace(/\\/g, "/") : pathValue;
 }
 
-function localResourceUrl(filePath: string): string {
-  const normalized = normalizePath(filePath);
-  const encoded = encodeURI(normalized).replaceAll("?", "%3F").replaceAll("#", "%23");
-  return `local-resource://${normalized.startsWith("/") ? "" : "/"}${encoded}`;
+export function isWorkspaceUncPath(source: string, workspacePath?: string | null): boolean {
+  if (!source.startsWith("//") || !workspacePath) return false;
+  const workspace = normalizePath(workspacePath).replace(/\/+$/, "").toLowerCase();
+  const candidate = source.toLowerCase();
+  return workspace.startsWith("//") && (candidate === workspace || candidate.startsWith(`${workspace}/`));
 }
 
-function decodeResourcePath(value: string): string {
+export function localResourceUrl(filePath: string): string {
+  // Chromium treats leading path segments as the host on standard schemes without an authority.
+  const encoded = encodeURIComponent(normalizePath(filePath)).replace(
+    /[!'()*]/g,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+  return `local-resource://file/${encoded}`;
+}
+
+export function decodeResourcePath(value: string): string {
   // URL 路径只解码一次；未转义的百分号仍可以是合法文件名。
   return value.replace(/(?:%[\da-f]{2})+/gi, (encoded) => {
     try {
@@ -36,7 +44,7 @@ function decodeResourcePath(value: string): string {
   });
 }
 
-function splitResourceReference(value: string): { pathname: string; suffix: string } {
+export function splitResourceReference(value: string): { pathname: string; suffix: string } {
   const suffixIndex = value.search(/[?#]/);
   return suffixIndex < 0
     ? { pathname: value, suffix: "" }
@@ -46,7 +54,7 @@ function splitResourceReference(value: string): { pathname: string; suffix: stri
 function getDirectory(filePath: string): string {
   const normalized = normalizePath(filePath);
   const lastSlash = normalized.lastIndexOf("/");
-  return lastSlash > 0 ? normalized.substring(0, lastSlash) : normalized;
+  return lastSlash >= 0 ? normalized.substring(0, lastSlash) : normalized;
 }
 
 export function resolveResourcePath(src: string, notePath: string): string {
@@ -54,7 +62,8 @@ export function resolveResourcePath(src: string, notePath: string): string {
 
   const noteDir = getDirectory(notePath);
   const { pathname, suffix } = splitResourceReference(src);
-  const decodedSrc = decodeResourcePath(pathname);
+  // Bare separators are portable Markdown. An encoded %5C is a literal POSIX filename character.
+  const decodedSrc = decodeResourcePath(pathname.replaceAll("\\", "/"));
   const cleanSrc = decodedSrc.replace(/^\.\//, "");
   const fullPath = `${noteDir}/${cleanSrc}`;
 
@@ -65,20 +74,39 @@ export function resolveLocalPath(src: string, notePath: string): string {
   if (!isRelativePath(src)) return src;
 
   const noteDir = getDirectory(notePath);
-  const cleanSrc = src.replace(/^\.\//, "");
+  const cleanSrc = decodeResourcePath(src.replaceAll("\\", "/")).replace(/^\.\//, "");
 
   return `${noteDir}/${cleanSrc}`;
 }
 
-export function createUrlTransformer(notePath: string | undefined) {
+export function createUrlTransformer(
+  notePath: string | undefined,
+  options?: { syntax?: "markdown" | "html"; workspacePath?: string | null; scannedWorkspacePath?: string | null }
+) {
   return (url: string): string => {
-    if (url.startsWith("local-resource://")) {
-      return url;
+    if (/^file:/i.test(url)) {
+      try {
+        const file = new URL(url);
+        if (file.hostname) return url;
+        const pathname = decodeURIComponent(file.pathname).replace(/^\/([A-Za-z]:\/)/, "$1");
+        return isLocalAbsolutePath(pathname) ? `${localResourceUrl(pathname)}${file.search}${file.hash}` : url;
+      } catch {
+        return url;
+      }
     }
 
-    if (isLocalAbsolutePath(url)) {
-      // 绝对路径来自本地文件系统，#、?、% 都属于文件名。
-      return localResourceUrl(url);
+    const absolute = isLocalAbsolutePath(url);
+    if (absolute || url.startsWith("//")) {
+      const { pathname, suffix } = options?.syntax ? splitResourceReference(url) : { pathname: url, suffix: "" };
+      const filePath = options?.syntax ? decodeResourcePath(pathname) : pathname;
+      if (
+        absolute ||
+        isWorkspaceUncPath(filePath, options?.workspacePath) ||
+        isWorkspaceUncPath(filePath, options?.scannedWorkspacePath)
+      ) {
+        return localResourceUrl(filePath) + suffix;
+      }
+      return `https:${url}`;
     }
 
     if (notePath && isRelativePath(url)) {
@@ -89,36 +117,14 @@ export function createUrlTransformer(notePath: string | undefined) {
   };
 }
 
-export function normalizeMarkdownPaths(markdown: string): string {
-  const linkRegex = /(!?\[[^\]]*\]\()([^\s)]+|[^\s)]+[^)]*?)(\))/g;
-  return markdown.replace(linkRegex, (match, prefix, rawUrl, suffix) => {
-    const trimmed = rawUrl.trim();
-    const isAbsolute = isLocalAbsolutePath(trimmed);
-    const isRelative = isRelativePath(trimmed);
-
-    if (!isAbsolute && !isRelative) return match;
-
-    if (isAbsolute) {
-      return `${prefix}${localResourceUrl(trimmed)}${suffix}`;
-    }
-
-    if (/\s/.test(trimmed)) {
-      const reference = splitResourceReference(trimmed);
-      const encodedPath = encodeURI(decodeResourcePath(reference.pathname))
-        .replaceAll("#", "%23")
-        .replaceAll("?", "%3F");
-      return `${prefix}${encodedPath}${reference.suffix}${suffix}`;
-    }
-
-    return match;
-  });
-}
-
 export function decodeLocalResourceUrl(url: string): string {
   if (!url.startsWith("local-resource://")) return url;
   const parsed = new URL(url);
+  if (parsed.hostname === "file" && /^\/(?:%2f|[a-z]%3a%2f)[^/]*$/i.test(parsed.pathname)) {
+    return decodeURIComponent(parsed.pathname.slice(1));
+  }
   const decodedPath = decodeURIComponent(parsed.pathname);
-  // 兼容旧版 Windows URL，同时为新版 hostless URL 保留盘符。
+  // 兼容旧版 URL。
   const legacyDrive = /^local-resource:\/\/([A-Za-z]):\//.exec(url)?.[1];
   if (legacyDrive) return `${legacyDrive}:${decodedPath}`;
   if (/^\/[A-Za-z]:\//.test(decodedPath)) return decodedPath.slice(1);

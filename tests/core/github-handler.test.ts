@@ -29,7 +29,9 @@ vi.mock("../../apps/desktop/src/main/github", () => ({
   getContentSha: vi.fn(),
   uploadContent: uploadMock
 }));
-vi.mock("../../apps/desktop/src/main/security/window-context", () => ({ getCallerWorkspace: () => fixture.root }));
+vi.mock("../../apps/desktop/src/main/security/window-context", () => ({
+  getCallerWorkspaceScope: () => ({ workspacePath: fixture.root })
+}));
 vi.mock("../../apps/desktop/src/main/window-manager", () => ({
   windowManager: { getEntryByWebContents: () => ({ rendererUrl: RENDERER_URL }) }
 }));

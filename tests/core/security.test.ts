@@ -1,7 +1,8 @@
 import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   isValidFileNameSegment,
   isValidWorkspaceEntryName,
@@ -34,6 +35,70 @@ describe("file name policy", () => {
 });
 
 describe("workspace path policy", () => {
+  it("allows a scanned UNC alias only while it resolves to the selected workspace", () => {
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+    const workspacePath = path.resolve("canonical-workspace");
+    const scannedWorkspacePath = "//approved.invalid/share/notes";
+    const aliasedFile = `${scannedWorkspacePath}/note.md`;
+    const file = path.join(workspacePath, "note.md");
+    const unrelated = path.resolve("another-workspace");
+    let aliasRoot = workspacePath;
+    const lstat = vi.spyOn(fs, "lstatSync").mockReturnValue({} as fs.Stats);
+    const stat = vi.spyOn(fs, "statSync").mockReturnValue({ isDirectory: () => true } as fs.Stats);
+    const realpath = vi.spyOn(fs.realpathSync, "native").mockImplementation((candidate) => {
+      if (candidate === path.resolve(scannedWorkspacePath)) return aliasRoot;
+      if (candidate === path.resolve(aliasedFile)) return file;
+      return String(candidate);
+    });
+    Object.defineProperty(process, "platform", { ...platform, value: "win32" });
+    try {
+      const workspace = { workspacePath, scannedWorkspacePath };
+      expect(validatePathInWorkspace(workspace, aliasedFile)).toEqual({ isValid: true, normalizedPath: file });
+      lstat.mockClear();
+      realpath.mockClear();
+
+      const sibling = "//approved.invalid/share/notes-other/note.md";
+      expect(validatePathInWorkspace(workspace, sibling).isValid).toBe(false);
+      expect(realpath).not.toHaveBeenCalled();
+
+      aliasRoot = unrelated;
+      expect(validatePathInWorkspace(workspace, aliasedFile).isValid).toBe(false);
+      expect(lstat).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(process, "platform", platform);
+      realpath.mockRestore();
+      stat.mockRestore();
+      lstat.mockRestore();
+    }
+  });
+  it("rejects Windows shares outside the selected workspace before any filesystem probe", () => {
+    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+    const workspace = path.resolve("workspace");
+    const realpath = vi.spyOn(fs.realpathSync, "native").mockImplementation(() => {
+      throw new Error("No filesystem access in this test");
+    });
+    Object.defineProperty(process, "platform", { ...platform, value: "win32" });
+    try {
+      expect(validatePathInWorkspace(workspace, "//unapproved.invalid/share/image.png")).toMatchObject({
+        isValid: false,
+        reason: "Network path is outside the workspace"
+      });
+      expect(validatePathInWorkspace("//server/share/notes", "//server/share/notes-other/image.png").isValid).toBe(
+        false
+      );
+      expect(validatePathInWorkspace("//server/share/notes", "//other-server/share/notes/image.png").isValid).toBe(
+        false
+      );
+      expect(realpath).not.toHaveBeenCalled();
+
+      validatePathInWorkspace("//server/share/notes", "//SERVER/share/notes/assets/image.png");
+      expect(realpath).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(process, "platform", platform);
+      realpath.mockRestore();
+    }
+  });
+
   it("rejects symlink escapes while allowing new files below real directories", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "zhiyuan-path-test-"));
     const workspace = path.join(root, "workspace");

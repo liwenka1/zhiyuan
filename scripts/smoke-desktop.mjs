@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { createRequire } from "node:module";
 import { once } from "node:events";
-import { mkdir, mkdtemp, open, readFile, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, open, readFile, realpath, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const require = createRequire(import.meta.url);
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -20,9 +20,15 @@ const workspaceAlias = path.join(smokeRoot, "workspace-alias");
 const noteName = `${"s".repeat(245)}.md`;
 const notePath = path.join(workspace, noteName);
 const decoyPath = path.join(workspace, "000-decoy.md");
-const initialContent = "# Desktop smoke\n\nFixture before edit.\n";
+const mediaPath = path.join(smokeRoot, "media `draft` (preview) [fixture] & # %.png");
+const markdownMediaPath = mediaPath.replaceAll("&", "&amp;");
+const htmlMediaPath = pathToFileURL(mediaPath)
+  .pathname.replace(/^\/([A-Za-z]:\/)/, "$1")
+  .replaceAll("&", "&amp;");
+const initialContent = `# Desktop smoke\n\nFixture before edit.\n\n![Smoke media\nfixture](${markdownMediaPath})\n\n<img src="${htmlMediaPath}?size=large#detail" alt="Smoke encoded media">\n`;
 const expectedContent = "# Desktop smoke edited\n\nSaved through the real editor.\n";
 const readyMarker = "ZHIYUAN_SMOKE_READY: editor opened, edited and saved";
+const mediaMarker = "ZHIYUAN_SMOKE_MEDIA_READY";
 const terminalMarker = "ZHIYUAN_SMOKE_TERMINAL_READY";
 const exportMarker = "ZHIYUAN_SMOKE_EXPORT_READY";
 const smokeTimeout = 25_000;
@@ -66,6 +72,7 @@ async function runSmokeCase(name, startupPath) {
         ZHIYUAN_SMOKE_EXPORT: packagedApp ? "1" : "",
         ZHIYUAN_SMOKE_USER_DATA: profileRoot,
         ZHIYUAN_SMOKE_NOTE: notePath,
+        ZHIYUAN_SMOKE_MEDIA: mediaPath,
         ...(process.platform === "darwin" && packagedApp ? { SHELL: "/bin/sh" } : {}),
         XDG_CONFIG_HOME: path.join(profileRoot, "config"),
         XDG_CACHE_HOME: path.join(profileRoot, "cache"),
@@ -86,6 +93,9 @@ async function runSmokeCase(name, startupPath) {
     }
     if ((await readFile(notePath, "utf8")) !== expectedContent) {
       throw new Error("Desktop smoke saved unexpected content");
+    }
+    if (!output.split(/\r?\n/).includes(mediaMarker)) {
+      throw new Error("Desktop smoke did not verify the local media protocol");
     }
     if (packagedApp && process.platform === "darwin" && !output.split(/\r?\n/).includes(terminalMarker)) {
       throw new Error("Packaged macOS app did not confirm a working terminal");
@@ -108,12 +118,14 @@ async function runSmokeCase(name, startupPath) {
     await log.close();
   }
   console.log(`desktop editor smoke passed: ${name} startup automatically selected, edited and saved the note`);
+  console.log(`desktop local media smoke passed: ${name} startup loaded the image and verified a partial response`);
   if (packagedApp && process.platform === "darwin") console.log(`desktop terminal smoke passed: ${name} startup`);
   if (packagedApp) console.log(`desktop image and HTML package export smoke passed: ${name} startup`);
 }
 
 try {
   await mkdir(workspace);
+  await copyFile(path.join(repoRoot, "apps/desktop/resources/icon.png"), mediaPath);
   await writeFile(decoyPath, "# Decoy note\n\nThis file must not be opened by the smoke test.\n");
   await symlink(workspace, workspaceAlias, process.platform === "win32" ? "junction" : "dir");
   await runSmokeCase("canonical", notePath);

@@ -384,7 +384,13 @@ const OpenNotePanels = memo(
             collapsible
             collapsedSize="0%"
           >
-            <PreviewContent content={content} notePath={notePath} noteId={noteId} noteTitle={noteTitle} />
+            <PreviewContent
+              content={content}
+              notePath={notePath}
+              noteId={noteId}
+              noteTitle={noteTitle}
+              isActive={isActive}
+            />
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>

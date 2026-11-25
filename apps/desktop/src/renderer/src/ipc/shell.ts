@@ -8,6 +8,7 @@ export const shellIpc = {
   showItemInFolder: async (fullPath: string) => unwrapIpcResult(await window.api.shell.showItemInFolder(fullPath)),
 
   openPath: async (fullPath: string) => unwrapIpcResult(await window.api.shell.openPath(fullPath)),
+  openNoteLink: async (fullPath: string) => unwrapIpcResult(await window.api.shell.openNoteLink(fullPath)),
 
   openExternal: async (url: string) => unwrapIpcResult(await window.api.shell.openExternal(url))
 };

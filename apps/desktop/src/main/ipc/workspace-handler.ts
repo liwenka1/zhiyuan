@@ -11,7 +11,8 @@ import { windowManager } from "../window-manager";
 import { configManager } from "../config";
 import { isSafeUrl, getRejectedProtocol } from "../security/url-validator";
 import { validatePathInWorkspace } from "../security/path-validator";
-import { getCallerWorkspace } from "../security/window-context";
+import { getCallerWorkspace, getCallerWorkspaceScope } from "../security/window-context";
+import { isExternalNoteFile, resolveLocalRegularFile } from "../security/local-file";
 import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "./ipc-result";
 import {
   normalizeExportLayoutConfig,
@@ -52,7 +53,10 @@ function assertPathInWorkspace(event: Electron.IpcMainInvokeEvent, filePath: str
     throw new Error("No workspace selected");
   }
 
-  const validation = validatePathInWorkspace(workspacePath, filePath);
+  const validation = validatePathInWorkspace(
+    { workspacePath, scannedWorkspacePath: entry.scannedWorkspacePath },
+    filePath
+  );
   if (!validation.isValid) {
     if (validation.code === "ENOTDIR") {
       throw Object.assign(new Error("The note's parent path is no longer a directory"), { code: validation.code });
@@ -566,6 +570,19 @@ export function registerWorkspaceHandlers(): void {
       if (errorMessage) {
         throw new Error(errorMessage);
       }
+    }, "SHELL_OPEN_PATH_FAILED")
+  );
+
+  handleAppIpc(
+    "shell:openNoteLink",
+    wrapIpcHandlerWithEvent(async (event, fullPath: string) => {
+      const validation = validatePathInWorkspace(getCallerWorkspaceScope(event), fullPath);
+      const filePath = validation.isValid ? validation.normalizedPath : resolveLocalRegularFile(fullPath);
+      if (!filePath || (!validation.isValid && !isExternalNoteFile(filePath))) {
+        throw new Error("Unsupported local file link");
+      }
+      const error = await shell.openPath(filePath);
+      if (error) throw new Error(error);
     }, "SHELL_OPEN_PATH_FAILED")
   );
 

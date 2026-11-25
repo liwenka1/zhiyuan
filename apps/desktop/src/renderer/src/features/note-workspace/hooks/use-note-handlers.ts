@@ -259,7 +259,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       }
 
       const title = fullNote.fileName.replace(/\.md$/i, "");
-      const assets = collectLocalMarkdownAssets(fullNote.content, fullNote.filePath);
+      const assets = collectLocalMarkdownAssets(fullNote.content, fullNote.filePath, sourceWorkspacePath);
       let body = fullNote.content;
 
       if (assets.length > 0) {
@@ -271,7 +271,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
           token: "",
           noteId: fullNote.id
         });
-        body = replaceMarkdownAssetUrls(body, replacements);
+        body = replaceMarkdownAssetUrls(body, assets, replacements);
         if (uploaded.length > 0) {
           toast.success(t("github.assetsUploaded", { count: uploaded.length }));
         }
