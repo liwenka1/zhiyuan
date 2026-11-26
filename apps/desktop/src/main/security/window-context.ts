@@ -11,7 +11,9 @@ export function getCallerWorkspace(event: Electron.IpcMainInvokeEvent): string {
   return getCallerWorkspaceScope(event).workspacePath;
 }
 
-export function getCallerWorkspaceScope(event: Electron.IpcMainInvokeEvent): WorkspacePathScope {
+export function getCallerWorkspaceScope(
+  event: Electron.IpcMainInvokeEvent
+): WorkspacePathScope & { workspaceRevision: number } {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (!win) {
     throw new Error("Cannot resolve caller window");
@@ -22,7 +24,11 @@ export function getCallerWorkspaceScope(event: Electron.IpcMainInvokeEvent): Wor
     throw new Error("No workspace selected");
   }
 
-  return { workspacePath: entry.workspacePath, scannedWorkspacePath: entry.scannedWorkspacePath };
+  return {
+    workspacePath: entry.workspacePath,
+    scannedWorkspacePath: entry.scannedWorkspacePath,
+    workspaceRevision: entry.workspaceRevision
+  };
 }
 
 export function getCallerWindowId(event: Electron.IpcMainInvokeEvent): number {

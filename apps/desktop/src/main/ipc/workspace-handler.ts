@@ -229,6 +229,13 @@ export function registerWorkspaceHandlers(): void {
     }
   });
 
+  handleAppIpc(
+    "workspace:begin-switch",
+    wrapIpcHandlerWithEvent(async (event, workspacePath: string | null) => {
+      windowManager.beginWorkspaceSwitch(getCallerWindow(event).id, workspacePath);
+    }, "WORKSPACE_SWITCH_FAILED")
+  );
+
   // 扫描工作区
   handleAppIpc(
     "workspace:scan",
@@ -240,6 +247,7 @@ export function registerWorkspaceHandlers(): void {
       if (!isApprovedWorkspacePath(workspacePath)) {
         throw new Error("Workspace path was not selected by the application");
       }
+      windowManager.beginWorkspaceSwitch(win.id, workspacePath);
       cancelWorkspaceScan(win.id);
       // 如果其他窗口已打开该工作区，聚焦过去，当前窗口返回 null
       if (windowManager.focusExistingWindow(workspacePath, win.id)) {

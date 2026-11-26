@@ -1,5 +1,6 @@
 import { contextBridge } from "electron";
 import { observeNativeMarkdownDrops } from "./apis/workspace";
+import { observeNativeClipboardCopies } from "./apis/export";
 import {
   themeApi,
   workspaceApi,
@@ -39,5 +40,6 @@ const api = {
 
 if (process.isMainFrame && process.contextIsolated) {
   observeNativeMarkdownDrops(window);
+  observeNativeClipboardCopies(window);
   contextBridge.exposeInMainWorld("api", api);
 }

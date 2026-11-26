@@ -1,7 +1,6 @@
-import { existsSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
 import { getSystemErrorName } from "node:util";
+import { loadPackagedKoffi } from "../native/koffi";
 
 const RENAME_EXCL = 0x00000004;
 const RENAME_NOREPLACE = 1;
@@ -16,11 +15,7 @@ type NativeRename = (source: string, destination: string, done: RenameCallback) 
 let exclusiveRename: Promise<Rename> | undefined;
 
 async function loadKoffi(): Promise<Pick<typeof import("koffi"), "load" | "errno">> {
-  const binding = process.resourcesPath && path.join(process.resourcesPath, "koffi.node");
-  if (binding && existsSync(binding)) {
-    return createRequire(import.meta.url)(binding);
-  }
-  return (await import("koffi")).default;
+  return loadPackagedKoffi() ?? (await import("koffi")).default;
 }
 
 function renameError(code: string, details = code): NodeJS.ErrnoException {

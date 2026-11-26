@@ -3,17 +3,21 @@ import { createUrlTransformer, isLocalAbsolutePath, isRelativePath } from "@shar
 import type { WorkspacePathScope } from "../security/path-validator";
 import { rewriteCssResources } from "./css-resources";
 
-export type ExportAssetType = "image" | "media" | "css";
-export type ExportAssetTarget = "capture" | "html";
+export type ExportAssetType = "image" | "media" | "css" | "attachment";
+export type ExportAssetTarget = "capture" | "html" | "clipboard";
 
 export function isLocalExportReference(source: string): boolean {
   return /^(file|local-resource|local-media):/i.test(source) || isLocalAbsolutePath(source) || isRelativePath(source);
 }
 
-type ReplaceAsset = (
-  source: string,
-  type: ExportAssetType
-) => string | null | undefined | Promise<string | null | undefined>;
+export function isDataUrl(source: string): boolean {
+  let start = 0;
+  while (source.charCodeAt(start) <= 0x20) start += 1;
+  return /^d[\t\r\n]*a[\t\r\n]*t[\t\r\n]*a[\t\r\n]*:/i.test(source.slice(start));
+}
+
+type AssetReplacement = string | { url: string; download: string } | null | undefined;
+type ReplaceAsset = (source: string, type: ExportAssetType) => AssetReplacement | Promise<AssetReplacement>;
 
 export async function rewriteExportAssets(
   html: string,
@@ -41,7 +45,8 @@ export async function rewriteExportAssets(
       const next = await replaceResource(source.trim(), type);
       if (next === undefined || next === source) return;
       if (next !== null) {
-        element.setAttribute(attribute, next);
+        element.setAttribute(attribute, typeof next === "string" ? next : next.url);
+        if (typeof next === "object") element.setAttribute("download", next.download);
         return;
       }
       element.removeAttribute(attribute);
@@ -56,6 +61,12 @@ export async function rewriteExportAssets(
     for (const element of root.querySelectorAll("img[src], video[poster]")) {
       await replaceAttribute(element, element.tagName === "IMG" ? "src" : "poster", "image");
     }
+    for (const element of root.querySelectorAll("image")) {
+      if (element.namespaceURI !== "http://www.w3.org/2000/svg") continue;
+      const attribute = element.hasAttribute("href") ? "href" : "xlink:href";
+      if (attribute === "href") element.removeAttribute("xlink:href");
+      await replaceAttribute(element, attribute, "image");
+    }
     for (const element of root.querySelectorAll("video, audio, source")) {
       for (const attribute of ["src", "href"]) {
         if (target === "capture") element.removeAttribute(attribute);
@@ -63,7 +74,10 @@ export async function rewriteExportAssets(
       }
     }
 
-    const replaceCssUrl = (source: string) => replaceResource(source, "css");
+    const replaceCssUrl = async (source: string) => {
+      const replacement = await replaceResource(source, "css");
+      return replacement && typeof replacement === "object" ? replacement.url : replacement;
+    };
     for (const element of root.querySelectorAll("[style], style")) {
       const style = element.getAttribute("style");
       if (style) element.setAttribute("style", await rewriteCssResources(style, "declarationList", replaceCssUrl));
@@ -72,13 +86,20 @@ export async function rewriteExportAssets(
       }
     }
 
-    for (const element of root.querySelectorAll("a[href], [srcset]")) {
+    for (const element of root.querySelectorAll("a[href]")) {
       const href = element.getAttribute("href")?.trim();
       if (href) {
         const normalized = normalize(href);
-        if (isLocalExportReference(normalized)) element.removeAttribute("href");
-        else if (normalized !== href) element.setAttribute("href", normalized);
+        if (target === "clipboard" && (isLocalExportReference(normalized) || isDataUrl(normalized))) {
+          await replaceAttribute(element, "href", "attachment");
+        } else if (isLocalExportReference(normalized)) {
+          element.removeAttribute("href");
+        } else if (normalized !== href) {
+          element.setAttribute("href", normalized);
+        }
       }
+    }
+    for (const element of root.querySelectorAll("[srcset]")) {
       // The Markdown sanitizer only enables src. Supplemental sources cannot override the reviewed image.
       element.removeAttribute("srcset");
     }

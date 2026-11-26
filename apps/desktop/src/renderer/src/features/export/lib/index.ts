@@ -1,7 +1,6 @@
 export { exportNoteAsHTML } from "./html-exporter";
 export { exportNoteAsPDF, exportNoteAsPDFPages } from "./pdf-exporter";
 export { exportNoteAsImage, exportNoteAsImagePages } from "./image-exporter";
-export { copyNoteToWechat } from "./wechat-exporter";
 export { renderNoteExportPreviewHtml } from "./export-preview-html";
 export {
   EXPORT_LAYOUT_FIELDS,

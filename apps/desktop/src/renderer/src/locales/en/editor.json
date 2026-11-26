@@ -14,6 +14,8 @@
     "exportPreviewOpening": "Opening...",
     "showInExplorer": "Show in File Manager",
     "rename": "Rename",
+    "copyFullText": "Copy Full Text",
+    "copyingFullText": "Copying Full Text…",
     "duplicate": "Duplicate",
     "pushToGitHub": "Push to GitHub Issue",
     "export": "Export",

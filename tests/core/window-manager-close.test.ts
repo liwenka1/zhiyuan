@@ -54,6 +54,23 @@ describe("managed windows", () => {
     expect(windowManager.getEntryById(win.id)!.rendererUrl).toMatch(/^file:.*\/renderer\/index\.html$/);
   });
 
+  it("invalidates the source revision at switch start while keeping the workspace bound", () => {
+    const first = path.resolve("first-workspace");
+    const second = path.resolve("second-workspace");
+    const win = windowManager.createWindow(first);
+    windowManager.setWorkspacePath(win.id, first);
+    const original = windowManager.getEntryById(win.id)!.workspaceRevision;
+
+    windowManager.beginWorkspaceSwitch(win.id, first);
+    expect(windowManager.getEntryById(win.id)!.workspaceRevision).toBe(original);
+    windowManager.beginWorkspaceSwitch(win.id, second);
+    expect(windowManager.getEntryById(win.id)).toMatchObject({
+      workspacePath: first,
+      scannedWorkspacePath: first,
+      workspaceRevision: original + 1
+    });
+  });
+
   it("routes a nested note using the workspace root the window scanned", async () => {
     const root = await realpath(await mkdtemp(path.join(os.tmpdir(), "zhiyuan-window-scan-")));
     const workspace = path.join(root, "actual");

@@ -29,8 +29,26 @@ export const exportIpc = {
 
   getDownloadsPath: async () => unwrapIpcResult(await window.api.export.getDownloadsPath()),
 
-  copyHTMLToClipboard: async (htmlContent: string) =>
-    unwrapIpcResult(await window.api.export.copyHTMLToClipboard(htmlContent)),
+  copyHTMLToClipboard: async (requestId: number, htmlContent: string) =>
+    unwrapIpcResult(
+      await window.api.export.copyHTMLToClipboard(requestId, htmlContent, useLanguageStore.getState().language)
+    ),
+
+  copyTextToClipboard: async (text: string) => unwrapIpcResult(await window.api.export.copyTextToClipboard(text)),
+
+  beginClipboardCopy: async (workspacePath: string, notePath?: string) =>
+    unwrapIpcResult(await window.api.export.beginClipboardCopy(workspacePath, notePath)),
+
+  copyFullText: async (requestId: number, markdown: string, htmlContent: string) =>
+    unwrapIpcResult(
+      await window.api.export.copyFullText(requestId, markdown, htmlContent, useLanguageStore.getState().language)
+    ),
+
+  confirmClipboardCopy: async (requestId: number, confirmed: boolean) =>
+    unwrapIpcResult(await window.api.export.confirmClipboardCopy(requestId, confirmed)),
+
+  onClipboardCopySuperseded: (callback: (requestId: number) => void) =>
+    window.api.export.onClipboardCopySuperseded(callback),
 
   exportHTMLPackage: async (
     htmlContent: string,

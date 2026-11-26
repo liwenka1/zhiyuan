@@ -7,6 +7,10 @@ const { JSDOM } = requireFromDesktop("jsdom") as {
   JSDOM: new () => { window: Window & { DOMParser: typeof DOMParser; close: () => void } };
 };
 
+vi.mock("katex/dist/katex.min.css?raw", () => ({
+  default: fs.readFileSync(requireFromDesktop.resolve("katex/dist/katex.min.css"), "utf8")
+}));
+
 describe("rendering dependency security and compatibility", () => {
   let closeDom: (() => void) | undefined;
   afterEach(() => {
@@ -44,13 +48,34 @@ describe("rendering dependency security and compatibility", () => {
     );
     const document = new DOMParser().parseFromString(html, "text/html");
     const css = fs.readFileSync(requireFromDesktop.resolve("katex/dist/katex.min.css"), "utf8");
-    // Vitest 默认 stub CSS 导入，直接读取真实包样式核对生成节点的选择器。
+    expect(html).toContain(css);
     expect(document.querySelector(".katex-error")).toBeNull();
     expect(document.querySelectorAll(".katex")).toHaveLength(2);
     for (const className of ["katex-display", "katex-html", "katex-mathml", "katex-base"]) {
       expect(document.querySelector(`.${className}`)).not.toBeNull();
       expect(css).toContain(`.${className}`);
     }
+  });
+
+  it("prepares KaTeX notation and the configured font size for clipboard equation rendering", async () => {
+    const dom = new JSDOM();
+    closeDom = () => dom.window.close();
+    vi.stubGlobal("DOMParser", dom.window.DOMParser);
+    const { buildClipboardDocument } =
+      await import("../../apps/desktop/src/renderer/src/features/export/lib/export-pipeline");
+    const inline = String.raw`\cancel{\mathbb{R}}`;
+    const block = String.raw`\boxed{\frac{\imath}{b}}`;
+    const html = await buildClipboardDocument(
+      { id: "math", title: "Math", content: `Inline $${inline}$.\n\n$$\n${block}\n$$` },
+      "default",
+      { baseFontSize: 24 }
+    );
+    const document = new DOMParser().parseFromString(html, "text/html");
+    const annotations = [...document.querySelectorAll('.katex-mathml annotation[encoding="application/x-tex"]')];
+    expect(annotations.map((annotation) => annotation.textContent)).toEqual([inline, block]);
+    expect(document.querySelector(".katex-html .cancel-pad, .katex-html .cancel-lap, .katex-html line")).not.toBeNull();
+    expect(document.querySelector(".katex-display .katex-html .mfrac")).not.toBeNull();
+    expect(document.querySelector<HTMLElement>(".prose")?.style.fontSize).toBe("24px");
   });
 
   it("initializes Mermaid and parses valid diagrams while rejecting invalid syntax", async () => {

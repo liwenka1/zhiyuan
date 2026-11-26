@@ -4,6 +4,7 @@ import { resolveFolderAbsolutePath, resolveFolderRelativePath } from "@/lib/work
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { workspaceIpc, watcherIpc, folderIpc, shellIpc, rssIpc, configIpc } from "@/ipc";
+import { exportIpc } from "@/ipc/export";
 import { flushAllDebouncedSaves } from "@/stores/note-store/persistence";
 
 export interface FolderHandlers {
@@ -187,7 +188,7 @@ export function useFolderHandlers({
       return;
     }
     try {
-      await navigator.clipboard.writeText(text);
+      await exportIpc.copyTextToClipboard(text);
       toast.success(t("note:pathCopied.single"));
     } catch {
       toast.error(t("note:errors.copyPathFailed"));

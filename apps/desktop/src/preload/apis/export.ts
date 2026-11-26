@@ -1,6 +1,14 @@
 import { ipcRenderer } from "electron";
 import type { IpcResultDTO } from "@shared";
 
+export function observeNativeClipboardCopies(target: Window): void {
+  const notify = (event: Event) => {
+    if (event.isTrusted) ipcRenderer.send("export:native-clipboard-copy");
+  };
+  target.addEventListener("copy", notify, true);
+  target.addEventListener("cut", notify, true);
+}
+
 export const exportApi = {
   /**
    * 显示保存对话框
@@ -52,8 +60,35 @@ export const exportApi = {
   /**
    * 复制 HTML 到剪贴板（用于微信公众号）
    */
-  copyHTMLToClipboard: (htmlContent: string): Promise<IpcResultDTO<void>> =>
-    ipcRenderer.invoke("export:copy-html-to-clipboard", htmlContent),
+  copyHTMLToClipboard: (
+    requestId: number,
+    htmlContent: string,
+    language?: "zh" | "en"
+  ): Promise<IpcResultDTO<"confirmation-required" | undefined>> =>
+    ipcRenderer.invoke("export:copy-html-to-clipboard", requestId, htmlContent, language),
+
+  copyTextToClipboard: (text: string): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("export:copy-text-to-clipboard", text),
+
+  beginClipboardCopy: (workspacePath: string, notePath?: string): Promise<IpcResultDTO<number>> =>
+    ipcRenderer.invoke("export:begin-clipboard-copy", workspacePath, notePath),
+
+  copyFullText: (
+    requestId: number,
+    markdown: string,
+    htmlContent: string,
+    language: "zh" | "en"
+  ): Promise<IpcResultDTO<"confirmation-required" | undefined>> =>
+    ipcRenderer.invoke("export:copy-full-text", requestId, markdown, htmlContent, language),
+
+  confirmClipboardCopy: (requestId: number, confirmed: boolean): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("export:confirm-clipboard-copy", requestId, confirmed),
+
+  onClipboardCopySuperseded: (callback: (requestId: number) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, requestId: number) => callback(requestId);
+    ipcRenderer.on("export:clipboard-copy-superseded", listener);
+    return () => ipcRenderer.removeListener("export:clipboard-copy-superseded", listener);
+  },
 
   /**
    * 导出 HTML 资源包（包含所有图片等资源）

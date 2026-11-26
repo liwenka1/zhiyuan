@@ -25,6 +25,7 @@ interface EditorAreaProps {
   onShowNoteInExplorer?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onRenameNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onDuplicateNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onCopyFullText?: (noteId: string) => Promise<void>;
   onExportNote?: (
     note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
@@ -47,6 +48,7 @@ export function EditorArea({
   onShowNoteInExplorer,
   onRenameNote,
   onDuplicateNote,
+  onCopyFullText,
   onExportNote,
   onDeleteNote,
   onPushToGitHub,
@@ -197,6 +199,7 @@ export function EditorArea({
         onShowNoteInExplorer={onShowNoteInExplorer}
         onRenameNote={onRenameNote}
         onDuplicateNote={onDuplicateNote}
+        onCopyFullText={onCopyFullText}
         onExportNote={onExportNote}
         onDeleteNote={onDeleteNote}
         onPushToGitHub={onPushToGitHub}

@@ -28,6 +28,9 @@ const { captureState, remoteFetch } = vi.hoisted(() => ({
     destroyCount: 0,
     brokenImages: [] as string[],
     decodedImages: [] as (boolean | Promise<boolean>)[],
+    equationClips: [] as Electron.Rectangle[],
+    equationScreenshots: [] as ({ data: string } | Error | Promise<{ data: string }>)[],
+    equationScreenshotCount: 0,
     decodeCount: 0,
     imageRequestDecisions: [] as boolean[],
     imageFile: "",
@@ -41,8 +44,19 @@ vi.mock("electron", async () => {
   class Contents extends EventEmitter {
     id = 73;
     setWindowOpenHandler() {}
+    startPainting() {}
+    debugger = {
+      attach() {},
+      async sendCommand(command: string) {
+        if (command !== "Page.captureScreenshot") return {};
+        const result = captureState.equationScreenshots[captureState.equationScreenshotCount++];
+        if (result instanceof Error) throw result;
+        return result;
+      }
+    };
     async executeJavaScript(script: string) {
       if (script.startsWith("Array.from(document.images)")) return captureState.brokenImages;
+      if (script.includes("document.body.replaceChildren")) return captureState.equationClips;
       if (script.startsWith("(async () => {") && script.includes("const image = new Image()")) {
         const file = captureState.imageFile;
         if (file) {
@@ -120,7 +134,11 @@ vi.mock("electron", async () => {
   };
 });
 
-import { captureHtmlAsImage, validateExportImages } from "../../apps/desktop/src/main/export/capture";
+import {
+  captureClipboardEquations,
+  captureHtmlAsImage,
+  validateExportImages
+} from "../../apps/desktop/src/main/export/capture";
 
 let root: string;
 let workspace: string;
@@ -136,6 +154,9 @@ beforeEach(async () => {
   captureState.captureHeight = 0;
   captureState.brokenImages = [];
   captureState.decodedImages = [];
+  captureState.equationClips = [];
+  captureState.equationScreenshots = [];
+  captureState.equationScreenshotCount = 0;
   captureState.decodeCount = 0;
   captureState.imageRequestDecisions = [];
   captureState.imageFile = "";
@@ -147,7 +168,30 @@ beforeEach(async () => {
   outside = path.join(root, "outside.svg");
   await Promise.all([fs.writeFile(inside, imageContents), fs.writeFile(outside, imageContents)]);
 });
-afterEach(async () => fs.rm(root, { recursive: true, force: true }));
+afterEach(async () => {
+  vi.useRealTimers();
+  await fs.rm(root, { recursive: true, force: true });
+});
+
+it("keeps completed equation captures when a later screenshot exceeds the deadline", async () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  captureState.equationClips = [
+    { x: 0, y: 0, width: 20, height: 30 },
+    { x: 0, y: 30, width: 24, height: 30 },
+    { x: 0, y: 60, width: 25, height: 30 }
+  ];
+  captureState.equationScreenshots = [{ data: "AA==" }, new Promise(() => {})];
+  const sources = ["first", "stalled", "remaining"].map((visual) => ({ visual, context: [] }));
+  const rendering = captureClipboardEquations(sources, () => {});
+  await vi.waitFor(() => expect(captureState.equationScreenshotCount).toBe(2));
+  await vi.advanceTimersByTimeAsync(15_000);
+
+  expect(await rendering).toEqual(
+    new Map([[sources[0], { url: "data:image/png;base64,AA==", width: 20, height: 30 }]])
+  );
+  expect(captureState.equationScreenshotCount).toBe(2);
+  expect(captureState.destroyCount).toBe(1);
+});
 
 describe("export local CSS resources", () => {
   it("embeds authorized CSS images from attributes and style blocks, including escaped names and SVG fragments", async () => {
@@ -373,6 +417,35 @@ it("keeps completed decodes and processes later images while one decode stalls",
     vi.useRealTimers();
   }
 });
+
+it.each(["image decode", "equation screenshot"] as const)(
+  "closes the export window when cancellation interrupts a pending %s",
+  async (operation) => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+    const controller = new AbortController();
+    let pending: Promise<unknown>;
+    if (operation === "image decode") {
+      captureState.decodedImages = [new Promise(() => {})];
+      pending = validateExportImages(["data:image/png;base64,AA=="], controller.signal);
+    } else {
+      captureState.equationClips = [{ x: 0, y: 0, width: 20, height: 30 }];
+      captureState.equationScreenshots = [new Promise(() => {})];
+      pending = captureClipboardEquations([{ visual: "formula", context: [] }], () => {}, controller.signal);
+    }
+    const finished = vi.fn();
+    const settled = pending.then(finished, finished);
+    try {
+      await vi.waitFor(() => expect(captureState.decodeCount + captureState.equationScreenshotCount).toBe(1));
+      const cancellation = new Error("USER_CANCELLED");
+      controller.abort(cancellation);
+      await vi.waitFor(() => expect(finished).toHaveBeenCalledExactlyOnceWith(cancellation), { timeout: 500 });
+      expect(captureState.destroyCount).toBe(1);
+    } finally {
+      await vi.advanceTimersByTimeAsync(15_000);
+      await settled;
+    }
+  }
+);
 
 it("rejects a replacement file before embedding a reviewed external image", async () => {
   const html = '<img src="../outside.svg">';

@@ -4,9 +4,11 @@ import * as path from "path";
 import { tmpdir } from "os";
 import { BrowserWindow, session } from "electron";
 import { pathToFileURL } from "node:url";
-import { embedExportImages, embedLocalImages } from "./assets";
+import { embedExportAssets, embedLocalImages } from "./assets";
 import type { ExportResourceReview } from "./resource-review";
 import type { WorkspacePathScope } from "../security/path-validator";
+import { requireNative } from "../native/koffi";
+import { layoutClipboardEquations, type ClipboardEquationSource } from "./clipboard-equation-layout";
 
 const EXPORT_PARTITION = "export-capture";
 let exportSession: Electron.Session | null = null;
@@ -26,14 +28,27 @@ function getExportSession(): Electron.Session {
   return exportSession;
 }
 
-function createOfflineExportWindow(documentUrl: string, width: number, height: number, imageFiles = new Set<string>()) {
+function createOfflineExportWindow(
+  documentUrl: string,
+  width: number,
+  height: number,
+  { imageFiles = new Set<string>(), offscreen = false }: { imageFiles?: ReadonlySet<string>; offscreen?: boolean } = {}
+) {
   getExportSession();
   const window = new BrowserWindow({
     width,
     height,
     show: false,
+    transparent: offscreen,
     enableLargerThanScreen: true,
-    webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, partition: EXPORT_PARTITION }
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+      partition: EXPORT_PARTITION,
+      offscreen,
+      backgroundThrottling: !offscreen
+    }
   });
   const windowId = window.webContents.id;
   exportDocuments.set(windowId, { url: documentUrl, imageFiles });
@@ -49,6 +64,122 @@ function createOfflineExportWindow(documentUrl: string, width: number, height: n
       if (!window.isDestroyed()) window.destroy();
     }
   };
+}
+
+let mathStyles: string | undefined;
+
+async function loadMathStyles(): Promise<string> {
+  if (mathStyles) return mathStyles;
+  const stylesheet = requireNative.resolve("katex/dist/katex.min.css");
+  const css = await fs.readFile(stylesheet, "utf8");
+  const fonts = [...new Set(css.match(/fonts\/KaTeX_[\w-]+\.woff2/g))];
+  const urls = new Map(
+    await Promise.all(
+      fonts.map(async (font) => {
+        const data = await fs.readFile(path.join(path.dirname(stylesheet), font));
+        return [font, `data:font/woff2;base64,${data.toString("base64")}`] as const;
+      })
+    )
+  );
+  mathStyles = css.replace(/fonts\/KaTeX_[\w-]+\.woff2/g, (font) => urls.get(font) ?? font);
+  return mathStyles;
+}
+
+interface ClipboardEquation {
+  url: string;
+  width: number;
+  height: number;
+}
+
+export async function captureClipboardEquations(
+  formulas: ClipboardEquationSource[],
+  assertCurrent: () => void,
+  signal?: AbortSignal
+): Promise<Map<ClipboardEquationSource, ClipboardEquation>> {
+  assertCurrent();
+  signal?.throwIfAborted();
+  const width = 800;
+  const height = 600;
+  const deadline = performance.now() + 15_000;
+  const withinDeadline = <T>(promise: Promise<T>, message: string) =>
+    withTimeout(promise, deadline - performance.now(), message, signal);
+  const images = new Map<ClipboardEquationSource, ClipboardEquation>();
+  let capture: ReturnType<typeof createOfflineExportWindow> | undefined;
+  try {
+    const styles = await withinDeadline(loadMathStyles(), "Equation fonts failed to load");
+    assertCurrent();
+    capture = createOfflineExportWindow("about:blank", width, height, { offscreen: true });
+    const { webContents } = capture.window;
+    await withinDeadline(capture.window.loadURL("about:blank"), "Equation renderer failed to load");
+    webContents.startPainting();
+    await withinDeadline(
+      webContents.executeJavaScript(`(() => {
+        const policy = document.createElement('meta');
+        policy.httpEquiv = 'Content-Security-Policy';
+        policy.content = "default-src 'none'; style-src 'unsafe-inline'; font-src data:";
+        document.head.append(policy);
+        const style = document.createElement('style');
+        style.textContent = ${JSON.stringify(styles)} + 'body{margin:0}';
+        document.head.append(style);
+      })()`),
+      "Equation renderer stopped responding"
+    );
+    webContents.debugger.attach("1.3");
+    // Some native importers use the PNG's pixel dimensions as its display size.
+    await withinDeadline(
+      webContents.debugger.sendCommand("Emulation.setDeviceMetricsOverride", {
+        width,
+        height,
+        deviceScaleFactor: 1,
+        mobile: false
+      }),
+      "Equation renderer stopped responding"
+    );
+    await withinDeadline(
+      webContents.debugger.sendCommand("Emulation.setDefaultBackgroundColorOverride", {
+        color: { r: 0, g: 0, b: 0, a: 0 }
+      }),
+      "Equation renderer stopped responding"
+    );
+    for (let offset = 0; offset < formulas.length && performance.now() < deadline; offset += 32) {
+      assertCurrent();
+      const batch = formulas.slice(offset, offset + 32);
+      const clips = await withinDeadline<Electron.Rectangle[]>(
+        webContents.executeJavaScript(`(${layoutClipboardEquations.toString()})(${JSON.stringify(batch)})`),
+        "Equation layout stopped responding"
+      );
+      for (const [index, clip] of clips.entries()) {
+        if (performance.now() >= deadline) break;
+        assertCurrent();
+        const scale = Math.min(1, 4096 / clip.width, 4096 / clip.height);
+        const displayWidth = Math.round(clip.width * scale);
+        const displayHeight = Math.round(clip.height * scale);
+        if (!displayWidth || !displayHeight) continue;
+        const snapshot = await withinDeadline(
+          webContents.debugger.sendCommand("Page.captureScreenshot", {
+            format: "png",
+            clip: { ...clip, scale },
+            captureBeyondViewport: true
+          }),
+          "Equation capture stopped responding"
+        ).catch(() => undefined);
+        signal?.throwIfAborted();
+        if (!snapshot?.data) continue;
+        images.set(batch[index], {
+          url: `data:image/png;base64,${snapshot.data}`,
+          width: displayWidth,
+          height: displayHeight
+        });
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === "USER_CANCELLED") throw error;
+    // The clipboard can still use captured images and the source of the remaining equations.
+  } finally {
+    capture?.dispose();
+  }
+  signal?.throwIfAborted();
+  return images;
 }
 
 async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10000): Promise<void> {
@@ -92,19 +223,32 @@ async function waitForPageLoad(webContents: Electron.WebContents, timeoutMs = 10
   }
 }
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  errorMessage: string,
+  signal?: AbortSignal
+): Promise<T> {
   let timeoutId: NodeJS.Timeout;
+  let abort: (() => void) | undefined;
 
   const timeoutPromise = new Promise<T>((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+    if (signal) {
+      abort = () => reject(signal.reason);
+      if (signal.aborted) abort();
+      else signal.addEventListener("abort", abort, { once: true });
+    }
   });
 
   return Promise.race([promise, timeoutPromise]).finally(() => {
     clearTimeout(timeoutId);
+    if (abort) signal?.removeEventListener("abort", abort);
   });
 }
 
-export async function validateExportImages(images: string[]): Promise<boolean[]> {
+export async function validateExportImages(images: string[], signal?: AbortSignal): Promise<boolean[]> {
+  signal?.throwIfAborted();
   const valid = Array<boolean>(images.length).fill(false);
   if (!images.length) return valid;
 
@@ -123,14 +267,15 @@ export async function validateExportImages(images: string[]): Promise<boolean[]>
       );
       documentUrl = pathToFileURL(documentPath).href;
     }
-    decoder = createOfflineExportWindow(documentUrl, 1, 1, imageFiles);
+    signal?.throwIfAborted();
+    decoder = createOfflineExportWindow(documentUrl, 1, 1, { imageFiles });
     const { window } = decoder;
-    await withTimeout(window.loadURL(documentUrl), deadline - Date.now(), "Image decoder failed to start");
+    await withTimeout(window.loadURL(documentUrl), deadline - Date.now(), "Image decoder failed to start", signal);
     let nextImage = 0;
     async function decodeImages(): Promise<void> {
       while (nextImage < images.length) {
         const remaining = deadline - Date.now();
-        if (remaining <= 0) return;
+        if (remaining <= 0 || signal?.aborted) return;
         const index = nextImage++;
         try {
           const decoded = await withTimeout(
@@ -141,7 +286,8 @@ export async function validateExportImages(images: string[]): Promise<boolean[]>
               return image.naturalWidth > 0 && image.naturalHeight > 0;
             })()`),
             remaining,
-            "Image decoding timed out"
+            "Image decoding timed out",
+            signal
           );
           valid[index] = decoded === true;
         } catch {
@@ -159,6 +305,7 @@ export async function validateExportImages(images: string[]): Promise<boolean[]>
       if (tempDirectory) await fs.rm(tempDirectory, { recursive: true, force: true }).catch(() => {});
     }
   }
+  signal?.throwIfAborted();
   return valid;
 }
 
@@ -178,7 +325,7 @@ export async function captureHtmlAsImage(
 
   try {
     const processedHtml = review
-      ? await embedExportImages(htmlContent, review.assets, review.includeExternal, review.missingLabel)
+      ? await embedExportAssets(htmlContent, review.assets, review.includeExternal, review.missingLabel)
       : await embedLocalImages(htmlContent, notePath, workspace);
 
     tempDirectory = await fs.mkdtemp(path.join(tmpdir(), "zhiyuan-export-"));

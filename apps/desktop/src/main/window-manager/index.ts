@@ -21,6 +21,7 @@ interface WindowEntry {
   window: BrowserWindow;
   workspacePath: string | null;
   scannedWorkspacePath: string | null;
+  workspaceRevision: number;
   localResourceToken: string;
   rendererUrl: string;
 }
@@ -135,6 +136,7 @@ class WindowManager {
       window: win,
       workspacePath: normalizedWorkspacePath,
       scannedWorkspacePath: null,
+      workspaceRevision: 0,
       localResourceToken,
       rendererUrl: rendererUrl.split("#", 1)[0]
     });
@@ -258,6 +260,13 @@ class WindowManager {
     return requested;
   }
 
+  beginWorkspaceSwitch(windowId: number, workspacePath: string | null): void {
+    const entry = this.windows.get(windowId);
+    if (entry && (entry.scannedWorkspacePath ?? entry.workspacePath) !== workspacePath) {
+      entry.workspaceRevision += 1;
+    }
+  }
+
   /**
    * 设置窗口的工作区路径
    */
@@ -268,6 +277,9 @@ class WindowManager {
       // 如果之前有工作区，先解绑文件监听
       if (entry.workspacePath && entry.workspacePath !== normalizedWorkspacePath) {
         fileWatcherManager.stopWatching(entry.workspacePath, windowId);
+      }
+      if (entry.workspacePath !== normalizedWorkspacePath || entry.scannedWorkspacePath !== workspacePath) {
+        entry.workspaceRevision += 1;
       }
       entry.workspacePath = normalizedWorkspacePath;
       entry.scannedWorkspacePath = workspacePath;

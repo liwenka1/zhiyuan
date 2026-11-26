@@ -4,6 +4,7 @@ import { useNoteExport } from "@/features/export";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { shellIpc, fileIpc, githubIpc, configIpc } from "@/ipc";
+import { exportIpc } from "@/ipc/export";
 import { getGitHubIssueNumberForRepository, upsertGitHubMetadata } from "@/lib/github-metadata";
 import { collectLocalMarkdownAssets, replaceMarkdownAssetUrls } from "@/lib/markdown-assets";
 import { uploadMarkdownAssets } from "@/lib/github-assets";
@@ -30,6 +31,7 @@ export interface NoteHandlers {
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
   ) => Promise<void>;
   handleCopyToWechat: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
+  handleCopyFullText: (noteId: string) => Promise<void>;
   handlePushToGitHub: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => Promise<void>;
   handleCopyNoteRelativePath: (note: {
     id: string;
@@ -70,7 +72,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
   };
 
   // 使用导出 hook
-  const { exportNote, copyToWechat } = useNoteExport();
+  const { exportNote, copyFullText, copyToWechat } = useNoteExport();
 
   // 处理新建笔记 - 打开对话框
   const handleCreateNote = () => {
@@ -160,6 +162,13 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
     await exportNote(fullNote, format);
   };
 
+  const handleCopyFullText = async (noteId: string) => {
+    const state = useNoteStore.getState();
+    if (!isCurrentWorkspace() || state.selectedNoteId !== noteId) return;
+    const note = state.getSelectedNote();
+    if (note) await copyFullText({ ...note, content: state.editorContent });
+  };
+
   const writePathsToClipboard = async (lines: string[]) => {
     const text = lines.join("\n");
     if (!text) {
@@ -167,7 +176,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
       return;
     }
     try {
-      await navigator.clipboard.writeText(text);
+      await exportIpc.copyTextToClipboard(text);
       toast.success(lines.length > 1 ? t("pathCopied.multiple", { count: lines.length }) : t("pathCopied.single"));
     } catch {
       toast.error(t("errors.copyPathFailed"));
@@ -333,6 +342,7 @@ export function useNoteHandlers({ onOpenRenameDialog, onOpenCreateNoteDialog }: 
     handleDuplicateNote,
     handleTogglePinNote,
     handleExportNote,
+    handleCopyFullText,
     handleCopyToWechat,
     handlePushToGitHub,
     handleCopyNoteRelativePath,

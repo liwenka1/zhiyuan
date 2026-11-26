@@ -11,6 +11,7 @@ import {
   FolderOpen,
   Pencil,
   Copy,
+  ClipboardCopy,
   Download,
   Trash2,
   ChevronRight,
@@ -31,6 +32,7 @@ interface EditorToolbarProps {
   onShowNoteInExplorer?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onRenameNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
   onDuplicateNote?: (note: { id: string; title: string; updatedAt?: string; isPinned?: boolean }) => void;
+  onCopyFullText?: (noteId: string) => Promise<void>;
   onExportNote?: (
     note: { id: string; title: string; updatedAt?: string; isPinned?: boolean },
     format: "html" | "pdf" | "pdf-pages" | "image" | "image-pages"
@@ -44,6 +46,7 @@ export function EditorToolbar({
   onShowNoteInExplorer,
   onRenameNote,
   onDuplicateNote,
+  onCopyFullText,
   onExportNote,
   onDeleteNote,
   onPushToGitHub
@@ -62,6 +65,7 @@ export function EditorToolbar({
   const [isPinned, setIsPinned] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [isCopyingFullText, setIsCopyingFullText] = useState(false);
 
   useEffect(() => {
     const handleMode = (event: Event) => {
@@ -119,6 +123,17 @@ export function EditorToolbar({
   const handleDuplicateNote = () => {
     if (noteSummary) {
       onDuplicateNote?.(noteSummary);
+    }
+  };
+
+  const handleCopyFullText = async () => {
+    if (!selectedNoteId || !onCopyFullText || isCopyingFullText) return;
+    setMoreOpen(false);
+    setIsCopyingFullText(true);
+    try {
+      await onCopyFullText(selectedNoteId);
+    } finally {
+      setIsCopyingFullText(false);
     }
   };
 
@@ -302,6 +317,16 @@ export function EditorToolbar({
               <Button variant="ghost" size="sm" className="h-8 w-full justify-start gap-2" onClick={handleRenameNote}>
                 <Pencil className="size-4" />
                 <span>{t("toolbar.rename")}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full justify-start gap-2"
+                disabled={isCopyingFullText || !onCopyFullText}
+                onClick={handleCopyFullText}
+              >
+                <ClipboardCopy className="size-4" />
+                <span>{t(isCopyingFullText ? "toolbar.copyingFullText" : "toolbar.copyFullText")}</span>
               </Button>
               <Button
                 variant="ghost"

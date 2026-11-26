@@ -48,6 +48,7 @@ export interface WorkspaceAPI {
     buttonLabel?: string;
   }) => Promise<IpcResultDTO<{ filePath: string; workspacePath: string } | null>>;
   getCurrent: () => Promise<IpcResultDTO<string | null>>;
+  beginSwitch: (workspacePath: string | null) => Promise<IpcResultDTO<void>>;
   scan: (workspacePath: string) => Promise<
     IpcResultDTO<{
       folders: Array<{ id: string; name: string; path: string; noteCount: number; isRss?: boolean }>;
@@ -165,7 +166,21 @@ export interface ExportAPI {
     options?: { width?: number }
   ) => Promise<IpcResultDTO<void>>;
   getDownloadsPath: () => Promise<IpcResultDTO<string>>;
-  copyHTMLToClipboard: (htmlContent: string) => Promise<IpcResultDTO<void>>;
+  copyHTMLToClipboard: (
+    requestId: number,
+    htmlContent: string,
+    language?: "zh" | "en"
+  ) => Promise<IpcResultDTO<"confirmation-required" | undefined>>;
+  copyTextToClipboard: (text: string) => Promise<IpcResultDTO<void>>;
+  beginClipboardCopy: (workspacePath: string, notePath?: string) => Promise<IpcResultDTO<number>>;
+  copyFullText: (
+    requestId: number,
+    markdown: string,
+    htmlContent: string,
+    language: "zh" | "en"
+  ) => Promise<IpcResultDTO<"confirmation-required" | undefined>>;
+  confirmClipboardCopy: (requestId: number, confirmed: boolean) => Promise<IpcResultDTO<void>>;
+  onClipboardCopySuperseded: (callback: (requestId: number) => void) => () => void;
   exportHTMLPackage: (
     htmlContent: string,
     outputPath: string,

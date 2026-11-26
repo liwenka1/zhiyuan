@@ -4,9 +4,10 @@ import path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { authorizeLocalResourceUrl, createUrlTransformer, decodeLocalResourceUrl, localResourceUrl } from "@shared";
-import { getLocalMediaType, resolveLocalRegularFile } from "../security/local-file";
+import { getLocalMediaType, isExternalNoteFile, resolveLocalRegularFile } from "../security/local-file";
 import { validatePathInWorkspace, type WorkspacePathScope } from "../security/path-validator";
 import {
+  isDataUrl,
   isLocalExportReference,
   rewriteExportAssets,
   type ExportAssetTarget,
@@ -25,16 +26,19 @@ interface LocalAsset {
 
 export interface MissingExportAsset {
   name: string;
-  reason: "local" | "unreadable" | "http" | "download" | "decode";
+  reason: "local" | "unreadable" | "http" | "download" | "decode" | "size";
 }
 
 export interface ExportAssets {
   workspace?: string | WorkspacePathScope;
   local: ReadonlyMap<string, LocalAsset>;
   remote: ReadonlyMap<string, string>;
+  inline: ReadonlySet<string>;
   externalFiles: string[];
   missing: MissingExportAsset[];
 }
+
+const EMBEDDED_ASSET_LIMIT = 48 * 1024 * 1024;
 
 function assetKey(source: string, type: ExportAssetType): string {
   return `${type}:${source}`;
@@ -45,9 +49,21 @@ function isLocalAssetSource(source: string, type: ExportAssetType): boolean {
   return isLocalExportReference(source) && !(type === "css" && /^fonts\/KaTeX_[\w-]+\.(woff2?|ttf)$/.test(source));
 }
 
+function hasHiddenPathComponent(filePath: string, workspace: string | WorkspacePathScope): boolean {
+  const roots = typeof workspace === "string" ? [workspace] : [workspace.workspacePath, workspace.scannedWorkspacePath];
+  const relative = roots
+    .filter((root): root is string => !!root)
+    .map((root) => path.relative(root, filePath))
+    .find((candidate) => !path.isAbsolute(candidate) && candidate !== ".." && !candidate.startsWith(`..${path.sep}`));
+  return (relative ?? path.normalize(filePath))
+    .split(path.sep)
+    .some((segment) => segment.startsWith(".") && segment !== "." && segment !== "..");
+}
+
 function locateLocalAsset(
   source: string,
   type: ExportAssetType,
+  target: ExportAssetTarget,
   notePath?: string,
   workspace?: string | WorkspacePathScope
 ): Omit<LocalAsset, "identity"> | null {
@@ -75,7 +91,23 @@ function locateLocalAsset(
     if (!filePath) return null;
     if (!outsideWorkspace && filePath !== validation.normalizedPath) return null;
     const mimeType = getLocalMediaType(filePath);
-    if (outsideWorkspace && (!mimeType || (type !== "media" && !mimeType.startsWith("image/")))) return null;
+    if (type === "attachment" && !isExternalNoteFile(filePath)) return null;
+    if (target === "clipboard") {
+      if (type === "media" && !/^(audio|video)\//.test(mimeType ?? "")) return null;
+      if (type === "css" && !mimeType?.startsWith("image/")) return null;
+      if (
+        !outsideWorkspace &&
+        (type === "attachment" || type === "media") &&
+        [requested, filePath].some((candidate) => hasHiddenPathComponent(candidate, workspace))
+      )
+        return null;
+    }
+    if (
+      outsideWorkspace &&
+      type !== "attachment" &&
+      (!mimeType || (type !== "media" && !mimeType.startsWith("image/")))
+    )
+      return null;
     url.searchParams.delete("__window");
     return {
       filePath,
@@ -131,29 +163,191 @@ function remoteImageUrl(source: string): URL | null {
   }
 }
 
+function clipboardLocalBytes(asset: LocalAsset, copies: number): bigint {
+  // Each occurrence writes its own data URL and base64 expands the original file.
+  return (4n * ((asset.identity.size + 2n) / 3n) + 128n) * BigInt(copies);
+}
+
+type ValidateImages = (images: string[], signal?: AbortSignal) => Promise<boolean[]>;
+type ImageCheck = { source: string; omit: () => void };
+type RemoteImageReference = { url: URL; copies: number };
+
+function localImageChecks(
+  local: Map<string, LocalAsset>,
+  missing: Map<string, MissingExportAsset>,
+  outsideWorkspace?: boolean
+): ImageCheck[] {
+  const references = new Map<string, string[]>();
+  for (const [key, asset] of local) {
+    if (outsideWorkspace !== undefined && outsideWorkspace !== asset.outsideWorkspace) continue;
+    if (!key.startsWith("image:") && !(key.startsWith("css:") && asset.mimeType.startsWith("image/"))) continue;
+    const keys = references.get(asset.filePath);
+    if (keys) keys.push(key);
+    else references.set(asset.filePath, [key]);
+  }
+  return Array.from(references, ([filename, keys]) => ({
+    source: pathToFileURL(filename).href,
+    omit() {
+      missing.set(filename, { name: filename, reason: "decode" });
+      for (const key of keys) local.delete(key);
+    }
+  }));
+}
+
+async function checkImages(checks: ImageCheck[], validate: ValidateImages): Promise<void> {
+  if (!checks.length) return;
+  const valid = await validate(checks.map(({ source }) => source));
+  for (const [index, check] of checks.entries()) {
+    if (!valid[index]) check.omit();
+  }
+}
+
+function omitOversizedClipboardFiles(
+  local: Map<string, LocalAsset>,
+  missing: Map<string, MissingExportAsset>,
+  references: Map<string, number>,
+  available: bigint,
+  outsideWorkspace: boolean
+): void {
+  for (const [key, asset] of local) {
+    if (
+      asset.outsideWorkspace !== outsideWorkspace ||
+      clipboardLocalBytes(asset, references.get(key) ?? 1) <= available
+    )
+      continue;
+    local.delete(key);
+    missing.set(asset.filePath, { name: asset.filePath, reason: "size" });
+  }
+}
+
+function reserveClipboardFiles(
+  local: Map<string, LocalAsset>,
+  missing: Map<string, MissingExportAsset>,
+  references: Map<string, number>,
+  remaining: bigint,
+  outsideWorkspace: boolean
+): bigint {
+  for (const [key, asset] of local) {
+    if (asset.outsideWorkspace !== outsideWorkspace) continue;
+    const bytes = clipboardLocalBytes(asset, references.get(key) ?? 1);
+    if (bytes <= remaining) remaining -= bytes;
+    else {
+      local.delete(key);
+      missing.set(asset.filePath, { name: asset.filePath, reason: "size" });
+    }
+  }
+  return remaining;
+}
+
+function omitRemoteImage(missing: Map<string, MissingExportAsset>, url: URL, reason: MissingExportAsset["reason"]) {
+  missing.set(url.href, { name: url.host + url.pathname, reason });
+}
+
+async function inspectRemoteImages(
+  urls: RemoteImageReference[],
+  missing: Map<string, MissingExportAsset>,
+  remaining: number,
+  clipboardDecoder?: ValidateImages,
+  signal?: AbortSignal
+) {
+  const remote = new Map<string, string>();
+  if (!urls.length) return { remote, remaining };
+  let downloadTimeLeft = 15_000;
+  // Clipboard review may decode a batch before downloading the rest.
+  const reviewDeadline = AbortSignal.timeout(clipboardDecoder ? 23_000 : downloadTimeLeft);
+  const reviewSignal = signal ? AbortSignal.any([signal, reviewDeadline]) : reviewDeadline;
+  const pending: Array<{ url: URL; data: string; bytes: number }> = [];
+  let pendingBytes = 0;
+
+  async function acceptDecodedImages(validate: ValidateImages) {
+    if (!pending.length) return;
+    const results = await validate(pending.map(({ data }) => data));
+    for (const [index, { url, data, bytes }] of pending.entries()) {
+      if (results[index]) {
+        remote.set(url.href, data);
+        remaining -= bytes;
+      } else omitRemoteImage(missing, url, "decode");
+    }
+    pending.length = 0;
+    pendingBytes = 0;
+  }
+
+  for (let offset = 0; offset < urls.length; offset += 4) {
+    const batch = urls.slice(offset, offset + 4);
+    const downloadStart = performance.now();
+    const downloadSignal =
+      clipboardDecoder && downloadTimeLeft > 0
+        ? AbortSignal.any([reviewSignal, AbortSignal.timeout(Math.ceil(downloadTimeLeft))])
+        : reviewSignal;
+    const images = await Promise.all(
+      batch.map(({ url }) =>
+        remaining > 0 && downloadTimeLeft > 0 && !downloadSignal.aborted
+          ? downloadExportImage(url.href, downloadSignal)
+          : null
+      )
+    );
+    signal?.throwIfAborted();
+    downloadTimeLeft -= performance.now() - downloadStart;
+    for (const [index, { url, copies }] of batch.entries()) {
+      const data = images[index];
+      if (!data) {
+        omitRemoteImage(missing, url, clipboardDecoder && remaining === 0 ? "size" : "download");
+        continue;
+      }
+      const bytes = data.length * copies;
+      if (clipboardDecoder && bytes <= remaining && bytes + pendingBytes > remaining) {
+        // Clear undecodable images before deciding whether a later image can fit.
+        await acceptDecodedImages(clipboardDecoder);
+      }
+      if (bytes > remaining) {
+        omitRemoteImage(missing, url, clipboardDecoder ? "size" : "download");
+      } else if (clipboardDecoder) {
+        pending.push({ url, data, bytes });
+        pendingBytes += bytes;
+      } else {
+        remote.set(url.href, data);
+        remaining -= bytes;
+      }
+    }
+  }
+  if (clipboardDecoder) await acceptDecodedImages(clipboardDecoder);
+  return { remote, remaining };
+}
+
 export async function inspectExportAssets(
   documents: string[],
   notePath: string | undefined,
   workspace: string | WorkspacePathScope | undefined,
   target: ExportAssetTarget,
-  validateImages?: (images: string[]) => Promise<boolean[]>
+  validateImages?: ValidateImages,
+  signal?: AbortSignal
 ): Promise<ExportAssets> {
+  signal?.throwIfAborted();
+  const validate = validateImages && signal ? (images: string[]) => validateImages(images, signal) : validateImages;
   const local = new Map<string, LocalAsset>();
   const fileIdentities = new Map<string, BigIntStats | null>();
   const missing = new Map<string, MissingExportAsset>();
-  const downloadUrls = new Map<string, URL>();
+  const downloadUrls = new Map<string, RemoteImageReference>();
   const inspected = new Set<string>();
+  const clipboardReferences = target === "clipboard" ? new Map<string, number>() : null;
+  const inlineBytes = new Map<string, bigint>();
 
   for (const html of documents) {
     await rewriteExportAssets(
       html,
       target,
       async (source, type) => {
+        signal?.throwIfAborted();
+        if (clipboardReferences && isDataUrl(source)) {
+          inlineBytes.set(source, (inlineBytes.get(source) ?? 0n) + BigInt(Buffer.byteLength(source)));
+          return;
+        }
         const key = assetKey(source, type);
-        if (inspected.has(key)) return;
-        inspected.add(key);
         if (isLocalAssetSource(source, type)) {
-          const asset = locateLocalAsset(source, type, notePath, workspace);
+          if (clipboardReferences) clipboardReferences.set(key, (clipboardReferences.get(key) ?? 0) + 1);
+          if (inspected.has(key)) return;
+          inspected.add(key);
+          const asset = locateLocalAsset(source, type, target, notePath, workspace);
           if (!asset) {
             let name = source;
             try {
@@ -176,7 +370,7 @@ export async function inspectExportAssets(
           local.set(key, { ...asset, identity });
           return;
         }
-        if (target !== "capture" || !validateImages) return;
+        if (target === "html" || !validateImages || type === "media" || type === "attachment") return;
         const url = remoteImageUrl(source);
         if (!url) return;
         if (url.protocol === "http:") missing.set(source, { name: url.host + url.pathname, reason: "http" });
@@ -184,66 +378,62 @@ export async function inspectExportAssets(
           missing.set(source, { name: url.host + url.pathname, reason: "download" });
         else {
           url.hash = "";
-          downloadUrls.set(url.href, url);
+          const copies = clipboardReferences ? (downloadUrls.get(url.href)?.copies ?? 0) + 1 : 1;
+          downloadUrls.set(url.href, { url, copies });
         }
       },
       { workspace }
     );
   }
 
-  const remote = new Map<string, string>();
-  const urls = [...downloadUrls.values()];
-  const signal = AbortSignal.timeout(15_000);
-  let remaining = 48 * 1024 * 1024;
-  for (let index = 0; index < urls.length; index += 4) {
-    const batch = urls.slice(index, index + 4);
-    const images = await Promise.all(
-      batch.map((url) => (remaining > 0 && !signal.aborted ? downloadExportImage(url.href, signal) : null))
-    );
-    for (const [index, url] of batch.entries()) {
-      const data = images[index];
-      if (data && data.length <= remaining) {
-        remaining -= data.length;
-        remote.set(url.href, data);
+  let clipboardSpace = BigInt(EMBEDDED_ASSET_LIMIT);
+  const inline = new Set<string>();
+  if (clipboardReferences) {
+    for (const [source, bytes] of inlineBytes) {
+      if (bytes <= clipboardSpace) {
+        clipboardSpace -= bytes;
+        inline.add(source);
       } else {
-        missing.set(url.href, { name: url.host + url.pathname, reason: "download" });
+        const mime = /^data:([\w.+-]{1,64}\/[\w.+-]{1,64})[;,]/i.exec(source)?.[1];
+        missing.set(source, { name: mime ? `data:${mime}` : "data:", reason: "size" });
       }
     }
+    omitOversizedClipboardFiles(local, missing, clipboardReferences, clipboardSpace, false);
+    if (validate) await checkImages(localImageChecks(local, missing, false), validate);
+    clipboardSpace = reserveClipboardFiles(local, missing, clipboardReferences, clipboardSpace, false);
   }
-
-  if (target === "capture" && validateImages) {
-    const localImages = new Map<string, string>();
-    for (const [key, asset] of local) {
-      if (key.startsWith("image:") || asset.mimeType.startsWith("image/")) {
-        localImages.set(asset.filePath, pathToFileURL(asset.filePath).href);
-      }
+  const { remote, remaining } = await inspectRemoteImages(
+    [...downloadUrls.values()],
+    missing,
+    Number(clipboardSpace),
+    clipboardReferences ? validate : undefined,
+    signal
+  );
+  if (clipboardReferences) {
+    const externalSpace = BigInt(remaining);
+    omitOversizedClipboardFiles(local, missing, clipboardReferences, externalSpace, true);
+    if (validate) await checkImages(localImageChecks(local, missing, true), validate);
+    // Optional external files use only the space left by the default resources.
+    reserveClipboardFiles(local, missing, clipboardReferences, externalSpace, true);
+  } else if (target === "capture" && validate) {
+    const images = localImageChecks(local, missing);
+    for (const [href, source] of remote) {
+      images.push({
+        source,
+        omit() {
+          remote.delete(href);
+          omitRemoteImage(missing, new URL(href), "decode");
+        }
+      });
     }
-    const sources = [...localImages.values(), ...remote.values()];
-    const valid = sources.length ? await validateImages(sources) : [];
-    let index = 0;
-    const badFiles = new Set<string>();
-    for (const filename of localImages.keys()) {
-      if (!valid[index++]) {
-        badFiles.add(filename);
-        missing.set(filename, { name: filename, reason: "decode" });
-      }
-    }
-    for (const [key, asset] of local) {
-      if (badFiles.has(asset.filePath)) local.delete(key);
-    }
-    for (const href of remote.keys()) {
-      if (!valid[index++]) {
-        remote.delete(href);
-        const url = new URL(href);
-        missing.set(href, { name: url.host + url.pathname, reason: "decode" });
-      }
-    }
+    await checkImages(images, validate);
   }
 
   const externalFiles = new Set(
     [...local.values()].filter((asset) => asset.outsideWorkspace).map((asset) => asset.filePath)
   );
-  return { workspace, local, remote, externalFiles: [...externalFiles], missing: [...missing.values()] };
+  signal?.throwIfAborted();
+  return { workspace, local, remote, inline, externalFiles: [...externalFiles], missing: [...missing.values()] };
 }
 
 function selectedAsset(
@@ -256,19 +446,31 @@ function selectedAsset(
   return asset && (!asset.outsideWorkspace || includeExternal) ? asset : undefined;
 }
 
-async function readReviewedAsset<T>(asset: LocalAsset, read: (file: FileHandle) => Promise<T>): Promise<T> {
+async function readReviewedAsset<T>(
+  asset: LocalAsset,
+  read: (file: FileHandle) => Promise<T>,
+  signal?: AbortSignal
+): Promise<T> {
+  signal?.throwIfAborted();
   const changed = () => new Error(`Export asset changed: ${path.basename(asset.filePath)}`);
   if (resolveLocalRegularFile(asset.filePath, !asset.outsideWorkspace) !== asset.filePath) {
     throw changed();
   }
-  const file = await fs.open(asset.filePath, assetOpenFlags);
+  let file: FileHandle | undefined;
   try {
+    file = await fs.open(asset.filePath, assetOpenFlags);
+    signal?.throwIfAborted();
     if (!matchesAssetIdentity(await file.stat({ bigint: true }), asset.identity)) throw changed();
+    signal?.throwIfAborted();
     const value = await read(file);
+    signal?.throwIfAborted();
     if (!matchesAssetIdentity(await file.stat({ bigint: true }), asset.identity)) throw changed();
     return value;
+  } catch (error) {
+    signal?.throwIfAborted();
+    throw error;
   } finally {
-    await file.close();
+    await file?.close();
   }
 }
 
@@ -292,28 +494,35 @@ export async function renderHtmlExportPreview(
   );
 }
 
-export async function embedExportImages(
+export async function embedExportAssets(
   html: string,
   assets: ExportAssets,
   includeExternal = false,
-  missingLabel?: string
+  missingLabel?: string,
+  target: "capture" | "clipboard" = "capture",
+  signal?: AbortSignal
 ): Promise<string> {
+  signal?.throwIfAborted();
   const embedded = new Map<string, string>();
-  return rewriteExportAssets(
+  const result = await rewriteExportAssets(
     html,
-    "capture",
+    target,
     async (source, type) => {
+      signal?.throwIfAborted();
+      if (target === "clipboard" && isDataUrl(source)) return assets.inline.has(source) ? undefined : null;
       if (isLocalAssetSource(source, type)) {
         const asset = selectedAsset(assets, source, type, includeExternal);
         if (!asset || (type === "css" && !asset.mimeType.startsWith("image/"))) return null;
         let data = embedded.get(asset.filePath);
         if (!data) {
-          const buffer = await readReviewedAsset(asset, (file) => file.readFile());
+          const buffer = await readReviewedAsset(asset, (file) => file.readFile({ signal }), signal);
+          signal?.throwIfAborted();
           data = `data:${asset.mimeType};base64,${buffer.toString("base64")}`;
           embedded.set(asset.filePath, data);
         }
-        return data + asset.hash;
+        return type === "attachment" ? { url: data, download: path.basename(asset.filePath) } : data + asset.hash;
       }
+      if (type === "media" || type === "attachment") return undefined;
       const url = remoteImageUrl(source);
       if (!url) return undefined;
       const hash = url.hash;
@@ -323,6 +532,8 @@ export async function embedExportImages(
     },
     { workspace: assets.workspace, missingLabel }
   );
+  signal?.throwIfAborted();
+  return result;
 }
 
 /** Build an offline image document from workspace resources. */
@@ -332,7 +543,7 @@ export async function embedLocalImages(
   workspace?: string | WorkspacePathScope
 ): Promise<string> {
   const assets = await inspectExportAssets([html], notePath, workspace, "capture");
-  return embedExportImages(html, assets);
+  return embedExportAssets(html, assets);
 }
 
 export async function collectAndCopyAssets(

@@ -53,6 +53,13 @@
     "success": "导出成功",
     "failed": "导出失败",
     "cancelled": "已取消导出",
+    "copyFullTextPreparing": "正在准备全文…",
+    "clipboardReady": "笔记已准备好复制",
+    "clipboardReplace": "现在复制会替换系统剪贴板中的内容。",
+    "clipboardCopyNow": "现在复制",
+    "clipboardCancel": "取消",
+    "copyFullTextSuccess": "已复制「{{title}}」全文",
+    "copyFullTextFailed": "复制全文失败",
     "wechatSuccess": "已复制到剪贴板，可直接粘贴到微信公众号编辑器",
     "wechatFailed": "复制到微信公众号失败"
   },

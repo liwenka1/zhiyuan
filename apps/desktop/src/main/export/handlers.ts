@@ -1,23 +1,58 @@
 import { BrowserWindow, dialog, app, clipboard } from "electron";
-import { handleAppIpc } from "../security/app-ipc";
+import { handleAppIpc, onAppIpc } from "../security/app-ipc";
 import * as fs from "fs/promises";
 import * as path from "path";
 import { PDFDocument } from "pdf-lib";
-import { wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "../ipc/ipc-result";
+import { wrapIpcHandler, wrapIpcHandlerWithEvent, ipcOk, ipcErr } from "../ipc/ipc-result";
 import { isValidFileNameSegment, normalizeFileNameSegment, type IpcResultDTO } from "@shared";
 import { captureHtmlAsImage } from "./capture";
-import { collectAndCopyAssets, inspectExportAssets, renderHtmlExportPreview } from "./assets";
-import { reviewExportResources } from "./resource-review";
+import { collectAndCopyAssets, embedExportAssets, inspectExportAssets, renderHtmlExportPreview } from "./assets";
+import { confirmClipboardWrite, reviewExportResources } from "./resource-review";
 import { getCallerResourceToken, getCallerWorkspace, getCallerWorkspaceScope } from "../security/window-context";
 import { validatePathInWorkspace } from "../security/path-validator";
 import { inspectExportDestination, writeExportDirectory, writeExportFile, type ExportDestination } from "./output";
+import { initializeClipboardMonitor, watchClipboard, type ClipboardWatch } from "./clipboard-state";
+import { renderClipboardEquations } from "./clipboard-equations";
 
 interface ApprovedExportPath {
   destination: ExportDestination;
   language: "zh" | "en";
 }
 
+interface ClipboardCopyRequest {
+  id: number;
+  workspace: ReturnType<typeof getCallerWorkspaceScope>;
+  notePath?: string;
+  clipboard: ClipboardWatch;
+  signal: AbortSignal;
+}
+
+interface PreparedClipboardWrite {
+  id: number;
+  frame: Electron.WebFrameMain;
+  window: BrowserWindow;
+  assertRequestCurrent: () => void;
+  write: () => void;
+}
+
 const approvedExportPaths = new WeakMap<Electron.WebFrameMain, ApprovedExportPath>();
+
+function waitForClipboardFocus(window: BrowserWindow, signal: AbortSignal): Promise<void> {
+  if (signal.aborted || window.isDestroyed() || window.isFocused()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timeout);
+      window.removeListener("focus", finish);
+      window.removeListener("closed", finish);
+      signal.removeEventListener("abort", finish);
+      resolve();
+    };
+    const timeout = setTimeout(finish, 5_000);
+    window.once("focus", finish);
+    window.once("closed", finish);
+    signal.addEventListener("abort", finish, { once: true });
+  });
+}
 
 function takeApprovedExportPath(event: Electron.IpcMainInvokeEvent, filePath: string): ApprovedExportPath {
   const frame = event.senderFrame;
@@ -30,6 +65,106 @@ function takeApprovedExportPath(event: Electron.IpcMainInvokeEvent, filePath: st
 }
 
 export function registerExportHandlers(): void {
+  initializeClipboardMonitor();
+  let latestClipboardCopy = 0;
+  let clipboardCopyController: AbortController | undefined;
+  let preparedClipboardWrite: PreparedClipboardWrite | undefined;
+  const clipboardCopies = new WeakMap<Electron.WebFrameMain, ClipboardCopyRequest>();
+
+  function discardPreparedClipboardWrite() {
+    const prepared = preparedClipboardWrite;
+    preparedClipboardWrite = undefined;
+    prepared?.window.removeListener("closed", discardPreparedClipboardWrite);
+    return prepared;
+  }
+
+  function advanceClipboardCopy() {
+    const id = ++latestClipboardCopy;
+    clipboardCopyController?.abort(new Error("USER_CANCELLED"));
+    clipboardCopyController = undefined;
+    const superseded = discardPreparedClipboardWrite();
+    if (superseded && !superseded.frame.isDestroyed() && !superseded.frame.detached) {
+      superseded.frame.send("export:clipboard-copy-superseded", superseded.id);
+    }
+    return id;
+  }
+
+  onAppIpc("export:native-clipboard-copy", advanceClipboardCopy);
+
+  handleAppIpc(
+    "export:confirm-clipboard-copy",
+    wrapIpcHandlerWithEvent(async (event, requestId: number, confirmed: boolean) => {
+      const prepared = preparedClipboardWrite;
+      if (!prepared || prepared.id !== requestId || event.senderFrame !== prepared.frame) {
+        throw new Error("USER_CANCELLED");
+      }
+      discardPreparedClipboardWrite();
+      if (confirmed === false) return;
+      if (confirmed !== true || prepared.window.isDestroyed() || !prepared.window.isFocused()) {
+        throw new Error("USER_CANCELLED");
+      }
+      prepared.assertRequestCurrent();
+      prepared.write();
+    }, "EXPORT_COPY_CLIPBOARD_FAILED")
+  );
+
+  function assertClipboardCopyCurrent(
+    event: Electron.IpcMainInvokeEvent,
+    frame: Electron.WebFrameMain,
+    requestId: number,
+    workspace: ClipboardCopyRequest["workspace"]
+  ) {
+    if (requestId !== latestClipboardCopy || event.senderFrame !== frame) throw new Error("USER_CANCELLED");
+    const current = getCallerWorkspaceScope(event);
+    if (
+      current.workspacePath !== workspace.workspacePath ||
+      current.workspaceRevision !== workspace.workspaceRevision
+    ) {
+      throw new Error("USER_CANCELLED");
+    }
+  }
+
+  function takeClipboardCopy(event: Electron.IpcMainInvokeEvent, requestId: number) {
+    const frame = event.senderFrame;
+    const request = frame && clipboardCopies.get(frame);
+    if (!frame || !request || request.id !== requestId) throw new Error("USER_CANCELLED");
+    clipboardCopies.delete(frame);
+
+    const assertRequestCurrent = () => assertClipboardCopyCurrent(event, frame, requestId, request.workspace);
+    const assertCurrent = async () => {
+      assertRequestCurrent();
+      if (!(await request.clipboard.unchanged())) throw new Error("USER_CANCELLED");
+      assertRequestCurrent();
+    };
+    const writeClipboard = async (language: "zh" | "en", write: () => void) => {
+      const window = request.clipboard.needsWindowFocus ? BrowserWindow.fromWebContents(event.sender) : undefined;
+      if (request.clipboard.needsWindowFocus && (!window || window.isDestroyed())) throw new Error("USER_CANCELLED");
+      if (request.clipboard.needsConfirmation) {
+        await assertCurrent();
+        if (window) {
+          // Without a selection change signal, only a fresh action in the focused renderer can commit this copy.
+          assertRequestCurrent();
+          if (window.isDestroyed()) throw new Error("USER_CANCELLED");
+          preparedClipboardWrite = { id: requestId, frame, window, assertRequestCurrent, write };
+          window.once("closed", discardPreparedClipboardWrite);
+          return "confirmation-required" as const;
+        }
+        await confirmClipboardWrite(event, language, request.signal);
+      }
+      assertRequestCurrent();
+      if (window) {
+        await waitForClipboardFocus(window, request.signal);
+        if (window.isDestroyed() || !window.isFocused()) throw new Error("USER_CANCELLED");
+      }
+      await assertCurrent();
+      if (window && (window.isDestroyed() || !window.isFocused())) throw new Error("USER_CANCELLED");
+      assertRequestCurrent();
+      write();
+      return undefined;
+    };
+    return { ...request, assertRequestCurrent, assertCurrent, writeClipboard };
+  }
+
   handleAppIpc(
     "export:show-save-dialog",
     wrapIpcHandlerWithEvent(
@@ -154,15 +289,77 @@ export function registerExportHandlers(): void {
     )
   );
 
-  handleAppIpc("export:copy-html-to-clipboard", (_, htmlContent: string): IpcResultDTO<void> => {
-    try {
-      clipboard.writeHTML(htmlContent);
-      return ipcOk(undefined);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return ipcErr(message, "EXPORT_COPY_CLIPBOARD_FAILED");
-    }
-  });
+  handleAppIpc(
+    "export:copy-html-to-clipboard",
+    wrapIpcHandlerWithEvent(async (event, requestId: number, htmlContent: string, language?: "zh" | "en") => {
+      const { writeClipboard } = takeClipboardCopy(event, requestId);
+      return writeClipboard(language === "zh" ? "zh" : "en", () => clipboard.writeHTML(htmlContent));
+    }, "EXPORT_COPY_CLIPBOARD_FAILED")
+  );
+
+  handleAppIpc(
+    "export:copy-text-to-clipboard",
+    wrapIpcHandler(async (text: string) => {
+      clipboard.writeText(text);
+      advanceClipboardCopy();
+    }, "EXPORT_COPY_CLIPBOARD_FAILED")
+  );
+
+  handleAppIpc(
+    "export:begin-clipboard-copy",
+    wrapIpcHandlerWithEvent(async (event, sourceWorkspace: string, notePath?: string) => {
+      const frame = event.senderFrame;
+      const workspace = getCallerWorkspaceScope(event);
+      const roots = [workspace.workspacePath, workspace.scannedWorkspacePath];
+      if (
+        !frame ||
+        typeof sourceWorkspace !== "string" ||
+        !path.isAbsolute(sourceWorkspace) ||
+        !roots.some((root) => root && path.relative(root, sourceWorkspace) === "")
+      ) {
+        throw new Error("USER_CANCELLED");
+      }
+      const id = advanceClipboardCopy();
+      clipboardCopyController = new AbortController();
+      const { signal } = clipboardCopyController;
+      const clipboard = await watchClipboard();
+      assertClipboardCopyCurrent(event, frame, id, workspace);
+      if (notePath && !validatePathInWorkspace(workspace, notePath).isValid) {
+        throw new Error("Note path is outside workspace");
+      }
+
+      clipboardCopies.set(frame, { id, workspace, notePath, clipboard, signal });
+      return id;
+    }, "EXPORT_COPY_CLIPBOARD_FAILED")
+  );
+
+  handleAppIpc(
+    "export:copy-full-text",
+    wrapIpcHandlerWithEvent(
+      async (event, requestId: number, markdown: string, htmlContent: string, language: "zh" | "en") => {
+        const { workspace, notePath, signal, assertRequestCurrent, assertCurrent, writeClipboard } = takeClipboardCopy(
+          event,
+          requestId
+        );
+        const locale = language === "zh" ? "zh" : "en";
+        await assertCurrent();
+        const portableHtml = await renderClipboardEquations(htmlContent, assertRequestCurrent, signal);
+        await assertCurrent();
+        const { assets, includeExternal, missingLabel } = await reviewExportResources(
+          event,
+          [portableHtml],
+          notePath,
+          workspace,
+          "clipboard",
+          locale,
+          { assertCurrent, signal }
+        );
+        const html = await embedExportAssets(portableHtml, assets, includeExternal, missingLabel, "clipboard", signal);
+        return writeClipboard(locale, () => clipboard.write({ text: markdown, html }));
+      },
+      "EXPORT_COPY_CLIPBOARD_FAILED"
+    )
+  );
 
   handleAppIpc(
     "export:export-html-package",

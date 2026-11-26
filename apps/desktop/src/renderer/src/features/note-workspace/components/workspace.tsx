@@ -417,6 +417,7 @@ export function NoteWorkspace({
             onShowNoteInExplorer={noteHandlers.handleShowNoteInExplorer}
             onRenameNote={noteHandlers.handleRenameNote}
             onDuplicateNote={noteHandlers.handleDuplicateNote}
+            onCopyFullText={noteHandlers.handleCopyFullText}
             onExportNote={noteHandlers.handleExportNote}
             onPushToGitHub={noteHandlers.handlePushToGitHub}
             onDeleteNote={noteHandlers.handleDeleteNote}

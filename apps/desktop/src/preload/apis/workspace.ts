@@ -71,6 +71,9 @@ export const workspaceApi = {
    */
   getCurrent: (): Promise<IpcResultDTO<string | null>> => ipcRenderer.invoke("workspace:getCurrent"),
 
+  beginSwitch: (workspacePath: string | null): Promise<IpcResultDTO<void>> =>
+    ipcRenderer.invoke("workspace:begin-switch", workspacePath),
+
   /**
    * 扫描工作区
    */

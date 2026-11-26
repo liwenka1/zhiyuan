@@ -53,6 +53,13 @@
     "success": "Export successful",
     "failed": "Export failed",
     "cancelled": "Export cancelled",
+    "copyFullTextPreparing": "Preparing note…",
+    "clipboardReady": "Note ready to copy",
+    "clipboardReplace": "Copying now will replace the contents of the system clipboard.",
+    "clipboardCopyNow": "Copy Now",
+    "clipboardCancel": "Cancel",
+    "copyFullTextSuccess": "Copied all of “{{title}}”",
+    "copyFullTextFailed": "Could not copy the full note",
     "wechatSuccess": "Copied to clipboard, paste it to WeChat editor",
     "wechatFailed": "Failed to copy to WeChat"
   },

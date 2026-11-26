@@ -46,6 +46,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       if (request !== workspaceRequest) return;
     }
     workspaceRequest = undefined;
+    if (get().workspacePath !== path && typeof window !== "undefined") {
+      // Invalidate pending copies while the old workspace is still bound for saving and scanning.
+      void window.api?.workspace?.beginSwitch?.(path).catch(() => {});
+    }
     // With no publication in flight this remains synchronous, before React can dispatch old-editor events.
     set((state) => {
       return state.workspacePath === path

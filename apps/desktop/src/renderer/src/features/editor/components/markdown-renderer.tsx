@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useNoteStore, useThemeStore } from "@/stores";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import { shellIpc } from "@/ipc";
+import { exportIpc } from "@/ipc/export";
 import { markdownToHTML } from "@/lib/markdown-processor";
 
 interface MarkdownRendererProps {
@@ -156,7 +157,7 @@ export function MarkdownRenderer({
             const codeText = code?.textContent ?? "";
             if (!codeText.trim()) return;
             try {
-              await navigator.clipboard.writeText(codeText);
+              await exportIpc.copyTextToClipboard(codeText);
               toast.success(t("copyCodeSuccess"));
             } catch {
               toast.error(t("errors.copyCodeFailed"));

@@ -3,9 +3,10 @@ import { normalizeMarkdownPaths } from "@/lib/markdown-links";
 import { generateHTMLDocument } from "@/lib/markdown-to-html";
 import { splitMarkdownByHr } from "@/lib/markdown-splitter";
 import { generateWechatHTMLDocument } from "@/lib/wechat-html";
+import { inlineCSS } from "@/lib/css-inliner";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 import type { Note } from "@/types";
-import type { ExportLayoutConfig } from "@shared";
+import { normalizeExportLayoutConfig, type ExportLayoutConfig } from "@shared";
 
 export type ExportFormat = "html" | "pdf" | "image";
 
@@ -33,6 +34,19 @@ export async function buildExportDocument(
     layout,
     notePath: note.filePath
   });
+}
+
+export async function buildClipboardDocument(
+  note: Note,
+  themeId: string,
+  layout?: Partial<ExportLayoutConfig>
+): Promise<string> {
+  const html = inlineCSS(await buildExportDocument(note, "html", themeId, layout));
+  const document = new DOMParser().parseFromString(html, "text/html");
+  const prose = document.querySelector<HTMLElement>(".prose");
+  if (prose) prose.style.fontSize = `${normalizeExportLayoutConfig(layout).baseFontSize}px`;
+
+  return document.body.innerHTML;
 }
 
 export async function buildExportDocumentsBySections(
@@ -87,4 +101,12 @@ export async function buildWechatDocument(
     enableCopyButton: false
   });
   return generateWechatHTMLDocument(note.title, htmlBody, themeId, layout);
+}
+
+export async function buildWechatClipboardDocument(
+  note: Note,
+  themeId: string,
+  layout?: Partial<ExportLayoutConfig>
+): Promise<string> {
+  return inlineCSS(await buildWechatDocument(note, themeId, layout));
 }
